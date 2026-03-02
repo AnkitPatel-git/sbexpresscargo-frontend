@@ -1,13 +1,13 @@
-import { Metadata } from "next"
+import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: "Customer Master",
-}
+};
 
 export default function CustomerMasterLayout({
     children,
 }: {
-    children: React.ReactNode
+    children: React.ReactNode;
 }) {
-    return <>{children}</>
+    return <>{children}</>;
 }

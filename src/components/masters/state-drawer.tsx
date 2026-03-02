@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -63,7 +63,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
     })
 
     const form = useForm<StateFormValues>({
-        resolver: zodResolver(stateSchema),
+        resolver: zodResolver(stateSchema) as Resolver<StateFormValues>,
         defaultValues: {
             stateCode: '',
             stateName: '',
@@ -132,6 +132,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="stateCode"
                                     render={({ field }) => (
                                         <FormItem>
@@ -145,6 +146,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
                                 />
 
                                 <FormField
+                                    control={form.control}
                                     name="gstAlias"
                                     render={({ field }) => (
                                         <FormItem>
@@ -159,6 +161,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
                             </div>
 
                             <FormField
+                                control={form.control}
                                 name="stateName"
                                 render={({ field }) => (
                                     <FormItem>
@@ -173,6 +176,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="productType"
                                     render={({ field }) => (
                                         <FormItem>
@@ -194,6 +198,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
                                 />
 
                                 <FormField
+                                    control={form.control}
                                     name="zoneId"
                                     render={({ field }) => (
                                         <FormItem>
@@ -222,6 +227,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
                             </div>
 
                             <FormField
+                                control={form.control}
                                 name="unionTerritory"
                                 render={({ field }) => (
                                     <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">

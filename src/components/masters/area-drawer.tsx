@@ -23,88 +23,81 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { bankService } from '@/services/masters/bank-service'
-import { Bank } from '@/types/masters/bank'
+import { areaService } from '@/services/masters/area-service'
+import { Area } from '@/types/masters/area'
 
-const bankSchema = z.object({
-    bankCode: z.string().min(2, "Bank code must be at least 2 characters"),
-    bankName: z.string().min(3, "Bank name must be at least 3 characters"),
-    status: z.string().min(1, "Status is required"),
+const areaSchema = z.object({
+    areaName: z.string().min(2, "Area name must be at least 2 characters"),
+    serviceCenter: z.string().min(2, "Service center is required"),
+    destination: z.string().min(2, "Destination is required"),
 })
 
-type BankFormValues = z.infer<typeof bankSchema>
+type AreaFormValues = z.infer<typeof areaSchema>
 
-interface BankDrawerProps {
+interface AreaDrawerProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    bank?: Bank | null
+    area?: Area | null
 }
 
-export function BankDrawer({ open, onOpenChange, bank }: BankDrawerProps) {
+export function AreaDrawer({ open, onOpenChange, area }: AreaDrawerProps) {
     const queryClient = useQueryClient()
-    const isEdit = !!bank
+    const isEdit = !!area
 
-    const form = useForm<BankFormValues>({
-        resolver: zodResolver(bankSchema) as Resolver<BankFormValues>,
+    const form = useForm<AreaFormValues>({
+        resolver: zodResolver(areaSchema) as Resolver<AreaFormValues>,
         defaultValues: {
-            bankCode: '',
-            bankName: '',
-            status: 'ACTIVE',
+            areaName: '',
+            serviceCenter: '',
+            destination: '',
         }
     })
 
     useEffect(() => {
-        if (bank) {
+        if (area) {
             form.reset({
-                bankCode: bank.bankCode,
-                bankName: bank.bankName,
-                status: bank.status,
+                areaName: area.areaName,
+                serviceCenter: area.serviceCenter,
+                destination: area.destination,
             })
         } else {
             form.reset({
-                bankCode: '',
-                bankName: '',
-                status: 'ACTIVE',
+                areaName: '',
+                serviceCenter: '',
+                destination: '',
             })
         }
-    }, [bank, form])
+    }, [area, form])
 
     const mutation = useMutation({
-        mutationFn: (data: BankFormValues) => {
-            if (isEdit && bank) {
-                return bankService.updateBank(bank.id, data)
+        mutationFn: (data: AreaFormValues) => {
+            if (isEdit && area) {
+                return areaService.updateArea(area.id, data)
             }
-            return bankService.createBank(data)
+            return areaService.createArea(data)
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['banks'] })
-            toast.success(`Bank ${isEdit ? 'updated' : 'created'} successfully`)
+            queryClient.invalidateQueries({ queryKey: ['areas'] })
+            toast.success(`Area ${isEdit ? 'updated' : 'created'} successfully`)
             onOpenChange(false)
             form.reset()
         },
         onError: (error: Error) => {
-            toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} bank`)
+            toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} area`)
         }
     })
 
-    function onSubmit(data: BankFormValues) {
+    function onSubmit(data: AreaFormValues) {
         mutation.mutate(data)
     }
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-[540px] overflow-y-auto">
+            <SheetContent className="sm:max-w-[450px]">
                 <SheetHeader className="px-6">
-                    <SheetTitle>{isEdit ? "Edit Bank" : "Create Bank"}</SheetTitle>
+                    <SheetTitle>{isEdit ? "Edit Area" : "Create Area"}</SheetTitle>
                     <SheetDescription>
-                        {isEdit ? "Update the bank details below." : "Enter the details for the new bank."}
+                        {isEdit ? "Update the area details below." : "Enter the details for the new area."}
                     </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6 px-6">
@@ -112,12 +105,12 @@ export function BankDrawer({ open, onOpenChange, bank }: BankDrawerProps) {
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <FormField
                                 control={form.control}
-                                name="bankCode"
+                                name="areaName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Bank Code</FormLabel>
+                                        <FormLabel>Area Name</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g. HDFC, ICICI" {...field} />
+                                            <Input placeholder="e.g. Mumbai Central" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -126,12 +119,12 @@ export function BankDrawer({ open, onOpenChange, bank }: BankDrawerProps) {
 
                             <FormField
                                 control={form.control}
-                                name="bankName"
+                                name="serviceCenter"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Bank Name</FormLabel>
+                                        <FormLabel>Service Center</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g. HDFC Bank, ICICI Bank" {...field} />
+                                            <Input placeholder="e.g. Mumbai SC" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -140,27 +133,19 @@ export function BankDrawer({ open, onOpenChange, bank }: BankDrawerProps) {
 
                             <FormField
                                 control={form.control}
-                                name="status"
+                                name="destination"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Status</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select status" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="ACTIVE">Active</SelectItem>
-                                                <SelectItem value="INACTIVE">Inactive</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <FormLabel>Destination</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. Mumbai" {...field} />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
-                            <div className="flex justify-end gap-3 pt-6 pb-10">
+                            <div className="flex justify-end gap-3 pt-6">
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -169,7 +154,7 @@ export function BankDrawer({ open, onOpenChange, bank }: BankDrawerProps) {
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={mutation.isPending}>
-                                    {mutation.isPending ? "Saving..." : isEdit ? "Update Bank" : "Create Bank"}
+                                    {mutation.isPending ? "Saving..." : isEdit ? "Update Area" : "Create Area"}
                                 </Button>
                             </div>
                         </form>

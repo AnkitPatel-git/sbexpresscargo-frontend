@@ -1,0 +1,98 @@
+import { ExceptionListResponse, ExceptionSingleResponse, ExceptionFormData } from '@/types/masters/exception';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+export const exceptionService = {
+    async getExceptions(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<ExceptionListResponse> {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+
+        const response = await fetch(`${API_URL}/exception-master?${queryParams.toString()}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch exceptions');
+        }
+
+        return response.json();
+    },
+
+    async getExceptionById(id: number): Promise<ExceptionSingleResponse> {
+        const response = await fetch(`${API_URL}/exception-master/${id}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch exception');
+        }
+
+        return response.json();
+    },
+
+    async createException(data: ExceptionFormData): Promise<ExceptionSingleResponse> {
+        const response = await fetch(`${API_URL}/exception-master`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to create exception');
+        }
+
+        return response.json();
+    },
+
+    async updateException(id: number, data: Partial<ExceptionFormData>): Promise<ExceptionSingleResponse> {
+        const response = await fetch(`${API_URL}/exception-master/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update exception');
+        }
+
+        return response.json();
+    },
+
+    async deleteException(id: number): Promise<{ success: boolean; message: string }> {
+        const response = await fetch(`${API_URL}/exception-master/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete exception');
+        }
+
+        return response.json();
+    },
+};

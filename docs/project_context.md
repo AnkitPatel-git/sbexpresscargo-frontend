@@ -43,6 +43,14 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - `/masters/service-centers`: Service Center Master management (Protected & RBAC controlled).
 - `/masters/customers`: Customer Master management (Protected & RBAC controlled).
 - `/masters/client-rates`: Client Rate Master management (Protected & RBAC controlled).
+- `/masters/consignee`: Consignee Master management (Protected & RBAC controlled).
+- `/masters/shipper`: Shipper Master management (Protected & RBAC controlled).
+- `/masters/vendor`: Vendor Master management (Protected & RBAC controlled).
+- `/masters/courier`: Courier Master management (Protected & RBAC controlled).
+- `/masters/area`: Area Master management (Protected & RBAC controlled).
+- `/masters/exception`: Exception Master management (Protected & RBAC controlled).
+- `/masters/service-map`: Service Map Master management (Protected & RBAC controlled).
+- `/masters/charge`: Charge Master management (Protected & RBAC controlled).
 
 - **Authentication & Authorization**: JWT-based login with persistent sessions.
 - **RBAC (Role-Based Access Control)**: UI elements and routes are protected based on user permissions.
@@ -62,6 +70,14 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
   - **Service Center Master**: Regional service center management.
   - **Customer Master**: Comprehensive customer database with registration types.
   - **Client Rate Master**: Custom rate settings for clients based on destination and service.
+  - **Consignee Master**: Management of consignee details, addresses, and contacts.
+  - **Shipper Master**: Management of shipper details, addresses, and contacts.
+  - **Vendor Master**: Management of external vendors and partners.
+  - **Courier Master**: Tracking and management of courier partners.
+  - **Area Master**: Regional area and destination mapping.
+  - **Exception Master**: Tracking of delivery exceptions and un-delivery reasons.
+  - **Service Map Master**: Mapping of vendors to service types and weight limits.
+  - **Charge Master**: Configuration of billing charges, sequences, and tax applications.
 - **Modern Modal (AlertDialog)**: Replaced native confirm dialogs with styled Radix-based alerts.
 - **Toast Notifications (Sonner)**: Real-time, color-coded feedback for all CRUD operations.
 - **Responsive Layout**: Designed to work across various screen sizes.
@@ -93,13 +109,19 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - **Page Title Management**: 
   - Uses the Next.js `metadata` API with a title template in the root `layout.tsx`.
   - Individual pages/routes provide their specific title (e.g., "Login", "Dashboard") which is then formatted as `[Title] | SB Express Cargo`.
+  - **Master Screen Convention**: All master listing pages must use the "Master" suffix in their page title and heading (e.g., "Consignee Master", "State Master").
   - For `use client` pages, meta-data is defined in a sibling `layout.tsx` file.
 - **Search Debouncing**: 
   - All search fields implement a 500ms debounce using the `useDebounce` hook.
   - This prevents excessive API calls during typing and improves overall application performance.
 
 - **Master Screen Consistency**: 
-  - All master listing pages (Country, State, Product, Flight, Zone, Content, Bank, Local Branch, Service Center, Customer, Client Rate) follow a unified pattern for UI and behavior.
+  - All master listing pages follow a unified pattern for UI and behavior.
+  - **Naming Convention**:
+    - **Sidebar Label**: Must include the "Master" suffix (e.g., "Local Branch Master", "Courier Master").
+    - **Page Title (Metadata)**: Must include the "Master" suffix.
+    - **Page Heading (H1)**: Must include the "Master" suffix.
+    - **Action Button**: Primary button follows the "Create [Entity]" format (e.g., "Create Consignee") for clarity and conciseness.
   - **Page Header**: Large 3xl title with a descriptive 1-2 line subtitle.
   - **Action Button**: A primary "Create [Entity]" button in the top right, guarded by the appropriate `_add` permission.
   - **Data Fetching**: Use `TanStack Query` (`useQuery`) for efficient server-state management, pagination, and searching.

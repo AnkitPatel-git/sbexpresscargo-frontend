@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -47,7 +47,7 @@ export function ContentDrawer({ open, onOpenChange, content }: ContentDrawerProp
     const isEdit = !!content
 
     const form = useForm<ContentFormValues>({
-        resolver: zodResolver(contentSchema),
+        resolver: zodResolver(contentSchema) as Resolver<ContentFormValues>,
         defaultValues: {
             contentCode: '',
             contentName: '',
@@ -112,6 +112,7 @@ export function ContentDrawer({ open, onOpenChange, content }: ContentDrawerProp
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <FormField
+                                control={form.control}
                                 name="contentCode"
                                 render={({ field }) => (
                                     <FormItem>
@@ -125,6 +126,7 @@ export function ContentDrawer({ open, onOpenChange, content }: ContentDrawerProp
                             />
 
                             <FormField
+                                control={form.control}
                                 name="contentName"
                                 render={({ field }) => (
                                     <FormItem>
@@ -138,6 +140,7 @@ export function ContentDrawer({ open, onOpenChange, content }: ContentDrawerProp
                             />
 
                             <FormField
+                                control={form.control}
                                 name="hsnCode"
                                 render={({ field }) => (
                                     <FormItem>
@@ -152,6 +155,7 @@ export function ContentDrawer({ open, onOpenChange, content }: ContentDrawerProp
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="vendor"
                                     render={({ field }) => (
                                         <FormItem>
@@ -165,6 +169,7 @@ export function ContentDrawer({ open, onOpenChange, content }: ContentDrawerProp
                                 />
 
                                 <FormField
+                                    control={form.control}
                                     name="country"
                                     render={({ field }) => (
                                         <FormItem>

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent } from 'lucide-react';
+import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { PermissionGuard } from '@/components/auth/permission-guard';
 import { cn } from '@/lib/utils';
@@ -226,7 +226,7 @@ export default function DashboardLayout({
                                             )}
                                         >
                                             <MapPin className="h-4 w-4" />
-                                            Local Branch
+                                            Local Branch Master
                                         </Link>
                                     </PermissionGuard>
                                     <PermissionGuard permission="service_center_master_list">
@@ -240,7 +240,7 @@ export default function DashboardLayout({
                                             )}
                                         >
                                             <Settings className="h-4 w-4" />
-                                            Service Center
+                                            Service Center Master
                                         </Link>
                                     </PermissionGuard>
                                     <PermissionGuard permission="customer_master_list">
@@ -268,7 +268,119 @@ export default function DashboardLayout({
                                             )}
                                         >
                                             <Percent className="h-4 w-4" />
-                                            Client Rate
+                                            Client Rate Master
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="consignee_master_list">
+                                        <Link
+                                            href="/masters/consignee"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/masters/consignee')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <UserRound className="h-4 w-4" />
+                                            Consignee Master
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="shipper_master_list">
+                                        <Link
+                                            href="/masters/shipper"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/masters/shipper')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <UserRound className="h-4 w-4" />
+                                            Shipper Master
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="vendor_master_list">
+                                        <Link
+                                            href="/masters/vendor"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/masters/vendor')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <Building2 className="h-4 w-4" />
+                                            Vendor Master
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="courier_master_list">
+                                        <Link
+                                            href="/masters/courier"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/masters/courier')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <Truck className="h-4 w-4" />
+                                            Courier Master
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="area_master_list">
+                                        <Link
+                                            href="/masters/area"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/masters/area')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <MapPin className="h-4 w-4" />
+                                            Area Master
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="exception_master_list">
+                                        <Link
+                                            href="/masters/exception"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/masters/exception')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <AlertTriangle className="h-4 w-4" />
+                                            Exception Master
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="service_map_master_list">
+                                        <Link
+                                            href="/masters/service-map"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/masters/service-map')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <MapIcon className="h-4 w-4" />
+                                            Service Map Master
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="charge_master_list">
+                                        <Link
+                                            href="/masters/charge"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/masters/charge')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <Coins className="h-4 w-4" />
+                                            Charge Master
                                         </Link>
                                     </PermissionGuard>
                                 </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
@@ -44,7 +44,7 @@ export function ZoneDrawer({ open, onOpenChange, zone }: ZoneDrawerProps) {
     const [loading, setLoading] = useState(false);
 
     const form = useForm<ZoneFormData>({
-        resolver: zodResolver(zoneSchema),
+        resolver: zodResolver(zoneSchema) as Resolver<ZoneFormData>,
         defaultValues: {
             name: '',
             code: '',

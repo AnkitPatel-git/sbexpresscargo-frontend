@@ -30,38 +30,39 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { customerService } from '@/services/masters/customer-service'
+import { vendorService } from '@/services/masters/vendor-service'
 import { stateService } from '@/services/masters/state-service'
-import { Customer } from '@/types/masters/customer'
+import { Vendor } from '@/types/masters/vendor'
 
-const customerSchema = z.object({
-    code: z.string().min(2, "Code must be at least 2 characters"),
-    name: z.string().min(3, "Name must be at least 3 characters"),
+const vendorSchema = z.object({
+    vendorCode: z.string().min(2, "Code must be at least 2 characters"),
+    vendorName: z.string().min(3, "Name must be at least 3 characters"),
     contactPerson: z.string().min(3, "Contact person is required"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
+    address2: z.string().optional(),
     pinCode: z.string().min(6, "Pin code must be 6 characters"),
     city: z.string().min(2, "City is required"),
     state: z.string().min(1, "State is required"),
-    telNo1: z.string().min(10, "Telephone must be at least 10 characters"),
+    telephone1: z.string().min(10, "Telephone must be at least 10 characters"),
+    telephone2: z.string().optional(),
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
+    website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+    gstNo: z.string().optional(),
     status: z.string().min(1, "Status is required"),
-    customerType: z.string().min(1, "Customer type is required"),
-    registerType: z.string().min(1, "Register type is required"),
-    gstNo: z.string().min(15, "GST Number must be 15 characters"),
 })
 
-type CustomerFormValues = z.infer<typeof customerSchema>
+type VendorFormValues = z.infer<typeof vendorSchema>
 
-interface CustomerDrawerProps {
+interface VendorDrawerProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    customer?: Customer | null
+    vendor?: Vendor | null
 }
 
-export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerProps) {
+export function VendorDrawer({ open, onOpenChange, vendor }: VendorDrawerProps) {
     const queryClient = useQueryClient()
-    const isEdit = !!customer
+    const isEdit = !!vendor
 
     const { data: statesData } = useQuery({
         queryKey: ['states-list'],
@@ -69,83 +70,86 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
         enabled: open
     })
 
-    const form = useForm<CustomerFormValues>({
-        resolver: zodResolver(customerSchema) as Resolver<CustomerFormValues>,
+    const form = useForm<VendorFormValues>({
+        resolver: zodResolver(vendorSchema) as Resolver<VendorFormValues>,
         defaultValues: {
-            code: '',
-            name: '',
+            vendorCode: '',
+            vendorName: '',
             contactPerson: '',
             address1: '',
+            address2: '',
             pinCode: '',
             city: '',
             state: '',
-            telNo1: '',
+            telephone1: '',
+            telephone2: '',
             email: '',
             mobile: '',
-            status: 'Active',
-            customerType: 'Customer',
-            registerType: 'Registered',
+            website: '',
             gstNo: '',
+            status: 'Active',
         }
     })
 
     useEffect(() => {
-        if (customer) {
+        if (vendor) {
             form.reset({
-                code: customer.code,
-                name: customer.name,
-                contactPerson: customer.contactPerson,
-                address1: customer.address1,
-                pinCode: customer.pinCode,
-                city: customer.city,
-                state: customer.state,
-                telNo1: customer.telNo1,
-                email: customer.email,
-                mobile: customer.mobile,
-                status: customer.status,
-                customerType: customer.customerType,
-                registerType: customer.registerType,
-                gstNo: customer.gstNo,
+                vendorCode: vendor.vendorCode,
+                vendorName: vendor.vendorName,
+                contactPerson: vendor.contactPerson,
+                address1: vendor.address1,
+                address2: vendor.address2 || '',
+                pinCode: vendor.pinCode,
+                city: vendor.city,
+                state: vendor.state,
+                telephone1: vendor.telephone1,
+                telephone2: vendor.telephone2 || '',
+                email: vendor.email,
+                mobile: vendor.mobile,
+                website: vendor.website || '',
+                gstNo: vendor.gstNo || '',
+                status: vendor.status,
             })
         } else {
             form.reset({
-                code: '',
-                name: '',
+                vendorCode: '',
+                vendorName: '',
                 contactPerson: '',
                 address1: '',
+                address2: '',
                 pinCode: '',
                 city: '',
                 state: '',
-                telNo1: '',
+                telephone1: '',
+                telephone2: '',
                 email: '',
                 mobile: '',
-                status: 'Active',
-                customerType: 'Customer',
-                registerType: 'Registered',
+                website: '',
                 gstNo: '',
+                status: 'Active',
             })
         }
-    }, [customer, form])
+    }, [vendor, form])
 
     const mutation = useMutation({
-        mutationFn: (data: CustomerFormValues) => {
-            if (isEdit && customer) {
-                return customerService.updateCustomer(customer.id, data)
+        mutationFn: (data: VendorFormValues) => {
+            if (isEdit && vendor) {
+                return vendorService.updateVendor(vendor.id, data)
             }
-            return customerService.createCustomer(data)
+            return vendorService.createVendor(data)
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['customers'] })
-            toast.success(`Customer ${isEdit ? 'updated' : 'created'} successfully`)
+            queryClient.invalidateQueries({ queryKey: ['vendors'] })
+            toast.success(`Vendor ${isEdit ? 'updated' : 'created'} successfully`)
             onOpenChange(false)
             form.reset()
         },
         onError: (error: Error) => {
-            toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} customer`)
+            toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} vendor`)
         }
     })
 
-    function onSubmit(data: CustomerFormValues) {
+    function onSubmit(data: VendorFormValues) {
         mutation.mutate(data)
     }
 
@@ -153,9 +157,9 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-[650px] overflow-y-auto">
                 <SheetHeader className="px-6">
-                    <SheetTitle>{isEdit ? "Edit Customer" : "Create Customer"}</SheetTitle>
+                    <SheetTitle>{isEdit ? "Edit Vendor" : "Create Vendor"}</SheetTitle>
                     <SheetDescription>
-                        {isEdit ? "Update the customer details below." : "Enter the details for the new customer."}
+                        {isEdit ? "Update the vendor details below." : "Enter the details for the new vendor."}
                     </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6 px-6 pb-10">
@@ -164,12 +168,12 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="code"
+                                    name="vendorCode"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Customer Code</FormLabel>
+                                            <FormLabel>Vendor Code</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. CUST01" {...field} />
+                                                <Input placeholder="e.g. V001" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -177,12 +181,12 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="name"
+                                    name="vendorName"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Customer Name</FormLabel>
+                                            <FormLabel>Vendor Name</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. Acme Corp" {...field} />
+                                                <Input placeholder="e.g. Global Vendor" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -197,26 +201,41 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                     <FormItem>
                                         <FormLabel>Contact Person</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g. John Doe" {...field} />
+                                            <Input placeholder="e.g. Vendor Contact" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
-                            <FormField
-                                control={form.control}
-                                name="address1"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Address</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Street address, building, floor" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="address1"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Address 1</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Street address, building, floor" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="address2"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Address 2 (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Suite, apartment, etc." {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
                             <div className="grid grid-cols-3 gap-4">
                                 <FormField
@@ -226,7 +245,7 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                         <FormItem>
                                             <FormLabel>City</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. Mumbai" {...field} />
+                                                <Input placeholder="e.g. Bangalore" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -263,7 +282,7 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                         <FormItem>
                                             <FormLabel>Pin Code</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. 400001" {...field} />
+                                                <Input placeholder="e.g. 560001" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -271,15 +290,15 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="telNo1"
+                                    name="telephone1"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Telephone</FormLabel>
+                                            <FormLabel>Telephone 1</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. 02212345678" {...field} />
+                                                <Input placeholder="e.g. 08012345678" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -287,12 +306,28 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                 />
                                 <FormField
                                     control={form.control}
+                                    name="telephone2"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Telephone 2 (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. 08012345679" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
                                     name="mobile"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Mobile</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. 9876543210" {...field} />
+                                                <Input placeholder="e.g. 8888888888" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -305,7 +340,7 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                         <FormItem>
                                             <FormLabel>Email</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. customer@example.com" {...field} />
+                                                <Input placeholder="e.g. vendor@example.com" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -313,67 +348,29 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="customerType"
+                                    name="website"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Customer Type</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select type" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Customer">Customer</SelectItem>
-                                                    <SelectItem value="Vendor">Vendor</SelectItem>
-                                                    <SelectItem value="Agent">Agent</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <FormLabel>Website (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. https://example.com" {...field} />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="registerType"
+                                    name="gstNo"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Register Type</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select type" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Registered">Registered</SelectItem>
-                                                    <SelectItem value="Unregistered">Unregistered</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="status"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Status</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select status" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Active">Active</SelectItem>
-                                                    <SelectItem value="Inactive">Inactive</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <FormLabel>GST No. (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Enter GST number" {...field} />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -382,13 +379,21 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
 
                             <FormField
                                 control={form.control}
-                                name="gstNo"
+                                name="status"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>GST Number</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="15-digit GSTIN" {...field} />
-                                        </FormControl>
+                                        <FormLabel>Status</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Active">Active</SelectItem>
+                                                <SelectItem value="Inactive">Inactive</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -403,7 +408,7 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={mutation.isPending}>
-                                    {mutation.isPending ? "Saving..." : isEdit ? "Update Customer" : "Create Customer"}
+                                    {mutation.isPending ? "Saving..." : isEdit ? "Update Vendor" : "Create Vendor"}
                                 </Button>
                             </div>
                         </form>

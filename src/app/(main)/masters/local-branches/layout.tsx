@@ -1,13 +1,13 @@
-import { Metadata } from "next"
+import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: "Local Branch Master",
-}
+};
 
 export default function LocalBranchMasterLayout({
     children,
 }: {
-    children: React.ReactNode
+    children: React.ReactNode;
 }) {
-    return <>{children}</>
+    return <>{children}</>;
 }

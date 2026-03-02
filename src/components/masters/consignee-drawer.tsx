@@ -30,35 +30,38 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { localBranchService } from '@/services/masters/local-branch-service'
+import { consigneeService } from '@/services/masters/consignee-service'
 import { stateService } from '@/services/masters/state-service'
-import { LocalBranch } from '@/types/masters/local-branch'
+import { Consignee } from '@/types/masters/consignee'
 
-const localBranchSchema = z.object({
-    branchCode: z.string().min(2, "Branch code must be at least 2 characters"),
-    companyName: z.string().min(3, "Company name must be at least 3 characters"),
-    name: z.string().min(3, "Branch name must be at least 3 characters"),
+const consigneeSchema = z.object({
+    code: z.string().min(2, "Code must be at least 2 characters"),
+    name: z.string().min(3, "Name must be at least 3 characters"),
+    destination: z.string().optional(),
+    contactPerson: z.string().min(3, "Contact person is required"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
-    address2: z.string().optional().nullable(),
+    address2: z.string().optional(),
     pinCode: z.string().min(6, "Pin code must be 6 characters"),
     city: z.string().min(2, "City is required"),
     state: z.string().min(1, "State is required"),
-    telephone1: z.string().min(10, "Telephone must be at least 10 characters"),
+    tel1: z.string().min(10, "Telephone must be at least 10 characters"),
+    tel2: z.string().optional(),
     email: z.string().email("Invalid email address"),
-    gstNo: z.string().min(15, "GST No must be 15 characters"),
+    mobile: z.string().min(10, "Mobile must be at least 10 characters"),
+    serviceCenter: z.string().optional(),
 })
 
-type LocalBranchFormValues = z.infer<typeof localBranchSchema>
+type ConsigneeFormValues = z.infer<typeof consigneeSchema>
 
-interface LocalBranchDrawerProps {
+interface ConsigneeDrawerProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    branch?: LocalBranch | null
+    consignee?: Consignee | null
 }
 
-export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDrawerProps) {
+export function ConsigneeDrawer({ open, onOpenChange, consignee }: ConsigneeDrawerProps) {
     const queryClient = useQueryClient()
-    const isEdit = !!branch
+    const isEdit = !!consignee
 
     const { data: statesData } = useQuery({
         queryKey: ['states-list'],
@@ -66,84 +69,93 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
         enabled: open
     })
 
-    const form = useForm<LocalBranchFormValues>({
-        resolver: zodResolver(localBranchSchema) as Resolver<LocalBranchFormValues>,
+    const form = useForm<ConsigneeFormValues>({
+        resolver: zodResolver(consigneeSchema) as Resolver<ConsigneeFormValues>,
         defaultValues: {
-            branchCode: '',
-            companyName: '',
+            code: '',
             name: '',
+            destination: '',
+            contactPerson: '',
             address1: '',
             address2: '',
             pinCode: '',
             city: '',
             state: '',
-            telephone1: '',
+            tel1: '',
+            tel2: '',
             email: '',
-            gstNo: '',
+            mobile: '',
+            serviceCenter: '',
         }
     })
 
     useEffect(() => {
-        if (branch) {
+        if (consignee) {
             form.reset({
-                branchCode: branch.branchCode,
-                companyName: branch.companyName,
-                name: branch.name,
-                address1: branch.address1,
-                address2: branch.address2 || '',
-                pinCode: branch.pinCode,
-                city: branch.city,
-                state: branch.state,
-                telephone1: branch.telephone1,
-                email: branch.email,
-                gstNo: branch.gstNo,
+                code: consignee.code,
+                name: consignee.name,
+                destination: consignee.destination || '',
+                contactPerson: consignee.contactPerson,
+                address1: consignee.address1,
+                address2: consignee.address2 || '',
+                pinCode: consignee.pinCode,
+                city: consignee.city,
+                state: consignee.state,
+                tel1: consignee.tel1,
+                tel2: consignee.tel2 || '',
+                email: consignee.email,
+                mobile: consignee.mobile,
+                serviceCenter: consignee.serviceCenter || '',
             })
         } else {
             form.reset({
-                branchCode: '',
-                companyName: '',
+                code: '',
                 name: '',
+                destination: '',
+                contactPerson: '',
                 address1: '',
                 address2: '',
                 pinCode: '',
                 city: '',
                 state: '',
-                telephone1: '',
+                tel1: '',
+                tel2: '',
                 email: '',
-                gstNo: '',
+                mobile: '',
+                serviceCenter: '',
             })
         }
-    }, [branch, form])
+    }, [consignee, form])
 
     const mutation = useMutation({
-        mutationFn: (data: LocalBranchFormValues) => {
-            if (isEdit && branch) {
-                return localBranchService.updateLocalBranch(branch.id, data)
+        mutationFn: (data: ConsigneeFormValues) => {
+            if (isEdit && consignee) {
+                return consigneeService.updateConsignee(consignee.id, data)
             }
-            return localBranchService.createLocalBranch(data)
+            return consigneeService.createConsignee(data)
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['local-branches'] })
-            toast.success(`Local Branch ${isEdit ? 'updated' : 'created'} successfully`)
+            queryClient.invalidateQueries({ queryKey: ['consignees'] })
+            toast.success(`Consignee ${isEdit ? 'updated' : 'created'} successfully`)
             onOpenChange(false)
             form.reset()
         },
         onError: (error: Error) => {
-            toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} local branch`)
+            toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} consignee`)
         }
     })
 
-    function onSubmit(data: LocalBranchFormValues) {
+    function onSubmit(data: ConsigneeFormValues) {
         mutation.mutate(data)
     }
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-[600px] overflow-y-auto">
+            <SheetContent className="sm:max-w-[650px] overflow-y-auto">
                 <SheetHeader className="px-6">
-                    <SheetTitle>{isEdit ? "Edit Local Branch" : "Create Local Branch"}</SheetTitle>
+                    <SheetTitle>{isEdit ? "Edit Consignee" : "Create Consignee"}</SheetTitle>
                     <SheetDescription>
-                        {isEdit ? "Update the branch details below." : "Enter the details for the new local branch."}
+                        {isEdit ? "Update the consignee details below." : "Enter the details for the new consignee."}
                     </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6 px-6 pb-10">
@@ -152,12 +164,12 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="branchCode"
+                                    name="code"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Branch Code</FormLabel>
+                                            <FormLabel>Consignee Code</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. BR001" {...field} />
+                                                <Input placeholder="e.g. C001" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -165,12 +177,12 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="companyName"
+                                    name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Company Name</FormLabel>
+                                            <FormLabel>Consignee Name</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. SB Express" {...field} />
+                                                <Input placeholder="e.g. Jane Smith" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -180,12 +192,12 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
 
                             <FormField
                                 control={form.control}
-                                name="name"
+                                name="destination"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Branch Name</FormLabel>
+                                        <FormLabel>Destination</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g. Mumbai Main Branch" {...field} />
+                                            <Input placeholder="e.g. Delhi" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -194,31 +206,46 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
 
                             <FormField
                                 control={form.control}
-                                name="address1"
+                                name="contactPerson"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Address Line 1</FormLabel>
+                                        <FormLabel>Contact Person</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Street address, P.O. box" {...field} />
+                                            <Input placeholder="e.g. Jane Smith" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
-                            <FormField
-                                control={form.control}
-                                name="address2"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Address Line 2 (Optional)</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Apartment, suite, unit, building, floor" {...field} value={field.value ?? ''} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="address1"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Address 1</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Street address, building, floor" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="address2"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Address 2 (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Suite, apartment, etc." {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
                             <div className="grid grid-cols-3 gap-4">
                                 <FormField
@@ -276,12 +303,41 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="telephone1"
+                                    name="tel1"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Telephone</FormLabel>
+                                            <FormLabel>Telephone 1</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="e.g. 02212345678" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="tel2"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Telephone 2 (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. 02287654321" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="mobile"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Mobile</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. 9876543210" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -294,7 +350,7 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
                                         <FormItem>
                                             <FormLabel>Email</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. branch@example.com" {...field} />
+                                                <Input placeholder="e.g. jane@example.com" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -304,12 +360,12 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
 
                             <FormField
                                 control={form.control}
-                                name="gstNo"
+                                name="serviceCenter"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>GST Number</FormLabel>
+                                        <FormLabel>Service Center</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="15-digit GSTIN" {...field} />
+                                            <Input placeholder="e.g. Delhi SC" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -325,7 +381,7 @@ export function LocalBranchDrawer({ open, onOpenChange, branch }: LocalBranchDra
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={mutation.isPending}>
-                                    {mutation.isPending ? "Saving..." : isEdit ? "Update Branch" : "Create Branch"}
+                                    {mutation.isPending ? "Saving..." : isEdit ? "Update Consignee" : "Create Consignee"}
                                 </Button>
                             </div>
                         </form>

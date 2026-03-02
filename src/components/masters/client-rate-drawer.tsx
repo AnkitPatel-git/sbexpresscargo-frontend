@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -79,7 +79,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
     })
 
     const form = useForm<ClientRateFormData>({
-        resolver: zodResolver(clientRateSchema),
+        resolver: zodResolver(clientRateSchema) as Resolver<ClientRateFormData>,
         defaultValues: {
             fromDate: '',
             customer: '',
@@ -163,6 +163,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="fromDate"
                                     render={({ field }) => (
                                         <FormItem>
@@ -175,6 +176,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                                     )}
                                 />
                                 <FormField
+                                    control={form.control}
                                     name="contractNo"
                                     render={({ field }) => (
                                         <FormItem>
@@ -189,6 +191,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                             </div>
 
                             <FormField
+                                control={form.control}
                                 name="customer"
                                 render={({ field }) => (
                                     <FormItem>
@@ -214,6 +217,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="product"
                                     render={({ field }) => (
                                         <FormItem>
@@ -237,6 +241,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                                     )}
                                 />
                                 <FormField
+                                    control={form.control}
                                     name="service"
                                     render={({ field }) => (
                                         <FormItem>
@@ -252,6 +257,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="origin"
                                     render={({ field }) => (
                                         <FormItem>
@@ -264,6 +270,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                                     )}
                                 />
                                 <FormField
+                                    control={form.control}
                                     name="destination"
                                     render={({ field }) => (
                                         <FormItem>
@@ -279,6 +286,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="country"
                                     render={({ field }) => (
                                         <FormItem>
@@ -302,6 +310,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                                     )}
                                 />
                                 <FormField
+                                    control={form.control}
                                     name="zone"
                                     render={({ field }) => (
                                         <FormItem>
@@ -317,6 +326,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="vendor"
                                     render={({ field }) => (
                                         <FormItem>
@@ -329,6 +339,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                                     )}
                                 />
                                 <FormField
+                                    control={form.control}
                                     name="rateValue"
                                     render={({ field }) => (
                                         <FormItem>

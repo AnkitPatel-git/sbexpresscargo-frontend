@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -66,7 +66,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
     })
 
     const form = useForm<ServiceCenterFormValues>({
-        resolver: zodResolver(serviceCenterSchema),
+        resolver: zodResolver(serviceCenterSchema) as Resolver<ServiceCenterFormValues>,
         defaultValues: {
             code: '',
             name: '',
@@ -147,6 +147,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="code"
                                     render={({ field }) => (
                                         <FormItem>
@@ -159,6 +160,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
                                     )}
                                 />
                                 <FormField
+                                    control={form.control}
                                     name="subName"
                                     render={({ field }) => (
                                         <FormItem>
@@ -173,6 +175,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
                             </div>
 
                             <FormField
+                                control={form.control}
                                 name="name"
                                 render={({ field }) => (
                                     <FormItem>
@@ -186,6 +189,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
                             />
 
                             <FormField
+                                control={form.control}
                                 name="address1"
                                 render={({ field }) => (
                                     <FormItem>
@@ -200,6 +204,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="destination"
                                     render={({ field }) => (
                                         <FormItem>
@@ -212,6 +217,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
                                     )}
                                 />
                                 <FormField
+                                    control={form.control}
                                     name="state"
                                     render={({ field }) => (
                                         <FormItem>
@@ -238,6 +244,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
+                                    control={form.control}
                                     name="pinCode"
                                     render={({ field }) => (
                                         <FormItem>
@@ -250,6 +257,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
                                     )}
                                 />
                                 <FormField
+                                    control={form.control}
                                     name="telephone"
                                     render={({ field }) => (
                                         <FormItem>
@@ -264,6 +272,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
                             </div>
 
                             <FormField
+                                control={form.control}
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem>
@@ -277,6 +286,7 @@ export function ServiceCenterDrawer({ open, onOpenChange, serviceCenter }: Servi
                             />
 
                             <FormField
+                                control={form.control}
                                 name="gstNo"
                                 render={({ field }) => (
                                     <FormItem>

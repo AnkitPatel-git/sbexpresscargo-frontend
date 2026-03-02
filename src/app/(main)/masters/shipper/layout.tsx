@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Service Center Master",
+    title: "Shipper Master",
 };
 
-export default function ServiceCenterMasterLayout({
+export default function ShipperMasterLayout({
     children,
 }: {
     children: React.ReactNode;
