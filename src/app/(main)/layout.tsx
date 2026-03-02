@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins } from 'lucide-react';
+import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins, Wrench } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { PermissionGuard } from '@/components/auth/permission-guard';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,7 @@ export default function DashboardLayout({
     const pathname = usePathname();
     const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith('/settings'));
     const [isMastersOpen, setIsMastersOpen] = useState(pathname.startsWith('/masters'));
+    const [isUtilitiesOpen, setIsUtilitiesOpen] = useState(pathname.startsWith('/utilities'));
 
     // Update open states when pathname changes (e.g. on hard reload or direct nav)
     useEffect(() => {
@@ -36,6 +37,9 @@ export default function DashboardLayout({
         if (pathname.startsWith('/masters')) {
             setIsMastersOpen(true);
         }
+        if (pathname.startsWith('/utilities')) {
+            setIsUtilitiesOpen(true);
+        }
     }, [pathname]);
 
     const initials = user?.username?.substring(0, 2).toUpperCase() || 'US';
@@ -43,6 +47,7 @@ export default function DashboardLayout({
     const isActive = (path: string) => pathname === path;
     const isSettingsActive = pathname.startsWith('/settings');
     const isMastersActive = pathname.startsWith('/masters');
+    const isUtilitiesActive = pathname.startsWith('/utilities');
 
     const navItemClasses = (active: boolean) =>
         cn(
@@ -80,6 +85,46 @@ export default function DashboardLayout({
                                 Users
                             </Link>
                         </PermissionGuard>
+
+                        {/* Utilities Menu */}
+                        <div className="flex flex-col">
+                            <button
+                                onClick={() => setIsUtilitiesOpen(!isUtilitiesOpen)}
+                                className={cn(
+                                    "flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 text-gray-500 hover:text-gray-900",
+                                    isUtilitiesActive && "text-gray-900 font-semibold"
+                                )}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Wrench className="h-4 w-4" />
+                                    Utilities
+                                </div>
+                                {isUtilitiesOpen ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                )}
+                            </button>
+
+                            {isUtilitiesOpen && (
+                                <div className="mt-1 flex flex-col gap-1">
+                                    <PermissionGuard permission="serviceable_pincode_list">
+                                        <Link
+                                            href="/utilities/serviceable-pincodes"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/utilities/serviceable-pincodes')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <MapPin className="h-4 w-4" />
+                                            Serviceable Pincodes
+                                        </Link>
+                                    </PermissionGuard>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Masters Menu */}
                         <div className="flex flex-col">

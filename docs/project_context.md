@@ -51,6 +51,7 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - `/masters/exception`: Exception Master management (Protected & RBAC controlled).
 - `/masters/service-map`: Service Map Master management (Protected & RBAC controlled).
 - `/masters/charge`: Charge Master management (Protected & RBAC controlled).
+- `/utilities/serviceable-pincodes`: Serviceable Pincodes management (Protected & RBAC controlled).
 
 - **Authentication & Authorization**: JWT-based login with persistent sessions.
 - **RBAC (Role-Based Access Control)**: UI elements and routes are protected based on user permissions.
@@ -78,6 +79,8 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
   - **Exception Master**: Tracking of delivery exceptions and un-delivery reasons.
   - **Service Map Master**: Mapping of vendors to service types and weight limits.
   - **Charge Master**: Configuration of billing charges, sequences, and tax applications.
+- **Utilities Module**: Centralized management for utility tools and features:
+  - **Serviceable Pincodes**: CRUD operations for managing serviceable areas, service centers, destinations, and ODA statuses.
 - **Modern Modal (AlertDialog)**: Replaced native confirm dialogs with styled Radix-based alerts.
 - **Toast Notifications (Sonner)**: Real-time, color-coded feedback for all CRUD operations.
 - **Responsive Layout**: Designed to work across various screen sizes.
