@@ -21,6 +21,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MoreHorizontal, Plus, Search } from "lucide-react"
+import { PermissionGuard } from "@/components/auth/permission-guard"
+import { useDebounce } from "@/hooks/use-debounce"
 
 // Mock data for users
 const initialUsers = [
@@ -68,11 +70,12 @@ const initialUsers = [
 
 export default function UsersPage() {
     const [users, setUsers] = useState(initialUsers)
-    const [searchQuery, setSearchQuery] = useState("")
+    const [search, setSearch] = useState("")
+    const debouncedSearch = useDebounce(search, 500)
 
     const filteredUsers = users.filter((user) =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        user.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        user.email.toLowerCase().includes(debouncedSearch.toLowerCase())
     )
 
     return (
@@ -85,9 +88,11 @@ export default function UsersPage() {
                     </p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Button>
-                        <Plus className="mr-2 h-4 w-4" /> Add User
-                    </Button>
+                    <PermissionGuard permission="user_master_add">
+                        <Button>
+                            <Plus className="mr-2 h-4 w-4" /> Add User
+                        </Button>
+                    </PermissionGuard>
                 </div>
             </div>
 
@@ -96,8 +101,8 @@ export default function UsersPage() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                     <Input
                         placeholder="Filter users..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                         className="pl-9"
                     />
                 </div>
@@ -125,8 +130,8 @@ export default function UsersPage() {
                                     <TableCell>
                                         <span
                                             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${user.status === "Active"
-                                                    ? "bg-green-100 text-green-800"
-                                                    : "bg-gray-100 text-gray-800"
+                                                ? "bg-green-100 text-green-800"
+                                                : "bg-gray-100 text-gray-800"
                                                 }`}
                                         >
                                             {user.status}
@@ -150,10 +155,14 @@ export default function UsersPage() {
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem>View details</DropdownMenuItem>
-                                                <DropdownMenuItem>Edit user</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-red-600">
-                                                    Delete user
-                                                </DropdownMenuItem>
+                                                <PermissionGuard permission="user_master_modify">
+                                                    <DropdownMenuItem>Edit user</DropdownMenuItem>
+                                                </PermissionGuard>
+                                                <PermissionGuard permission="user_master_delete">
+                                                    <DropdownMenuItem className="text-red-600">
+                                                        Delete user
+                                                    </DropdownMenuItem>
+                                                </PermissionGuard>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
