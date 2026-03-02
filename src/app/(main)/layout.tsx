@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins, Wrench } from 'lucide-react';
+import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins, Wrench, Calculator, Droplet } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { PermissionGuard } from '@/components/auth/permission-guard';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,7 @@ export default function DashboardLayout({
     const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith('/settings'));
     const [isMastersOpen, setIsMastersOpen] = useState(pathname.startsWith('/masters'));
     const [isUtilitiesOpen, setIsUtilitiesOpen] = useState(pathname.startsWith('/utilities'));
+    const [isTaxChargesOpen, setIsTaxChargesOpen] = useState(pathname.startsWith('/tax-charges'));
 
     // Update open states when pathname changes (e.g. on hard reload or direct nav)
     useEffect(() => {
@@ -40,6 +41,9 @@ export default function DashboardLayout({
         if (pathname.startsWith('/utilities')) {
             setIsUtilitiesOpen(true);
         }
+        if (pathname.startsWith('/tax-charges')) {
+            setIsTaxChargesOpen(true);
+        }
     }, [pathname]);
 
     const initials = user?.username?.substring(0, 2).toUpperCase() || 'US';
@@ -48,6 +52,7 @@ export default function DashboardLayout({
     const isSettingsActive = pathname.startsWith('/settings');
     const isMastersActive = pathname.startsWith('/masters');
     const isUtilitiesActive = pathname.startsWith('/utilities');
+    const isTaxChargesActive = pathname.startsWith('/tax-charges');
 
     const navItemClasses = (active: boolean) =>
         cn(
@@ -76,7 +81,7 @@ export default function DashboardLayout({
                             <LayoutDashboard className="h-4 w-4" />
                             Dashboard
                         </Link>
-                        <PermissionGuard permission="user_master_list">
+                        {/* <PermissionGuard permission="user_master_list">
                             <Link
                                 href="/users"
                                 className={navItemClasses(isActive('/users'))}
@@ -84,7 +89,7 @@ export default function DashboardLayout({
                                 <Users className="h-4 w-4" />
                                 Users
                             </Link>
-                        </PermissionGuard>
+                        </PermissionGuard> */}
 
                         {/* Utilities Menu */}
                         <div className="flex flex-col">
@@ -120,6 +125,61 @@ export default function DashboardLayout({
                                         >
                                             <MapPin className="h-4 w-4" />
                                             Serviceable Pincodes
+                                        </Link>
+                                    </PermissionGuard>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Tax & Charges Setup Menu */}
+                        <div className="flex flex-col">
+                            <button
+                                onClick={() => setIsTaxChargesOpen(!isTaxChargesOpen)}
+                                className={cn(
+                                    "flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 text-gray-500 hover:text-gray-900",
+                                    isTaxChargesActive && "text-gray-900 font-semibold"
+                                )}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Calculator className="h-4 w-4" />
+                                    Tax & Charges Setup
+                                </div>
+                                {isTaxChargesOpen ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                )}
+                            </button>
+
+                            {isTaxChargesOpen && (
+                                <div className="mt-1 flex flex-col gap-1">
+                                    {/* Using fuel_setup_list and tax_setup_list permissions appropriately */}
+                                    <PermissionGuard permission="fuel_setup_list">
+                                        <Link
+                                            href="/tax-charges/fuel-setup"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/tax-charges/fuel-setup')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <Droplet className="h-4 w-4" />
+                                            Fuel Setup
+                                        </Link>
+                                    </PermissionGuard>
+                                    <PermissionGuard permission="tax_setup_list">
+                                        <Link
+                                            href="/tax-charges/tax-setup"
+                                            className={cn(
+                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                                                isActive('/tax-charges/tax-setup')
+                                                    ? "bg-gray-100 text-gray-900 font-semibold"
+                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <Percent className="h-4 w-4" />
+                                            Tax Setup
                                         </Link>
                                     </PermissionGuard>
                                 </div>
