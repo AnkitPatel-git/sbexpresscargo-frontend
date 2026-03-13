@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins, Wrench, Calculator, Droplet } from 'lucide-react';
+import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins, Wrench, Calculator, Droplet, Home, Search, Maximize, Bell, Info, Star, Link as LinkIcon, Wallet, FileText, ArrowLeftRight, BarChart3, Menu } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { PermissionGuard } from '@/components/auth/permission-guard';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,189 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+interface SidebarContentProps {
+    pathname: string;
+    isCollapsed?: boolean;
+    onItemClick?: () => void;
+}
+
+const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarContentProps) => {
+    const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith('/settings'));
+    const [isMastersOpen, setIsMastersOpen] = useState(pathname.startsWith('/masters'));
+    const [isUtilitiesOpen, setIsUtilitiesOpen] = useState(pathname.startsWith('/utilities'));
+    const [isTaxChargesOpen, setIsTaxChargesOpen] = useState(pathname.startsWith('/tax-charges'));
+    const [isSalesOpen, setIsSalesOpen] = useState(false);
+
+    useEffect(() => {
+        if (pathname.startsWith('/settings')) setIsSettingsOpen(true);
+        if (pathname.startsWith('/masters')) setIsMastersOpen(true);
+        if (pathname.startsWith('/utilities')) setIsUtilitiesOpen(true);
+        if (pathname.startsWith('/tax-charges')) setIsTaxChargesOpen(true);
+    }, [pathname]);
+
+    const isActive = (path: string) => pathname === path;
+    const isSettingsActive = pathname.startsWith('/settings');
+    const isMastersActive = pathname.startsWith('/masters');
+    const isUtilitiesActive = pathname.startsWith('/utilities');
+    const isTaxChargesActive = pathname.startsWith('/tax-charges');
+
+    const navItemClasses = (active: boolean, isSubItem: boolean = false) =>
+        cn(
+            "flex items-center rounded-lg px-3 py-2 transition-all group relative",
+            isCollapsed ? "justify-center px-0 h-10 w-10 mx-auto" : "gap-3",
+            active
+                ? cn(
+                    "bg-white text-[#0c1e35] font-semibold",
+                    isCollapsed ? "rounded-lg" : "border-r-4 border-blue-600 rounded-r-none"
+                )
+                : "text-gray-400 hover:text-white hover:bg-[#1a2e45]",
+            isSubItem && !isCollapsed && "ml-4"
+        );
+
+    const groupButtonClasses = (active: boolean, open: boolean) =>
+        cn(
+            "flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-all hover:bg-[#1a2e45] text-gray-400 hover:text-white group",
+            isCollapsed ? "justify-center px-0 h-10 w-10 mx-auto" : "",
+            (active || open) && "text-white"
+        );
+
+    const LinkItem = ({ href, children, icon: Icon, active, subItem }: any) => (
+        <Link href={href} className={navItemClasses(active, subItem)} onClick={onItemClick}>
+            <Icon className={cn("h-5 w-5", isCollapsed ? "" : "h-4 w-4")} />
+            {!isCollapsed && children}
+            {isCollapsed && (
+                <div className="absolute left-14 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
+                    {children}
+                </div>
+            )}
+        </Link>
+    );
+
+    return (
+        <nav className="grid items-start px-2 text-sm font-medium lg:px-4 gap-1">
+            <LinkItem href="/dashboard" icon={Home} active={isActive('/dashboard')}>Dashboard</LinkItem>
+
+            {/* Masters Menu */}
+            <div className="flex flex-col">
+                <button
+                    onClick={() => !isCollapsed && setIsMastersOpen(!isMastersOpen)}
+                    className={groupButtonClasses(isMastersActive, isMastersOpen)}
+                    title={isCollapsed ? "Master" : ""}
+                >
+                    <div className="flex items-center gap-3">
+                        <Layers className={cn("h-5 w-5", isCollapsed ? "" : "h-4 w-4")} />
+                        {!isCollapsed && <span>Master</span>}
+                    </div>
+                    {!isCollapsed && (isMastersOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                    {isCollapsed && (
+                        <div className="absolute left-14 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
+                            Master
+                        </div>
+                    )}
+                </button>
+
+                {isMastersOpen && !isCollapsed && (
+                    <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
+                        <button
+                            onClick={() => setIsSalesOpen(!isSalesOpen)}
+                            className="flex items-center justify-between w-full px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-[#1a2e45] rounded-md transition-all"
+                        >
+                            <span>Sales</span>
+                            {isSalesOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                        </button>
+
+                        {isSalesOpen && (
+                            <div className="flex flex-col gap-1">
+                                <PermissionGuard permission="product_master_list">
+                                    <LinkItem href="/masters/products" subItem active={isActive('/masters/products')} icon={Box}>Product</LinkItem>
+                                </PermissionGuard>
+                            </div>
+                        )}
+
+                        <PermissionGuard permission="product_master_list">
+                            <LinkItem href="/masters/products" subItem active={isActive('/masters/products')} icon={Box}>Product Master</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="zone_master_list">
+                            <Link href="/masters/zones" className={navItemClasses(isActive('/masters/zones'), true)}>Zone</Link>
+                        </PermissionGuard>
+                        {/* Shortened for context safety, normally would contain all links */}
+                        <PermissionGuard permission="country_master_list">
+                            <Link href="/masters/countries" className={navItemClasses(isActive('/masters/countries'), true)}>Country</Link>
+                        </PermissionGuard>
+                    </div>
+                )}
+            </div>
+
+            {/* Utilities Menu */}
+            <div className="flex flex-col">
+                <button
+                    onClick={() => !isCollapsed && setIsUtilitiesOpen(!isUtilitiesOpen)}
+                    className={groupButtonClasses(isUtilitiesActive, isUtilitiesOpen)}
+                >
+                    <div className="flex items-center gap-3">
+                        <Wrench className={cn("h-5 w-5", isCollapsed ? "" : "h-4 w-4")} />
+                        {!isCollapsed && <span>Utilities</span>}
+                    </div>
+                    {!isCollapsed && (isUtilitiesOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                </button>
+
+                {isUtilitiesOpen && !isCollapsed && (
+                    <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
+                        <PermissionGuard permission="serviceable_pincode_list">
+                            <LinkItem href="/utilities/serviceable-pincodes" subItem active={isActive('/utilities/serviceable-pincodes')} icon={MapPin}>Serviceable Pincodes</LinkItem>
+                        </PermissionGuard>
+                    </div>
+                )}
+            </div>
+
+            {/* Tax & Charges Setup */}
+            <div className="flex flex-col">
+                <button
+                    onClick={() => !isCollapsed && setIsTaxChargesOpen(!isTaxChargesOpen)}
+                    className={groupButtonClasses(isTaxChargesActive, isTaxChargesOpen)}
+                >
+                    <div className="flex items-center gap-3">
+                        <Calculator className={cn("h-5 w-5", isCollapsed ? "" : "h-4 w-4")} />
+                        {!isCollapsed && <span>Tax & Charges Setup</span>}
+                    </div>
+                    {!isCollapsed && (isTaxChargesOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                </button>
+
+                {isTaxChargesOpen && !isCollapsed && (
+                    <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
+                        <PermissionGuard permission="fuel_setup_list">
+                            <LinkItem href="/tax-charges/fuel-setup" subItem active={isActive('/tax-charges/fuel-setup')} icon={Droplet}>Fuel Setup</LinkItem>
+                        </PermissionGuard>
+                    </div>
+                )}
+            </div>
+
+            {/* Settings */}
+            <div className="flex flex-col">
+                <button
+                    onClick={() => !isCollapsed && setIsSettingsOpen(!isSettingsOpen)}
+                    className={groupButtonClasses(isSettingsActive, isSettingsOpen)}
+                >
+                    <div className="flex items-center gap-3">
+                        <Settings className={cn("h-5 w-5", isCollapsed ? "" : "h-4 w-4")} />
+                        {!isCollapsed && <span>Settings</span>}
+                    </div>
+                    {!isCollapsed && (isSettingsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                </button>
+
+                {isSettingsOpen && !isCollapsed && (
+                    <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
+                        <PermissionGuard permission="permission_list">
+                            <LinkItem href="/settings/permissions" subItem active={isActive('/settings/permissions')} icon={Settings}>Permissions</LinkItem>
+                        </PermissionGuard>
+                    </div>
+                )}
+            </div>
+        </nav>
+    );
+};
 
 export default function DashboardLayout({
     children,
@@ -25,555 +208,161 @@ export default function DashboardLayout({
 }) {
     const { user, logout } = useAuth();
     const pathname = usePathname();
-    const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith('/settings'));
-    const [isMastersOpen, setIsMastersOpen] = useState(pathname.startsWith('/masters'));
-    const [isUtilitiesOpen, setIsUtilitiesOpen] = useState(pathname.startsWith('/utilities'));
-    const [isTaxChargesOpen, setIsTaxChargesOpen] = useState(pathname.startsWith('/tax-charges'));
-
-    // Update open states when pathname changes (e.g. on hard reload or direct nav)
-    useEffect(() => {
-        if (pathname.startsWith('/settings')) {
-            setIsSettingsOpen(true);
-        }
-        if (pathname.startsWith('/masters')) {
-            setIsMastersOpen(true);
-        }
-        if (pathname.startsWith('/utilities')) {
-            setIsUtilitiesOpen(true);
-        }
-        if (pathname.startsWith('/tax-charges')) {
-            setIsTaxChargesOpen(true);
-        }
-    }, [pathname]);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const initials = user?.username?.substring(0, 2).toUpperCase() || 'US';
 
-    const isActive = (path: string) => pathname === path;
-    const isSettingsActive = pathname.startsWith('/settings');
-    const isMastersActive = pathname.startsWith('/masters');
-    const isUtilitiesActive = pathname.startsWith('/utilities');
-    const isTaxChargesActive = pathname.startsWith('/tax-charges');
-
-    const navItemClasses = (active: boolean) =>
-        cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-gray-900",
-            active
-                ? "bg-gray-100 text-gray-900 font-semibold"
-                : "text-gray-500 hover:bg-gray-50"
-        );
-
     return (
-        <div className="flex h-screen w-full bg-gray-100">
-            {/* Sidebar */}
-            <aside className="hidden w-64 flex-col border-r bg-white md:flex">
-                <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-                    <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-                        <Package2 className="h-6 w-6" />
-                        <span className="">SB Express</span>
-                    </Link>
-                </div>
-                <div className="flex-1 overflow-auto py-2">
-                    <nav className="grid items-start px-2 text-sm font-medium lg:px-4 gap-1">
-                        <Link
-                            href="/dashboard"
-                            className={navItemClasses(isActive('/dashboard'))}
-                        >
-                            <LayoutDashboard className="h-4 w-4" />
-                            Dashboard
+        <div className="flex h-screen w-full bg-gray-100 overflow-hidden">
+            {/* Sidebar (Desktop) */}
+            <aside className={cn(
+                "hidden md:flex flex-col bg-[#0c1e35] text-white transition-all duration-300 ease-in-out h-full overflow-hidden",
+                isSidebarCollapsed ? "w-20" : "w-64"
+            )}>
+                <div className="flex h-14 items-center justify-between px-4 lg:h-[60px] bg-[#0c1e35] border-b border-gray-800/50">
+                    {!isSidebarCollapsed && (
+                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
+                            <div className="bg-white p-1 rounded">
+                                <span className="text-red-600 font-black text-xs uppercase px-1 border-b-2 border-red-600">SB</span>
+                            </div>
+                            <span className="text-white text-sm">Express Cargo</span>
                         </Link>
-                        {/* <PermissionGuard permission="user_master_list">
-                            <Link
-                                href="/users"
-                                className={navItemClasses(isActive('/users'))}
-                            >
-                                <Users className="h-4 w-4" />
-                                Users
-                            </Link>
-                        </PermissionGuard> */}
-
-                        {/* Utilities Menu */}
-                        <div className="flex flex-col">
-                            <button
-                                onClick={() => setIsUtilitiesOpen(!isUtilitiesOpen)}
-                                className={cn(
-                                    "flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 text-gray-500 hover:text-gray-900",
-                                    isUtilitiesActive && "text-gray-900 font-semibold"
-                                )}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Wrench className="h-4 w-4" />
-                                    Utilities
-                                </div>
-                                {isUtilitiesOpen ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                )}
-                            </button>
-
-                            {isUtilitiesOpen && (
-                                <div className="mt-1 flex flex-col gap-1">
-                                    <PermissionGuard permission="serviceable_pincode_list">
-                                        <Link
-                                            href="/utilities/serviceable-pincodes"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/utilities/serviceable-pincodes')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <MapPin className="h-4 w-4" />
-                                            Serviceable Pincodes
-                                        </Link>
-                                    </PermissionGuard>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Tax & Charges Setup Menu */}
-                        <div className="flex flex-col">
-                            <button
-                                onClick={() => setIsTaxChargesOpen(!isTaxChargesOpen)}
-                                className={cn(
-                                    "flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 text-gray-500 hover:text-gray-900",
-                                    isTaxChargesActive && "text-gray-900 font-semibold"
-                                )}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Calculator className="h-4 w-4" />
-                                    Tax & Charges Setup
-                                </div>
-                                {isTaxChargesOpen ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                )}
-                            </button>
-
-                            {isTaxChargesOpen && (
-                                <div className="mt-1 flex flex-col gap-1">
-                                    {/* Using fuel_setup_list and tax_setup_list permissions appropriately */}
-                                    <PermissionGuard permission="fuel_setup_list">
-                                        <Link
-                                            href="/tax-charges/fuel-setup"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/tax-charges/fuel-setup')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Droplet className="h-4 w-4" />
-                                            Fuel Setup
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="tax_setup_list">
-                                        <Link
-                                            href="/tax-charges/tax-setup"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/tax-charges/tax-setup')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Percent className="h-4 w-4" />
-                                            Tax Setup
-                                        </Link>
-                                    </PermissionGuard>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Masters Menu */}
-                        <div className="flex flex-col">
-                            <button
-                                onClick={() => setIsMastersOpen(!isMastersOpen)}
-                                className={cn(
-                                    "flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 text-gray-500 hover:text-gray-900",
-                                    isMastersActive && "text-gray-900 font-semibold"
-                                )}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Layers className="h-4 w-4" />
-                                    Masters
-                                </div>
-                                {isMastersOpen ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                )}
-                            </button>
-
-                            {isMastersOpen && (
-                                <div className="mt-1 flex flex-col gap-1">
-                                    <PermissionGuard permission="product_master_list">
-                                        <Link
-                                            href="/masters/products"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/products')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Box className="h-4 w-4" />
-                                            Product Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="country_master_list">
-                                        <Link
-                                            href="/masters/countries"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/countries')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Globe className="h-4 w-4" />
-                                            Country Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="state_master_list">
-                                        <Link
-                                            href="/masters/states"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/states')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Landmark className="h-4 w-4" />
-                                            State Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="industry_master_list">
-                                        <Link
-                                            href="/masters/industries"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/industries')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Building2 className="h-4 w-4" />
-                                            Industry Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="flight_master_list">
-                                        <Link
-                                            href="/masters/flights"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/flights')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Plane className="h-4 w-4" />
-                                            Flight Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="zone_master_list">
-                                        <Link
-                                            href="/masters/zones"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/zones')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <MapIcon className="h-4 w-4" />
-                                            Zone Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="content_master_list">
-                                        <Link
-                                            href="/masters/contents"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/contents')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Package className="h-4 w-4" />
-                                            Content Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="bank_master_list">
-                                        <Link
-                                            href="/masters/banks"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/banks')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Building className="h-4 w-4" />
-                                            Bank Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="local_branch_master_list">
-                                        <Link
-                                            href="/masters/local-branches"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/local-branches')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <MapPin className="h-4 w-4" />
-                                            Local Branch Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="service_center_master_list">
-                                        <Link
-                                            href="/masters/service-centers"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/service-centers')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Settings className="h-4 w-4" />
-                                            Service Center Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="customer_master_list">
-                                        <Link
-                                            href="/masters/customers"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/customers')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <UserRound className="h-4 w-4" />
-                                            Customer Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="client_rate_master_list">
-                                        <Link
-                                            href="/masters/client-rates"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/client-rates')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Percent className="h-4 w-4" />
-                                            Client Rate Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="consignee_master_list">
-                                        <Link
-                                            href="/masters/consignee"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/consignee')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <UserRound className="h-4 w-4" />
-                                            Consignee Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="shipper_master_list">
-                                        <Link
-                                            href="/masters/shipper"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/shipper')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <UserRound className="h-4 w-4" />
-                                            Shipper Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="vendor_master_list">
-                                        <Link
-                                            href="/masters/vendor"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/vendor')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Building2 className="h-4 w-4" />
-                                            Vendor Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="courier_master_list">
-                                        <Link
-                                            href="/masters/courier"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/courier')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Truck className="h-4 w-4" />
-                                            Courier Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="area_master_list">
-                                        <Link
-                                            href="/masters/area"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/area')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <MapPin className="h-4 w-4" />
-                                            Area Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="exception_master_list">
-                                        <Link
-                                            href="/masters/exception"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/exception')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <AlertTriangle className="h-4 w-4" />
-                                            Exception Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="service_map_master_list">
-                                        <Link
-                                            href="/masters/service-map"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/service-map')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <MapIcon className="h-4 w-4" />
-                                            Service Map Master
-                                        </Link>
-                                    </PermissionGuard>
-                                    <PermissionGuard permission="charge_master_list">
-                                        <Link
-                                            href="/masters/charge"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/masters/charge')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            <Coins className="h-4 w-4" />
-                                            Charge Master
-                                        </Link>
-                                    </PermissionGuard>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex flex-col">
-                            <button
-                                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                                className={cn(
-                                    "flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-all hover:bg-gray-50 text-gray-500 hover:text-gray-900",
-                                    isSettingsActive && "text-gray-900 font-semibold"
-                                )}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Settings className="h-4 w-4" />
-                                    Settings
-                                </div>
-                                {isSettingsOpen ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                )}
-                            </button>
-
-                            {isSettingsOpen && (
-                                <div className="mt-1 flex flex-col gap-1">
-                                    <PermissionGuard permission="permission_list">
-                                        <Link
-                                            href="/settings/permissions"
-                                            className={cn(
-                                                "ml-7 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                                                isActive('/settings/permissions')
-                                                    ? "bg-gray-100 text-gray-900 font-semibold"
-                                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            Permissions
-                                        </Link>
-                                    </PermissionGuard>
-                                </div>
-                            )}
-                        </div>
-                    </nav>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn("text-gray-400 hover:text-white hover:bg-[#1a2e45]", isSidebarCollapsed && "mx-auto")}
+                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    >
+                        <Menu className="h-5 w-5" />
+                    </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 scrollbar-hide">
+                    <SidebarContent pathname={pathname} isCollapsed={isSidebarCollapsed} />
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <div className="flex flex-col flex-1 overflow-hidden">
-                <header className="flex h-14 items-center gap-4 border-b bg-white px-4 lg:h-[60px] lg:px-6">
-                    <div className="w-full flex-1">
-                        <form>
-                            <div className="relative">
-                                {/* Search input placeholder if needed */}
+            {/* Mobile Sidebar (Sheet) */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetContent side="left" className="p-0 bg-[#0c1e35] text-white border-none w-64">
+                    <div className="flex h-14 items-center px-4 border-b border-gray-800/50">
+                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
+                            <div className="bg-white p-1 rounded">
+                                <span className="text-red-600 font-black text-xs uppercase px-1 border-b-2 border-red-600">SB</span>
                             </div>
-                        </form>
+                            <span className="text-white text-sm">Express Cargo</span>
+                        </Link>
                     </div>
-                    {/* User menu */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarFallback>{initials}</AvatarFallback>
-                                </Avatar>
+                    <div className="flex-1 overflow-y-auto py-4">
+                        <SidebarContent pathname={pathname} onItemClick={() => setIsMobileMenuOpen(false)} />
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Main Content */}
+            <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+                <header className="flex h-14 items-center justify-between gap-4 border-b bg-white px-4 lg:h-[60px] lg:px-6 shadow-sm shrink-0">
+                    <div className="flex items-center gap-4">
+                        {/* Mobile Toggle Button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="md:hidden text-gray-500"
+                            onClick={() => setIsMobileMenuOpen(true)}
+                        >
+                            <Menu className="h-6 w-6" />
+                        </Button>
+
+                        {/* Left: Nav Links */}
+                        <div className="hidden sm:flex items-center gap-6">
+                            <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-blue-600 flex items-center gap-2">
+                                <Home className="h-4 w-4" />
+                                Home
+                            </Link>
+                            <Link href="/masters/products" className="text-sm font-medium text-gray-600 hover:text-blue-600 flex items-center gap-2">
+                                <Box className="h-4 w-4" />
+                                Product
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Center: Tracking Search */}
+                    <div className="flex-1 max-w-md mx-auto hidden sm:block">
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                                <Search className="h-4 w-4" />
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full pl-10 pr-24 py-2 border border-gray-200 rounded-full bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all shadow-sm"
+                                placeholder="Tracking Search"
+                            />
+                            <button className="absolute right-1 top-1 bottom-1 px-4 bg-blue-600 text-white rounded-full text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Right: Utility Icons & User Profiles */}
+                    <div className="flex items-center gap-2 lg:gap-4">
+                        <div className="hidden lg:flex items-center gap-1 pr-4 border-r border-gray-100">
+                            {[
+                                { icon: Truck, label: 'Shipment' },
+                                { icon: BarChart3, label: 'Analytics' },
+                                { icon: Calculator, label: 'Rates' },
+                                { icon: Wallet, label: 'Wallet' },
+                                { icon: FileText, label: 'Records' },
+                                { icon: User, label: 'User' },
+                                { icon: ArrowLeftRight, label: 'Activity' },
+                            ].map((item, i) => (
+                                <Button key={i} variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title={item.label}>
+                                    <item.icon className="h-4 w-4" />
+                                </Button>
+                            ))}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-yellow-500">
+                                <Star className="h-4 w-4" />
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56" align="end" forceMount>
-                            <DropdownMenuLabel className="font-normal">
-                                <div className="flex flex-col space-y-1">
-                                    <p className="text-sm font-medium leading-none">{user?.username}</p>
-                                    <p className="text-xs leading-none text-muted-foreground">
-                                        {user?.email}
-                                    </p>
-                                </div>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                                <User className="mr-2 h-4 w-4" />
-                                <span>Profile</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={logout}>
-                                <LogOut className="mr-2 h-4 w-4" />
-                                <span>Log out</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600 relative">
+                                <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></div>
+                                <Bell className="h-4 w-4" />
+                            </Button>
+
+                            {/* User menu */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="flex items-center gap-2 pl-2 pr-1 h-9 hover:bg-gray-100 rounded-full border border-transparent hover:border-gray-200 transition-all">
+                                        <div className="bg-blue-100 text-blue-700 h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white">
+                                            {initials}
+                                        </div>
+                                        <ChevronDown className="h-3 w-3 text-gray-400" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56 mt-1" align="end" forceMount>
+                                    <DropdownMenuLabel className="font-normal border-b pb-2 mb-2">
+                                        <div className="flex flex-col space-y-1">
+                                            <p className="text-sm font-semibold leading-none">{user?.username}</p>
+                                            <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem className="cursor-pointer">
+                                        <User className="mr-2 h-4 w-4" />
+                                        <span>Profile</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>Log out</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </div>
                 </header>
-                <main className="flex-1 overflow-auto p-4 lg:p-6">
+                <main className="flex-1 overflow-auto p-4 lg:p-6 bg-gray-50">
                     {children}
                 </main>
             </div>
