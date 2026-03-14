@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { TaxSetupFormData, TaxSetupListResponse, TaxSetupSingleResponse } from '@/types/tax-charges/tax-setup';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const taxSetupService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/tax-charges/tax-setup?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/tax-setup?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const taxSetupService = {
     },
 
     async getTaxSetupById(id: number): Promise<TaxSetupSingleResponse> {
-        const response = await fetch(`${API_URL}/tax-charges/tax-setup/${id}`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/tax-setup/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const taxSetupService = {
     },
 
     async createTaxSetup(data: TaxSetupFormData): Promise<TaxSetupSingleResponse> {
-        const response = await fetch(`${API_URL}/tax-charges/tax-setup`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/tax-setup`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const taxSetupService = {
     },
 
     async updateTaxSetup(id: number, data: Partial<TaxSetupFormData>): Promise<TaxSetupSingleResponse> {
-        const response = await fetch(`${API_URL}/tax-charges/tax-setup/${id}`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/tax-setup/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const taxSetupService = {
     },
 
     async deleteTaxSetup(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/tax-charges/tax-setup/${id}`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/tax-setup/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

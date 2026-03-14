@@ -95,6 +95,7 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 ### Architectural Patterns
 - **Service Layer Pattern**: API logic is encapsulated in `src/services/` (e.g., `permission-service.ts`), decoupling UI components from network logic.
 - **Isolated Master Screens**: For systemic scalability, each master entity (Product, Country, etc.) has its own dedicated files for types and services within `src/types/masters/` and `src/services/masters/` respectively.
+- **Global API Interception**: All frontend API calls are wrapped using an custom `apiFetch` utility (`src/lib/api-fetch.ts`). This interceptor handles global 401 Unauthorized responses by automatically clearing auth tokens and redirecting the user to the login page (bypassing the login endpoint itself to prevent loops).
 - **Query & Mutation Pattern**: Utilizes **TanStack Query** for all data fetching and state synchronization, ensuring reliable caching and optimistic updates.
 - **Atomic UI Components**: Leverages **Shadcn/ui** for high-quality, accessible base components (Table, Sheet, Dialog, Button).
 
@@ -102,13 +103,20 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - **Overlay-First UI**: Significant data creation/update operations use **Drawers (Sheets)** to maintain user context without full-page transitions.
 - **Schema-Driven Validation**: All forms are backed by **Zod** schemas and handled via **React Hook Form** for consistent error reporting.
 - **Centralized Authorization**: Uses a dedicated `PermissionGuard` component and pattern-based `identifier` strings (e.g., `permission_add`) for modular RBAC.
-- **Dynamic Sidebar Navigation**: 
-  - **Active State Detection**: Uses `usePathname` from `next/navigation` to highlight the current route.
-  - **Collapsible Submenus**: Implements state-based toggling for nested menus (e.g., Settings) with persistence on page reloads/hard refreshes by checking the initial URL path.
-  - **Visual Feedback**: Utilizes `Chevron` icons and consistent active styling (`bg-gray-100`) for clear navigation context.
+- **Layout & Navigation Redesign**: 
+  - **Expandable/Collapsible Sidebar**: On desktop screens, the sidebar toggles between an expanded state (full text, nested menus) and a contracted state (icons only, tooltips on hover).
+  - **Mobile Drawer (Sheet)**: On mobile viewports, the sidebar is replaced with a responsive off-canvas menu triggered via the header's hamburger icon.
+  - **Navy Theme & Active States**: Features a deep navy background (`#0c1e35`) with bold white/blue active states matching modern dashboard aesthetics.
+  - **Robust Header**: Features an integrated tracking search input and a unified utility/user profile widget section.
+  - **Active State Detection**: Uses `usePathname` from `next/navigation` to highlight the current route and map nested structures.
 - **Visual Navigation (Icons)**: 
   - Each master screen is assigned a unique, contextually relevant Lucide icon (e.g., `Landmark` for Banks, `MapPin` for Branches) to improve visual recognition in the sidebar.
 - **Modern React**: Exclusively uses functional components and hooks (e.g., `useState`, `useQuery`, `useForm`, `useEffect`).
+- **Login Page Redesign**:
+  - Implemented a responsive split-layout (Left: Graphic/Slider, Right: Form).
+  - Left side features an automated image slider (rotating every 5 seconds) with a specific background color (`#a5b2ef`).
+  - Right side features a centered logo and a clean, minimalist login form (replacing external labels with placeholders) and a password visibility toggle.
+  - "Powered by" footer section simplified to text only for a cleaner look.
 
 ### UI/UX Design Practices
 - **Drawer Horizontal Padding**: Always include `px-6` in `SheetHeader` and the form container `div` to maintain a professional margin from the edges.

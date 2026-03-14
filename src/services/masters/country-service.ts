@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { CountryListResponse, CountrySingleResponse, CountryFormData } from '@/types/masters/country';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const countryService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/country-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/country-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const countryService = {
     },
 
     async getCountryById(id: number): Promise<CountrySingleResponse> {
-        const response = await fetch(`${API_URL}/country-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/country-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const countryService = {
     },
 
     async createCountry(data: CountryFormData): Promise<CountrySingleResponse> {
-        const response = await fetch(`${API_URL}/country-master`, {
+        const response = await apiFetch(`${API_URL}/country-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const countryService = {
     },
 
     async updateCountry(id: number, data: Partial<CountryFormData>): Promise<CountrySingleResponse> {
-        const response = await fetch(`${API_URL}/country-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/country-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const countryService = {
     },
 
     async deleteCountry(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/country-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/country-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { ContentListResponse, ContentSingleResponse, ContentFormData } from '@/types/masters/content';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const contentService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/content-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/content-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const contentService = {
     },
 
     async getContentById(id: number): Promise<ContentSingleResponse> {
-        const response = await fetch(`${API_URL}/content-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/content-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const contentService = {
     },
 
     async createContent(data: ContentFormData): Promise<ContentSingleResponse> {
-        const response = await fetch(`${API_URL}/content-master`, {
+        const response = await apiFetch(`${API_URL}/content-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const contentService = {
     },
 
     async updateContent(id: number, data: Partial<ContentFormData>): Promise<ContentSingleResponse> {
-        const response = await fetch(`${API_URL}/content-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/content-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const contentService = {
     },
 
     async deleteContent(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/content-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/content-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

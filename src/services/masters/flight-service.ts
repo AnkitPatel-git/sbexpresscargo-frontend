@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { FlightListResponse, FlightSingleResponse, FlightFormData } from '@/types/masters/flight';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const flightService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/flight-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/flight-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const flightService = {
     },
 
     async getFlightById(id: number): Promise<FlightSingleResponse> {
-        const response = await fetch(`${API_URL}/flight-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/flight-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const flightService = {
     },
 
     async createFlight(data: FlightFormData): Promise<FlightSingleResponse> {
-        const response = await fetch(`${API_URL}/flight-master`, {
+        const response = await apiFetch(`${API_URL}/flight-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const flightService = {
     },
 
     async updateFlight(id: number, data: Partial<FlightFormData>): Promise<FlightSingleResponse> {
-        const response = await fetch(`${API_URL}/flight-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/flight-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const flightService = {
     },
 
     async deleteFlight(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/flight-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/flight-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

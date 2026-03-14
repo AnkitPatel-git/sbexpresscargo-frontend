@@ -1,30 +1,21 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useAuth } from "@/context/auth-context"
 import { useMutation } from "@tanstack/react-query"
 import { authApi } from "@/lib/api-client"
-import { useState } from "react"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { AlertCircle, Loader2, Eye, EyeOff } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
 
 const loginSchema = z.object({
-    email: z.string().email("Invalid email address"),
+    email: z.string().min(1, "Username is required"),
     password: z.string().min(6, "Password must be at least 6 characters"),
-    remember: z.boolean().optional(),
 })
 
 type LoginFormValues = z.infer<typeof loginSchema>
@@ -32,13 +23,26 @@ type LoginFormValues = z.infer<typeof loginSchema>
 export default function LoginPage() {
     const { login } = useAuth()
     const [error, setError] = useState<string | null>(null)
+    const [showPassword, setShowPassword] = useState(false)
+    const [currentSlide, setCurrentSlide] = useState(0)
+
+    const slides = [
+        "/sliders/1.png",
+        "/sliders/2.png"
+    ]
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % slides.length)
+        }, 5000)
+        return () => clearInterval(timer)
+    }, [slides.length])
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
             email: "",
             password: "",
-            remember: false,
         },
     })
 
@@ -67,76 +71,129 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="flex h-screen w-full items-center justify-center bg-gray-50 px-4">
-            <Card className="w-full max-w-sm shadow-xl">
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <CardHeader className="space-y-1">
-                        <CardTitle className="text-2xl font-bold tracking-tight text-center">Login</CardTitle>
-                        <CardDescription className="text-center">
-                            Enter your credentials to access the dashboard
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-4">
+        <div className="flex min-h-screen w-full bg-white">
+            {/* Left Side - Illustration */}
+            <div className="hidden lg:flex lg:w-[60%] bg-[#a5b2ef] relative items-center justify-center overflow-hidden">
+                <div className="relative w-full h-full max-w-4xl max-h-[800px] flex items-center justify-center p-12">
+                    <div className="relative w-full aspect-video">
+                        {slides.map((slide, index) => (
+                            <img 
+                                key={slide}
+                                src={slide} 
+                                alt={`Logistics Slider ${index + 1}`} 
+                                className={`absolute inset-0 object-contain w-full h-full transition-opacity duration-1000 ${
+                                    index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"
+                                }`}
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                }}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Side - Form */}
+            <div className="flex flex-col flex-1 lg:w-[40%] justify-between px-8 py-12 sm:px-16 lg:px-24">
+                <div /> {/* Spacer for flex-between */}
+                
+                <div className="w-full max-w-md mx-auto space-y-8">
+                    {/* Logo & Heading */}
+                    <div className="space-y-6 flex flex-col items-center">
+                        <img 
+                            src="/logo/logo.png" 
+                            alt="SB Express Cargo" 
+                            className="h-16 w-auto object-contain mx-auto"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                            }}
+                        />
+                        <h1 className="text-3xl font-semibold tracking-tight text-gray-900 text-center">
+                            SB Express Cargo
+                        </h1>
+                    </div>
+
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         {error && (
                             <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-100">
-                                <AlertCircle className="h-4 w-4" />
+                                <AlertCircle className="h-4 w-4 shrink-0" />
                                 <span>{error}</span>
                             </div>
                         )}
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="admin@example.com"
-                                {...form.register("email")}
-                            />
-                            {form.formState.errors.email && (
-                                <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
-                            )}
+                        
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Input
+                                    id="email"
+                                    type="text"
+                                    placeholder="Username"
+                                    className="h-12 border-gray-300 rounded-md px-4"
+                                    {...form.register("email")}
+                                />
+                                {form.formState.errors.email && (
+                                    <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+                                )}
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="********"
+                                        className="h-12 border-gray-300 rounded-md pr-12 px-4"
+                                        {...form.register("password")}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-5 w-5" />
+                                        ) : (
+                                            <Eye className="h-5 w-5" />
+                                        )}
+                                        <span className="sr-only">Toggle password visibility</span>
+                                    </button>
+                                </div>
+                                {form.formState.errors.password && (
+                                    <p className="text-xs text-red-500">{form.formState.errors.password.message}</p>
+                                )}
+                            </div>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                {...form.register("password")}
-                            />
-                            {form.formState.errors.password && (
-                                <p className="text-xs text-red-500">{form.formState.errors.password.message}</p>
-                            )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="remember"
-                                onCheckedChange={(checked) => form.setValue("remember", checked === true)}
-                            />
-                            <label
-                                htmlFor="remember"
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                                Remember me
-                            </label>
-                        </div>
-                    </CardContent>
-                    <CardFooter>
+
                         <Button
-                            className="w-full"
+                            className="w-full h-12 text-base font-semibold bg-black hover:bg-black/90 text-white rounded-md"
                             type="submit"
                             disabled={loginMutation.isPending}
                         >
                             {loginMutation.isPending ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Signing In...
+                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                    Logging in...
                                 </>
                             ) : (
-                                "Sign In"
+                                "Login"
                             )}
                         </Button>
-                    </CardFooter>
-                </form>
-            </Card>
+
+                        <div className="pt-2">
+                            <Link 
+                                href="/forgot-password" 
+                                className="text-[15px] font-semibold text-blue-600 hover:text-blue-800 hover:underline inline-block"
+                            >
+                                Forgot / Reset Password
+                            </Link>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Footer */}
+                <div className="text-center md:text-left text-sm text-gray-500 flex items-center justify-center md:justify-start gap-1 mt-12">
+                    ©2026 Powered by <span className="font-semibold text-gray-900">SB Express Cargo</span>
+                </div>
+            </div>
         </div>
     )
 }

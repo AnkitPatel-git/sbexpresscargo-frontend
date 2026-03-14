@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { FuelSetupFormData, FuelSetupListResponse, FuelSetupSingleResponse } from '@/types/tax-charges/fuel-setup';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const fuelSetupService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/tax-charges/fuel-setup?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/fuel-setup?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const fuelSetupService = {
     },
 
     async getFuelSetupById(id: number): Promise<FuelSetupSingleResponse> {
-        const response = await fetch(`${API_URL}/tax-charges/fuel-setup/${id}`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/fuel-setup/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const fuelSetupService = {
     },
 
     async createFuelSetup(data: FuelSetupFormData): Promise<FuelSetupSingleResponse> {
-        const response = await fetch(`${API_URL}/tax-charges/fuel-setup`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/fuel-setup`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const fuelSetupService = {
     },
 
     async updateFuelSetup(id: number, data: Partial<FuelSetupFormData>): Promise<FuelSetupSingleResponse> {
-        const response = await fetch(`${API_URL}/tax-charges/fuel-setup/${id}`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/fuel-setup/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const fuelSetupService = {
     },
 
     async deleteFuelSetup(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/tax-charges/fuel-setup/${id}`, {
+        const response = await apiFetch(`${API_URL}/tax-charges/fuel-setup/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

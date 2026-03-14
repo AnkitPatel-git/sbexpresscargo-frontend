@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { ZoneFormData, ZoneListResponse, ZoneSingleResponse } from '@/types/masters/zone';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -21,7 +22,7 @@ export const zoneService = {
         if (params?.exportType) queryParams.append('exportType', params.exportType);
         if (params?.country) queryParams.append('country', params.country);
 
-        const response = await fetch(`${API_URL}/rate-master/zones?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/rate-master/zones?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -35,7 +36,7 @@ export const zoneService = {
     },
 
     async getZoneById(id: number): Promise<ZoneSingleResponse> {
-        const response = await fetch(`${API_URL}/rate-master/zones/${id}`, {
+        const response = await apiFetch(`${API_URL}/rate-master/zones/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -49,7 +50,7 @@ export const zoneService = {
     },
 
     async createZone(data: ZoneFormData): Promise<ZoneSingleResponse> {
-        const response = await fetch(`${API_URL}/rate-master/zones`, {
+        const response = await apiFetch(`${API_URL}/rate-master/zones`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ export const zoneService = {
     },
 
     async updateZone(id: number, data: Partial<ZoneFormData>): Promise<ZoneSingleResponse> {
-        const response = await fetch(`${API_URL}/rate-master/zones/${id}`, {
+        const response = await apiFetch(`${API_URL}/rate-master/zones/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -85,7 +86,7 @@ export const zoneService = {
     },
 
     async deleteZone(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/rate-master/zones/${id}`, {
+        const response = await apiFetch(`${API_URL}/rate-master/zones/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

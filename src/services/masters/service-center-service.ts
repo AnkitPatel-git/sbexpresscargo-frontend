@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { ServiceCenterListResponse, ServiceCenterSingleResponse, ServiceCenterFormData } from '@/types/masters/service-center';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const serviceCenterService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/service-center-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/service-center-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const serviceCenterService = {
     },
 
     async getServiceCenterById(id: number): Promise<ServiceCenterSingleResponse> {
-        const response = await fetch(`${API_URL}/service-center-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/service-center-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const serviceCenterService = {
     },
 
     async createServiceCenter(data: ServiceCenterFormData): Promise<ServiceCenterSingleResponse> {
-        const response = await fetch(`${API_URL}/service-center-master`, {
+        const response = await apiFetch(`${API_URL}/service-center-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const serviceCenterService = {
     },
 
     async updateServiceCenter(id: number, data: Partial<ServiceCenterFormData>): Promise<ServiceCenterSingleResponse> {
-        const response = await fetch(`${API_URL}/service-center-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/service-center-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const serviceCenterService = {
     },
 
     async deleteServiceCenter(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/service-center-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/service-center-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
