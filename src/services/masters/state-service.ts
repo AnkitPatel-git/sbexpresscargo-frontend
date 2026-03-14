@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { StateListResponse, StateSingleResponse, StateFormData } from '@/types/masters/state';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const stateService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/state-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/state-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const stateService = {
     },
 
     async getStateById(id: number): Promise<StateSingleResponse> {
-        const response = await fetch(`${API_URL}/state-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/state-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const stateService = {
     },
 
     async createState(data: StateFormData): Promise<StateSingleResponse> {
-        const response = await fetch(`${API_URL}/state-master`, {
+        const response = await apiFetch(`${API_URL}/state-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const stateService = {
     },
 
     async updateState(id: number, data: Partial<StateFormData>): Promise<StateSingleResponse> {
-        const response = await fetch(`${API_URL}/state-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/state-master/${id}`, {
             method: 'PUT', // Fixed to PUT as per standard API pattern observed in country/product
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const stateService = {
     },
 
     async deleteState(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/state-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/state-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

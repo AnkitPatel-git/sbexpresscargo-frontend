@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { AreaListResponse, AreaSingleResponse, AreaFormData } from '@/types/masters/area';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const areaService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/area-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/area-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const areaService = {
     },
 
     async getAreaById(id: number): Promise<AreaSingleResponse> {
-        const response = await fetch(`${API_URL}/area-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/area-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const areaService = {
     },
 
     async createArea(data: AreaFormData): Promise<AreaSingleResponse> {
-        const response = await fetch(`${API_URL}/area-master`, {
+        const response = await apiFetch(`${API_URL}/area-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const areaService = {
     },
 
     async updateArea(id: number, data: Partial<AreaFormData>): Promise<AreaSingleResponse> {
-        const response = await fetch(`${API_URL}/area-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/area-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const areaService = {
     },
 
     async deleteArea(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/area-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/area-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

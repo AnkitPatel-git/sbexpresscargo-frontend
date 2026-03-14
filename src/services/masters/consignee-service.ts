@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { ConsigneeListResponse, ConsigneeSingleResponse, ConsigneeFormData } from '@/types/masters/consignee';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const consigneeService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/consignee-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/consignee-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const consigneeService = {
     },
 
     async getConsigneeById(id: number): Promise<ConsigneeSingleResponse> {
-        const response = await fetch(`${API_URL}/consignee-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/consignee-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const consigneeService = {
     },
 
     async createConsignee(data: ConsigneeFormData): Promise<ConsigneeSingleResponse> {
-        const response = await fetch(`${API_URL}/consignee-master`, {
+        const response = await apiFetch(`${API_URL}/consignee-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const consigneeService = {
     },
 
     async updateConsignee(id: number, data: Partial<ConsigneeFormData>): Promise<ConsigneeSingleResponse> {
-        const response = await fetch(`${API_URL}/consignee-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/consignee-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const consigneeService = {
     },
 
     async deleteConsignee(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/consignee-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/consignee-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { ProductListResponse, ProductSingleResponse, ProductFormData } from '@/types/masters/product';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const productService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/product-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/product-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const productService = {
     },
 
     async getProductById(id: number): Promise<ProductSingleResponse> {
-        const response = await fetch(`${API_URL}/product-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/product-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const productService = {
     },
 
     async createProduct(data: ProductFormData): Promise<ProductSingleResponse> {
-        const response = await fetch(`${API_URL}/product-master`, {
+        const response = await apiFetch(`${API_URL}/product-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const productService = {
     },
 
     async updateProduct(id: number, data: Partial<ProductFormData>): Promise<ProductSingleResponse> {
-        const response = await fetch(`${API_URL}/product-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/product-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const productService = {
     },
 
     async deleteProduct(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/product-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/product-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

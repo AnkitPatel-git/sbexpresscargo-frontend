@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { ServiceablePincodeFormData, ServiceablePincodeListResponse, ServiceablePincodeSingleResponse } from '@/types/utilities/serviceable-pincode';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const serviceablePincodeService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/utilities/serviceable-pincodes?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/utilities/serviceable-pincodes?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const serviceablePincodeService = {
     },
 
     async getServiceablePincodeById(id: number): Promise<ServiceablePincodeSingleResponse> {
-        const response = await fetch(`${API_URL}/utilities/serviceable-pincodes/${id}`, {
+        const response = await apiFetch(`${API_URL}/utilities/serviceable-pincodes/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const serviceablePincodeService = {
     },
 
     async createServiceablePincode(data: ServiceablePincodeFormData): Promise<ServiceablePincodeSingleResponse> {
-        const response = await fetch(`${API_URL}/utilities/serviceable-pincodes`, {
+        const response = await apiFetch(`${API_URL}/utilities/serviceable-pincodes`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const serviceablePincodeService = {
     },
 
     async updateServiceablePincode(id: number, data: Partial<ServiceablePincodeFormData>): Promise<ServiceablePincodeSingleResponse> {
-        const response = await fetch(`${API_URL}/utilities/serviceable-pincodes/${id}`, {
+        const response = await apiFetch(`${API_URL}/utilities/serviceable-pincodes/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const serviceablePincodeService = {
     },
 
     async deleteServiceablePincode(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/utilities/serviceable-pincodes/${id}`, {
+        const response = await apiFetch(`${API_URL}/utilities/serviceable-pincodes/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { BankListResponse, BankSingleResponse, BankFormData } from '@/types/masters/bank';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const bankService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/bank-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/bank-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const bankService = {
     },
 
     async getBankById(id: number): Promise<BankSingleResponse> {
-        const response = await fetch(`${API_URL}/bank-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/bank-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const bankService = {
     },
 
     async createBank(data: BankFormData): Promise<BankSingleResponse> {
-        const response = await fetch(`${API_URL}/bank-master`, {
+        const response = await apiFetch(`${API_URL}/bank-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const bankService = {
     },
 
     async updateBank(id: number, data: Partial<BankFormData>): Promise<BankSingleResponse> {
-        const response = await fetch(`${API_URL}/bank-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/bank-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const bankService = {
     },
 
     async deleteBank(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/bank-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/bank-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

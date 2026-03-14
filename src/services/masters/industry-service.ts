@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { IndustryListResponse, IndustrySingleResponse, IndustryFormData } from '@/types/masters/industry';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -17,7 +18,7 @@ export const industryService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await fetch(`${API_URL}/industry-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/industry-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -31,7 +32,7 @@ export const industryService = {
     },
 
     async getIndustryById(id: number): Promise<IndustrySingleResponse> {
-        const response = await fetch(`${API_URL}/industry-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/industry-master/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -45,7 +46,7 @@ export const industryService = {
     },
 
     async createIndustry(data: IndustryFormData): Promise<IndustrySingleResponse> {
-        const response = await fetch(`${API_URL}/industry-master`, {
+        const response = await apiFetch(`${API_URL}/industry-master`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ export const industryService = {
     },
 
     async updateIndustry(id: number, data: Partial<IndustryFormData>): Promise<IndustrySingleResponse> {
-        const response = await fetch(`${API_URL}/industry-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/industry-master/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ export const industryService = {
     },
 
     async deleteIndustry(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await fetch(`${API_URL}/industry-master/${id}`, {
+        const response = await apiFetch(`${API_URL}/industry-master/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
