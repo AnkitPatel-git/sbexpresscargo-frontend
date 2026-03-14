@@ -112,6 +112,11 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - **Visual Navigation (Icons)**: 
   - Each master screen is assigned a unique, contextually relevant Lucide icon (e.g., `Landmark` for Banks, `MapPin` for Branches) to improve visual recognition in the sidebar.
 - **Modern React**: Exclusively uses functional components and hooks (e.g., `useState`, `useQuery`, `useForm`, `useEffect`).
+- **Login Page Redesign**:
+  - Implemented a responsive split-layout (Left: Graphic/Slider, Right: Form).
+  - Left side features an automated image slider (rotating every 5 seconds) with a specific background color (`#a5b2ef`).
+  - Right side features a centered logo and a clean, minimalist login form (replacing external labels with placeholders) and a password visibility toggle.
+  - "Powered by" footer section simplified to text only for a cleaner look.
 
 ### UI/UX Design Practices
 - **Drawer Horizontal Padding**: Always include `px-6` in `SheetHeader` and the form container `div` to maintain a professional margin from the edges.
