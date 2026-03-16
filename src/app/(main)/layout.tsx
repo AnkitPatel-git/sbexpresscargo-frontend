@@ -272,11 +272,12 @@ export default function DashboardLayout({
             )}>
                 <div className="flex h-14 items-center justify-between px-4 lg:h-[60px] bg-[#0c1e35] border-b border-gray-800/50">
                     {!isSidebarCollapsed && (
-                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-                            <div className="bg-white p-1 rounded">
-                                <span className="text-red-600 font-black text-xs uppercase px-1 border-b-2 border-red-600">SB</span>
-                            </div>
-                            <span className="text-white text-sm">Express Cargo</span>
+                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md">
+                            <img 
+                                src="/logo/logo.png" 
+                                alt="SB Express Cargo" 
+                                className="h-7 w-auto object-contain"
+                            />
                         </Link>
                     )}
                     <Button
@@ -297,11 +298,12 @@ export default function DashboardLayout({
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetContent side="left" className="p-0 bg-[#0c1e35] text-white border-none w-64">
                     <div className="flex h-14 items-center px-4 border-b border-gray-800/50">
-                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-                            <div className="bg-white p-1 rounded">
-                                <span className="text-red-600 font-black text-xs uppercase px-1 border-b-2 border-red-600">SB</span>
-                            </div>
-                            <span className="text-white text-sm">Express Cargo</span>
+                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md">
+                            <img 
+                                src="/logo/logo.png" 
+                                alt="SB Express Cargo" 
+                                className="h-7 w-auto object-contain"
+                            />
                         </Link>
                     </div>
                     <div className="flex-1 overflow-y-auto py-4">

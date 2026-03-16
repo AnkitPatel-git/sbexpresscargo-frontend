@@ -99,18 +99,15 @@ export default function LoginPage() {
                 
                 <div className="w-full max-w-md mx-auto space-y-8">
                     {/* Logo & Heading */}
-                    <div className="space-y-6 flex flex-col items-center">
+                    <div className="flex flex-col items-center">
                         <img 
                             src="/logo/logo.png" 
                             alt="SB Express Cargo" 
-                            className="h-16 w-auto object-contain mx-auto"
+                            className="h-12 w-auto object-contain mx-auto"
                             onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                             }}
                         />
-                        <h1 className="text-3xl font-semibold tracking-tight text-gray-900 text-center">
-                            SB Express Cargo
-                        </h1>
                     </div>
 
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
