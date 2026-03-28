@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from "@/lib/utils"
 import {
     Sheet,
     SheetContent,
@@ -21,6 +23,19 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,7 +64,7 @@ const vendorSchema = z.object({
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),
     gstNo: z.string().optional(),
-    status: z.string().min(1, "Status is required"),
+    status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 })
 
 type VendorFormValues = z.infer<typeof vendorSchema>
@@ -63,6 +78,7 @@ interface VendorDrawerProps {
 export function VendorDrawer({ open, onOpenChange, vendor }: VendorDrawerProps) {
     const queryClient = useQueryClient()
     const isEdit = !!vendor
+    const [stateOpen, setStateOpen] = useState(false)
 
     const { data: statesData } = useQuery({
         queryKey: ['states-list'],
@@ -71,7 +87,7 @@ export function VendorDrawer({ open, onOpenChange, vendor }: VendorDrawerProps) 
     })
 
     const form = useForm<VendorFormValues>({
-        resolver: zodResolver(vendorSchema) as Resolver<VendorFormValues>,
+        resolver: zodResolver(vendorSchema) as any,
         defaultValues: {
             vendorCode: '',
             vendorName: '',
@@ -87,7 +103,7 @@ export function VendorDrawer({ open, onOpenChange, vendor }: VendorDrawerProps) 
             mobile: '',
             website: '',
             gstNo: '',
-            status: 'Active',
+            status: 'ACTIVE',
         }
     })
 
@@ -126,7 +142,7 @@ export function VendorDrawer({ open, onOpenChange, vendor }: VendorDrawerProps) 
                 mobile: '',
                 website: '',
                 gstNo: '',
-                status: 'Active',
+                status: 'ACTIVE',
             })
         }
     }, [vendor, form])
@@ -255,22 +271,59 @@ export function VendorDrawer({ open, onOpenChange, vendor }: VendorDrawerProps) 
                                     control={form.control}
                                     name="state"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>State</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select state" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {statesData?.data?.map((state) => (
-                                                        <SelectItem key={state.id} value={state.stateName}>
-                                                            {state.stateName}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between font-normal",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? statesData?.data?.find(
+                                                                    (state) => state.stateName === field.value
+                                                                )?.stateName
+                                                                : "Select state"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search state..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No state found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {statesData?.data?.map((state) => (
+                                                                    <CommandItem
+                                                                        value={state.stateName}
+                                                                        key={state.id}
+                                                                        onSelect={() => {
+                                                                            form.setValue("state", state.stateName)
+                                                                            setStateOpen(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                state.stateName === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {state.stateName}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -390,8 +443,8 @@ export function VendorDrawer({ open, onOpenChange, vendor }: VendorDrawerProps) 
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="Active">Active</SelectItem>
-                                                <SelectItem value="Inactive">Inactive</SelectItem>
+                                                <SelectItem value="ACTIVE">Active</SelectItem>
+                                                <SelectItem value="INACTIVE">Inactive</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

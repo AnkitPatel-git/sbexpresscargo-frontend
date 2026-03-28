@@ -1,0 +1,7 @@
+info:
+  name: Service Map Master
+  type: folder
+  seq: 18
+
+request:
+  auth: inherit

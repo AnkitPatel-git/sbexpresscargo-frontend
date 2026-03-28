@@ -6,7 +6,13 @@ export interface Courier {
     inActive: boolean;
     pickupCharge: string | number;
     deliveryCharge: string | number;
-    serviceCenter: string;
+    serviceCenterId: number;
+    serviceCenterCode?: string;
+    serviceCenter?: {
+        id: number;
+        code: string;
+        name: string;
+    };
     destination: string;
     originCode: string | null;
     tldBatchNo: string | null;
@@ -25,7 +31,8 @@ export interface CourierFormData {
     inActive: boolean;
     pickupCharge: number;
     deliveryCharge: number;
-    serviceCenter: string;
+    serviceCenterId: number;
+    serviceCenterCode: string;
     destination: string;
     originCode?: string;
     tldBatchNo?: string;
@@ -35,10 +42,12 @@ export interface CourierListResponse {
     success: boolean;
     message: string;
     data: Courier[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface CourierSingleResponse {

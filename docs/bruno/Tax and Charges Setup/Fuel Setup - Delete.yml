@@ -1,0 +1,20 @@
+info:
+  name: Fuel Setup - Delete
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/tax-charges/fuel-setup/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Soft-delete fuel setup. JWT + fuel_setup_delete/all.

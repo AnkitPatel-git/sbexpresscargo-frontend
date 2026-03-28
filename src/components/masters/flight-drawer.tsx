@@ -56,7 +56,7 @@ export function FlightDrawer({ open, onOpenChange, flight }: FlightDrawerProps) 
         defaultValues: {
             flightCode: '',
             flightName: '',
-            flightType: 'prime',
+            flightType: 'PRIME',
         }
     })
 
@@ -71,7 +71,7 @@ export function FlightDrawer({ open, onOpenChange, flight }: FlightDrawerProps) 
             form.reset({
                 flightCode: '',
                 flightName: '',
-                flightType: 'prime',
+                flightType: 'PRIME',
             })
         }
     }, [flight, form])
@@ -151,8 +151,8 @@ export function FlightDrawer({ open, onOpenChange, flight }: FlightDrawerProps) 
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="prime">Prime</SelectItem>
-                                                <SelectItem value="gcr">GCR</SelectItem>
+                                                <SelectItem value="PRIME">Prime</SelectItem>
+                                                <SelectItem value="GCR">GCR</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

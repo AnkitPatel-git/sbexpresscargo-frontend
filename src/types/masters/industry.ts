@@ -17,12 +17,14 @@ export interface IndustryFormData {
 
 export interface IndustryListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Industry[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface IndustrySingleResponse {

@@ -99,7 +99,7 @@ export default function ServiceCentersPage() {
                         Manage regional service centers, their locations, and contact info.
                     </p>
                 </div>
-                <PermissionGuard permission="service_center_master_add">
+                <PermissionGuard permission="master.service_center.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create SC
                     </Button>
@@ -170,12 +170,12 @@ export default function ServiceCentersPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="service_center_master_modify">
+                                                            <PermissionGuard permission="master.service_center.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(sc)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="service_center_master_delete">
+                                                            <PermissionGuard permission="master.service_center.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(sc.id)}
@@ -204,13 +204,13 @@ export default function ServiceCentersPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

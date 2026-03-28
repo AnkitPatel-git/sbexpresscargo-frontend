@@ -31,7 +31,7 @@ const zoneSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     code: z.string().min(1, 'Code is required'),
     country: z.string().min(1, 'Country is required'),
-    zoneType: z.enum(['Domestic', 'Vendor']),
+    zoneType: z.enum(['DOMESTIC', 'VENDOR']),
 });
 
 interface ZoneDrawerProps {
@@ -49,7 +49,7 @@ export function ZoneDrawer({ open, onOpenChange, zone }: ZoneDrawerProps) {
             name: '',
             code: '',
             country: 'India',
-            zoneType: 'Domestic',
+            zoneType: 'DOMESTIC',
         },
     });
 
@@ -59,14 +59,14 @@ export function ZoneDrawer({ open, onOpenChange, zone }: ZoneDrawerProps) {
                 name: zone.name,
                 code: zone.code,
                 country: zone.country,
-                zoneType: zone.zoneType as 'Domestic' | 'Vendor',
+                zoneType: zone.zoneType,
             });
         } else {
             form.reset({
                 name: '',
                 code: '',
                 country: 'India',
-                zoneType: 'Domestic',
+                zoneType: 'DOMESTIC',
             });
         }
     }, [zone, form]);
@@ -150,8 +150,8 @@ export function ZoneDrawer({ open, onOpenChange, zone }: ZoneDrawerProps) {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="Domestic">Domestic</SelectItem>
-                                                <SelectItem value="Vendor">Vendor</SelectItem>
+                                                <SelectItem value="DOMESTIC">Domestic</SelectItem>
+                                                <SelectItem value="VENDOR">Vendor</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

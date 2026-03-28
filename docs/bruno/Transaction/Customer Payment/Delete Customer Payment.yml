@@ -1,0 +1,20 @@
+info:
+  name: Delete Customer Payment
+  type: http
+  seq: 6
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/transaction/customer-payment/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Soft-delete customer payment. JWT + customer_payment_delete or customer_payment_all.

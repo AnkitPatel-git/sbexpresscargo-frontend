@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from "@/lib/utils"
 import {
     Sheet,
     SheetContent,
@@ -21,6 +23,19 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,13 +46,15 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { courierService } from '@/services/masters/courier-service'
-import { Courier } from '@/types/masters/courier'
+import { serviceCenterService } from '@/services/masters/service-center-service'
+import { Courier, CourierFormData } from '@/types/masters/courier'
 
 const courierSchema = z.object({
     code: z.string().min(2, "Code must be at least 2 characters").max(32, "Code must be at most 32 characters"),
     name: z.string().min(3, "Name must be at least 3 characters").max(255, "Name must be at most 255 characters"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
-    serviceCenter: z.string().min(1, "Service Center is required"),
+    serviceCenterId: z.number().min(1, "Service Center is required"),
+    serviceCenterCode: z.string().min(1, "Service Center is required"),
     destination: z.string().min(1, "Destination is required"),
     pickupCharge: z.coerce.number().min(0, "Charge must be a positive number"),
     deliveryCharge: z.coerce.number().min(0, "Charge must be a positive number"),
@@ -57,6 +74,13 @@ interface CourierDrawerProps {
 export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProps) {
     const queryClient = useQueryClient()
     const isEdit = !!courier
+    const [scOpen, setScOpen] = useState(false)
+
+    const { data: scData } = useQuery({
+        queryKey: ['service-centers-list'],
+        queryFn: () => serviceCenterService.getServiceCenters({ limit: 100 }),
+        enabled: open
+    })
 
     const form = useForm<CourierFormValues>({
         resolver: zodResolver(courierSchema) as Resolver<CourierFormValues>,
@@ -64,7 +88,8 @@ export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProp
             code: '',
             name: '',
             mobile: '',
-            serviceCenter: '',
+            serviceCenterId: 0,
+            serviceCenterCode: '',
             destination: '',
             pickupCharge: 0,
             deliveryCharge: 0,
@@ -80,20 +105,22 @@ export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProp
                 code: courier.code,
                 name: courier.name,
                 mobile: courier.mobile,
-                serviceCenter: courier.serviceCenter,
+                serviceCenterId: courier.serviceCenterId || courier.serviceCenter?.id || 0,
+                serviceCenterCode: courier.serviceCenterCode || courier.serviceCenter?.code || '',
                 destination: courier.destination,
                 pickupCharge: Number(courier.pickupCharge) || 0,
                 deliveryCharge: Number(courier.deliveryCharge) || 0,
                 originCode: courier.originCode || '',
                 tldBatchNo: courier.tldBatchNo || '',
-                inActive: courier.inActive,
+                inActive: !!courier.inActive,
             })
         } else {
             form.reset({
                 code: '',
                 name: '',
                 mobile: '',
-                serviceCenter: '',
+                serviceCenterId: 0,
+                serviceCenterCode: '',
                 destination: '',
                 pickupCharge: 0,
                 deliveryCharge: 0,
@@ -102,14 +129,14 @@ export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProp
                 inActive: false,
             })
         }
-    }, [courier, form])
+    }, [courier, form, open])
 
     const mutation = useMutation({
         mutationFn: (data: CourierFormValues) => {
             if (isEdit && courier) {
-                return courierService.updateCourier(courier.id, data)
+                return courierService.updateCourier(courier.id, data as any)
             }
-            return courierService.createCourier(data)
+            return courierService.createCourier(data as any)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['couriers'] })
@@ -126,6 +153,11 @@ export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProp
         mutation.mutate(data)
     }
 
+    const onInvalid = (errors: any) => {
+        console.error("Form Validation Errors:", errors)
+        toast.error("Please check the form for errors")
+    }
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-[650px] overflow-y-auto">
@@ -137,7 +169,7 @@ export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProp
                 </SheetHeader>
                 <div className="mt-6 px-6 pb-10">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
@@ -183,13 +215,62 @@ export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProp
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="serviceCenter"
+                                    name="serviceCenterId"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>Service Center</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. Mumbai SC" {...field} />
-                                            </FormControl>
+                                            <Popover open={scOpen} onOpenChange={setScOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between font-normal",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? scData?.data?.find(
+                                                                    (sc) => sc.id === field.value
+                                                                )?.name
+                                                                : "Select service center"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search service center..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No service center found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {scData?.data?.map((sc) => (
+                                                                    <CommandItem
+                                                                        value={sc.name}
+                                                                        key={sc.id}
+                                                                        onSelect={() => {
+                                                                            form.setValue("serviceCenterId", sc.id)
+                                                                            form.setValue("serviceCenterCode", sc.code)
+                                                                            setScOpen(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                sc.id === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {sc.name} ({sc.code})
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -217,8 +298,8 @@ export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProp
                                         <FormItem>
                                             <FormLabel>Status</FormLabel>
                                             <Select
-                                                onValueChange={(val) => field.onChange(val === "Inactive")}
-                                                value={field.value ? "Inactive" : "Active"}
+                                                onValueChange={(val) => field.onChange(val === 'INACTIVE')}
+                                                value={field.value ? 'INACTIVE' : 'ACTIVE'}
                                             >
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -226,8 +307,8 @@ export function CourierDrawer({ open, onOpenChange, courier }: CourierDrawerProp
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Active">Active</SelectItem>
-                                                    <SelectItem value="Inactive">Inactive</SelectItem>
+                                                    <SelectItem value="ACTIVE">Active</SelectItem>
+                                                    <SelectItem value="INACTIVE">Inactive</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

@@ -99,7 +99,7 @@ export default function IndustriesPage() {
                         Manage business industries and sectors.
                     </p>
                 </div>
-                <PermissionGuard permission="industry_master_add">
+                <PermissionGuard permission="master.industry.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Industry
                     </Button>
@@ -162,12 +162,12 @@ export default function IndustriesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="industry_master_modify">
+                                                            <PermissionGuard permission="master.industry.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(industry)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="industry_master_delete">
+                                                            <PermissionGuard permission="master.industry.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(industry.id)}
@@ -196,13 +196,13 @@ export default function IndustriesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

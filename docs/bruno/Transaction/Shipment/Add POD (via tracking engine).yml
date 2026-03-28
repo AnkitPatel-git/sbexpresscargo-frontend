@@ -1,0 +1,29 @@
+info:
+  name: Add POD (via tracking engine)
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/shipment/1/pod"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "podFilePath": "s3://bucket/pod/AWB123456.pdf",
+        "remark": "Delivered to receiver"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Attach POD and mark shipment DELIVERED via tracking processor. JWT + shipment.core.update.

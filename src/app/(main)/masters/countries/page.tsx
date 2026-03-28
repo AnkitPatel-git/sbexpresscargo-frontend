@@ -99,7 +99,7 @@ export default function CountriesPage() {
                         Manage your service countries and international zones.
                     </p>
                 </div>
-                <PermissionGuard permission="country_master_add">
+                <PermissionGuard permission="master.country.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Country
                     </Button>
@@ -152,9 +152,9 @@ export default function CountriesPage() {
                                     ) : (
                                         data?.data.map((country) => (
                                             <TableRow key={country.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{country.code}</TableCell>
+                                                <TableCell className="font-medium text-blue-600 uppercase">{country.code}</TableCell>
                                                 <TableCell className="font-medium">{country.name}</TableCell>
-                                                <TableCell>{country.weightUnit}</TableCell>
+                                                <TableCell className="uppercase">{country.weightUnit}</TableCell>
                                                 <TableCell>{country.currency}</TableCell>
                                                 <TableCell>{country.isdCode}</TableCell>
                                                 <TableCell className="text-right">
@@ -168,12 +168,12 @@ export default function CountriesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="country_master_modify">
+                                                            <PermissionGuard permission="master.country.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(country)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="country_master_delete">
+                                                            <PermissionGuard permission="master.country.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(country.id)}
@@ -203,13 +203,13 @@ export default function CountriesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

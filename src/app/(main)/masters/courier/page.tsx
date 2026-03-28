@@ -100,7 +100,7 @@ export default function CourierPage() {
                         Manage couriers, their contact details, and account statuses.
                     </p>
                 </div>
-                <PermissionGuard permission="courier_master_add">
+                <PermissionGuard permission="master.courier.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Courier
                     </Button>
@@ -155,7 +155,7 @@ export default function CourierPage() {
                                             <TableRow key={courier.id} className="hover:bg-gray-50/50">
                                                 <TableCell className="font-medium text-blue-600">{courier.code}</TableCell>
                                                 <TableCell className="font-medium">{courier.name}</TableCell>
-                                                <TableCell>{courier.serviceCenter}</TableCell>
+                                                <TableCell>{courier.serviceCenter?.name || 'N/A'}</TableCell>
                                                 <TableCell>{courier.destination}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={!courier.inActive ? "success" : "secondary"} className={
@@ -177,12 +177,12 @@ export default function CourierPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="courier_master_modify">
+                                                            <PermissionGuard permission="master.courier.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(courier)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="courier_master_delete">
+                                                            <PermissionGuard permission="master.courier.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(courier.id)}
@@ -211,13 +211,13 @@ export default function CourierPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

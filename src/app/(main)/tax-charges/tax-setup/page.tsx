@@ -101,7 +101,7 @@ export default function TaxSetupPage() {
                     </p>
                 </div>
                 {/* Adjust permissions below if needed. Currently assuming tax_setup_add/modify/delete logic matches existing masters. */}
-                <PermissionGuard permission="tax_setup_add">
+                <PermissionGuard permission="master.tax_charges.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Tax Setup
                     </Button>
@@ -176,12 +176,12 @@ export default function TaxSetupPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="tax_setup_modify">
+                                                            <PermissionGuard permission="master.tax_charges.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(taxSetup)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="tax_setup_delete">
+                                                            <PermissionGuard permission="master.tax_charges.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(taxSetup.id)}

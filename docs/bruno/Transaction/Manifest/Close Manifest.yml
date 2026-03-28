@@ -1,0 +1,233 @@
+info:
+  name: Close Manifest
+  type: http
+  seq: 16
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/manifest/1/close"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200"
+    request:
+      url: "{{baseUrl}}/transaction/manifest/1/close"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "version": 1
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "2657"
+        - name: etag
+          value: W/"a61-5CRFiGvTkGSRO/3Zu6rUybT82ZY"
+        - name: date
+          value: Wed, 25 Mar 2026 03:47:08 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Manifest closed successfully",
+            "data": {
+              "id": 1,
+              "manifestNo": "CD12345",
+              "masterAwbNo": "MAWB123",
+              "manifestAt": "2026-03-20T00:00:00.000Z",
+              "status": "CLOSED",
+              "version": 1,
+              "location": "MUMBAI",
+              "serviceCenterId": 1,
+              "connectStation": "DELHI",
+              "vendorId": 1,
+              "productId": 1,
+              "format": "standard",
+              "singleLine": false,
+              "pdfType": "A4",
+              "accountNo": "ACC001",
+              "department": "Operations",
+              "createdAt": "2026-03-25T03:39:05.623Z",
+              "updatedAt": "2026-03-25T03:47:08.073Z",
+              "createdById": 1,
+              "updatedById": 1,
+              "deletedAt": null,
+              "deletedById": null,
+              "activeKey": null,
+              "items": [
+                {
+                  "id": 1,
+                  "manifestId": 1,
+                  "bagNo": null,
+                  "forwardingNo": null,
+                  "awbNo": "AWB123456",
+                  "refNo": null,
+                  "crnMhbsNo": null,
+                  "pieces": 1,
+                  "chargeWeight": "5",
+                  "bookDate": null,
+                  "origin": "MUMBAI",
+                  "destination": "DELHI",
+                  "code": null,
+                  "customer": null,
+                  "consignee": null,
+                  "instruction": null,
+                  "content": null,
+                  "actlWeight": null,
+                  "shipperName": null,
+                  "shipperTelNo": null,
+                  "shipperAdd1": null,
+                  "orgCode": null,
+                  "consigneeTelNo": null,
+                  "consigneeAdd1": null,
+                  "consigneeAdd2": null,
+                  "consigneeAdd3": null,
+                  "destinationCode": null,
+                  "keydate2": null,
+                  "vendorCode": null,
+                  "prodName": null,
+                  "orgCountry": null,
+                  "createdAt": "2026-03-25T03:43:00.605Z",
+                  "updatedAt": "2026-03-25T03:43:00.605Z",
+                  "snapshotAt": null,
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                }
+              ],
+              "progresses": [
+                {
+                  "id": 1,
+                  "manifestId": 1,
+                  "bagNo": "BAG123",
+                  "progressedAt": "2026-03-18T00:00:00.000Z",
+                  "serviceCenterId": null,
+                  "exceptionId": null,
+                  "createdAt": "2026-03-25T03:43:33.652Z",
+                  "updatedAt": "2026-03-25T03:44:56.363Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": "2026-03-25T03:44:56.360Z",
+                  "deletedById": 1
+                },
+                {
+                  "id": 2,
+                  "manifestId": 1,
+                  "bagNo": "BAG123",
+                  "progressedAt": "2026-03-18T00:00:00.000Z",
+                  "serviceCenterId": null,
+                  "exceptionId": null,
+                  "createdAt": "2026-03-25T03:43:54.296Z",
+                  "updatedAt": "2026-03-25T03:43:54.296Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 3,
+                  "manifestId": 1,
+                  "bagNo": "BAG123",
+                  "progressedAt": "2026-03-18T00:00:00.000Z",
+                  "serviceCenterId": 1,
+                  "exceptionId": null,
+                  "createdAt": "2026-03-25T03:45:22.829Z",
+                  "updatedAt": "2026-03-25T03:45:22.829Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 4,
+                  "manifestId": 1,
+                  "bagNo": "BAG123",
+                  "progressedAt": "2026-03-18T00:00:00.000Z",
+                  "serviceCenterId": 1,
+                  "exceptionId": null,
+                  "createdAt": "2026-03-25T03:45:38.386Z",
+                  "updatedAt": "2026-03-25T03:45:38.386Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 5,
+                  "manifestId": 1,
+                  "bagNo": "BAG123",
+                  "progressedAt": "2026-03-18T00:00:00.000Z",
+                  "serviceCenterId": 1,
+                  "exceptionId": null,
+                  "createdAt": "2026-03-25T03:45:39.637Z",
+                  "updatedAt": "2026-03-25T03:45:39.637Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                }
+              ]
+            }
+          }
+
+docs: Close manifest (no further edits). JWT + manifest_modify or manifest_all.

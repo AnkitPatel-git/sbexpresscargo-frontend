@@ -100,7 +100,7 @@ export default function ExceptionPage() {
                         Manage delivery exceptions, statuses, and tracking codes.
                     </p>
                 </div>
-                <PermissionGuard permission="exception_master_add">
+                <PermissionGuard permission="master.exception.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Exception
                     </Button>
@@ -185,12 +185,12 @@ export default function ExceptionPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="exception_master_modify">
+                                                            <PermissionGuard permission="master.exception.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(exception)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="exception_master_delete">
+                                                            <PermissionGuard permission="master.exception.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(exception.id)}
@@ -219,13 +219,13 @@ export default function ExceptionPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= data.meta.totalPages}
                         >
                             Next
                         </Button>

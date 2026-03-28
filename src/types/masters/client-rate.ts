@@ -1,14 +1,39 @@
 export interface ClientRate {
     id: number;
     fromDate: string;
-    customer: string;
+    customerId: number;
+    customer?: {
+        id: number;
+        code: string;
+        name: string;
+    };
     origin: string;
-    vendor: string;
-    product: string;
-    zone: string;
-    country: string;
+    vendorId: number;
+    vendor?: {
+        id: number;
+        vendorCode: string;
+        vendorName: string;
+    };
+    productId: number;
+    product?: {
+        id: number;
+        productCode: string;
+        productName: string;
+    };
+    zoneId: number;
+    zone?: {
+        id: number;
+        zoneCode: string;
+        zoneName: string;
+    };
+    countryId: number;
+    country?: {
+        id: number;
+        code: string;
+        name: string;
+    };
     destination: string;
-    service: string;
+    service: 'AIR' | 'SURFACE' | 'EXPRESS' | 'STANDARD' | string;
     contractNo: string;
     rateValue: string | number;
     createdAt: string;
@@ -21,14 +46,14 @@ export interface ClientRate {
 
 export interface ClientRateFormData {
     fromDate: string;
-    customer: string;
+    customerCode: string;
     origin: string;
-    vendor: string;
-    product: string;
-    zone: string;
-    country: string;
+    vendorCode: string;
+    productCode: string;
+    zoneCode: string;
+    countryCode: string;
     destination: string;
-    service: string;
+    service: 'AIR' | 'SURFACE' | 'EXPRESS' | 'STANDARD';
     contractNo: string;
     rateValue: number;
 }
@@ -37,10 +62,12 @@ export interface ClientRateListResponse {
     success: boolean;
     message: string;
     data: ClientRate[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface ClientRateSingleResponse {

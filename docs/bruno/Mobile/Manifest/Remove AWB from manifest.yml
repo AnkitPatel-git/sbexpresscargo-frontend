@@ -1,0 +1,20 @@
+info:
+  name: Remove AWB from manifest
+  type: http
+  seq: 8
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/mobile/manifest/{{mobileManifestId}}/awb/{{mobileAwbNo}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: mobile.manifest.update

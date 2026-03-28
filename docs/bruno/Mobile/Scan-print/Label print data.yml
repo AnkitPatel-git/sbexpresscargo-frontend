@@ -1,0 +1,20 @@
+info:
+  name: Label print data
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/mobile/scan-print/{{mobileAwbNo}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: mobile.scan-print.read

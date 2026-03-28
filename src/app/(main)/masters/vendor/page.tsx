@@ -100,7 +100,7 @@ export default function VendorPage() {
                         Manage vendors, their contact details, and account statuses.
                     </p>
                 </div>
-                <PermissionGuard permission="vendor_master_add">
+                <PermissionGuard permission="master.vendor.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Vendor
                     </Button>
@@ -158,12 +158,12 @@ export default function VendorPage() {
                                                 <TableCell>{vendor.contactPerson}</TableCell>
                                                 <TableCell>{vendor.city}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={vendor.status === "Active" ? "success" : "secondary"} className={
-                                                        vendor.status === "Active"
+                                                    <Badge variant={vendor.status === "ACTIVE" ? "success" : "secondary"} className={
+                                                        vendor.status === "ACTIVE"
                                                             ? "bg-green-100 text-green-800 border-green-200"
                                                             : "bg-gray-100 text-gray-800 border-gray-200"
                                                     }>
-                                                        {vendor.status}
+                                                        {vendor.status === 'ACTIVE' ? "Active" : "Inactive"}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -177,12 +177,12 @@ export default function VendorPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="vendor_master_modify">
+                                                            <PermissionGuard permission="master.vendor.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(vendor)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="vendor_master_delete">
+                                                            <PermissionGuard permission="master.vendor.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(vendor.id)}
@@ -211,13 +211,13 @@ export default function VendorPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

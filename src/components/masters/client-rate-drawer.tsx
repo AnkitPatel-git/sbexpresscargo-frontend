@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect } from 'react'
-import { useForm, Resolver } from 'react-hook-form'
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from "@/lib/utils"
 import {
     Sheet,
     SheetContent,
@@ -21,6 +23,19 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -34,21 +49,27 @@ import { clientRateService } from '@/services/masters/client-rate-service'
 import { customerService } from '@/services/masters/customer-service'
 import { productService } from '@/services/masters/product-service'
 import { countryService } from '@/services/masters/country-service'
+import { vendorService } from '@/services/masters/vendor-service'
+import { zoneService } from '@/services/masters/zone-service'
 import { ClientRate, ClientRateFormData } from '@/types/masters/client-rate'
 
 const clientRateSchema = z.object({
     fromDate: z.string().min(1, "From date is required"),
-    customer: z.string().min(1, "Customer is required"),
+    customerCode: z.string().min(1, "Customer is required"),
     origin: z.string().min(1, "Origin is required"),
-    vendor: z.string().min(1, "Vendor is required"),
-    product: z.string().min(1, "Product is required"),
-    zone: z.string().min(1, "Zone is required"),
-    country: z.string().min(1, "Country is required"),
+    vendorCode: z.string().min(1, "Vendor is required"),
+    productCode: z.string().min(1, "Product is required"),
+    zoneCode: z.string().min(1, "Zone is required"),
+    countryCode: z.string().min(1, "Country is required"),
     destination: z.string().min(1, "Destination is required"),
-    service: z.string().min(1, "Service is required"),
+    service: z.enum(['AIR', 'SURFACE', 'EXPRESS', 'STANDARD'], {
+        message: "Please select a valid service"
+    }),
     contractNo: z.string().min(1, "Contract No is required"),
     rateValue: z.number().min(0, "Rate must be positive"),
 })
+
+type ClientRateFormValues = z.infer<typeof clientRateSchema>
 
 interface ClientRateDrawerProps {
     open: boolean
@@ -59,6 +80,11 @@ interface ClientRateDrawerProps {
 export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerProps) {
     const queryClient = useQueryClient()
     const isEdit = !!rate
+    const [customerOpen, setCustomerOpen] = useState(false)
+    const [productOpen, setProductOpen] = useState(false)
+    const [countryOpen, setCountryOpen] = useState(false)
+    const [vendorOpen, setVendorOpen] = useState(false)
+    const [zoneOpen, setZoneOpen] = useState(false)
 
     const { data: customersData } = useQuery({
         queryKey: ['customers-list'],
@@ -78,18 +104,30 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
         enabled: open
     })
 
-    const form = useForm<ClientRateFormData>({
-        resolver: zodResolver(clientRateSchema) as Resolver<ClientRateFormData>,
+    const { data: vendorsData } = useQuery({
+        queryKey: ['vendors-list'],
+        queryFn: () => vendorService.getVendors({ limit: 100 }),
+        enabled: open
+    })
+
+    const { data: zonesData } = useQuery({
+        queryKey: ['zones-list'],
+        queryFn: () => zoneService.getZones({ limit: 100 }),
+        enabled: open
+    })
+
+    const form = useForm<ClientRateFormValues>({
+        resolver: zodResolver(clientRateSchema) as any,
         defaultValues: {
             fromDate: '',
-            customer: '',
+            customerCode: '',
             origin: '',
-            vendor: '',
-            product: '',
-            zone: '',
-            country: '',
+            vendorCode: '',
+            productCode: '',
+            zoneCode: '',
+            countryCode: '',
             destination: '',
-            service: '',
+            service: 'AIR',
             contractNo: '',
             rateValue: 0,
         }
@@ -98,41 +136,41 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
     useEffect(() => {
         if (rate) {
             form.reset({
-                fromDate: rate.fromDate || '',
-                customer: rate.customer || '',
+                fromDate: rate.fromDate ? new Date(rate.fromDate).toISOString().split('T')[0] : '',
+                customerCode: rate.customer?.code || '',
                 origin: rate.origin || '',
-                vendor: rate.vendor || '',
-                product: rate.product || '',
-                zone: rate.zone || '',
-                country: rate.country || '',
+                vendorCode: rate.vendor?.vendorCode || '',
+                productCode: rate.product?.productCode || '',
+                zoneCode: rate.zone?.zoneCode || '',
+                countryCode: rate.country?.code || '',
                 destination: rate.destination || '',
-                service: rate.service || '',
+                service: (rate.service as any) || 'AIR',
                 contractNo: rate.contractNo || '',
                 rateValue: typeof rate.rateValue === 'string' ? parseFloat(rate.rateValue) : rate.rateValue,
             })
         } else {
             form.reset({
                 fromDate: new Date().toISOString().split('T')[0],
-                customer: '',
+                customerCode: '',
                 origin: '',
-                vendor: '',
-                product: '',
-                zone: '',
-                country: '',
+                vendorCode: '',
+                productCode: '',
+                zoneCode: '',
+                countryCode: '',
                 destination: '',
-                service: '',
+                service: 'AIR',
                 contractNo: '',
                 rateValue: 0,
             })
         }
-    }, [rate, form])
+    }, [rate, form, open])
 
     const mutation = useMutation({
-        mutationFn: (data: ClientRateFormData) => {
+        mutationFn: (data: ClientRateFormValues) => {
             if (isEdit && rate) {
-                return clientRateService.updateClientRate(rate.id, data)
+                return clientRateService.updateClientRate(rate.id, data as any)
             }
-            return clientRateService.createClientRate(data)
+            return clientRateService.createClientRate(data as any)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['client-rates'] })
@@ -145,7 +183,7 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
         }
     })
 
-    function onSubmit(data: ClientRateFormData) {
+    function onSubmit(data: ClientRateFormValues) {
         mutation.mutate(data)
     }
 
@@ -192,24 +230,61 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
 
                             <FormField
                                 control={form.control}
-                                name="customer"
+                                name="customerCode"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="flex flex-col">
                                         <FormLabel>Customer</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select customer" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {customersData?.data?.map((cust) => (
-                                                    <SelectItem key={cust.id} value={cust.name}>
-                                                        {cust.name} ({cust.code})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                            "w-full justify-between font-normal",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        {field.value
+                                                            ? customersData?.data?.find(
+                                                                (cust) => cust.code === field.value
+                                                            )?.name
+                                                            : "Select customer"}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search customer..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No customer found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {customersData?.data?.map((cust) => (
+                                                                <CommandItem
+                                                                    value={cust.code}
+                                                                    key={cust.id}
+                                                                    onSelect={() => {
+                                                                        form.setValue("customerCode", cust.code)
+                                                                        setCustomerOpen(false)
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            cust.code === field.value
+                                                                                ? "opacity-100"
+                                                                                : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {cust.name} ({cust.code})
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -218,24 +293,61 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="product"
+                                    name="productCode"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>Product</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select product" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {productsData?.data?.map((prod) => (
-                                                        <SelectItem key={prod.id} value={prod.productName}>
-                                                            {prod.productName}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <Popover open={productOpen} onOpenChange={setProductOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between font-normal",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? productsData?.data?.find(
+                                                                    (prod) => prod.productCode === field.value
+                                                                )?.productName
+                                                                : "Select product"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search product..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No product found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {productsData?.data?.map((prod) => (
+                                                                    <CommandItem
+                                                                        value={prod.productCode}
+                                                                        key={prod.id}
+                                                                        onSelect={() => {
+                                                                            form.setValue("productCode", prod.productCode)
+                                                                            setProductOpen(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                prod.productCode === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {prod.productName}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -246,9 +358,19 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Service</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. Express, Economy" {...field} />
-                                            </FormControl>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select service type" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="AIR">AIR</SelectItem>
+                                                    <SelectItem value="SURFACE">SURFACE</SelectItem>
+                                                    <SelectItem value="EXPRESS">EXPRESS</SelectItem>
+                                                    <SelectItem value="STANDARD">STANDARD</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -287,37 +409,122 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="country"
+                                    name="countryCode"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>Country</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select country" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {countriesData?.data?.map((c) => (
-                                                        <SelectItem key={c.id} value={c.name}>
-                                                            {c.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between font-normal",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? countriesData?.data?.find(
+                                                                    (c) => c.code === field.value
+                                                                )?.name
+                                                                : "Select country"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search country..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No country found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {countriesData?.data?.map((c) => (
+                                                                    <CommandItem
+                                                                        value={c.code}
+                                                                        key={c.id}
+                                                                        onSelect={() => {
+                                                                            form.setValue("countryCode", c.code)
+                                                                            setCountryOpen(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                c.code === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {c.name}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="zone"
+                                    name="zoneCode"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>Zone</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. USA East, UK South" {...field} />
-                                            </FormControl>
+                                            <Popover open={zoneOpen} onOpenChange={setZoneOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between font-normal",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? zonesData?.data?.find(
+                                                                    (z) => z.code === field.value
+                                                                )?.name
+                                                                : "Select zone"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search zone..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No zone found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {zonesData?.data?.map((z: any) => (
+                                                                    <CommandItem
+                                                                        value={z.code}
+                                                                        key={z.id}
+                                                                        onSelect={() => {
+                                                                            form.setValue("zoneCode", z.code)
+                                                                            setZoneOpen(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                z.code === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {z.name} ({z.code})
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -327,13 +534,61 @@ export function ClientRateDrawer({ open, onOpenChange, rate }: ClientRateDrawerP
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="vendor"
+                                    name="vendorCode"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>Vendor</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Vendor name" {...field} />
-                                            </FormControl>
+                                            <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between font-normal",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? vendorsData?.data?.find(
+                                                                    (v) => v.vendorCode === field.value
+                                                                )?.vendorName
+                                                                : "Select vendor"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search vendor..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No vendor found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {vendorsData?.data?.map((v: any) => (
+                                                                    <CommandItem
+                                                                        value={v.vendorCode}
+                                                                        key={v.id}
+                                                                        onSelect={() => {
+                                                                            form.setValue("vendorCode", v.vendorCode)
+                                                                            setVendorOpen(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                v.vendorCode === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {v.vendorName} ({v.vendorCode})
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                     )}

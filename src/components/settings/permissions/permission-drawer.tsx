@@ -57,8 +57,8 @@ export function PermissionDrawer({ open, onOpenChange, permission }: PermissionD
         if (permission) {
             form.reset({
                 name: permission.name,
-                underMenu: permission.underMenu,
-                description: permission.description,
+                underMenu: permission.subModule || permission.underMenu || "",
+                description: permission.description || "",
             })
         } else {
             form.reset({

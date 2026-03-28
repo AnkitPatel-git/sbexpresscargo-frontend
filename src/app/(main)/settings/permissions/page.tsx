@@ -91,7 +91,7 @@ export default function PermissionsPage() {
     }
 
     const permissions = data?.data || []
-    const totalPages = data?.totalPages || 1
+    const totalPages = data?.meta?.totalPages || 1
 
     return (
         <div className="space-y-6">
@@ -103,7 +103,7 @@ export default function PermissionsPage() {
                     </p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <PermissionGuard permission="permission_add">
+                    <PermissionGuard permission="master.permission.create">
                         <Button onClick={handleCreate}>
                             <Plus className="mr-2 h-4 w-4" /> Create Permission
                         </Button>
@@ -152,7 +152,7 @@ export default function PermissionsPage() {
                                 <TableRow key={permission.id}>
                                     <TableCell className="font-medium whitespace-normal break-words min-w-[150px]">{permission.name}</TableCell>
                                     <TableCell className="whitespace-normal break-all min-w-[150px]"><code>{permission.identifier}</code></TableCell>
-                                    <TableCell className="whitespace-nowrap">{permission.underMenu}</TableCell>
+                                    <TableCell className="whitespace-nowrap">{permission.subModule || permission.underMenu}</TableCell>
                                     <TableCell className="whitespace-normal break-words min-w-[250px]">{permission.description}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
@@ -170,12 +170,12 @@ export default function PermissionsPage() {
                                                     Copy Identifier
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
-                                                <PermissionGuard permission="permission_modify">
+                                                <PermissionGuard permission="master.permission.update">
                                                     <DropdownMenuItem onClick={() => handleEdit(permission)}>
                                                         <Edit className="mr-2 h-4 w-4" /> Edit
                                                     </DropdownMenuItem>
                                                 </PermissionGuard>
-                                                <PermissionGuard permission="permission_delete">
+                                                <PermissionGuard permission="master.permission.delete">
                                                     <DropdownMenuItem
                                                         className="text-red-600"
                                                         onClick={() => handleDeleteRequest(permission.id)}

@@ -25,6 +25,11 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - `postman/`: API collection for backend integration.
 - `docs/`: Project documentation.
 
+## Important References
+- [Project Overview](#project-overview)
+- [API Changes Context](file:///Users/divesh/Documents/Projects/Doja/courier/sbexpresscargo-frontend/docs/api_changes_context.md)
+- [Design Tokens](#design-tokens)
+
 ## 🗺️ Routes
 - `/`: Redirects to `/login` (Protected if token exists).
 - `/login`: User authentication interface (Redirects to `/dashboard` if authenticated).
@@ -127,9 +132,16 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
   - Individual pages/routes provide their specific title (e.g., "Login", "Dashboard") which is then formatted as `[Title] | SB Express Cargo`.
   - **Master Screen Convention**: All master listing pages must use the "Master" suffix in their page title and heading (e.g., "Consignee Master", "State Master").
   - For `use client` pages, meta-data is defined in a sibling `layout.tsx` file.
-- **Search Debouncing**: 
+- **Search Debouncing**:
   - All search fields implement a 500ms debounce using the `useDebounce` hook.
   - This prevents excessive API calls during typing and improves overall application performance.
+
+- **Searchable Dropdowns (Combobox)**:
+  - **Requirement**: Use the **Searchable Combobox** pattern (`Popover` + `Command` from Shadcn) for all dropdowns containing more than 10 items or those referencing other Master entities (e.g., Country, Vendor, Branch).
+  - **Searchability**: Users must be able to filter options by typing within the dropdown.
+  - **Long Text Handling**: The `PopoverTrigger` (Button) must utilize the `truncate` utility class on the label `<span>` to prevent UI overlapping in multi-column layouts (e.g., `grid-cols-2`).
+  - **Loading States**: Always implement `disabled` states and "Loading..." placeholders while the back-end data is being fetched via TanStack Query.
+  - **Defensive Rendering**: Always use `Array.isArray()` checks before mapping over data and provide a "No items found" fallback using `CommandEmpty`.
 
 - **Master Screen Consistency**: 
   - All master listing pages follow a unified pattern for UI and behavior.

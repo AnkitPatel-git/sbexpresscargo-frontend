@@ -99,7 +99,7 @@ export default function ServiceablePincodesPage() {
                         Manage serviceable pincodes, destinations, and ODA statuses.
                     </p>
                 </div>
-                <PermissionGuard permission="serviceable_pincode_add">
+                <PermissionGuard permission="master.area.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Pincode
                     </Button>
@@ -155,7 +155,7 @@ export default function ServiceablePincodesPage() {
                                             <TableRow key={pincode.id} className="hover:bg-gray-50/50">
                                                 <TableCell className="font-medium text-blue-600">{pincode.pinCode}</TableCell>
                                                 <TableCell className="font-medium">{pincode.pinCodeName}</TableCell>
-                                                <TableCell>{pincode.serviceCenter}</TableCell>
+                                                <TableCell>{pincode.serviceCenter?.name || pincode.serviceCenter?.code || 'N/A'}</TableCell>
                                                 <TableCell>{pincode.destination}</TableCell>
                                                 <TableCell className="text-center">
                                                     {pincode.serviceable ? (
@@ -182,12 +182,12 @@ export default function ServiceablePincodesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="serviceable_pincode_modify">
+                                                            <PermissionGuard permission="master.area.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(pincode)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="serviceable_pincode_delete">
+                                                            <PermissionGuard permission="master.area.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(pincode.id)}
@@ -216,13 +216,13 @@ export default function ServiceablePincodesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            onClick={() => setPage((prev) => Math.max(prev + 1, 1))}
+                            disabled={!data || page >= (data?.meta?.totalPages || 0)}
                         >
                             Next
                         </Button>

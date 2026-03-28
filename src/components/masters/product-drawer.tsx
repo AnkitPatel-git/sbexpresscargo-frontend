@@ -63,13 +63,13 @@ export function ProductDrawer({ open, onOpenChange, product }: ProductDrawerProp
         defaultValues: {
             productCode: "",
             productName: "",
-            productType: "domestic",
+            productType: "DOMESTIC",
             productService: "",
             fuelCharge: true,
             gstReverse: false,
             docType: "DOX",
             status: "ACTIVE",
-            groupType: "air",
+            groupType: "AIR",
         },
     })
 
@@ -90,13 +90,13 @@ export function ProductDrawer({ open, onOpenChange, product }: ProductDrawerProp
             form.reset({
                 productCode: "",
                 productName: "",
-                productType: "domestic",
+                productType: "DOMESTIC",
                 productService: "",
                 fuelCharge: true,
                 gstReverse: false,
                 docType: "DOX",
                 status: "ACTIVE",
-                groupType: "air",
+                groupType: "AIR",
             })
         }
     }, [product, form])
@@ -174,8 +174,10 @@ export function ProductDrawer({ open, onOpenChange, product }: ProductDrawerProp
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="domestic">Domestic</SelectItem>
-                                                    <SelectItem value="international">International</SelectItem>
+                                                    <SelectItem value="DOMESTIC">Domestic</SelectItem>
+                                                    <SelectItem value="INTERNATIONAL">International</SelectItem>
+                                                    <SelectItem value="IMPORT">Import</SelectItem>
+                                                    <SelectItem value="LOCAL">Local</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -195,9 +197,10 @@ export function ProductDrawer({ open, onOpenChange, product }: ProductDrawerProp
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="air">Air</SelectItem>
-                                                    <SelectItem value="surface">Surface</SelectItem>
-                                                    <SelectItem value="sea">Sea</SelectItem>
+                                                    <SelectItem value="AIR">Air</SelectItem>
+                                                    <SelectItem value="SURFACE">Surface</SelectItem>
+                                                    <SelectItem value="TRAIN">Train</SelectItem>
+                                                    <SelectItem value="ALL">All</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -221,7 +224,7 @@ export function ProductDrawer({ open, onOpenChange, product }: ProductDrawerProp
                                                 </FormControl>
                                                 <SelectContent>
                                                     <SelectItem value="DOX">DOX</SelectItem>
-                                                    <SelectItem value="NON-DOX">NON-DOX</SelectItem>
+                                                    <SelectItem value="NDOX">NDOX</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

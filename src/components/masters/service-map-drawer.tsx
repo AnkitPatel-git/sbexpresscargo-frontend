@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from "@/lib/utils"
 import {
     Sheet,
     SheetContent,
@@ -30,18 +32,31 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { serviceMapService } from '@/services/masters/service-map-service'
 import { vendorService } from '@/services/masters/vendor-service'
 import { ServiceMap, ServiceMapFormData } from '@/types/masters/service-map'
 
 const serviceMapSchema = z.object({
-    vendor: z.string().min(1, "Vendor is required"),
-    serviceType: z.string().min(1, "Service type is required"),
-    billingVendor: z.string().min(1, "Billing vendor is required"),
+    vendorCode: z.string().min(1, "Vendor is required"),
+    serviceType: z.enum(['AIR', 'SURFACE', 'EXPRESS']),
+    billingVendorCode: z.string().min(1, "Billing vendor is required"),
     minWeight: z.coerce.number().min(0, "Min weight must be at least 0"),
     maxWeight: z.coerce.number().min(0, "Max weight must be at least 0"),
-    status: z.string().min(1, "Status is required"),
+    status: z.enum(['ACTIVE', 'INACTIVE']),
     vendorLink: z.string().optional().or(z.literal('')),
     isSinglePiece: z.boolean(),
 })
@@ -57,6 +72,8 @@ interface ServiceMapDrawerProps {
 export function ServiceMapDrawer({ open, onOpenChange, serviceMap }: ServiceMapDrawerProps) {
     const queryClient = useQueryClient()
     const isEdit = !!serviceMap
+    const [vendorOpen, setVendorOpen] = useState(false)
+    const [billingVendorOpen, setBillingVendorOpen] = useState(false)
 
     const { data: vendorsData } = useQuery({
         queryKey: ['vendors-list'],
@@ -67,12 +84,12 @@ export function ServiceMapDrawer({ open, onOpenChange, serviceMap }: ServiceMapD
     const form = useForm<ServiceMapFormValues>({
         resolver: zodResolver(serviceMapSchema) as Resolver<ServiceMapFormValues>,
         defaultValues: {
-            vendor: '',
-            serviceType: 'Express',
-            billingVendor: '',
+            vendorCode: '',
+            serviceType: 'EXPRESS',
+            billingVendorCode: '',
             minWeight: 0,
             maxWeight: 0,
-            status: 'Active',
+            status: 'ACTIVE',
             vendorLink: '',
             isSinglePiece: false,
         }
@@ -80,10 +97,14 @@ export function ServiceMapDrawer({ open, onOpenChange, serviceMap }: ServiceMapD
 
     useEffect(() => {
         if (serviceMap) {
+            // Find vendor codes by ID from the vendors list
+            const vendor = vendorsData?.data?.find(v => v.id === serviceMap.vendorId)
+            const billingVendor = vendorsData?.data?.find(v => v.id === serviceMap.billingVendorId)
+
             form.reset({
-                vendor: serviceMap.vendor,
+                vendorCode: vendor?.vendorCode || '',
                 serviceType: serviceMap.serviceType,
-                billingVendor: serviceMap.billingVendor,
+                billingVendorCode: billingVendor?.vendorCode || '',
                 minWeight: Number(serviceMap.minWeight),
                 maxWeight: Number(serviceMap.maxWeight),
                 status: serviceMap.status,
@@ -92,17 +113,17 @@ export function ServiceMapDrawer({ open, onOpenChange, serviceMap }: ServiceMapD
             })
         } else {
             form.reset({
-                vendor: '',
-                serviceType: 'Express',
-                billingVendor: '',
+                vendorCode: '',
+                serviceType: 'EXPRESS',
+                billingVendorCode: '',
                 minWeight: 0,
                 maxWeight: 0,
-                status: 'Active',
+                status: 'ACTIVE',
                 vendorLink: '',
                 isSinglePiece: false,
             })
         }
-    }, [serviceMap, form])
+    }, [serviceMap, form, vendorsData])
 
     const mutation = useMutation({
         mutationFn: (data: ServiceMapFormValues) => {
@@ -141,24 +162,63 @@ export function ServiceMapDrawer({ open, onOpenChange, serviceMap }: ServiceMapD
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="vendor"
+                                    name="vendorCode"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>Vendor</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select vendor" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {vendorsData?.data?.map((vendor) => (
-                                                        <SelectItem key={vendor.id} value={vendor.vendorName}>
-                                                            {vendor.vendorName}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between font-normal",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            <span className="truncate">
+                                                                {field.value
+                                                                    ? vendorsData?.data?.find(
+                                                                        (vendor) => vendor.vendorCode === field.value
+                                                                    )?.vendorName
+                                                                    : "Select vendor"}
+                                                            </span>
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search vendor..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No vendor found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {vendorsData?.data?.map((vendor) => (
+                                                                    <CommandItem
+                                                                        key={vendor.id}
+                                                                        value={vendor.vendorName}
+                                                                        onSelect={() => {
+                                                                            form.setValue("vendorCode", vendor.vendorCode)
+                                                                            setVendorOpen(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                vendor.vendorCode === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {vendor.vendorName} ({vendor.vendorCode})
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -176,9 +236,9 @@ export function ServiceMapDrawer({ open, onOpenChange, serviceMap }: ServiceMapD
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Express">Express</SelectItem>
-                                                    <SelectItem value="Surface">Surface</SelectItem>
-                                                    <SelectItem value="Air">Air</SelectItem>
+                                                    <SelectItem value="EXPRESS">EXPRESS</SelectItem>
+                                                    <SelectItem value="SURFACE">SURFACE</SelectItem>
+                                                    <SelectItem value="AIR">AIR</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -189,24 +249,63 @@ export function ServiceMapDrawer({ open, onOpenChange, serviceMap }: ServiceMapD
 
                             <FormField
                                 control={form.control}
-                                name="billingVendor"
+                                name="billingVendorCode"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="flex flex-col">
                                         <FormLabel>Billing Vendor</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select billing vendor" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {vendorsData?.data?.map((vendor) => (
-                                                    <SelectItem key={vendor.id} value={vendor.vendorName}>
-                                                        {vendor.vendorName}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Popover open={billingVendorOpen} onOpenChange={setBillingVendorOpen}>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                            "w-full justify-between font-normal",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <span className="truncate">
+                                                            {field.value
+                                                                ? vendorsData?.data?.find(
+                                                                    (vendor) => vendor.vendorCode === field.value
+                                                                )?.vendorName
+                                                                : "Select billing vendor"}
+                                                        </span>
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search billing vendor..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No vendor found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {vendorsData?.data?.map((vendor) => (
+                                                                <CommandItem
+                                                                    key={vendor.id}
+                                                                    value={vendor.vendorName}
+                                                                    onSelect={() => {
+                                                                        form.setValue("billingVendorCode", vendor.vendorCode)
+                                                                        setBillingVendorOpen(false)
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            vendor.vendorCode === field.value
+                                                                                ? "opacity-100"
+                                                                                : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {vendor.vendorName} ({vendor.vendorCode})
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -269,8 +368,8 @@ export function ServiceMapDrawer({ open, onOpenChange, serviceMap }: ServiceMapD
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Active">Active</SelectItem>
-                                                    <SelectItem value="Inactive">Inactive</SelectItem>
+                                                    <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                                                    <SelectItem value="INACTIVE">INACTIVE</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

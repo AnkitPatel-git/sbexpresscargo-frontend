@@ -99,7 +99,7 @@ export default function AreaPage() {
                         Manage areas, service centers, and destinations.
                     </p>
                 </div>
-                <PermissionGuard permission="area_master_add">
+                <PermissionGuard permission="master.area.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Area
                     </Button>
@@ -151,7 +151,7 @@ export default function AreaPage() {
                                         data?.data.map((area: Area) => (
                                             <TableRow key={area.id} className="hover:bg-gray-50/50">
                                                 <TableCell className="font-medium text-blue-600">{area.areaName}</TableCell>
-                                                <TableCell>{area.serviceCenter}</TableCell>
+                                                <TableCell>{typeof area.serviceCenter === 'object' ? area.serviceCenter.name : area.serviceCenter || area.serviceCenterId}</TableCell>
                                                 <TableCell>{area.destination}</TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
@@ -164,12 +164,12 @@ export default function AreaPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="area_master_modify">
+                                                            <PermissionGuard permission="master.area.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(area)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="area_master_delete">
+                                                            <PermissionGuard permission="master.area.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(area.id)}
@@ -198,13 +198,13 @@ export default function AreaPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

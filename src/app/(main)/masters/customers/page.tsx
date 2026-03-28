@@ -100,7 +100,7 @@ export default function CustomersPage() {
                         Manage customers, their contact details, and account statuses.
                     </p>
                 </div>
-                <PermissionGuard permission="customer_master_add">
+                <PermissionGuard permission="master.customer.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Customer
                     </Button>
@@ -164,8 +164,8 @@ export default function CustomersPage() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant={customer.status === "Active" ? "success" : "secondary"} className={
-                                                        customer.status === "Active"
+                                                    <Badge variant={customer.status === "ACTIVE" ? "success" : "secondary"} className={
+                                                        customer.status === "ACTIVE"
                                                             ? "bg-green-100 text-green-800 border-green-200"
                                                             : "bg-gray-100 text-gray-800 border-gray-200"
                                                     }>
@@ -183,12 +183,12 @@ export default function CustomersPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="customer_master_modify">
+                                                            <PermissionGuard permission="master.customer.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(customer)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="customer_master_delete">
+                                                            <PermissionGuard permission="master.customer.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(customer.id)}
@@ -217,13 +217,13 @@ export default function CustomersPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

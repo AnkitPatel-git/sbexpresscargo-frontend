@@ -37,8 +37,8 @@ import { Charge } from '@/types/masters/charge'
 const chargeSchema = z.object({
     code: z.string().min(2, "Code must be at least 2 characters"),
     name: z.string().min(3, "Name must be at least 3 characters"),
-    chargeType: z.string().min(1, "Charge type is required"),
-    calculationBase: z.string().min(1, "Calculation base is required"),
+    chargeType: z.enum(['FREIGHT', 'AIRWAYBILL', 'FUEL_SURCHARGE', 'DOCUMENTATION', 'OTHER']),
+    calculationBase: z.enum(['CHARGE_WEIGHT', 'FLAT']),
     chargeRate: z.coerce.number().min(0, "Rate must be at least 0"),
     applyFuel: z.boolean(),
     applyTaxOnFuel: z.boolean(),
@@ -65,8 +65,8 @@ export function ChargeDrawer({ open, onOpenChange, charge }: ChargeDrawerProps) 
         defaultValues: {
             code: '',
             name: '',
-            chargeType: 'Freight',
-            calculationBase: 'Charge Weight',
+            chargeType: 'FREIGHT',
+            calculationBase: 'CHARGE_WEIGHT',
             chargeRate: 0,
             applyFuel: true,
             applyTaxOnFuel: true,
@@ -82,7 +82,7 @@ export function ChargeDrawer({ open, onOpenChange, charge }: ChargeDrawerProps) 
             form.reset({
                 code: charge.code,
                 name: charge.name,
-                chargeType: charge.chargeType || '',
+                chargeType: (charge.chargeType as any) || 'FREIGHT',
                 calculationBase: charge.calculationBase,
                 chargeRate: Number(charge.chargeRate),
                 applyFuel: charge.applyFuel,
@@ -96,8 +96,8 @@ export function ChargeDrawer({ open, onOpenChange, charge }: ChargeDrawerProps) 
             form.reset({
                 code: '',
                 name: '',
-                chargeType: 'Freight',
-                calculationBase: 'Charge Weight',
+                chargeType: 'FREIGHT',
+                calculationBase: 'CHARGE_WEIGHT',
                 chargeRate: 0,
                 applyFuel: true,
                 applyTaxOnFuel: true,
@@ -186,9 +186,11 @@ export function ChargeDrawer({ open, onOpenChange, charge }: ChargeDrawerProps) 
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Freight">Freight</SelectItem>
-                                                    <SelectItem value="Other">Other</SelectItem>
-                                                    <SelectItem value="Service">Service</SelectItem>
+                                                    <SelectItem value="FREIGHT">FREIGHT</SelectItem>
+                                                    <SelectItem value="AIRWAYBILL">AIRWAYBILL</SelectItem>
+                                                    <SelectItem value="FUEL_SURCHARGE">FUEL SURCHARGE</SelectItem>
+                                                    <SelectItem value="DOCUMENTATION">DOCUMENTATION</SelectItem>
+                                                    <SelectItem value="OTHER">OTHER</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -208,10 +210,8 @@ export function ChargeDrawer({ open, onOpenChange, charge }: ChargeDrawerProps) 
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Charge Weight">Charge Weight</SelectItem>
-                                                    <SelectItem value="Actual Weight">Actual Weight</SelectItem>
-                                                    <SelectItem value="Fixed">Fixed</SelectItem>
-                                                    <SelectItem value="Pieces">Pieces</SelectItem>
+                                                    <SelectItem value="CHARGE_WEIGHT">CHARGE WEIGHT</SelectItem>
+                                                    <SelectItem value="FLAT">FLAT</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

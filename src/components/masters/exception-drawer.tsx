@@ -32,12 +32,12 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { exceptionService } from '@/services/masters/exception-service'
-import { ExceptionMaster } from '@/types/masters/exception'
+import { ExceptionMaster, ExceptionType } from '@/types/masters/exception'
 
 const exceptionSchema = z.object({
     code: z.string().min(2, "Code must be at least 2 characters"),
     name: z.string().min(3, "Name must be at least 3 characters"),
-    type: z.string().min(1, "Type is required"),
+    type: z.enum(['UNDELIVERED', 'IN_TRANSIT', 'DELAYED', 'DELIVERED'] as const),
     inscan: z.boolean(),
     showOnMobileApps: z.boolean(),
 })
@@ -59,7 +59,7 @@ export function ExceptionDrawer({ open, onOpenChange, exception }: ExceptionDraw
         defaultValues: {
             code: '',
             name: '',
-            type: 'Un-Delivered',
+            type: 'UNDELIVERED',
             inscan: true,
             showOnMobileApps: true,
         }
@@ -78,7 +78,7 @@ export function ExceptionDrawer({ open, onOpenChange, exception }: ExceptionDraw
             form.reset({
                 code: '',
                 name: '',
-                type: 'Un-Delivered',
+                type: 'UNDELIVERED',
                 inscan: true,
                 showOnMobileApps: true,
             })
@@ -160,9 +160,10 @@ export function ExceptionDrawer({ open, onOpenChange, exception }: ExceptionDraw
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="Un-Delivered">Un-Delivered</SelectItem>
-                                                <SelectItem value="In-Transit">In-Transit</SelectItem>
-                                                <SelectItem value="Delayed">Delayed</SelectItem>
+                                                <SelectItem value="UNDELIVERED">UNDELIVERED</SelectItem>
+                                                <SelectItem value="IN_TRANSIT">IN_TRANSIT</SelectItem>
+                                                <SelectItem value="DELAYED">DELAYED</SelectItem>
+                                                <SelectItem value="DELIVERED">DELIVERED</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

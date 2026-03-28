@@ -100,7 +100,7 @@ export default function StatesPage() {
                         Manage states, products types, and zone mappings.
                     </p>
                 </div>
-                <PermissionGuard permission="state_master_add">
+                <PermissionGuard permission="master.state.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create State
                     </Button>
@@ -156,7 +156,7 @@ export default function StatesPage() {
                                             <TableRow key={state.id} className="hover:bg-gray-50/50">
                                                 <TableCell className="font-medium text-blue-600">{state.stateCode}</TableCell>
                                                 <TableCell className="font-medium">{state.stateName}</TableCell>
-                                                <TableCell>{state.productType}</TableCell>
+                                                <TableCell className="uppercase">{state.productType}</TableCell>
                                                 <TableCell>{state.zone?.name || "-"}</TableCell>
                                                 <TableCell>{state.gstAlias}</TableCell>
                                                 <TableCell>
@@ -179,12 +179,12 @@ export default function StatesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="state_master_modify">
+                                                            <PermissionGuard permission="master.state.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(state)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="state_master_delete">
+                                                            <PermissionGuard permission="master.state.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(state.id)}
@@ -213,13 +213,13 @@ export default function StatesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

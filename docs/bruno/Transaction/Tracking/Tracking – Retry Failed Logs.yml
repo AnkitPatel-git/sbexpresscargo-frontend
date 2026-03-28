@@ -1,0 +1,28 @@
+info:
+  name: Tracking – Retry Failed Logs
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/tracking/retry-failed"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "limit": 50
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Retry failed carrier logs. JWT + tracking_modify or tracking_all.

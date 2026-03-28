@@ -19,12 +19,14 @@ export interface BankFormData {
 
 export interface BankListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Bank[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface BankSingleResponse {

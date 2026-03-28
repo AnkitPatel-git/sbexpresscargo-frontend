@@ -1,0 +1,45 @@
+info:
+  name: Rate Master - Update
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/rate-master/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "updateType": "awb_entry_rate",
+        "fromDate": "2026-03-01",
+        "toDate": "2026-03-31",
+        "serviceCenter": "VASAI",
+        "origin": "MUMBAI",
+        "customer": "CUST01",
+        "product": "EXPRESS",
+        "vendor": "VEND01",
+        "destination": "DELHI",
+        "paymentType": "credit",
+        "zeroContract": false,
+        "rateValue": 26.0,
+        "taxValue": 18,
+        "fuelValue": 5
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Update rate master by id. JWT + rate_master_modify/all.
+
+  Mandatory: (none - all optional for partial update)
+  Optional: updateType, fromDate, toDate, serviceCenter, origin, customer, product, vendor, destination, paymentType, zeroContract, rateValue, taxValue, fuelValue

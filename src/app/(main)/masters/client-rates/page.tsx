@@ -99,7 +99,7 @@ export default function ClientRatesPage() {
                         Manage custom rates for clients based on products, zones, and destinations.
                     </p>
                 </div>
-                <PermissionGuard permission="client_rate_master_add">
+                <PermissionGuard permission="master.client_rate.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Rate
                     </Button>
@@ -153,13 +153,15 @@ export default function ClientRatesPage() {
                                     ) : (
                                         data?.data.map((rate) => (
                                             <TableRow key={rate.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{rate.customer}</TableCell>
-                                                <TableCell>{rate.product}</TableCell>
+                                                <TableCell className="font-medium text-blue-600">
+                                                    {rate.customer?.name || `ID: ${rate.customerId}`}
+                                                </TableCell>
+                                                <TableCell>{rate.product?.productName || `ID: ${rate.productId}`}</TableCell>
                                                 <TableCell>{rate.origin}</TableCell>
                                                 <TableCell>{rate.destination}</TableCell>
                                                 <TableCell>{rate.service}</TableCell>
                                                 <TableCell className="font-semibold">
-                                                    {typeof rate.rateValue === 'string' ? parseFloat(rate.rateValue).toFixed(2) : rate.rateValue.toFixed(2)}
+                                                    {typeof rate.rateValue === 'string' ? parseFloat(rate.rateValue).toFixed(2) : (rate.rateValue?.toFixed(2) || '0.00')}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
@@ -172,12 +174,12 @@ export default function ClientRatesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="client_rate_master_modify">
+                                                            <PermissionGuard permission="master.client_rate.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(rate)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="client_rate_master_delete">
+                                                            <PermissionGuard permission="master.client_rate.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(rate.id)}
@@ -206,13 +208,13 @@ export default function ClientRatesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

@@ -100,7 +100,7 @@ export default function BanksPage() {
                         Manage banks and their statuses for financial operations.
                     </p>
                 </div>
-                <PermissionGuard permission="bank_master_add">
+                <PermissionGuard permission="master.bank.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Bank
                     </Button>
@@ -173,12 +173,12 @@ export default function BanksPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="bank_master_modify">
+                                                            <PermissionGuard permission="master.bank.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(bank)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="bank_master_delete">
+                                                            <PermissionGuard permission="master.bank.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(bank.id)}
@@ -207,13 +207,13 @@ export default function BanksPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

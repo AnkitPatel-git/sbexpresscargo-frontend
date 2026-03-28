@@ -67,7 +67,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
         defaultValues: {
             stateCode: '',
             stateName: '',
-            productType: 'Domestic',
+            productType: 'DOMESTIC',
             zoneId: 0,
             gstAlias: '',
             unionTerritory: false,
@@ -88,7 +88,7 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
             form.reset({
                 stateCode: '',
                 stateName: '',
-                productType: 'Domestic',
+                productType: 'DOMESTIC',
                 zoneId: 0,
                 gstAlias: '',
                 unionTerritory: false,
@@ -188,8 +188,9 @@ export function StateDrawer({ open, onOpenChange, state }: StateDrawerProps) {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Domestic">Domestic</SelectItem>
-                                                    <SelectItem value="International">International</SelectItem>
+                                                    <SelectItem value="DOMESTIC">Domestic</SelectItem>
+                                                    <SelectItem value="INTERNATIONAL">International</SelectItem>
+                                                    <SelectItem value="LOCAL">Local</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

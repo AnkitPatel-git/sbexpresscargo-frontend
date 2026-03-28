@@ -100,7 +100,7 @@ export default function ZonesPage() {
                         Manage geographic zones and shipping regions.
                     </p>
                 </div>
-                <PermissionGuard permission="zone_master_add">
+                <PermissionGuard permission="master.area.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Zone
                     </Button>
@@ -157,7 +157,7 @@ export default function ZonesPage() {
                                                 <TableCell>{zone.country}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline" className="capitalize">
-                                                        {zone.zoneType}
+                                                        {zone.zoneType.toLowerCase()}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -171,12 +171,12 @@ export default function ZonesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="zone_master_modify">
+                                                            <PermissionGuard permission="master.area.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(zone)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="zone_master_delete">
+                                                            <PermissionGuard permission="master.area.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(zone.id)}
@@ -205,13 +205,13 @@ export default function ZonesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

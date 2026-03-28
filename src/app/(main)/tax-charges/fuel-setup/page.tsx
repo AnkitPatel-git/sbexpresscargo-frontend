@@ -101,7 +101,7 @@ export default function FuelSetupPage() {
                     </p>
                 </div>
                 {/* Adjust permissions below if needed. Currently assuming fuel_setup_add/modify/delete logic matches existing masters. */}
-                <PermissionGuard permission="fuel_setup_add">
+                <PermissionGuard permission="master.tax_charges.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Fuel Setup
                     </Button>
@@ -178,12 +178,12 @@ export default function FuelSetupPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="fuel_setup_modify">
+                                                            <PermissionGuard permission="master.tax_charges.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(fuelSetup)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="fuel_setup_delete">
+                                                            <PermissionGuard permission="master.tax_charges.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(fuelSetup.id)}
@@ -212,13 +212,13 @@ export default function FuelSetupPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= data.meta.totalPages}
                         >
                             Next
                         </Button>

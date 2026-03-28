@@ -58,7 +58,7 @@ export function CountryDrawer({ open, onOpenChange, country }: CountryDrawerProp
         defaultValues: {
             code: '',
             name: '',
-            weightUnit: 'Kgs',
+            weightUnit: 'KGS',
             currency: '',
             isdCode: '',
         }
@@ -77,7 +77,7 @@ export function CountryDrawer({ open, onOpenChange, country }: CountryDrawerProp
             form.reset({
                 code: '',
                 name: '',
-                weightUnit: 'Kgs',
+                weightUnit: 'KGS',
                 currency: '',
                 isdCode: '',
             })
@@ -160,8 +160,8 @@ export function CountryDrawer({ open, onOpenChange, country }: CountryDrawerProp
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Kgs">Kgs</SelectItem>
-                                                    <SelectItem value="Lbs">Lbs</SelectItem>
+                                                    <SelectItem value="KGS">KGS</SelectItem>
+                                                    <SelectItem value="LBS">LBS</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

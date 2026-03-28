@@ -1,11 +1,26 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from "@/lib/utils"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
 import {
     Sheet,
     SheetContent,
@@ -45,9 +60,9 @@ const customerSchema = z.object({
     telNo1: z.string().min(10, "Telephone must be at least 10 characters"),
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
-    status: z.string().min(1, "Status is required"),
-    customerType: z.string().min(1, "Customer type is required"),
-    registerType: z.string().min(1, "Register type is required"),
+    status: z.enum(['ACTIVE', 'INACTIVE']),
+    customerType: z.enum(['CUSTOMER', 'VENDOR', 'AGENT']),
+    registerType: z.enum(['REGISTERED', 'UNREGISTERED']),
     gstNo: z.string().min(15, "GST Number must be 15 characters"),
 })
 
@@ -62,8 +77,9 @@ interface CustomerDrawerProps {
 export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerProps) {
     const queryClient = useQueryClient()
     const isEdit = !!customer
+    const [stateOpen, setStateOpen] = useState(false)
 
-    const { data: statesData } = useQuery({
+    const { data: statesData } = useQuery<import('@/types/masters/state').StateListResponse>({
         queryKey: ['states-list'],
         queryFn: () => stateService.getStates({ limit: 100 }),
         enabled: open
@@ -82,9 +98,9 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
             telNo1: '',
             email: '',
             mobile: '',
-            status: 'Active',
-            customerType: 'Customer',
-            registerType: 'Registered',
+            status: 'ACTIVE',
+            customerType: 'CUSTOMER',
+            registerType: 'REGISTERED',
             gstNo: '',
         }
     })
@@ -119,9 +135,9 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                 telNo1: '',
                 email: '',
                 mobile: '',
-                status: 'Active',
-                customerType: 'Customer',
-                registerType: 'Registered',
+                status: 'ACTIVE',
+                customerType: 'CUSTOMER',
+                registerType: 'REGISTERED',
                 gstNo: '',
             })
         }
@@ -236,22 +252,59 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                     control={form.control}
                                     name="state"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>State</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select state" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {statesData?.data?.map((state) => (
-                                                        <SelectItem key={state.id} value={state.stateName}>
-                                                            {state.stateName}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-full justify-between font-normal",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? statesData?.data?.find(
+                                                                    (state) => state.stateName === field.value
+                                                                )?.stateName
+                                                                : "Select state"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search state..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No state found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {statesData?.data?.map((state) => (
+                                                                    <CommandItem
+                                                                        value={state.stateName}
+                                                                        key={state.id}
+                                                                        onSelect={() => {
+                                                                            form.setValue("state", state.stateName)
+                                                                            setStateOpen(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                state.stateName === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {state.stateName}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -327,9 +380,9 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Customer">Customer</SelectItem>
-                                                    <SelectItem value="Vendor">Vendor</SelectItem>
-                                                    <SelectItem value="Agent">Agent</SelectItem>
+                                                    <SelectItem value="CUSTOMER">Customer</SelectItem>
+                                                    <SelectItem value="VENDOR">Vendor</SelectItem>
+                                                    <SelectItem value="AGENT">Agent</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -349,8 +402,8 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Registered">Registered</SelectItem>
-                                                    <SelectItem value="Unregistered">Unregistered</SelectItem>
+                                                    <SelectItem value="REGISTERED">Registered</SelectItem>
+                                                    <SelectItem value="UNREGISTERED">Unregistered</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -370,8 +423,8 @@ export function CustomerDrawer({ open, onOpenChange, customer }: CustomerDrawerP
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Active">Active</SelectItem>
-                                                    <SelectItem value="Inactive">Inactive</SelectItem>
+                                                    <SelectItem value="ACTIVE">Active</SelectItem>
+                                                    <SelectItem value="INACTIVE">Inactive</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

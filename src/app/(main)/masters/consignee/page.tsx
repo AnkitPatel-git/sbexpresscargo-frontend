@@ -100,7 +100,7 @@ export default function ConsigneePage() {
                         Manage consignees, their contact details, and account statuses.
                     </p>
                 </div>
-                <PermissionGuard permission="consignee_master_add">
+                <PermissionGuard permission="master.consignee.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Consignee
                     </Button>
@@ -167,12 +167,12 @@ export default function ConsigneePage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="consignee_master_modify">
+                                                            <PermissionGuard permission="master.consignee.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(consignee)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="consignee_master_delete">
+                                                            <PermissionGuard permission="master.consignee.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(consignee.id)}
@@ -201,13 +201,13 @@ export default function ConsigneePage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

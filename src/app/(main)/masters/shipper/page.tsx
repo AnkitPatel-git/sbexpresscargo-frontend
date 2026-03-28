@@ -100,7 +100,7 @@ export default function ShipperPage() {
                         Manage shippers, their contact details, and account statuses.
                     </p>
                 </div>
-                <PermissionGuard permission="shipper_master_add">
+                <PermissionGuard permission="master.shipper.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Shipper
                     </Button>
@@ -167,12 +167,12 @@ export default function ShipperPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="shipper_master_modify">
+                                                            <PermissionGuard permission="master.shipper.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(shipper)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="shipper_master_delete">
+                                                            <PermissionGuard permission="master.shipper.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(shipper.id)}
@@ -201,13 +201,13 @@ export default function ShipperPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>

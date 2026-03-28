@@ -37,6 +37,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { serviceMapService } from "@/services/masters/service-map-service"
+import { vendorService } from "@/services/masters/vendor-service"
 import { ServiceMap } from "@/types/masters/service-map"
 import { ServiceMapDrawer } from "@/components/masters/service-map-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
@@ -53,10 +54,19 @@ export default function ServiceMapPage() {
     const [selectedServiceMap, setSelectedServiceMap] = useState<ServiceMap | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
+    const { data: vendorsData } = useQuery({
+        queryKey: ["vendors-list"],
+        queryFn: () => vendorService.getVendors({ limit: 100 }),
+    })
+
     const { data, isLoading } = useQuery({
         queryKey: ["service-maps", page, debouncedSearch],
         queryFn: () => serviceMapService.getServiceMaps({ page, limit, search: debouncedSearch }),
     })
+
+    const getVendorName = (id: number) => {
+        return vendorsData?.data?.find(v => v.id === id)?.vendorName || `ID: ${id}`;
+    };
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => serviceMapService.deleteServiceMap(id),
@@ -100,7 +110,7 @@ export default function ServiceMapPage() {
                         Manage vendor services, mapping, and weight restrictions.
                     </p>
                 </div>
-                <PermissionGuard permission="service_map_master_add">
+                <PermissionGuard permission="master.service_map.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Service Map
                     </Button>
@@ -156,7 +166,7 @@ export default function ServiceMapPage() {
                                             <TableRow key={serviceMap.id} className="hover:bg-gray-50/50">
                                                 <TableCell className="font-medium text-blue-600">
                                                     <div className="flex items-center">
-                                                        {serviceMap.vendor}
+                                                        {getVendorName(serviceMap.vendorId)}
                                                         {serviceMap.vendorLink && (
                                                             <a href={serviceMap.vendorLink} target="_blank" rel="noopener noreferrer" className="ml-2">
                                                                 <LinkIcon className="h-3 w-3 text-muted-foreground" />
@@ -169,7 +179,7 @@ export default function ServiceMapPage() {
                                                         {serviceMap.serviceType}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell>{serviceMap.billingVendor}</TableCell>
+                                                <TableCell>{getVendorName(serviceMap.billingVendorId)}</TableCell>
                                                 <TableCell>{serviceMap.minWeight} - {serviceMap.maxWeight} kg</TableCell>
                                                 <TableCell className="text-center">
                                                     {serviceMap.isSinglePiece ? (
@@ -179,8 +189,8 @@ export default function ServiceMapPage() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant={serviceMap.status === "Active" ? "success" : "secondary"} className={
-                                                        serviceMap.status === "Active"
+                                                    <Badge variant={serviceMap.status === "ACTIVE" ? "success" : "secondary"} className={
+                                                        serviceMap.status === "ACTIVE"
                                                             ? "bg-green-100 text-green-800 border-green-200"
                                                             : "bg-gray-100 text-gray-800 border-gray-200"
                                                     }>
@@ -198,12 +208,12 @@ export default function ServiceMapPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="service_map_master_modify">
+                                                            <PermissionGuard permission="master.service_map.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(serviceMap)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="service_map_master_delete">
+                                                            <PermissionGuard permission="master.service_map.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(serviceMap.id)}
@@ -232,13 +242,13 @@ export default function ServiceMapPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= data.meta.totalPages}
                         >
                             Next
                         </Button>

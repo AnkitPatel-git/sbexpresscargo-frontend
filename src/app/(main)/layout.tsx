@@ -112,70 +112,70 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
 
                         {isSalesOpen && (
                             <div className="flex flex-col gap-1">
-                                <PermissionGuard permission="product_master_list">
+                                <PermissionGuard permission="master.product.read">
                                     <LinkItem href="/masters/products" subItem active={isActive('/masters/products')} icon={Box}>Product</LinkItem>
                                 </PermissionGuard>
                             </div>
                         )}
 
-                        <PermissionGuard permission="product_master_list">
+                        <PermissionGuard permission="master.product.read">
                             <LinkItem href="/masters/products" subItem active={isActive('/masters/products')} icon={Box}>Product Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="zone_master_list">
+                        <PermissionGuard permission="master.area.read">
                             <LinkItem href="/masters/zones" subItem active={isActive('/masters/zones')} icon={MapIcon}>Zone</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="country_master_list">
+                        <PermissionGuard permission="master.country.read">
                             <LinkItem href="/masters/countries" subItem active={isActive('/masters/countries')} icon={Globe}>Country</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="state_master_list">
+                        <PermissionGuard permission="master.state.read">
                             <LinkItem href="/masters/states" subItem active={isActive('/masters/states')} icon={Landmark}>State Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="industry_master_list">
+                        <PermissionGuard permission="master.industry.read">
                             <LinkItem href="/masters/industries" subItem active={isActive('/masters/industries')} icon={Building2}>Industry Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="flight_master_list">
+                        <PermissionGuard permission="master.flight.read">
                             <LinkItem href="/masters/flights" subItem active={isActive('/masters/flights')} icon={Plane}>Flight Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="content_master_list">
+                        <PermissionGuard permission="master.content.read">
                             <LinkItem href="/masters/contents" subItem active={isActive('/masters/contents')} icon={Package}>Content Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="bank_master_list">
+                        <PermissionGuard permission="master.bank.read">
                             <LinkItem href="/masters/banks" subItem active={isActive('/masters/banks')} icon={Building}>Bank Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="local_branch_master_list">
+                        <PermissionGuard permission="master.local_branch.read">
                             <LinkItem href="/masters/local-branches" subItem active={isActive('/masters/local-branches')} icon={MapPin}>Local Branch Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="service_center_master_list">
+                        <PermissionGuard permission="master.service_center.read">
                             <LinkItem href="/masters/service-centers" subItem active={isActive('/masters/service-centers')} icon={Settings}>Service Center Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="customer_master_list">
+                        <PermissionGuard permission="master.customer.read">
                             <LinkItem href="/masters/customers" subItem active={isActive('/masters/customers')} icon={UserRound}>Customer Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="client_rate_master_list">
+                        <PermissionGuard permission="master.client_rate.read">
                             <LinkItem href="/masters/client-rates" subItem active={isActive('/masters/client-rates')} icon={Percent}>Client Rate Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="consignee_master_list">
+                        <PermissionGuard permission="master.consignee.read">
                             <LinkItem href="/masters/consignee" subItem active={isActive('/masters/consignee')} icon={UserRound}>Consignee Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="shipper_master_list">
+                        <PermissionGuard permission="master.shipper.read">
                             <LinkItem href="/masters/shipper" subItem active={isActive('/masters/shipper')} icon={UserRound}>Shipper Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="vendor_master_list">
+                        <PermissionGuard permission="master.vendor.read">
                             <LinkItem href="/masters/vendor" subItem active={isActive('/masters/vendor')} icon={Building2}>Vendor Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="courier_master_list">
+                        <PermissionGuard permission="master.courier.read">
                             <LinkItem href="/masters/courier" subItem active={isActive('/masters/courier')} icon={Truck}>Courier Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="area_master_list">
+                        <PermissionGuard permission="master.area.read">
                             <LinkItem href="/masters/area" subItem active={isActive('/masters/area')} icon={MapPin}>Area Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="exception_master_list">
+                        <PermissionGuard permission="master.exception.read">
                             <LinkItem href="/masters/exception" subItem active={isActive('/masters/exception')} icon={AlertTriangle}>Exception Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="service_map_master_list">
+                        <PermissionGuard permission="master.service_map.read">
                             <LinkItem href="/masters/service-map" subItem active={isActive('/masters/service-map')} icon={MapIcon}>Service Map Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="charge_master_list">
+                        <PermissionGuard permission="master.charge.read">
                             <LinkItem href="/masters/charge" subItem active={isActive('/masters/charge')} icon={Coins}>Charge Master</LinkItem>
                         </PermissionGuard>
                     </div>
@@ -197,7 +197,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
 
                 {isUtilitiesOpen && !isCollapsed && (
                     <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
-                        <PermissionGuard permission="serviceable_pincode_list">
+                        <PermissionGuard permission="master.area.read">
                             <LinkItem href="/utilities/serviceable-pincodes" subItem active={isActive('/utilities/serviceable-pincodes')} icon={MapPin}>Serviceable Pincodes</LinkItem>
                         </PermissionGuard>
                     </div>
@@ -219,7 +219,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
 
                 {isTaxChargesOpen && !isCollapsed && (
                     <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
-                        <PermissionGuard permission="fuel_setup_list">
+                        <PermissionGuard permission="master.tax_charges.read">
                             <LinkItem href="/tax-charges/fuel-setup" subItem active={isActive('/tax-charges/fuel-setup')} icon={Droplet}>Fuel Setup</LinkItem>
                         </PermissionGuard>
                     </div>
@@ -241,7 +241,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
 
                 {isSettingsOpen && !isCollapsed && (
                     <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
-                        <PermissionGuard permission="permission_list">
+                        <PermissionGuard permission="dashboard.core.read">
                             <LinkItem href="/settings/permissions" subItem active={isActive('/settings/permissions')} icon={Settings}>Permissions</LinkItem>
                         </PermissionGuard>
                     </div>

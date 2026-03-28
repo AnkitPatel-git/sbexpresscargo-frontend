@@ -1,0 +1,20 @@
+info:
+  name: Exceptions
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{baseUrl}}/mobile/lookup/exceptions?search="
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: mobile.lookup.read — showOnMobileApps=true only

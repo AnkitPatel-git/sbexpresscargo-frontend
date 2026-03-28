@@ -1,0 +1,7 @@
+info:
+  name: Misrouted Scan
+  type: folder
+  seq: 10
+
+request:
+  auth: inherit

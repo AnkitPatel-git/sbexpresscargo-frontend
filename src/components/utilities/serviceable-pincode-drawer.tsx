@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from "@/lib/utils"
 import {
     Sheet,
     SheetContent,
@@ -23,14 +25,29 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
+import { serviceCenterService } from '@/services/masters/service-center-service'
 import { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
 
 const pincodeSchema = z.object({
     pinCode: z.string().min(1, "Pin Code is required"),
     pinCodeName: z.string().min(1, "Pin Code Name is required"),
-    serviceCenter: z.string().min(1, "Service Center is required"),
+    serviceCenterId: z.number().min(1, "Service Center is required"),
+    serviceCenterCode: z.string().min(1, "Service Center Code is required"),
     destination: z.string().min(1, "Destination is required"),
     serviceable: z.boolean(),
     oda: z.boolean(),
@@ -47,13 +64,21 @@ interface ServiceablePincodeDrawerProps {
 export function ServiceablePincodeDrawer({ open, onOpenChange, pincode }: ServiceablePincodeDrawerProps) {
     const queryClient = useQueryClient()
     const isEdit = !!pincode
+    const [scOpen, setScOpen] = useState(false)
+
+    const { data: scData } = useQuery({
+        queryKey: ['service-centers-list'],
+        queryFn: () => serviceCenterService.getServiceCenters({ limit: 100 }),
+        enabled: open
+    })
 
     const form = useForm<PincodeFormValues>({
         resolver: zodResolver(pincodeSchema) as unknown as Resolver<PincodeFormValues>,
         defaultValues: {
             pinCode: '',
             pinCodeName: '',
-            serviceCenter: '',
+            serviceCenterId: 0,
+            serviceCenterCode: '',
             destination: '',
             serviceable: true,
             oda: false,
@@ -65,7 +90,8 @@ export function ServiceablePincodeDrawer({ open, onOpenChange, pincode }: Servic
             form.reset({
                 pinCode: pincode.pinCode,
                 pinCodeName: pincode.pinCodeName,
-                serviceCenter: pincode.serviceCenter,
+                serviceCenterId: pincode.serviceCenterId || pincode.serviceCenter?.id || 0,
+                serviceCenterCode: pincode.serviceCenter?.code || '',
                 destination: pincode.destination,
                 serviceable: pincode.serviceable,
                 oda: pincode.oda,
@@ -74,13 +100,14 @@ export function ServiceablePincodeDrawer({ open, onOpenChange, pincode }: Servic
             form.reset({
                 pinCode: '',
                 pinCodeName: '',
-                serviceCenter: '',
+                serviceCenterId: 0,
+                serviceCenterCode: '',
                 destination: '',
                 serviceable: true,
                 oda: false,
             })
         }
-    }, [pincode, form])
+    }, [pincode, form, open])
 
     const mutation = useMutation({
         mutationFn: (data: PincodeFormValues) => {
@@ -146,13 +173,64 @@ export function ServiceablePincodeDrawer({ open, onOpenChange, pincode }: Servic
 
                             <FormField
                                 control={form.control}
-                                name="serviceCenter"
+                                name="serviceCenterId"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="flex flex-col">
                                         <FormLabel>Service Center</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g. DELHI" {...field} />
-                                        </FormControl>
+                                        <Popover open={scOpen} onOpenChange={setScOpen}>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                            "w-full justify-between font-normal",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <span className="truncate">
+                                                            {field.value
+                                                                ? scData?.data?.find(
+                                                                    (sc) => sc.id === field.value
+                                                                )?.name
+                                                                : "Select service center"}
+                                                        </span>
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search service center..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No service center found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {scData?.data?.map((sc) => (
+                                                                <CommandItem
+                                                                    key={sc.id}
+                                                                    value={sc.name}
+                                                                    onSelect={() => {
+                                                                        form.setValue("serviceCenterId", sc.id)
+                                                                        form.setValue("serviceCenterCode", sc.code)
+                                                                        setScOpen(false)
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            sc.id === field.value
+                                                                                ? "opacity-100"
+                                                                                : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {sc.name} ({sc.code})
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage />
                                     </FormItem>
                                 )}

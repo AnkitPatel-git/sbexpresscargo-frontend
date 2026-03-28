@@ -1,0 +1,354 @@
+info:
+  name: Vendor Master - Create
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/vendor-master"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "vendorCode": "VEND03",
+        "vendorName": "Logistics Partner Ltd",
+        "contactPerson": "Vendor Contact",
+        "address1": "400 Vendor Ave",
+        "address2": "Floor 1",
+        "pinCode": "400004",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "telephone1": "022-77778888",
+        "telephone2": "022-88889999",
+        "fax": "022-99990000",
+        "email": "vendor@partner.com",
+        "mobile": "9876543213",
+        "website": "https://vendor.com",
+        "gstNo": "27AABCU9603R1ZM",
+        "mode": "AIR",
+        "fuelHead": "ADVANCED",
+        "currency": "INR",
+        "origin": "MUMBAI",
+        "vendorZip": "400004",
+        "status": "ACTIVE",
+        "global": false,
+        "gstType": "FORWARD",
+        "volumetricRound": 5000
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200"
+    request:
+      url: "{{baseUrl}}/vendor-master"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "vendorCode": "VEND01",
+            "vendorName": "Logistics Partner Ltd",
+            "contactPerson": "Vendor Contact",
+            "address1": "400 Vendor Ave",
+            "address2": "Floor 1",
+            "pinCode": "400004",
+            "city": "Mumbai",
+            "state": "Maharashtra",
+            "telephone1": "022-77778888",
+            "telephone2": "022-88889999",
+            "fax": "022-99990000",
+            "email": "vendor@partner.com",
+            "mobile": "9876543213",
+            "website": "https://vendor.com",
+            "gstNo": "27AABCU9603R1ZM",
+            "mode": "AIR",
+            "fuelHead": "FUEL01",
+            "currency": "INR",
+            "origin": "MUMBAI",
+            "vendorZip": "400004",
+            "status": "Active",
+            "global": false,
+            "gstType": "REGULAR",
+            "volumetricRound": 5000
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "199"
+        - name: etag
+          value: W/"c7-7YzqQYWg9Qlqg2YD3fegv8YB1/0"
+        - name: date
+          value: Tue, 24 Mar 2026 12:45:11 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "fuelHead must be one of the following values: BASIC, ADVANCED, status must be one of the following values: ACTIVE, INACTIVE, gstType must be FORWARD or REVERSE",
+            "data": {}
+          }
+  - name: "409"
+    request:
+      url: "{{baseUrl}}/vendor-master"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "vendorCode": "VEND01",
+            "vendorName": "Logistics Partner Ltd",
+            "contactPerson": "Vendor Contact",
+            "address1": "400 Vendor Ave",
+            "address2": "Floor 1",
+            "pinCode": "400004",
+            "city": "Mumbai",
+            "state": "Maharashtra",
+            "telephone1": "022-77778888",
+            "telephone2": "022-88889999",
+            "fax": "022-99990000",
+            "email": "vendor@partner.com",
+            "mobile": "9876543213",
+            "website": "https://vendor.com",
+            "gstNo": "27AABCU9603R1ZM",
+            "mode": "AIR",
+            "fuelHead": "ADVANCED",
+            "currency": "INR",
+            "origin": "MUMBAI",
+            "vendorZip": "400004",
+            "status": "ACTIVE",
+            "global": false,
+            "gstType": "FORWARD",
+            "volumetricRound": 5000
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "82"
+        - name: etag
+          value: W/"52-t1ACQf++fAPsKZDlETlfDwjYUIE"
+        - name: date
+          value: Tue, 24 Mar 2026 12:46:24 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "Vendor with code \"VEND01\" already exists",
+            "data": {}
+          }
+  - name: "200"
+    request:
+      url: "{{baseUrl}}/vendor-master"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "vendorCode": "VEND03",
+            "vendorName": "Logistics Partner Ltd",
+            "contactPerson": "Vendor Contact",
+            "address1": "400 Vendor Ave",
+            "address2": "Floor 1",
+            "pinCode": "400004",
+            "city": "Mumbai",
+            "state": "Maharashtra",
+            "telephone1": "022-77778888",
+            "telephone2": "022-88889999",
+            "fax": "022-99990000",
+            "email": "vendor@partner.com",
+            "mobile": "9876543213",
+            "website": "https://vendor.com",
+            "gstNo": "27AABCU9603R1ZM",
+            "mode": "AIR",
+            "fuelHead": "ADVANCED",
+            "currency": "INR",
+            "origin": "MUMBAI",
+            "vendorZip": "400004",
+            "status": "ACTIVE",
+            "global": false,
+            "gstType": "FORWARD",
+            "volumetricRound": 5000
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "760"
+        - name: etag
+          value: W/"2f8-xqUjYKKLoVJ9ewI4cu6PsdDZZDg"
+        - name: date
+          value: Tue, 24 Mar 2026 12:46:56 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 3,
+              "vendorCode": "VEND03",
+              "vendorName": "Logistics Partner Ltd",
+              "version": 1,
+              "contactPerson": "Vendor Contact",
+              "address1": "400 Vendor Ave",
+              "address2": "Floor 1",
+              "pinCode": "400004",
+              "city": "Mumbai",
+              "state": "Maharashtra",
+              "telephone1": "022-77778888",
+              "telephone2": "022-88889999",
+              "fax": "022-99990000",
+              "email": "vendor@partner.com",
+              "mobile": "9876543213",
+              "website": "https://vendor.com",
+              "gstNo": "27AABCU9603R1ZM",
+              "mode": "AIR",
+              "fuelHead": "ADVANCED",
+              "currency": "INR",
+              "origin": "MUMBAI",
+              "vendorZip": "400004",
+              "status": "ACTIVE",
+              "global": false,
+              "gstType": "FORWARD",
+              "volumetricRound": 5000,
+              "createdAt": "2026-03-24T12:46:56.111Z",
+              "updatedAt": "2026-03-24T12:46:56.111Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null,
+              "carrierId": null
+            }
+          }
+
+docs: |-
+  Vendor Master create. JWT + vendor_master_add or vendor_master_all.
+
+  Mandatory: vendorCode, vendorName
+  Optional: contactPerson, address1, address2, pinCode, city, state, telephone1, telephone2, fax, email, mobile, website, gstNo, mode, fuelHead, currency, origin, vendorZip, status, global, gstType, volumetricRound

@@ -1,0 +1,149 @@
+info:
+  name: Content Master - Create
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/content-master"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "contentCode": "CNT01",
+        "contentName": "General Cargo",
+        "hsnCode": "996511",
+        "vendor": "VENDOR1",
+        "country": "India",
+        "additionalField": "Custom field",
+        "clearanceCethNo": "CETH001",
+        "notificationSubType": "Type1",
+        "notificationSubType1": "Sub1",
+        "notificationNo": "NOT001",
+        "srNo": "SR001",
+        "igstNotification": "IGST001",
+        "igstSrNo": "IGSTSR001",
+        "igstcNotification": "IGSTC001",
+        "igstcSrNo": "IGSTCSR001"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200"
+    request:
+      url: "{{baseUrl}}/content-master"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "contentCode": "CNT01",
+            "contentName": "General Cargo",
+            "hsnCode": "996511",
+            "vendor": "VENDOR1",
+            "country": "India",
+            "additionalField": "Custom field",
+            "clearanceCethNo": "CETH001",
+            "notificationSubType": "Type1",
+            "notificationSubType1": "Sub1",
+            "notificationNo": "NOT001",
+            "srNo": "SR001",
+            "igstNotification": "IGST001",
+            "igstSrNo": "IGSTSR001",
+            "igstcNotification": "IGSTC001",
+            "igstcSrNo": "IGSTCSR001"
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "555"
+        - name: etag
+          value: W/"22b-YUAE6SPyfcqNcfjvshwxVxhzWRc"
+        - name: date
+          value: Tue, 24 Mar 2026 12:25:25 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 1,
+              "contentCode": "CNT01",
+              "contentName": "General Cargo",
+              "hsnCode": "996511",
+              "vendorId": null,
+              "countryId": null,
+              "additionalField": "Custom field",
+              "clearanceCethNo": "CETH001",
+              "notificationSubType": "Type1",
+              "notificationSubType1": "Sub1",
+              "notificationNo": "NOT001",
+              "srNo": "SR001",
+              "igstNotification": "IGST001",
+              "igstSrNo": "IGSTSR001",
+              "igstcNotification": "IGSTC001",
+              "igstcSrNo": "IGSTCSR001",
+              "createdAt": "2026-03-24T12:25:25.367Z",
+              "updatedAt": "2026-03-24T12:25:25.367Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null
+            }
+          }
+
+docs: |-
+  Content Master create. JWT + content_master_add or content_master_all.
+
+  Mandatory: contentCode, contentName
+  Optional: hsnCode, vendor, country, additionalField, clearanceCethNo, notificationSubType, notificationSubType1, notificationNo, srNo, igstNotification, igstSrNo, igstcNotification, igstcSrNo
