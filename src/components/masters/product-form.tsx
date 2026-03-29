@@ -91,6 +91,9 @@ export function ProductForm({ initialData }: ProductFormProps) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] })
+            if (isEdit && initialData) {
+                queryClient.invalidateQueries({ queryKey: ['product', initialData.id] })
+            }
             toast.success(isEdit ? "Product updated successfully" : "Product created successfully")
             router.push('/masters/products')
         },

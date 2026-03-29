@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,20 +38,17 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { customerService } from "@/services/masters/customer-service"
-import { Customer } from "@/types/masters/customer"
-import { CustomerDrawer } from "@/components/masters/customer-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function CustomersPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +70,11 @@ export default function CustomersPage() {
     })
 
     const handleCreate = () => {
-        setSelectedCustomer(null)
-        setDrawerOpen(true)
+        router.push('/masters/customers/create')
     }
 
-    const handleEdit = (customer: Customer) => {
-        setSelectedCustomer(customer)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/customers/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -184,7 +180,7 @@ export default function CustomersPage() {
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
                                                             <PermissionGuard permission="master.customer.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(customer)}>
+                                                                <DropdownMenuItem onClick={() => handleEdit(customer.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
@@ -231,11 +227,6 @@ export default function CustomersPage() {
                 </CardContent>
             </Card>
 
-            <CustomerDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                customer={selectedCustomer}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

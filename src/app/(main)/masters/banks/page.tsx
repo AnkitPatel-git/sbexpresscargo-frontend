@@ -35,10 +35,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
+import { useRouter } from "next/navigation"
 import { bankService } from "@/services/masters/bank-service"
 import { Bank } from "@/types/masters/bank"
-import { BankDrawer } from "@/components/masters/bank-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
@@ -46,11 +45,10 @@ export default function BanksPage() {
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
+    const router = useRouter()
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedBank, setSelectedBank] = useState<Bank | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +70,11 @@ export default function BanksPage() {
     })
 
     const handleCreate = () => {
-        setSelectedBank(null)
-        setDrawerOpen(true)
+        router.push('/masters/banks/create')
     }
 
-    const handleEdit = (bank: Bank) => {
-        setSelectedBank(bank)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/banks/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -174,7 +170,7 @@ export default function BanksPage() {
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
                                                             <PermissionGuard permission="master.bank.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(bank)}>
+                                                                <DropdownMenuItem onClick={() => handleEdit(bank.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
@@ -221,11 +217,6 @@ export default function BanksPage() {
                 </CardContent>
             </Card>
 
-            <BankDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                bank={selectedBank}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

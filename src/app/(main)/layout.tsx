@@ -39,7 +39,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
         if (pathname.startsWith('/tax-charges')) setIsTaxChargesOpen(true);
     }, [pathname]);
 
-    const isActive = (path: string) => pathname === path;
+    const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
     const isSettingsActive = pathname.startsWith('/settings');
     const isMastersActive = pathname.startsWith('/masters');
     const isUtilitiesActive = pathname.startsWith('/utilities');
@@ -386,7 +386,11 @@ export default function DashboardLayout({
                             {/* User menu */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="flex items-center gap-2 pl-2 pr-1 h-9 hover:bg-gray-100 rounded-full border border-transparent hover:border-gray-200 transition-all">
+                                    <Button 
+                                        id="user-menu-trigger"
+                                        variant="ghost" 
+                                        className="flex items-center gap-2 pl-2 pr-1 h-9 hover:bg-gray-100 rounded-full border border-transparent hover:border-gray-200 transition-all"
+                                    >
                                         <div className="bg-blue-100 text-blue-700 h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white">
                                             {initials}
                                         </div>

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,20 +37,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { serviceCenterService } from "@/services/masters/service-center-service"
-import { ServiceCenter } from "@/types/masters/service-center"
-import { ServiceCenterDrawer } from "@/components/masters/service-center-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ServiceCentersPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedSC, setSelectedSC] = useState<ServiceCenter | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -71,13 +69,11 @@ export default function ServiceCentersPage() {
     })
 
     const handleCreate = () => {
-        setSelectedSC(null)
-        setDrawerOpen(true)
+        router.push('/masters/service-centers/create')
     }
 
-    const handleEdit = (sc: ServiceCenter) => {
-        setSelectedSC(sc)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/service-centers/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -171,7 +167,7 @@ export default function ServiceCentersPage() {
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
                                                             <PermissionGuard permission="master.service_center.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(sc)}>
+                                                                <DropdownMenuItem onClick={() => handleEdit(sc.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
@@ -218,11 +214,6 @@ export default function ServiceCentersPage() {
                 </CardContent>
             </Card>
 
-            <ServiceCenterDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                serviceCenter={selectedSC}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

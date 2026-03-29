@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,20 +37,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { localBranchService } from "@/services/masters/local-branch-service"
-import { LocalBranch } from "@/types/masters/local-branch"
-import { LocalBranchDrawer } from "@/components/masters/local-branch-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function LocalBranchesPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedBranch, setSelectedBranch] = useState<LocalBranch | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -71,13 +69,11 @@ export default function LocalBranchesPage() {
     })
 
     const handleCreate = () => {
-        setSelectedBranch(null)
-        setDrawerOpen(true)
+        router.push('/masters/local-branches/create')
     }
 
-    const handleEdit = (branch: LocalBranch) => {
-        setSelectedBranch(branch)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/local-branches/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -171,7 +167,7 @@ export default function LocalBranchesPage() {
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
                                                             <PermissionGuard permission="master.local_branch.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(branch)}>
+                                                                <DropdownMenuItem onClick={() => handleEdit(branch.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
@@ -218,11 +214,6 @@ export default function LocalBranchesPage() {
                 </CardContent>
             </Card>
 
-            <LocalBranchDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                branch={selectedBranch}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

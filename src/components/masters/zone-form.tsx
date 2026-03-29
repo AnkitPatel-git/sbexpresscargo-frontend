@@ -95,6 +95,9 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['zones'] })
+            if (isEdit && initialData) {
+                queryClient.invalidateQueries({ queryKey: ['zone', initialData.id] })
+            }
             toast.success(isEdit ? "Zone updated successfully" : "Zone created successfully")
             router.push('/masters/zones')
         },

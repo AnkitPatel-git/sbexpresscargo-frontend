@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { flightService } from "@/services/masters/flight-service"
 import { Flight } from "@/types/masters/flight"
-import { FlightDrawer } from "@/components/masters/flight-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function FlightsPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function FlightsPage() {
     })
 
     const handleCreate = () => {
-        setSelectedFlight(null)
-        setDrawerOpen(true)
+        router.push("/masters/flights/create")
     }
 
-    const handleEdit = (flight: Flight) => {
-        setSelectedFlight(flight)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/flights/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -170,7 +167,7 @@ export default function FlightsPage() {
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
                                                             <PermissionGuard permission="master.flight.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(flight)}>
+                                                                <DropdownMenuItem onClick={() => handleEdit(flight.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
@@ -217,11 +214,6 @@ export default function FlightsPage() {
                 </CardContent>
             </Card>
 
-            <FlightDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                flight={selectedFlight}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

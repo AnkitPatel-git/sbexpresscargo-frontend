@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -37,19 +38,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { industryService } from "@/services/masters/industry-service"
 import { Industry } from "@/types/masters/industry"
-import { IndustryDrawer } from "@/components/masters/industry-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function IndustriesPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -71,13 +70,11 @@ export default function IndustriesPage() {
     })
 
     const handleCreate = () => {
-        setSelectedIndustry(null)
-        setDrawerOpen(true)
+        router.push("/masters/industries/create")
     }
 
-    const handleEdit = (industry: Industry) => {
-        setSelectedIndustry(industry)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/industries/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -163,7 +160,7 @@ export default function IndustriesPage() {
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
                                                             <PermissionGuard permission="master.industry.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(industry)}>
+                                                                <DropdownMenuItem onClick={() => handleEdit(industry.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
@@ -210,11 +207,6 @@ export default function IndustriesPage() {
                 </CardContent>
             </Card>
 
-            <IndustryDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                industry={selectedIndustry}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

@@ -29,6 +29,8 @@ export interface ContentFormData {
     contentCode: string;
     contentName: string;
     hsnCode: string;
+    vendorId?: number | null;
+    countryId?: number | null;
     vendor?: string;
     country?: string;
     additionalField?: string;
