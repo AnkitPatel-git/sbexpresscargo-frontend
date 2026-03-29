@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { productService } from "@/services/masters/product-service"
 import { Product } from "@/types/masters/product"
-import { ProductDrawer } from "@/components/masters/product-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ProductsPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function ProductsPage() {
     })
 
     const handleCreate = () => {
-        setSelectedProduct(null)
-        setDrawerOpen(true)
+        router.push("/masters/products/create")
     }
 
     const handleEdit = (product: Product) => {
-        setSelectedProduct(product)
-        setDrawerOpen(true)
+        router.push(`/masters/products/${product.id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -234,12 +231,6 @@ export default function ProductsPage() {
                     </div>
                 </CardContent>
             </Card>
-
-            <ProductDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                product={selectedProduct}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

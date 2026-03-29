@@ -3,6 +3,7 @@ export interface Zone {
     name: string;
     code: string;
     country: string;
+    countryId: number | null;
     zoneType: 'DOMESTIC' | 'VENDOR';
     createdAt: string;
     updatedAt: string;

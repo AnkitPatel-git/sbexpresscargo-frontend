@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { zoneService } from "@/services/masters/zone-service"
 import { Zone } from "@/types/masters/zone"
-import { ZoneDrawer } from "@/components/masters/zone-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ZonesPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedZone, setSelectedZone] = useState<Zone | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function ZonesPage() {
     })
 
     const handleCreate = () => {
-        setSelectedZone(null)
-        setDrawerOpen(true)
+        router.push("/masters/zones/create")
     }
 
     const handleEdit = (zone: Zone) => {
-        setSelectedZone(zone)
-        setDrawerOpen(true)
+        router.push(`/masters/zones/${zone.id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -219,11 +216,6 @@ export default function ZonesPage() {
                 </CardContent>
             </Card>
 
-            <ZoneDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                zone={selectedZone}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
