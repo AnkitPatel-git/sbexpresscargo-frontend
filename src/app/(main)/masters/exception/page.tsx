@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Check, X } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { exceptionService } from "@/services/masters/exception-service"
 import { ExceptionMaster } from "@/types/masters/exception"
-import { ExceptionDrawer } from "@/components/masters/exception-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ExceptionPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedException, setSelectedException] = useState<ExceptionMaster | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function ExceptionPage() {
     })
 
     const handleCreate = () => {
-        setSelectedException(null)
-        setDrawerOpen(true)
+        router.push("/masters/exception/create")
     }
 
     const handleEdit = (exception: ExceptionMaster) => {
-        setSelectedException(exception)
-        setDrawerOpen(true)
+        router.push(`/masters/exception/${exception.id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -233,11 +230,7 @@ export default function ExceptionPage() {
                 </CardContent>
             </Card>
 
-            <ExceptionDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                exception={selectedException}
-            />
+            {/* Drawer removed in favor of route-based creation/editing */}
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

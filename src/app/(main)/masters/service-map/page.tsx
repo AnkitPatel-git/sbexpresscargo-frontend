@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Link as LinkIcon, Check, X } from "lucide-react"
 import { toast } from "sonner"
 
@@ -39,19 +40,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { serviceMapService } from "@/services/masters/service-map-service"
 import { vendorService } from "@/services/masters/vendor-service"
 import { ServiceMap } from "@/types/masters/service-map"
-import { ServiceMapDrawer } from "@/components/masters/service-map-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ServiceMapPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedServiceMap, setSelectedServiceMap] = useState<ServiceMap | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data: vendorsData } = useQuery({
@@ -65,7 +64,7 @@ export default function ServiceMapPage() {
     })
 
     const getVendorName = (id: number) => {
-        return vendorsData?.data?.find(v => v.id === id)?.vendorName || `ID: ${id}`;
+        return vendorsData?.data?.find((v: any) => v.id === id)?.vendorName || `ID: ${id}`;
     };
 
     const deleteMutation = useMutation({
@@ -82,13 +81,11 @@ export default function ServiceMapPage() {
     })
 
     const handleCreate = () => {
-        setSelectedServiceMap(null)
-        setDrawerOpen(true)
+        router.push("/masters/service-map/create")
     }
 
-    const handleEdit = (serviceMap: ServiceMap) => {
-        setSelectedServiceMap(serviceMap)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/service-map/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -153,7 +150,7 @@ export default function ServiceMapPage() {
                                         <TableRow>
                                             <TableCell colSpan={7} className="h-24 text-center">
                                                 Loading service maps...
-                                            </TableCell>
+                                             </TableCell>
                                         </TableRow>
                                     ) : data?.data && data.data.length === 0 ? (
                                         <TableRow>
@@ -209,7 +206,7 @@ export default function ServiceMapPage() {
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
                                                             <PermissionGuard permission="master.service_map.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(serviceMap)}>
+                                                                <DropdownMenuItem onClick={() => handleEdit(serviceMap.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
@@ -236,7 +233,7 @@ export default function ServiceMapPage() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                            onClick={() => setPage((prev: number) => Math.max(prev - 1, 1))}
                             disabled={page === 1}
                         >
                             Previous
@@ -247,7 +244,7 @@ export default function ServiceMapPage() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage((prev) => prev + 1)}
+                            onClick={() => setPage((prev: number) => prev + 1)}
                             disabled={!data || page >= data.meta.totalPages}
                         >
                             Next
@@ -255,12 +252,6 @@ export default function ServiceMapPage() {
                     </div>
                 </CardContent>
             </Card>
-
-            <ServiceMapDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                serviceMap={selectedServiceMap}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

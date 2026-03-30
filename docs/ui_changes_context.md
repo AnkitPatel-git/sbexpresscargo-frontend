@@ -12,7 +12,8 @@ When migrating a master module from a Drawer (Sheet) to dedicated routes, follow
 ### Phase 1: Form Extraction
 1. **Extract Form Component**:
    - Create a new component in `src/components/masters/[module]-form.tsx`.
-   - Move the Zod schema, `useForm` hook, and form layout from the original drawer file.
+   - Move the Zod schema, `useForm` hook, and form logic from the original drawer file.
+   - **Important**: The component should **only** contain the `Form` and `<form>` elements. Avoid adding `Card`, `max-width`, or `container` wrappers here to ensure maximum flexibility and consistency across different pages.
    - **Props**: The component should accept `initialData?: [Type] | null`.
    - **Logic**: Use `useMutation` for both Create (POST) and Update (PUT) operations.
      - **Cache Invalidation**: On `onSuccess`, ensure you invalidate both the list query (e.g., `['modules']`) AND the specific item query (e.g., `['module', id]`). This prevents stale data issues.
@@ -20,9 +21,11 @@ When migrating a master module from a Drawer (Sheet) to dedicated routes, follow
 
 ### Phase 2: Routing & Page Creation
 2. **Create Routes**:
+   - **Layout Standard**: Use a `space-y-6` container in the page component.
    - **Create Page**: `src/app/(main)/masters/[module]/create/page.tsx`
-     - Render the newly created `[Module]Form`.
+     - Render the `[Module]Form` inside a `Card` and `CardContent`.
    - **Edit Page**: `src/app/(main)/masters/[module]/[id]/edit/page.tsx`
+     - Same layout as "Create Page" (Card + CardContent).
      - Use `useParams` to get the `id`.
      - **API Pattern**: Use the **"Get By Id"** API for the specific module. 
        - Always refer to the **Bruno collection** (located in `docs/bruno`) for the correct endpoint and response structure.
@@ -30,8 +33,10 @@ When migrating a master module from a Drawer (Sheet) to dedicated routes, follow
      - Pass the fetched data to `[Module]Form` via the `initialData` prop.
      - Show a loading spinner during the fetch and handle error states gracefully.
    - **Header Layout**:
-     - Use a `flex` container for the page title.
-     - Include a back button (`ArrowLeft` icon with `variant="ghost"` and `size="icon"`) linking back to the list page.
+     - Define the header **above** the `Card`.
+     - Use a `flex` container for the page title and back button.
+     - Include a back button (`ArrowLeft` icon with `variant="ghost"` and `size="icon"` inside an `asChild` `Link`) linking back to the list page.
+     - Use `text-3xl font-bold tracking-tight` for the `<h1>` and `text-muted-foreground` for the description.
 
 ### Phase 3: List Page Integration
 3. **Update Navigation**:

@@ -1,4 +1,4 @@
-export type ExceptionType = 'UNDELIVERED' | 'IN_TRANSIT' | 'DELAYED' | 'DELIVERED';
+export type ExceptionType = 'UNDELIVERED' | 'DELIVERED';
 
 export interface ExceptionMaster {
     id: number;

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,19 +38,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { areaService } from "@/services/masters/area-service"
 import { Area } from "@/types/masters/area"
-import { AreaDrawer } from "@/components/masters/area-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function AreaPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedArea, setSelectedArea] = useState<Area | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -71,13 +70,11 @@ export default function AreaPage() {
     })
 
     const handleCreate = () => {
-        setSelectedArea(null)
-        setDrawerOpen(true)
+        router.push("/masters/area/create")
     }
 
     const handleEdit = (area: Area) => {
-        setSelectedArea(area)
-        setDrawerOpen(true)
+        router.push(`/masters/area/${area.id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -212,11 +209,7 @@ export default function AreaPage() {
                 </CardContent>
             </Card>
 
-            <AreaDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                area={selectedArea}
-            />
+            {/* Drawer removed in favor of route-based creation/editing */}
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

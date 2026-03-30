@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash2, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { courierService } from "@/services/masters/courier-service"
 import { Courier } from "@/types/masters/courier"
-import { CourierDrawer } from "@/components/masters/courier-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function CourierPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function CourierPage() {
     })
 
     const handleCreate = () => {
-        setSelectedCourier(null)
-        setDrawerOpen(true)
+        router.push("/masters/courier/create")
     }
 
     const handleEdit = (courier: Courier) => {
-        setSelectedCourier(courier)
-        setDrawerOpen(true)
+        router.push(`/masters/courier/${courier.id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -225,11 +222,7 @@ export default function CourierPage() {
                 </CardContent>
             </Card>
 
-            <CourierDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                courier={selectedCourier}
-            />
+
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

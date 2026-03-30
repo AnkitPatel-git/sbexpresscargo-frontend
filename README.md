@@ -37,4 +37,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 
 
-As per this context document ui_changes_context please migrate the UI of "Courier Master" from drawer.
+As per this context document ui_changes_context please migrate the UI of "Permissions" from drawer.
