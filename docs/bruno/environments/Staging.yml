@@ -1,0 +1,4 @@
+name: Staging
+variables:
+  - name: baseUrl
+    value: https://dev.backend.portal.sbexpresscargo.com/api

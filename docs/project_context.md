@@ -159,6 +159,147 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
   - **Permissions**: Each action (List, Add, Modify, Delete) is wrapped in a `PermissionGuard` with the corresponding permission string.
   - **Modals/Drawers**: Use `Sheet` (Drawers) for data entry/edit to maintain context, and `AlertDialog` for all destructive deletions.
 
+
+---
+
+## 🏛️ Core Architecture
+
+### Root Layout & Providers
+The application's entry point is the `src/app/layout.tsx`. It handles:
+- **Global Fonts**: Uses `Geist` and `Geist_Mono` from `next/font/google`.
+- **Global Providers**: All state management and context providers are wrapped in a single `Providers` component in `src/context/providers.tsx`.
+- **Global UI**: Includes the `sonner` Toaster for top-right notifications.
+- **CSR Convention**: Most application routes are marked as `"use client"`. This is intentional to support heavy interactivity via React Hook Form, TanStack Query, and Auth Context.
+
+### Theming & Dark Mode
+- **Status**: The project uses Tailwind 4 with `oklch` color variables.
+- **Dark Mode**: `.dark` class support is ready in `globals.css` with a full secondary set of color tokens.
+- > [!NOTE]
+  > While the CSS is dark-mode ready, a global `ThemeProvider` and user-facing toggle are currently missing (see Technical Debt).
+
+---
+
+## 🔄 State Management (TanStack Query)
+
+The project uses `@tanstack/react-query` to manage server state.
+
+### Configuration (`src/context/providers.tsx`):
+- **Stale Time**: Currently set to **60 seconds** (1 minute).
+  - > [!WARNING]
+    > **Technical Debt**: The `staleTime` is set globally. This should be reviewed and potentially moved to a more granular approach.
+- **Retries**: Set to **1** for failed queries.
+
+### Patterns:
+- **`useQuery`**: Used for all data fetching (List pages, Edit pages).
+- **`useMutation`**: Used for all data modifications (Create, Edit, Delete).
+- **Invalidation**: After successful mutations, `queryClient.invalidateQueries` is called to keep the UI in sync with the backend.
+
+---
+
+## 🔒 Authentication & Security
+
+### flow:
+- **`useAuth` Context**: A centralized hook and context for managing the authenticated user's state.
+- **Route Protection**: Handled via a combination of the `proxy.ts` logic and client-side checks.
+- **Permissions**: The `PermissionGuard` component is used to conditionally render UI elements based on the user's assigned permissions.
+
+### Token Storage:
+- Currently, the `accessToken` and user data are stored in **`localStorage`** and **`js-cookie`**.
+  - **`js-cookie`**: Used primarily to make the token visible to the Next.js Middleware/Proxy for request interception.
+  - **`localStorage`**: Used for persistent client-side state across sessions.
+  - > [!CAUTION]
+    - **Technical Debt**: Storing sensitive tokens in `localStorage` is vulnerable to XSS. This should be migrated to **HTTP-only cookies** for enhanced security.
+
+### Permission Wildcards:
+- The `hasPermission` logic in `src/context/auth-context.tsx` includes an override for system administrators.
+- **Wildcard Roles**: If the user's role identifier is `SUPER_ADMIN` or `superuser`, all permission checks automatically return `true`, granting full system access regardless of individual permission assignments.
+- All API calls utilize the `apiFetch` wrapper.
+- If a `401 Unauthorized` response is received, the wrapper automatically clears local tokens and redirects the user to the `/login` page.
+
+---
+
+## 🛠️ Detailed Development Guide
+
+### 1. How you build a module
+A module (e.g., `masters/countries`) is typically built within the `src/app/(main)` directory.
+- `page.tsx`: The primary list view with search, pagination, and row-level actions.
+- `create/page.tsx`: Page for creating new records, usually containing a shared form.
+- `[id]/edit/page.tsx`: Dynamic route for editing existing records.
+- `src/services/<module>-service.ts`: Dedicated service layer for API calls.
+- `src/types/<module>.ts`: TypeScript interfaces and Zod schemas for the module.
+
+### 2. How do you build the list page
+The list page follows a standard pattern:
+- **Client Component**: Marked with `"use client"`.
+- **Search & Debounce**: Implements a debounced (500ms) search input using the `useDebounce` hook.
+- **Data Hook**: Uses `useQuery` from React Query to fetch and cache server data.
+- **Table Components**: Uses shadcn `Table` components (`TableHeader`, `TableBody`, etc.) for consistent UI.
+- **Pagination**: Manages `page` and `limit` state to support large datasets.
+- **Actions**: Uses `DropdownMenu` for row-level actions like Edit or Delete, guarded by permissions.
+
+### 3. How do you build the create/edit page
+Create and Edit pages are simplified by sharing a common Form component:
+- **Shared Form component**: Located in `src/components/masters/country-form.tsx`: A shared form used by both Create and Edit pages.
+
+### Visual Conventions:
+- **Module Icons**: Each Master module is assigned a unique, contextually relevant `Lucide` icon for visual identification in the sidebar (e.g., `Globe` for Country, `MapPin` for Area).
+- **Consitency**: Always use standard shadcn variants (e.g., `<Button variant="ghost">` or `<Badge variant="outline">`) to maintain a premium, unified look.
+- **React Hook Form & Zod**: Manages form state, validation, and error reporting.
+- **`useMutation`**: Handles the actual API submission (POST for create, PUT for update).
+- **State Synchronization**: Upon successful submission, the component MUST call `queryClient.invalidateQueries` for the relevant module key. This ensures that the user sees the updated information immediately when redirected back to the list page.
+- **Success Feedback**: Shows a success toast using `sonner` and redirects back to the list page via `router.push()`.
+
+### 4. How do you write the business logic
+Business logic is decoupled into specific layers:
+- **Validation Logic**: Encapsulated in Zod schemas in the module's type file.
+- **API Logic**: Defined as methods in service objects (e.g., `countryService.createCountry()`).
+- **Data models**: Standardized on `ListResponse` (with a `meta` object for pagination) and `SingleResponse` types.
+- **Authorization logic**: Controlled via the `PermissionGuard` component and pattern-based permission identifiers.
+
+### 5. How do you integrate the apis
+API integration follows a consistent pattern across the project:
+- **Standard response structures**: All APIs return a `success: boolean` flag.
+- **Listings**: Always include a `meta` object containing `total`, `page`, `limit`, and `totalPages`.
+- **`apiFetch` Wrapper**: All calls use the custom `apiFetch` wrapper to handle global concerns like token management and 401 redirects.
+- **Service Layer**: Each module has a dedicated service file that encapsulates URL construction, query parameters, and headers.
+- **Environment Variables**: Always uses `NEXT_PUBLIC_API_URL` for the base endpoint.
+
+### 6. How do you created the menus and submenus with active state
+The application's navigation is managed in `src/app/(main)/layout.tsx`:
+- **Role-Based Menus**: Uses `PermissionGuard` to show/hide items based on user permissions.
+- **Submenus**: Uses local state (`isMastersOpen`, etc.) to handle collapsible groups.
+- **Active State Detection**: Uses `usePathname` to compare the current path with menu item URLs, highlighting the active item and automatically expanding its parent group.
+
+### 7. Advanced UI Patterns
+- **Standard Select**: Used for fixed-option enums like `weightUnit`.
+- **Searchable Combobox**: 
+  - **Pattern**: `Popover` + `Command` from Shadcn UI.
+  - **Usage**: Mandatory for all dropdowns with >10 items or those referencing other entities (e.g., Select Country).
+  - **Implementation**: Always include "No items found" fallbacks and implement `truncate` on the trigger button to handle long labels.
+- **User Feedback**:
+  - **Loading States**: Currently uses inline "Loading..." text in table cells or `Loader2` icons in buttons.
+  - **Toasts**: Uses `sonner` for rich-color, status-based (success, error) notifications at the top-right.
+
+### Responsive Form Layouts:
+- **Grid Pattern**: To maintain consistency and responsiveness, create/edit forms should use a standard grid:
+  - Container class: `grid grid-cols-1 md:grid-cols-2 gap-4`.
+  - This ensures a single column on mobile and two columns on desktop viewports.
+
+---
+
+## 🛡️ Known Technical Debt
+
+To maintain codebase health, the following items have been identified for future refactoring:
+
+1.  **Token Storage**: Migration from `localStorage` to **HTTP-only Cookies**.
+2.  **State Management**: Review of global `staleTime` and transition to more granular cache-control.
+3.  **Global Theme Toggle**: Implementation of `next-themes` and a header-based theme switch.
+4.  **Loading Skeletons**: Replacing base "Loading..." text with high-quality skeleton loaders.
+5.  **Route Protection**: Centralizing middleware logic and ensuring `proxy.ts` is fully integrated with Next.js protocols.
+6.  **Error Handling**: Implementing a more robust global error boundary for better crash reporting.
+
+---
+
 ## 🚀 Future Roadmap
 - Implementation of real-time tracking features.
 - Development of dashboard widgets for metrics.

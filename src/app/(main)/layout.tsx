@@ -30,6 +30,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
     const [isMastersOpen, setIsMastersOpen] = useState(pathname.startsWith('/masters'));
     const [isUtilitiesOpen, setIsUtilitiesOpen] = useState(pathname.startsWith('/utilities'));
     const [isTaxChargesOpen, setIsTaxChargesOpen] = useState(pathname.startsWith('/tax-charges'));
+    const [isTransactionsOpen, setIsTransactionsOpen] = useState(pathname.startsWith('/transactions'));
     const [isSalesOpen, setIsSalesOpen] = useState(false);
 
     useEffect(() => {
@@ -37,6 +38,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
         if (pathname.startsWith('/masters')) setIsMastersOpen(true);
         if (pathname.startsWith('/utilities')) setIsUtilitiesOpen(true);
         if (pathname.startsWith('/tax-charges')) setIsTaxChargesOpen(true);
+        if (pathname.startsWith('/transactions')) setIsTransactionsOpen(true);
     }, [pathname]);
 
     const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
@@ -44,6 +46,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
     const isMastersActive = pathname.startsWith('/masters');
     const isUtilitiesActive = pathname.startsWith('/utilities');
     const isTaxChargesActive = pathname.startsWith('/tax-charges');
+    const isTransactionsActive = pathname.startsWith('/transactions');
 
     const navItemClasses = (active: boolean, isSubItem: boolean = false) =>
         cn(
@@ -177,6 +180,37 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
                         </PermissionGuard>
                         <PermissionGuard permission="master.charge.read">
                             <LinkItem href="/masters/charge" subItem active={isActive('/masters/charge')} icon={Coins}>Charge Master</LinkItem>
+                        </PermissionGuard>
+                    </div>
+                )}
+            </div>
+
+            {/* Transactions Menu */}
+            <div className="flex flex-col">
+                <button
+                    onClick={() => !isCollapsed && setIsTransactionsOpen(!isTransactionsOpen)}
+                    className={groupButtonClasses(isTransactionsActive, isTransactionsOpen)}
+                    title={isCollapsed ? "Transactions" : ""}
+                >
+                    <div className="flex items-center gap-3">
+                        <ArrowLeftRight className={cn("h-5 w-5", isCollapsed ? "" : "h-4 w-4")} />
+                        {!isCollapsed && <span>Transactions</span>}
+                    </div>
+                    {!isCollapsed && (isTransactionsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                    {isCollapsed && (
+                        <div className="absolute left-14 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
+                            Transactions
+                        </div>
+                    )}
+                </button>
+
+                {isTransactionsOpen && !isCollapsed && (
+                    <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
+                        <PermissionGuard permission="shipment.pickup.read">
+                            <LinkItem href="/transactions/pickup" subItem active={isActive('/transactions/pickup')} icon={Truck}>Pickup</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.shipment.read">
+                            <LinkItem href="/transactions/shipment" subItem active={isActive('/transactions/shipment')} icon={Package}>Shipment</LinkItem>
                         </PermissionGuard>
                     </div>
                 )}
