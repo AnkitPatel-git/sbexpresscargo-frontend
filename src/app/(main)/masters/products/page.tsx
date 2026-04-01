@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { productService } from "@/services/masters/product-service"
 import { Product } from "@/types/masters/product"
-import { ProductDrawer } from "@/components/masters/product-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ProductsPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function ProductsPage() {
     })
 
     const handleCreate = () => {
-        setSelectedProduct(null)
-        setDrawerOpen(true)
+        router.push("/masters/products/create")
     }
 
     const handleEdit = (product: Product) => {
-        setSelectedProduct(product)
-        setDrawerOpen(true)
+        router.push(`/masters/products/${product.id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -100,7 +97,7 @@ export default function ProductsPage() {
                         Manage your service products and shipping types.
                     </p>
                 </div>
-                <PermissionGuard permission="product_master_add">
+                <PermissionGuard permission="master.product.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Product
                     </Button>
@@ -164,11 +161,11 @@ export default function ProductsPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant="outline" className="capitalize">
+                                                    <Badge variant="outline" className="uppercase">
                                                         {product.productType}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="capitalize">{product.groupType}</TableCell>
+                                                <TableCell className="uppercase">{product.groupType}</TableCell>
                                                 <TableCell>{product.docType}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={product.status === 'ACTIVE' ? 'success' : 'secondary'}>
@@ -186,12 +183,12 @@ export default function ProductsPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="product_master_modify">
+                                                            <PermissionGuard permission="master.product.update">
                                                                 <DropdownMenuItem onClick={() => handleEdit(product)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="product_master_delete">
+                                                            <PermissionGuard permission="master.product.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(product.id)}
@@ -221,25 +218,19 @@ export default function ProductsPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>
                     </div>
                 </CardContent>
             </Card>
-
-            <ProductDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                product={selectedProduct}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

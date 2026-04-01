@@ -1,0 +1,35 @@
+info:
+  name: Upload POD
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/mobile/pod/upload"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: multipart-form
+    data:
+      - name: awbNo
+        type: text
+        value: "{{mobileAwbNo}}"
+      - name: receiverName
+        type: text
+        value: Receiver
+      - name: remark
+        type: text
+        value: ""
+      - name: podFile
+        type: file
+        value: []
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: mobile.pod.create — field `podFile` required

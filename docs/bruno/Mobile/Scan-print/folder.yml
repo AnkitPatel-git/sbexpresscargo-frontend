@@ -1,0 +1,7 @@
+info:
+  name: Scan-print
+  type: folder
+  seq: 11
+
+request:
+  auth: inherit

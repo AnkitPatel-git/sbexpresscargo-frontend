@@ -1,0 +1,38 @@
+info:
+  name: Check in
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/mobile/attendance/checkin"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: multipart-form
+    data:
+      - name: lat
+        type: text
+        value: "19.0760"
+      - name: lng
+        type: text
+        value: "72.8777"
+      - name: address
+        type: text
+        value: ""
+      - name: deviceTime
+        type: text
+        value: ""
+      - name: photo
+        type: file
+        value: []
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: "mobile.attendance.create — multipart: `photo` (image) required; lat, lng required strings; optional address, deviceTime (ISO date string)"

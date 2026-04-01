@@ -88,7 +88,7 @@ export default function UsersPage() {
                     </p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <PermissionGuard permission="user_master_add">
+                    <PermissionGuard permission="master.user.create">
                         <Button>
                             <Plus className="mr-2 h-4 w-4" /> Add User
                         </Button>
@@ -155,10 +155,10 @@ export default function UsersPage() {
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem>View details</DropdownMenuItem>
-                                                <PermissionGuard permission="user_master_modify">
+                                                <PermissionGuard permission="master.user.update">
                                                     <DropdownMenuItem>Edit user</DropdownMenuItem>
                                                 </PermissionGuard>
-                                                <PermissionGuard permission="user_master_delete">
+                                                <PermissionGuard permission="master.user.delete">
                                                     <DropdownMenuItem className="text-red-600">
                                                         Delete user
                                                     </DropdownMenuItem>

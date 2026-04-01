@@ -30,6 +30,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
     const [isMastersOpen, setIsMastersOpen] = useState(pathname.startsWith('/masters'));
     const [isUtilitiesOpen, setIsUtilitiesOpen] = useState(pathname.startsWith('/utilities'));
     const [isTaxChargesOpen, setIsTaxChargesOpen] = useState(pathname.startsWith('/tax-charges'));
+    const [isTransactionsOpen, setIsTransactionsOpen] = useState(pathname.startsWith('/transactions'));
     const [isSalesOpen, setIsSalesOpen] = useState(false);
 
     useEffect(() => {
@@ -37,13 +38,15 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
         if (pathname.startsWith('/masters')) setIsMastersOpen(true);
         if (pathname.startsWith('/utilities')) setIsUtilitiesOpen(true);
         if (pathname.startsWith('/tax-charges')) setIsTaxChargesOpen(true);
+        if (pathname.startsWith('/transactions')) setIsTransactionsOpen(true);
     }, [pathname]);
 
-    const isActive = (path: string) => pathname === path;
+    const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
     const isSettingsActive = pathname.startsWith('/settings');
     const isMastersActive = pathname.startsWith('/masters');
     const isUtilitiesActive = pathname.startsWith('/utilities');
     const isTaxChargesActive = pathname.startsWith('/tax-charges');
+    const isTransactionsActive = pathname.startsWith('/transactions');
 
     const navItemClasses = (active: boolean, isSubItem: boolean = false) =>
         cn(
@@ -112,71 +115,102 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
 
                         {isSalesOpen && (
                             <div className="flex flex-col gap-1">
-                                <PermissionGuard permission="product_master_list">
+                                <PermissionGuard permission="master.product.read">
                                     <LinkItem href="/masters/products" subItem active={isActive('/masters/products')} icon={Box}>Product</LinkItem>
                                 </PermissionGuard>
                             </div>
                         )}
 
-                        <PermissionGuard permission="product_master_list">
+                        <PermissionGuard permission="master.product.read">
                             <LinkItem href="/masters/products" subItem active={isActive('/masters/products')} icon={Box}>Product Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="zone_master_list">
+                        <PermissionGuard permission="master.area.read">
                             <LinkItem href="/masters/zones" subItem active={isActive('/masters/zones')} icon={MapIcon}>Zone</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="country_master_list">
+                        <PermissionGuard permission="master.country.read">
                             <LinkItem href="/masters/countries" subItem active={isActive('/masters/countries')} icon={Globe}>Country</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="state_master_list">
+                        <PermissionGuard permission="master.state.read">
                             <LinkItem href="/masters/states" subItem active={isActive('/masters/states')} icon={Landmark}>State Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="industry_master_list">
+                        <PermissionGuard permission="master.industry.read">
                             <LinkItem href="/masters/industries" subItem active={isActive('/masters/industries')} icon={Building2}>Industry Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="flight_master_list">
+                        <PermissionGuard permission="master.flight.read">
                             <LinkItem href="/masters/flights" subItem active={isActive('/masters/flights')} icon={Plane}>Flight Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="content_master_list">
+                        <PermissionGuard permission="master.content.read">
                             <LinkItem href="/masters/contents" subItem active={isActive('/masters/contents')} icon={Package}>Content Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="bank_master_list">
+                        <PermissionGuard permission="master.bank.read">
                             <LinkItem href="/masters/banks" subItem active={isActive('/masters/banks')} icon={Building}>Bank Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="local_branch_master_list">
+                        <PermissionGuard permission="master.local_branch.read">
                             <LinkItem href="/masters/local-branches" subItem active={isActive('/masters/local-branches')} icon={MapPin}>Local Branch Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="service_center_master_list">
+                        <PermissionGuard permission="master.service_center.read">
                             <LinkItem href="/masters/service-centers" subItem active={isActive('/masters/service-centers')} icon={Settings}>Service Center Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="customer_master_list">
+                        <PermissionGuard permission="master.customer.read">
                             <LinkItem href="/masters/customers" subItem active={isActive('/masters/customers')} icon={UserRound}>Customer Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="client_rate_master_list">
+                        <PermissionGuard permission="master.client_rate.read">
                             <LinkItem href="/masters/client-rates" subItem active={isActive('/masters/client-rates')} icon={Percent}>Client Rate Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="consignee_master_list">
+                        <PermissionGuard permission="master.consignee.read">
                             <LinkItem href="/masters/consignee" subItem active={isActive('/masters/consignee')} icon={UserRound}>Consignee Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="shipper_master_list">
+                        <PermissionGuard permission="master.shipper.read">
                             <LinkItem href="/masters/shipper" subItem active={isActive('/masters/shipper')} icon={UserRound}>Shipper Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="vendor_master_list">
+                        <PermissionGuard permission="master.vendor.read">
                             <LinkItem href="/masters/vendor" subItem active={isActive('/masters/vendor')} icon={Building2}>Vendor Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="courier_master_list">
+                        <PermissionGuard permission="master.courier.read">
                             <LinkItem href="/masters/courier" subItem active={isActive('/masters/courier')} icon={Truck}>Courier Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="area_master_list">
+                        <PermissionGuard permission="master.area.read">
                             <LinkItem href="/masters/area" subItem active={isActive('/masters/area')} icon={MapPin}>Area Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="exception_master_list">
+                        <PermissionGuard permission="master.exception.read">
                             <LinkItem href="/masters/exception" subItem active={isActive('/masters/exception')} icon={AlertTriangle}>Exception Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="service_map_master_list">
+                        <PermissionGuard permission="master.service_map.read">
                             <LinkItem href="/masters/service-map" subItem active={isActive('/masters/service-map')} icon={MapIcon}>Service Map Master</LinkItem>
                         </PermissionGuard>
-                        <PermissionGuard permission="charge_master_list">
+                        <PermissionGuard permission="master.charge.read">
                             <LinkItem href="/masters/charge" subItem active={isActive('/masters/charge')} icon={Coins}>Charge Master</LinkItem>
+                        </PermissionGuard>
+                    </div>
+                )}
+            </div>
+
+            {/* Transactions Menu */}
+            <div className="flex flex-col">
+                <button
+                    onClick={() => !isCollapsed && setIsTransactionsOpen(!isTransactionsOpen)}
+                    className={groupButtonClasses(isTransactionsActive, isTransactionsOpen)}
+                    title={isCollapsed ? "Transactions" : ""}
+                >
+                    <div className="flex items-center gap-3">
+                        <ArrowLeftRight className={cn("h-5 w-5", isCollapsed ? "" : "h-4 w-4")} />
+                        {!isCollapsed && <span>Transactions</span>}
+                    </div>
+                    {!isCollapsed && (isTransactionsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                    {isCollapsed && (
+                        <div className="absolute left-14 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
+                            Transactions
+                        </div>
+                    )}
+                </button>
+
+                {isTransactionsOpen && !isCollapsed && (
+                    <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
+                        <PermissionGuard permission="shipment.pickup.read">
+                            <LinkItem href="/transactions/pickup" subItem active={isActive('/transactions/pickup')} icon={Truck}>Pickup</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.shipment.read">
+                            <LinkItem href="/transactions/shipment" subItem active={isActive('/transactions/shipment')} icon={Package}>Shipment</LinkItem>
                         </PermissionGuard>
                     </div>
                 )}
@@ -197,7 +231,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
 
                 {isUtilitiesOpen && !isCollapsed && (
                     <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
-                        <PermissionGuard permission="serviceable_pincode_list">
+                        <PermissionGuard permission="master.area.read">
                             <LinkItem href="/utilities/serviceable-pincodes" subItem active={isActive('/utilities/serviceable-pincodes')} icon={MapPin}>Serviceable Pincodes</LinkItem>
                         </PermissionGuard>
                     </div>
@@ -219,7 +253,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
 
                 {isTaxChargesOpen && !isCollapsed && (
                     <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
-                        <PermissionGuard permission="fuel_setup_list">
+                        <PermissionGuard permission="master.tax_charges.read">
                             <LinkItem href="/tax-charges/fuel-setup" subItem active={isActive('/tax-charges/fuel-setup')} icon={Droplet}>Fuel Setup</LinkItem>
                         </PermissionGuard>
                     </div>
@@ -241,7 +275,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
 
                 {isSettingsOpen && !isCollapsed && (
                     <div className="mt-1 flex flex-col gap-1 border-l border-gray-700 ml-4 pl-1">
-                        <PermissionGuard permission="permission_list">
+                        <PermissionGuard permission="dashboard.core.read">
                             <LinkItem href="/settings/permissions" subItem active={isActive('/settings/permissions')} icon={Settings}>Permissions</LinkItem>
                         </PermissionGuard>
                     </div>
@@ -272,11 +306,12 @@ export default function DashboardLayout({
             )}>
                 <div className="flex h-14 items-center justify-between px-4 lg:h-[60px] bg-[#0c1e35] border-b border-gray-800/50">
                     {!isSidebarCollapsed && (
-                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-                            <div className="bg-white p-1 rounded">
-                                <span className="text-red-600 font-black text-xs uppercase px-1 border-b-2 border-red-600">SB</span>
-                            </div>
-                            <span className="text-white text-sm">Express Cargo</span>
+                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md">
+                            <img 
+                                src="/logo/logo.png" 
+                                alt="SB Express Cargo" 
+                                className="h-7 w-auto object-contain"
+                            />
                         </Link>
                     )}
                     <Button
@@ -297,11 +332,12 @@ export default function DashboardLayout({
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetContent side="left" className="p-0 bg-[#0c1e35] text-white border-none w-64">
                     <div className="flex h-14 items-center px-4 border-b border-gray-800/50">
-                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-                            <div className="bg-white p-1 rounded">
-                                <span className="text-red-600 font-black text-xs uppercase px-1 border-b-2 border-red-600">SB</span>
-                            </div>
-                            <span className="text-white text-sm">Express Cargo</span>
+                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md">
+                            <img 
+                                src="/logo/logo.png" 
+                                alt="SB Express Cargo" 
+                                className="h-7 w-auto object-contain"
+                            />
                         </Link>
                     </div>
                     <div className="flex-1 overflow-y-auto py-4">
@@ -384,7 +420,11 @@ export default function DashboardLayout({
                             {/* User menu */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="flex items-center gap-2 pl-2 pr-1 h-9 hover:bg-gray-100 rounded-full border border-transparent hover:border-gray-200 transition-all">
+                                    <Button 
+                                        id="user-menu-trigger"
+                                        variant="ghost" 
+                                        className="flex items-center gap-2 pl-2 pr-1 h-9 hover:bg-gray-100 rounded-full border border-transparent hover:border-gray-200 transition-all"
+                                    >
                                         <div className="bg-blue-100 text-blue-700 h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white">
                                             {initials}
                                         </div>

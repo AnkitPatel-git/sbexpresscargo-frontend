@@ -1,0 +1,468 @@
+info:
+  name: Create Shipment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/shipment"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "awbNo": "AWB123456",
+        "bookDate": "2026-03-20",
+        "bookTime": "10:30",
+        "referenceNo": "REF001",
+        "customerId": 1,
+        "shipperId": 1,
+        "consigneeId": 1,
+        "origin": "MUMBAI",
+        "originCode": "MUM",
+        "destination": "DELHI",
+        "destinationCode": "DEL",
+        "productId": 1,
+        "vendorId": 1,
+        "serviceMapId": 1,
+        "shipmentValue": 5000,
+        "currency": "INR",
+        "pieces": 1,
+        "actualWeight": 4.5,
+        "volumetricWeight": 5.2,
+        "chargeWeight": 5,
+        "km": 1400,
+        "commercial": false,
+        "paymentType": "CREDIT",
+        "content": "Documents",
+        "instruction": "Handle with care",
+        "fieldExecutiveId": 1,
+        "cashReceiptNo": 1001,
+        "amountReceived": 500,
+        "balanceAmount": 100,
+        "cashReceiptDate": "2026-03-20",
+        "contractCharges": 400,
+        "otherCharges": 50,
+        "subTotal": 450,
+        "totalFuel": 25,
+        "igst": 85.5,
+        "cgst": 0,
+        "sgst": 0,
+        "totalAmount": 560.5,
+        "oda": false,
+        "medicalCharges": 0,
+        "serviceCenterId": 1,
+        "manifestNo": "CD12345",
+        "manifestDate": "2026-03-20",
+        "invoiceNo": "INV001",
+        "debitNoteNo": "DN001",
+        "creditNoteNo": "CN001",
+        "flightNo": "6E123",
+        "podUserId": "POD001",
+        "isCod": false,
+        "codAmount": 0,
+        "piecesRows": [
+          {
+            "childAwbNo": "AWB123456-1",
+            "actualWeightPerPc": 4.5,
+            "pieces": 1,
+            "length": 30,
+            "width": 20,
+            "height": 15,
+            "division": 1,
+            "volumetricWeight": 5.2,
+            "chargeWeight": 5
+          }
+        ],
+        "charges": [
+          {
+            "chargeId": 1,
+            "description": "Freight",
+            "rate": 25,
+            "amount": 125,
+            "fuelApply": true,
+            "fuelAmount": 12.5,
+            "taxApply": true,
+            "taxOnFuel": true,
+            "igst": 24.75,
+            "cgst": 0,
+            "sgst": 0,
+            "total": 162.25,
+            "chargeType": "FREIGHT"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200"
+    request:
+      url: "{{baseUrl}}/transaction/shipment"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "awbNo": "AWB123456",
+            "bookDate": "2026-03-20",
+            "bookTime": "10:30",
+            "referenceNo": "REF001",
+            "customerId": 1,
+            "shipperId": 1,
+            "consigneeId": 1,
+            "origin": "MUMBAI",
+            "originCode": "MUM",
+            "destination": "DELHI",
+            "destinationCode": "DEL",
+            "productId": 1,
+            "vendorId": 1,
+            "serviceMapId": 1,
+            "shipmentValue": 5000,
+            "currency": "INR",
+            "pieces": 1,
+            "actualWeight": 4.5,
+            "volumetricWeight": 5.2,
+            "chargeWeight": 5,
+            "km": 1400,
+            "commercial": false,
+            "paymentType": "CREDIT",
+            "content": "Documents",
+            "instruction": "Handle with care",
+            "fieldExecutiveId": 1,
+            "cashReceiptNo": 1001,
+            "amountReceived": 500,
+            "balanceAmount": 100,
+            "cashReceiptDate": "2026-03-20",
+            "contractCharges": 400,
+            "otherCharges": 50,
+            "subTotal": 450,
+            "totalFuel": 25,
+            "igst": 85.5,
+            "cgst": 0,
+            "sgst": 0,
+            "totalAmount": 560.5,
+            "oda": false,
+            "medicalCharges": 0,
+            "serviceCenterId": 1,
+            "manifestNo": "CD12345",
+            "manifestDate": "2026-03-20",
+            "invoiceNo": "INV001",
+            "debitNoteNo": "DN001",
+            "creditNoteNo": "CN001",
+            "flightNo": "6E123",
+            "podUserId": "POD001",
+            "isCod": false,
+            "codAmount": 0,
+            "piecesRows": [
+              {
+                "childAwbNo": "AWB123456-1",
+                "actualWeightPerPc": 4.5,
+                "pieces": 1,
+                "length": 30,
+                "width": 20,
+                "height": 15,
+                "division": 1,
+                "volumetricWeight": 5.2,
+                "chargeWeight": 5
+              }
+            ],
+            "charges": [
+              {
+                "chargeId": 1,
+                "description": "Freight",
+                "rate": 25,
+                "amount": 125,
+                "fuelApply": true,
+                "fuelAmount": 12.5,
+                "taxApply": true,
+                "taxOnFuel": true,
+                "igst": 24.75,
+                "cgst": 0,
+                "sgst": 0,
+                "total": 162.25,
+                "chargeType": "FREIGHT"
+              }
+            ]
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "1173"
+        - name: etag
+          value: W/"495-qWo8rMoR0dB2s/9HD9drO5ut7z4"
+        - name: date
+          value: Tue, 24 Mar 2026 19:38:40 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 2,
+              "awbNo": "AWB123456",
+              "customerId": 1,
+              "vendorId": 1,
+              "productId": 1,
+              "origin": "MUMBAI",
+              "destination": "DELHI",
+              "pieces": 1,
+              "declaredWeight": "5",
+              "chargeWeight": null,
+              "paymentType": "CREDIT",
+              "currentStatus": "CREATED",
+              "version": 1,
+              "codAmount": null,
+              "isCod": false,
+              "createdAt": "2026-03-24T19:38:40.286Z",
+              "updatedAt": "2026-03-24T19:38:40.286Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null,
+              "piecesRows": [
+                {
+                  "id": 1,
+                  "shipmentId": 2,
+                  "childAwbNo": "AWB123456-1",
+                  "actualWeightPerPc": "4.5",
+                  "pieces": 1,
+                  "length": "30",
+                  "width": "20",
+                  "height": "15",
+                  "division": 1,
+                  "volumetricWeight": "5.2",
+                  "chargeWeight": "5",
+                  "createdAt": "2026-03-24T19:38:40.286Z",
+                  "updatedAt": "2026-03-24T19:38:40.286Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                }
+              ],
+              "charges": [
+                {
+                  "id": 1,
+                  "shipmentId": 2,
+                  "chargeId": 1,
+                  "description": "Freight",
+                  "rate": "25",
+                  "amount": "125",
+                  "fuelApply": true,
+                  "fuelAmount": "12.5",
+                  "taxApply": true,
+                  "taxOnFuel": true,
+                  "igst": "24.75",
+                  "cgst": "0",
+                  "sgst": "0",
+                  "total": "162.25",
+                  "chargeType": "FREIGHT",
+                  "createdAt": "2026-03-24T19:38:40.286Z",
+                  "updatedAt": "2026-03-24T19:38:40.286Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                }
+              ]
+            }
+          }
+  - name: "409"
+    request:
+      url: "{{baseUrl}}/transaction/shipment"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "awbNo": "AWB123456",
+            "bookDate": "2026-03-20",
+            "bookTime": "10:30",
+            "referenceNo": "REF001",
+            "customerId": 1,
+            "shipperId": 1,
+            "consigneeId": 1,
+            "origin": "MUMBAI",
+            "originCode": "MUM",
+            "destination": "DELHI",
+            "destinationCode": "DEL",
+            "productId": 1,
+            "vendorId": 1,
+            "serviceMapId": 1,
+            "shipmentValue": 5000,
+            "currency": "INR",
+            "pieces": 1,
+            "actualWeight": 4.5,
+            "volumetricWeight": 5.2,
+            "chargeWeight": 5,
+            "km": 1400,
+            "commercial": false,
+            "paymentType": "CREDIT",
+            "content": "Documents",
+            "instruction": "Handle with care",
+            "fieldExecutiveId": 1,
+            "cashReceiptNo": 1001,
+            "amountReceived": 500,
+            "balanceAmount": 100,
+            "cashReceiptDate": "2026-03-20",
+            "contractCharges": 400,
+            "otherCharges": 50,
+            "subTotal": 450,
+            "totalFuel": 25,
+            "igst": 85.5,
+            "cgst": 0,
+            "sgst": 0,
+            "totalAmount": 560.5,
+            "oda": false,
+            "medicalCharges": 0,
+            "serviceCenterId": 1,
+            "manifestNo": "CD12345",
+            "manifestDate": "2026-03-20",
+            "invoiceNo": "INV001",
+            "debitNoteNo": "DN001",
+            "creditNoteNo": "CN001",
+            "flightNo": "6E123",
+            "podUserId": "POD001",
+            "isCod": false,
+            "codAmount": 0,
+            "piecesRows": [
+              {
+                "childAwbNo": "AWB123456-1",
+                "actualWeightPerPc": 4.5,
+                "pieces": 1,
+                "length": 30,
+                "width": 20,
+                "height": 15,
+                "division": 1,
+                "volumetricWeight": 5.2,
+                "chargeWeight": 5
+              }
+            ],
+            "charges": [
+              {
+                "chargeId": 1,
+                "description": "Freight",
+                "rate": 25,
+                "amount": 125,
+                "fuelApply": true,
+                "fuelAmount": 12.5,
+                "taxApply": true,
+                "taxOnFuel": true,
+                "igst": 24.75,
+                "cgst": 0,
+                "sgst": 0,
+                "total": 162.25,
+                "chargeType": "FREIGHT"
+              }
+            ]
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "80"
+        - name: etag
+          value: W/"50-iNJ0wjFMBxWErQ/fDvh7Q2WpfdQ"
+        - name: date
+          value: Tue, 24 Mar 2026 19:38:56 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "A record with this value already exists.",
+            "data": {}
+          }
+
+docs: |-
+  Create shipment AWB. JWT + shipment.core.create.
+
+  Mandatory: awbNo, bookDate
+  Optional: bookTime, referenceNo, customerId, shipperId, consigneeId, origin, originCode, destination, destinationCode, productId, vendorId, serviceMapId, shipmentValue, currency, pieces, actualWeight, volumetricWeight, chargeWeight, km, commercial, paymentType, content, instruction, fieldExecutiveId, cashReceiptNo, amountReceived, balanceAmount, cashReceiptDate, contractCharges, otherCharges, subTotal, totalFuel, igst, cgst, sgst, totalAmount, oda, medicalCharges, serviceCenterId, manifestNo, manifestDate, invoiceNo, debitNoteNo, creditNoteNo, flightNo, podUserId, isCod, codAmount, piecesRows, charges

@@ -35,9 +35,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
+import { useRouter } from "next/navigation"
 import { contentService } from "@/services/masters/content-service"
 import { Content } from "@/types/masters/content"
-import { ContentDrawer } from "@/components/masters/content-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
@@ -45,11 +45,10 @@ export default function ContentsPage() {
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
+    const router = useRouter()
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedContent, setSelectedContent] = useState<Content | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -71,13 +70,11 @@ export default function ContentsPage() {
     })
 
     const handleCreate = () => {
-        setSelectedContent(null)
-        setDrawerOpen(true)
+        router.push('/masters/contents/create')
     }
 
-    const handleEdit = (content: Content) => {
-        setSelectedContent(content)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/contents/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -99,7 +96,7 @@ export default function ContentsPage() {
                         Manage shipmemt contents, HSN codes, and vendor mappings.
                     </p>
                 </div>
-                <PermissionGuard permission="content_master_add">
+                <PermissionGuard permission="master.content.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Content
                     </Button>
@@ -155,8 +152,16 @@ export default function ContentsPage() {
                                                 <TableCell className="font-medium text-blue-600">{content.contentCode}</TableCell>
                                                 <TableCell className="font-medium">{content.contentName}</TableCell>
                                                 <TableCell>{content.hsnCode}</TableCell>
-                                                <TableCell>{content.vendor || "-"}</TableCell>
-                                                <TableCell>{content.country || "-"}</TableCell>
+                                                <TableCell>
+                                                    {typeof content.vendor === "object"
+                                                        ? (content.vendor as any)?.vendorName || "-"
+                                                        : content.vendor || "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {typeof content.country === "object"
+                                                        ? (content.country as any)?.name || "-"
+                                                        : content.country || "-"}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -168,12 +173,12 @@ export default function ContentsPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="content_master_modify">
-                                                                <DropdownMenuItem onClick={() => handleEdit(content)}>
+                                                            <PermissionGuard permission="master.content.update">
+                                                                <DropdownMenuItem onClick={() => handleEdit(content.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="content_master_delete">
+                                                            <PermissionGuard permission="master.content.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(content.id)}
@@ -202,13 +207,13 @@ export default function ContentsPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>
@@ -216,11 +221,6 @@ export default function ContentsPage() {
                 </CardContent>
             </Card>
 
-            <ContentDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                content={selectedContent}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

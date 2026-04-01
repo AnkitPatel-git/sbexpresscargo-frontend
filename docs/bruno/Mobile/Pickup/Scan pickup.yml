@@ -1,0 +1,28 @@
+info:
+  name: Scan pickup
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/mobile/pickup/scan"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "query": "booking-or-shipper"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: mobile.pickup.read

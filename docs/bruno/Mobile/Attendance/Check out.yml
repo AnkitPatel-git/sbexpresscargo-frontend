@@ -1,0 +1,38 @@
+info:
+  name: Check out
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/mobile/attendance/checkout"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: multipart-form
+    data:
+      - name: lat
+        type: text
+        value: "19.0760"
+      - name: lng
+        type: text
+        value: "72.8777"
+      - name: address
+        type: text
+        value: ""
+      - name: deviceTime
+        type: text
+        value: ""
+      - name: photo
+        type: file
+        value: []
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: mobile.attendance.update — closes last open check-in (open window). Same body shape as check-in.

@@ -1,0 +1,11 @@
+info:
+  name: Tax and Charges Setup
+  type: folder
+  seq: 6
+
+request:
+  auth: inherit
+
+docs:
+  content: "Parent: Tax and Charges. Children: Fuel Setup, Tax Setup. Menu: Tax & Charges."
+  type: text/markdown

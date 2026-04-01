@@ -3,8 +3,20 @@ export interface Content {
     contentCode: string;
     contentName: string;
     hsnCode: string;
-    vendor: string | null;
-    country: string | null;
+    vendorId: number | null;
+    countryId: number | null;
+    vendor?: string | null;
+    country?: string | null;
+    additionalField?: string | null;
+    clearanceCethNo?: string | null;
+    notificationSubType?: string | null;
+    notificationSubType1?: string | null;
+    notificationNo?: string | null;
+    srNo?: string | null;
+    igstNotification?: string | null;
+    igstSrNo?: string | null;
+    igstcNotification?: string | null;
+    igstcSrNo?: string | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -17,18 +29,32 @@ export interface ContentFormData {
     contentCode: string;
     contentName: string;
     hsnCode: string;
-    vendor: string;
-    country: string;
+    vendorId?: number | null;
+    countryId?: number | null;
+    vendor?: string;
+    country?: string;
+    additionalField?: string;
+    clearanceCethNo?: string;
+    notificationSubType?: string;
+    notificationSubType1?: string;
+    notificationNo?: string;
+    srNo?: string;
+    igstNotification?: string;
+    igstSrNo?: string;
+    igstcNotification?: string;
+    igstcSrNo?: string;
 }
 
 export interface ContentListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Content[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface ContentSingleResponse {

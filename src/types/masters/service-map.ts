@@ -1,11 +1,14 @@
+export type ServiceMapStatus = 'ACTIVE' | 'INACTIVE';
+export type ServiceTypeEnums = 'AIR' | 'SURFACE' | 'EXPRESS';
+
 export interface ServiceMap {
     id: number;
-    vendor: string;
-    serviceType: string;
-    billingVendor: string;
+    vendorId: number;
+    serviceType: ServiceTypeEnums;
+    billingVendorId: number;
     minWeight: string | number;
     maxWeight: string | number;
-    status: 'Active' | 'Inactive' | string;
+    status: ServiceMapStatus;
     vendorLink: string | null;
     isSinglePiece: boolean;
     createdAt: string;
@@ -17,12 +20,12 @@ export interface ServiceMap {
 }
 
 export interface ServiceMapFormData {
-    vendor: string;
-    serviceType: string;
-    billingVendor: string;
+    vendorCode: string;
+    serviceType: ServiceTypeEnums;
+    billingVendorCode: string;
     minWeight: number;
     maxWeight: number;
-    status: string;
+    status: ServiceMapStatus;
     vendorLink?: string;
     isSinglePiece: boolean;
 }
@@ -31,10 +34,12 @@ export interface ServiceMapListResponse {
     success: boolean;
     message: string;
     data: ServiceMap[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface ServiceMapSingleResponse {

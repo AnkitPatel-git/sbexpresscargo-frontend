@@ -2,8 +2,11 @@ export interface Permission {
     id: number;
     name: string;
     identifier: string;
-    underMenu: string;
-    description: string;
+    module: string;
+    subModule: string;
+    action: string | null;
+    underMenu?: string; // Kept for legacy compatibility if needed
+    description: string | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -52,8 +55,10 @@ export interface PaginatedResponse<T> {
     success: boolean;
     message: string;
     data: T[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }

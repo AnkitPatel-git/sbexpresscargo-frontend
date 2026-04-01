@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { vendorService } from "@/services/masters/vendor-service"
 import { Vendor } from "@/types/masters/vendor"
-import { VendorDrawer } from "@/components/masters/vendor-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function VendorPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function VendorPage() {
     })
 
     const handleCreate = () => {
-        setSelectedVendor(null)
-        setDrawerOpen(true)
+        router.push("/masters/vendor/create")
     }
 
-    const handleEdit = (vendor: Vendor) => {
-        setSelectedVendor(vendor)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/vendor/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -92,99 +89,102 @@ export default function VendorPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Vendor Master</h1>
-                    <p className="text-muted-foreground">
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Vendor Master</h1>
+                    <p className="text-slate-500">
                         Manage vendors, their contact details, and account statuses.
                     </p>
                 </div>
-                <PermissionGuard permission="vendor_master_add">
-                    <Button onClick={handleCreate}>
+                <PermissionGuard permission="master.vendor.create">
+                    <Button onClick={handleCreate} className="bg-slate-900 hover:bg-slate-800 text-white">
                         <Plus className="mr-2 h-4 w-4" /> Create Vendor
                     </Button>
                 </PermissionGuard>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Vendors</CardTitle>
+            <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50 p-4">
+                    <CardTitle className="text-slate-800 text-lg font-semibold">Vendors</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex items-center py-4">
+                <CardContent className="p-0">
+                    <div className="flex items-center p-4">
                         <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                             <Input
                                 placeholder="Search vendors..."
-                                className="pl-8"
+                                className="pl-8 border-slate-200 focus:ring-slate-400"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
                     </div>
 
-                    <div className="rounded-md border overflow-hidden">
+                    <div className="border-t border-slate-100 overflow-hidden">
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-gray-50">
-                                        <TableHead className="w-[120px]">Code</TableHead>
-                                        <TableHead className="min-w-[200px]">Vendor Name</TableHead>
-                                        <TableHead>Contact Person</TableHead>
-                                        <TableHead>City</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 transition-colors">
+                                        <TableHead className="w-[120px] font-semibold text-slate-700 pl-4">Code</TableHead>
+                                        <TableHead className="min-w-[200px] font-semibold text-slate-700">Vendor Name</TableHead>
+                                        <TableHead className="font-semibold text-slate-700">Contact Person</TableHead>
+                                        <TableHead className="font-semibold text-slate-700">City</TableHead>
+                                        <TableHead className="font-semibold text-slate-700 text-center">Status</TableHead>
+                                        <TableHead className="text-right font-semibold text-slate-700 pr-4">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {isLoading ? (
                                         <TableRow>
                                             <TableCell colSpan={6} className="h-24 text-center">
-                                                Loading vendors...
+                                                <div className="flex items-center justify-center gap-2 text-slate-500">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Loading vendors...
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : data?.data && data.data.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={6} className="h-24 text-center text-slate-500 italic">
                                                 No vendors found.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         data?.data.map((vendor: Vendor) => (
-                                            <TableRow key={vendor.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{vendor.vendorCode}</TableCell>
-                                                <TableCell className="font-medium">{vendor.vendorName}</TableCell>
-                                                <TableCell>{vendor.contactPerson}</TableCell>
-                                                <TableCell>{vendor.city}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={vendor.status === "Active" ? "success" : "secondary"} className={
-                                                        vendor.status === "Active"
-                                                            ? "bg-green-100 text-green-800 border-green-200"
-                                                            : "bg-gray-100 text-gray-800 border-gray-200"
-                                                    }>
-                                                        {vendor.status}
+                                            <TableRow key={vendor.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <TableCell className="font-medium text-blue-600 pl-4">{vendor.vendorCode}</TableCell>
+                                                <TableCell className="font-medium text-slate-800">{vendor.vendorName}</TableCell>
+                                                <TableCell className="text-slate-600">{vendor.contactPerson}</TableCell>
+                                                <TableCell className="text-slate-600">{vendor.city}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge className={
+                                                        vendor.status === 'ACTIVE'
+                                                            ? "bg-emerald-50 text-emerald-700 border-emerald-100 px-3"
+                                                            : "bg-slate-50 text-slate-600 border-slate-100 px-3"
+                                                    } variant="outline">
+                                                        {vendor.status === 'ACTIVE' ? "Active" : "Inactive"}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-right pr-4">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                            <Button variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900">
                                                                 <span className="sr-only">Open menu</span>
                                                                 <MoreHorizontal className="h-4 w-4" />
                                                             </Button>
                                                         </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
+                                                        <DropdownMenuContent align="end" className="w-40">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="vendor_master_modify">
-                                                                <DropdownMenuItem onClick={() => handleEdit(vendor)}>
+                                                            <PermissionGuard permission="master.vendor.update">
+                                                                <DropdownMenuItem onClick={() => handleEdit(vendor.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="vendor_master_delete">
+                                                            <PermissionGuard permission="master.vendor.delete">
                                                                 <DropdownMenuItem
-                                                                    className="text-red-600"
+                                                                    className="text-red-600 focus:text-red-600"
                                                                     onClick={() => handleDeleteRequest(vendor.id)}
                                                                 >
                                                                     <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -201,52 +201,49 @@ export default function VendorPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end space-x-2 py-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                            disabled={page === 1}
-                        >
-                            Previous
-                        </Button>
-                        <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                    <div className="flex items-center justify-between p-4 border-t border-slate-100">
+                        <div className="text-sm text-slate-500 font-medium">
+                            Showing page {page} of {data?.meta?.totalPages || 1}
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
-                        >
-                            Next
-                        </Button>
+                        <div className="flex space-x-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-slate-200 text-slate-600 hover:bg-slate-50 h-8 font-medium"
+                                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                                disabled={page === 1}
+                            >
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-slate-200 text-slate-600 hover:bg-slate-50 h-8 font-medium"
+                                onClick={() => setPage((prev) => prev + 1)}
+                                disabled={!data || page >= (data.meta?.totalPages || 1)}
+                            >
+                                Next
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
 
-            <VendorDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                vendor={selectedVendor}
-            />
-
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <AlertDialogContent>
+                <AlertDialogContent className="max-w-[400px]">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the vendor
-                            from our servers.
+                        <AlertDialogTitle className="text-slate-900">Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-500">
+                            This action cannot be undone. This will permanently delete the vendor record.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogFooter className="mt-4">
+                        <AlertDialogCancel className="border-slate-200 text-slate-600 hover:bg-slate-50">Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                            className="bg-red-600 hover:bg-red-700 text-white border-none"
                         >
-                            Delete
+                            Delete Record
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

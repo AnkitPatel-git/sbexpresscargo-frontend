@@ -14,7 +14,7 @@ export interface Vendor {
     mobile: string;
     website: string | null;
     gstNo: string | null;
-    status: 'Active' | 'Inactive' | string;
+    status: 'ACTIVE' | 'INACTIVE';
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -38,17 +38,19 @@ export interface VendorFormData {
     mobile: string;
     website?: string;
     gstNo?: string;
-    status: string;
+    status: 'ACTIVE' | 'INACTIVE';
 }
 
 export interface VendorListResponse {
     success: boolean;
     message: string;
     data: Vendor[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface VendorSingleResponse {

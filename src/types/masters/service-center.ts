@@ -2,15 +2,22 @@ export interface ServiceCenter {
     id: number;
     code: string;
     name: string;
-    subName: string;
-    address1: string;
+    subName: string | null;
+    address1: string | null;
     address2: string | null;
-    destination: string;
-    state: string;
-    telephone: string;
-    email: string;
-    gstNo: string;
-    pinCode: string;
+    address3: string | null;
+    address4: string | null;
+    destination: string | null;
+    state: string | null;
+    telephone: string | null;
+    email: string | null;
+    icnNo: string | null;
+    stNo: string | null;
+    pinCode: string | null;
+    companyLogo: string | null;
+    signatoryLogo: string | null;
+    version: number;
+    localBranchId: number | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -22,24 +29,32 @@ export interface ServiceCenter {
 export interface ServiceCenterFormData {
     code: string;
     name: string;
-    subName: string;
-    address1: string;
-    destination: string;
-    state: string;
-    telephone: string;
-    email: string;
-    gstNo: string;
-    pinCode: string;
+    subName?: string | null;
+    address1?: string | null;
+    address2?: string | null;
+    address3?: string | null;
+    address4?: string | null;
+    destination?: string | null;
+    state?: string | null;
+    telephone?: string | null;
+    email?: string | null;
+    icnNo?: string | null;
+    stNo?: string | null;
+    pinCode?: string | null;
+    companyLogo?: string | null;
+    signatoryLogo?: string | null;
 }
 
 export interface ServiceCenterListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: ServiceCenter[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface ServiceCenterSingleResponse {

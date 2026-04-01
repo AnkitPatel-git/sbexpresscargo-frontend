@@ -1,0 +1,1255 @@
+info:
+  name: Get Grouped Permissions for Role
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseUrl}}/permissions/for-role/{{roleId}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200"
+    request:
+      url: "{{baseUrl}}/permissions/for-role/{{roleId}}"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: server
+          value: nginx/1.28.2
+        - name: date
+          value: Tue, 24 Mar 2026 09:07:45 GMT
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "14647"
+        - name: connection
+          value: keep-alive
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: etag
+          value: W/"3937-Si5CSFPNc90MxwebRSxvVULr7ls"
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Grouped permissions for role retrieved successfully",
+            "data": [
+              {
+                "underMenu": "CUSTOMER.master",
+                "resources": [
+                  {
+                    "resource": "Master",
+                    "resourceKey": "CUSTOMER_master",
+                    "actions": [
+                      {
+                        "id": 13,
+                        "identifier": "customer.master.manage",
+                        "name": "Manage",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "DASHBOARD.core",
+                "resources": [
+                  {
+                    "resource": "Core",
+                    "resourceKey": "DASHBOARD_core",
+                    "actions": [
+                      {
+                        "id": 1,
+                        "identifier": "dashboard.core.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "DASHBOARD.platform",
+                "resources": [
+                  {
+                    "resource": "Platform",
+                    "resourceKey": "DASHBOARD_platform",
+                    "actions": [
+                      {
+                        "id": 124,
+                        "identifier": "platform_mobile",
+                        "name": "Mobile",
+                        "granted": true
+                      },
+                      {
+                        "id": 123,
+                        "identifier": "platform_portal",
+                        "name": "Portal",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "DASHBOARD.report",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to view daily shipment status summaries",
+                    "resourceKey": "DASHBOARD_report",
+                    "actions": [
+                      {
+                        "id": 116,
+                        "identifier": "mobile.report.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "INVOICE.core",
+                "resources": [
+                  {
+                    "resource": "Core",
+                    "resourceKey": "INVOICE_core",
+                    "actions": [
+                      {
+                        "id": 10,
+                        "identifier": "invoice.core.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 12,
+                        "identifier": "invoice.core.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 11,
+                        "identifier": "invoice.core.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MANIFEST.core",
+                "resources": [
+                  {
+                    "resource": "Core",
+                    "resourceKey": "MANIFEST_core",
+                    "actions": [
+                      {
+                        "id": 7,
+                        "identifier": "manifest.core.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 9,
+                        "identifier": "manifest.core.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 8,
+                        "identifier": "manifest.core.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MANIFEST.manifest",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to create manifests",
+                    "resourceKey": "MANIFEST_manifest",
+                    "actions": [
+                      {
+                        "id": 105,
+                        "identifier": "mobile.manifest.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 106,
+                        "identifier": "mobile.manifest.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 104,
+                        "identifier": "mobile.manifest.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.area",
+                "resources": [
+                  {
+                    "resource": "Area",
+                    "resourceKey": "MASTER_area",
+                    "actions": [
+                      {
+                        "id": 74,
+                        "identifier": "master.area.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 76,
+                        "identifier": "master.area.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 75,
+                        "identifier": "master.area.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 77,
+                        "identifier": "master.area.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.bank",
+                "resources": [
+                  {
+                    "resource": "Bank",
+                    "resourceKey": "MASTER_bank",
+                    "actions": [
+                      {
+                        "id": 38,
+                        "identifier": "master.bank.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 40,
+                        "identifier": "master.bank.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 39,
+                        "identifier": "master.bank.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 41,
+                        "identifier": "master.bank.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.charge",
+                "resources": [
+                  {
+                    "resource": "Charge",
+                    "resourceKey": "MASTER_charge",
+                    "actions": [
+                      {
+                        "id": 86,
+                        "identifier": "master.charge.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 88,
+                        "identifier": "master.charge.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 87,
+                        "identifier": "master.charge.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 89,
+                        "identifier": "master.charge.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.client_rate",
+                "resources": [
+                  {
+                    "resource": "Client Rate",
+                    "resourceKey": "MASTER_client_rate",
+                    "actions": [
+                      {
+                        "id": 54,
+                        "identifier": "master.client_rate.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 56,
+                        "identifier": "master.client_rate.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 55,
+                        "identifier": "master.client_rate.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 57,
+                        "identifier": "master.client_rate.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.consignee",
+                "resources": [
+                  {
+                    "resource": "Consignee",
+                    "resourceKey": "MASTER_consignee",
+                    "actions": [
+                      {
+                        "id": 58,
+                        "identifier": "master.consignee.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 60,
+                        "identifier": "master.consignee.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 59,
+                        "identifier": "master.consignee.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 61,
+                        "identifier": "master.consignee.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.content",
+                "resources": [
+                  {
+                    "resource": "Content",
+                    "resourceKey": "MASTER_content",
+                    "actions": [
+                      {
+                        "id": 34,
+                        "identifier": "master.content.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 36,
+                        "identifier": "master.content.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 35,
+                        "identifier": "master.content.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 37,
+                        "identifier": "master.content.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.country",
+                "resources": [
+                  {
+                    "resource": "Country",
+                    "resourceKey": "MASTER_country",
+                    "actions": [
+                      {
+                        "id": 18,
+                        "identifier": "master.country.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 20,
+                        "identifier": "master.country.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 19,
+                        "identifier": "master.country.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 21,
+                        "identifier": "master.country.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.courier",
+                "resources": [
+                  {
+                    "resource": "Courier",
+                    "resourceKey": "MASTER_courier",
+                    "actions": [
+                      {
+                        "id": 70,
+                        "identifier": "master.courier.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 72,
+                        "identifier": "master.courier.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 71,
+                        "identifier": "master.courier.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 73,
+                        "identifier": "master.courier.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.customer",
+                "resources": [
+                  {
+                    "resource": "Customer",
+                    "resourceKey": "MASTER_customer",
+                    "actions": [
+                      {
+                        "id": 50,
+                        "identifier": "master.customer.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 52,
+                        "identifier": "master.customer.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 51,
+                        "identifier": "master.customer.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 53,
+                        "identifier": "master.customer.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.exception",
+                "resources": [
+                  {
+                    "resource": "Exception",
+                    "resourceKey": "MASTER_exception",
+                    "actions": [
+                      {
+                        "id": 78,
+                        "identifier": "master.exception.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 80,
+                        "identifier": "master.exception.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 79,
+                        "identifier": "master.exception.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 81,
+                        "identifier": "master.exception.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.flight",
+                "resources": [
+                  {
+                    "resource": "Flight",
+                    "resourceKey": "MASTER_flight",
+                    "actions": [
+                      {
+                        "id": 30,
+                        "identifier": "master.flight.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 32,
+                        "identifier": "master.flight.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 31,
+                        "identifier": "master.flight.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 33,
+                        "identifier": "master.flight.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.industry",
+                "resources": [
+                  {
+                    "resource": "Industry",
+                    "resourceKey": "MASTER_industry",
+                    "actions": [
+                      {
+                        "id": 26,
+                        "identifier": "master.industry.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 28,
+                        "identifier": "master.industry.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 27,
+                        "identifier": "master.industry.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 29,
+                        "identifier": "master.industry.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.local_branch",
+                "resources": [
+                  {
+                    "resource": "Local Branch",
+                    "resourceKey": "MASTER_local_branch",
+                    "actions": [
+                      {
+                        "id": 42,
+                        "identifier": "master.local_branch.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 44,
+                        "identifier": "master.local_branch.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 43,
+                        "identifier": "master.local_branch.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 45,
+                        "identifier": "master.local_branch.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.lookup",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to fetch dropdown reference data",
+                    "resourceKey": "MASTER_lookup",
+                    "actions": [
+                      {
+                        "id": 98,
+                        "identifier": "mobile.lookup.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.product",
+                "resources": [
+                  {
+                    "resource": "Product",
+                    "resourceKey": "MASTER_product",
+                    "actions": [
+                      {
+                        "id": 14,
+                        "identifier": "master.product.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 16,
+                        "identifier": "master.product.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 15,
+                        "identifier": "master.product.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 17,
+                        "identifier": "master.product.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.rate",
+                "resources": [
+                  {
+                    "resource": "Rate",
+                    "resourceKey": "MASTER_rate",
+                    "actions": [
+                      {
+                        "id": 90,
+                        "identifier": "master.rate.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 92,
+                        "identifier": "master.rate.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 91,
+                        "identifier": "master.rate.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 93,
+                        "identifier": "master.rate.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.service_center",
+                "resources": [
+                  {
+                    "resource": "Service Center",
+                    "resourceKey": "MASTER_service_center",
+                    "actions": [
+                      {
+                        "id": 46,
+                        "identifier": "master.service_center.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 48,
+                        "identifier": "master.service_center.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 47,
+                        "identifier": "master.service_center.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 49,
+                        "identifier": "master.service_center.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.service_map",
+                "resources": [
+                  {
+                    "resource": "Service Map",
+                    "resourceKey": "MASTER_service_map",
+                    "actions": [
+                      {
+                        "id": 82,
+                        "identifier": "master.service_map.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 84,
+                        "identifier": "master.service_map.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 83,
+                        "identifier": "master.service_map.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 85,
+                        "identifier": "master.service_map.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.shipper",
+                "resources": [
+                  {
+                    "resource": "Shipper",
+                    "resourceKey": "MASTER_shipper",
+                    "actions": [
+                      {
+                        "id": 62,
+                        "identifier": "master.shipper.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 64,
+                        "identifier": "master.shipper.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 63,
+                        "identifier": "master.shipper.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 65,
+                        "identifier": "master.shipper.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.state",
+                "resources": [
+                  {
+                    "resource": "State",
+                    "resourceKey": "MASTER_state",
+                    "actions": [
+                      {
+                        "id": 22,
+                        "identifier": "master.state.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 24,
+                        "identifier": "master.state.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 23,
+                        "identifier": "master.state.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 25,
+                        "identifier": "master.state.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.tax_charges",
+                "resources": [
+                  {
+                    "resource": "Tax Charges",
+                    "resourceKey": "MASTER_tax_charges",
+                    "actions": [
+                      {
+                        "id": 94,
+                        "identifier": "master.tax_charges.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 96,
+                        "identifier": "master.tax_charges.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 95,
+                        "identifier": "master.tax_charges.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 97,
+                        "identifier": "master.tax_charges.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "MASTER.vendor",
+                "resources": [
+                  {
+                    "resource": "Vendor",
+                    "resourceKey": "MASTER_vendor",
+                    "actions": [
+                      {
+                        "id": 66,
+                        "identifier": "master.vendor.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 68,
+                        "identifier": "master.vendor.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 67,
+                        "identifier": "master.vendor.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 69,
+                        "identifier": "master.vendor.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.attendance",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to check in with GPS and a proof photo",
+                    "resourceKey": "SHIPMENT_attendance",
+                    "actions": [
+                      {
+                        "id": 119,
+                        "identifier": "mobile.attendance.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 120,
+                        "identifier": "mobile.attendance.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 121,
+                        "identifier": "mobile.attendance.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 122,
+                        "identifier": "mobile.attendance.admin",
+                        "name": "Admin",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.awb",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to create shipments (AWB)",
+                    "resourceKey": "SHIPMENT_awb",
+                    "actions": [
+                      {
+                        "id": 101,
+                        "identifier": "mobile.awb.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 103,
+                        "identifier": "mobile.awb.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 102,
+                        "identifier": "mobile.awb.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.core",
+                "resources": [
+                  {
+                    "resource": "Core",
+                    "resourceKey": "SHIPMENT_core",
+                    "actions": [
+                      {
+                        "id": 2,
+                        "identifier": "shipment.core.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 4,
+                        "identifier": "shipment.core.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 3,
+                        "identifier": "shipment.core.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 5,
+                        "identifier": "shipment.core.delete",
+                        "name": "Delete",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.drs",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to create a DRS from AWBs",
+                    "resourceKey": "SHIPMENT_drs",
+                    "actions": [
+                      {
+                        "id": 108,
+                        "identifier": "mobile.drs.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 109,
+                        "identifier": "mobile.drs.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 107,
+                        "identifier": "mobile.drs.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.event_scan",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to create undelivered received or misrouted scans",
+                    "resourceKey": "SHIPMENT_event_scan",
+                    "actions": [
+                      {
+                        "id": 111,
+                        "identifier": "mobile.event_scan.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 112,
+                        "identifier": "mobile.event_scan.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 110,
+                        "identifier": "mobile.event_scan.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.notification",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to list notifications and mark them read",
+                    "resourceKey": "SHIPMENT_notification",
+                    "actions": [
+                      {
+                        "id": 118,
+                        "identifier": "mobile.notification.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.pickup",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to list, view, and scan pickups",
+                    "resourceKey": "SHIPMENT_pickup",
+                    "actions": [
+                      {
+                        "id": 100,
+                        "identifier": "mobile.pickup.update",
+                        "name": "Update",
+                        "granted": true
+                      },
+                      {
+                        "id": 99,
+                        "identifier": "mobile.pickup.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.pod",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to load shipment details before POD capture",
+                    "resourceKey": "SHIPMENT_pod",
+                    "actions": [
+                      {
+                        "id": 114,
+                        "identifier": "mobile.pod.create",
+                        "name": "Create",
+                        "granted": true
+                      },
+                      {
+                        "id": 113,
+                        "identifier": "mobile.pod.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.scanprint",
+                "resources": [
+                  {
+                    "resource": "Allows mobile app users to fetch print-ready label data for an AWB",
+                    "resourceKey": "SHIPMENT_scanprint",
+                    "actions": [
+                      {
+                        "id": 117,
+                        "identifier": "mobile.scan-print.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "underMenu": "SHIPMENT.tracking",
+                "resources": [
+                  {
+                    "resource": "Tracking",
+                    "resourceKey": "SHIPMENT_tracking",
+                    "actions": [
+                      {
+                        "id": 6,
+                        "identifier": "shipment.tracking.read",
+                        "name": "Read",
+                        "granted": true
+                      },
+                      {
+                        "id": 115,
+                        "identifier": "mobile.tracking.read",
+                        "name": "Read",
+                        "granted": true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+
+docs: Grouped permissions with granted true/false per action for the role.

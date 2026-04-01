@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { stateService } from "@/services/masters/state-service"
 import { State } from "@/types/masters/state"
-import { StateDrawer } from "@/components/masters/state-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function StatesPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedState, setSelectedState] = useState<State | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function StatesPage() {
     })
 
     const handleCreate = () => {
-        setSelectedState(null)
-        setDrawerOpen(true)
+        router.push("/masters/states/create")
     }
 
-    const handleEdit = (state: State) => {
-        setSelectedState(state)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/states/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -100,7 +97,7 @@ export default function StatesPage() {
                         Manage states, products types, and zone mappings.
                     </p>
                 </div>
-                <PermissionGuard permission="state_master_add">
+                <PermissionGuard permission="master.state.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create State
                     </Button>
@@ -156,7 +153,7 @@ export default function StatesPage() {
                                             <TableRow key={state.id} className="hover:bg-gray-50/50">
                                                 <TableCell className="font-medium text-blue-600">{state.stateCode}</TableCell>
                                                 <TableCell className="font-medium">{state.stateName}</TableCell>
-                                                <TableCell>{state.productType}</TableCell>
+                                                <TableCell className="uppercase">{state.productType}</TableCell>
                                                 <TableCell>{state.zone?.name || "-"}</TableCell>
                                                 <TableCell>{state.gstAlias}</TableCell>
                                                 <TableCell>
@@ -179,12 +176,12 @@ export default function StatesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="state_master_modify">
-                                                                <DropdownMenuItem onClick={() => handleEdit(state)}>
+                                                            <PermissionGuard permission="master.state.update">
+                                                                <DropdownMenuItem onClick={() => handleEdit(state.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="state_master_delete">
+                                                            <PermissionGuard permission="master.state.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(state.id)}
@@ -213,13 +210,13 @@ export default function StatesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>
@@ -227,11 +224,6 @@ export default function StatesPage() {
                 </CardContent>
             </Card>
 
-            <StateDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                state={selectedState}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

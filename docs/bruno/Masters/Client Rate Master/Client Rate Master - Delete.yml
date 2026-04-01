@@ -1,0 +1,20 @@
+info:
+  name: Client Rate Master - Delete
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/client-rate-master/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Client Rate Master soft-delete by id. JWT + client_rate_master_delete or client_rate_master_all.

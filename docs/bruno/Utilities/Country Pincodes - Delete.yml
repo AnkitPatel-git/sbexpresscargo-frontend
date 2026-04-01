@@ -1,0 +1,20 @@
+info:
+  name: Country Pincodes - Delete
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/utilities/country-pincodes/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Soft-delete country pincode. JWT + utility.country_pincode.delete.

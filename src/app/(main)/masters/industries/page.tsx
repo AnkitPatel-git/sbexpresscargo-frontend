@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -37,19 +38,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { industryService } from "@/services/masters/industry-service"
 import { Industry } from "@/types/masters/industry"
-import { IndustryDrawer } from "@/components/masters/industry-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function IndustriesPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -71,13 +70,11 @@ export default function IndustriesPage() {
     })
 
     const handleCreate = () => {
-        setSelectedIndustry(null)
-        setDrawerOpen(true)
+        router.push("/masters/industries/create")
     }
 
-    const handleEdit = (industry: Industry) => {
-        setSelectedIndustry(industry)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/industries/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -99,7 +96,7 @@ export default function IndustriesPage() {
                         Manage business industries and sectors.
                     </p>
                 </div>
-                <PermissionGuard permission="industry_master_add">
+                <PermissionGuard permission="master.industry.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Industry
                     </Button>
@@ -162,12 +159,12 @@ export default function IndustriesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="industry_master_modify">
-                                                                <DropdownMenuItem onClick={() => handleEdit(industry)}>
+                                                            <PermissionGuard permission="master.industry.update">
+                                                                <DropdownMenuItem onClick={() => handleEdit(industry.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="industry_master_delete">
+                                                            <PermissionGuard permission="master.industry.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(industry.id)}
@@ -196,13 +193,13 @@ export default function IndustriesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>
@@ -210,11 +207,6 @@ export default function IndustriesPage() {
                 </CardContent>
             </Card>
 
-            <IndustryDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                industry={selectedIndustry}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

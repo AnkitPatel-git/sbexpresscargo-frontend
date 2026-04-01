@@ -19,12 +19,14 @@ export interface FlightFormData {
 
 export interface FlightListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Flight[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface FlightSingleResponse {

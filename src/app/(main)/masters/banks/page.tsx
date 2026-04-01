@@ -35,10 +35,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
+import { useRouter } from "next/navigation"
 import { bankService } from "@/services/masters/bank-service"
 import { Bank } from "@/types/masters/bank"
-import { BankDrawer } from "@/components/masters/bank-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
@@ -46,11 +45,10 @@ export default function BanksPage() {
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
+    const router = useRouter()
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedBank, setSelectedBank] = useState<Bank | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +70,11 @@ export default function BanksPage() {
     })
 
     const handleCreate = () => {
-        setSelectedBank(null)
-        setDrawerOpen(true)
+        router.push('/masters/banks/create')
     }
 
-    const handleEdit = (bank: Bank) => {
-        setSelectedBank(bank)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/banks/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -100,7 +96,7 @@ export default function BanksPage() {
                         Manage banks and their statuses for financial operations.
                     </p>
                 </div>
-                <PermissionGuard permission="bank_master_add">
+                <PermissionGuard permission="master.bank.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Bank
                     </Button>
@@ -173,12 +169,12 @@ export default function BanksPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="bank_master_modify">
-                                                                <DropdownMenuItem onClick={() => handleEdit(bank)}>
+                                                            <PermissionGuard permission="master.bank.update">
+                                                                <DropdownMenuItem onClick={() => handleEdit(bank.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="bank_master_delete">
+                                                            <PermissionGuard permission="master.bank.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(bank.id)}
@@ -207,13 +203,13 @@ export default function BanksPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>
@@ -221,11 +217,6 @@ export default function BanksPage() {
                 </CardContent>
             </Card>
 
-            <BankDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                bank={selectedBank}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

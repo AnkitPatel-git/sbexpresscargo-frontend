@@ -1,0 +1,11 @@
+info:
+  name: Rate Master
+  type: folder
+  seq: 5
+
+request:
+  auth: inherit
+
+docs:
+  content: "Rate master and zones (child). Update types: awb_entry_rate, vendor_rate, tax_fuel, vendor_obc_rate. Date range max 31 days. Payment: cash, credit, check, topay."
+  type: text/markdown

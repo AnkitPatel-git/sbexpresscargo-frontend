@@ -2,7 +2,12 @@ export interface ServiceablePincode {
     id: number;
     pinCode: string;
     pinCodeName: string;
-    serviceCenter: string;
+    serviceCenterId: number | null;
+    serviceCenter: {
+        id: number;
+        code: string;
+        name: string;
+    } | null;
     destination: string;
     serviceable: boolean;
     oda: boolean;
@@ -17,7 +22,8 @@ export interface ServiceablePincode {
 export interface ServiceablePincodeFormData {
     pinCode: string;
     pinCodeName: string;
-    serviceCenter: string;
+    serviceCenterId: number;
+    serviceCenterCode: string;
     destination: string;
     serviceable: boolean;
     oda: boolean;
@@ -27,10 +33,12 @@ export interface ServiceablePincodeListResponse {
     success: boolean;
     message: string;
     data: ServiceablePincode[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface ServiceablePincodeSingleResponse {

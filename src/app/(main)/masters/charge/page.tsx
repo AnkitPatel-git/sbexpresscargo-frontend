@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -38,19 +39,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { chargeService } from "@/services/masters/charge-service"
 import { Charge } from "@/types/masters/charge"
-import { ChargeDrawer } from "@/components/masters/charge-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ChargePage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedCharge, setSelectedCharge] = useState<Charge | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -72,13 +71,11 @@ export default function ChargePage() {
     })
 
     const handleCreate = () => {
-        setSelectedCharge(null)
-        setDrawerOpen(true)
+        router.push("/masters/charge/create")
     }
 
-    const handleEdit = (charge: Charge) => {
-        setSelectedCharge(charge)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/charge/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -100,7 +97,7 @@ export default function ChargePage() {
                         Manage additional charges, rates, and calculation logic.
                     </p>
                 </div>
-                <PermissionGuard permission="charge_master_add">
+                <PermissionGuard permission="master.charge.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Charge
                     </Button>
@@ -175,12 +172,12 @@ export default function ChargePage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="charge_master_modify">
-                                                                <DropdownMenuItem onClick={() => handleEdit(charge)}>
+                                                            <PermissionGuard permission="master.charge.update">
+                                                                <DropdownMenuItem onClick={() => handleEdit(charge.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="charge_master_delete">
+                                                            <PermissionGuard permission="master.charge.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(charge.id)}
@@ -203,31 +200,25 @@ export default function ChargePage() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                            onClick={() => setPage((prev: number) => Math.max(prev - 1, 1))}
                             disabled={page === 1}
                         >
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            onClick={() => setPage((prev: number) => prev + 1)}
+                            disabled={!data || page >= (data?.meta?.totalPages || 0)}
                         >
                             Next
                         </Button>
                     </div>
                 </CardContent>
             </Card>
-
-            <ChargeDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                charge={selectedCharge}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

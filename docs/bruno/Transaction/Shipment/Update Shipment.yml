@@ -1,0 +1,200 @@
+info:
+  name: Update Shipment
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/transaction/shipment/2"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1,
+        "awbNo": "AWB123456",
+        "bookDate": "2026-03-20",
+        "bookTime": "10:30",
+        "referenceNo": "REF001",
+        "customerId": 1,
+        "shipperId": 1,
+        "consigneeId": 1,
+        "origin": "MUMBAI",
+        "originCode": "MUM",
+        "destination": "BANGALORE",
+        "destinationCode": "BLR",
+        "productId": 1,
+        "vendorId": 1,
+        "serviceMapId": 1,
+        "pieces": 2,
+        "actualWeight": 8,
+        "volumetricWeight": 10,
+        "chargeWeight": 10,
+        "paymentType": "CREDIT",
+        "content": "Documents",
+        "instruction": "Handle with care",
+        "piecesRows": [
+          {
+            "childAwbNo": "AWB123456-1",
+            "pieces": 2,
+            "actualWeightPerPc": 4,
+            "chargeWeight": 10
+          }
+        ],
+        "charges": [
+          {
+            "chargeId": 1,
+            "description": "Freight",
+            "rate": 25,
+            "amount": 250,
+            "fuelApply": true,
+            "taxApply": true,
+            "total": 295
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200"
+    request:
+      url: "{{baseUrl}}/transaction/shipment/2"
+      method: PUT
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "version": 1,
+            "awbNo": "AWB123456",
+            "bookDate": "2026-03-20",
+            "bookTime": "10:30",
+            "referenceNo": "REF001",
+            "customerId": 1,
+            "shipperId": 1,
+            "consigneeId": 1,
+            "origin": "MUMBAI",
+            "originCode": "MUM",
+            "destination": "BANGALORE",
+            "destinationCode": "BLR",
+            "productId": 1,
+            "vendorId": 1,
+            "serviceMapId": 1,
+            "pieces": 2,
+            "actualWeight": 8,
+            "volumetricWeight": 10,
+            "chargeWeight": 10,
+            "paymentType": "CREDIT",
+            "content": "Documents",
+            "instruction": "Handle with care",
+            "piecesRows": [
+              {
+                "childAwbNo": "AWB123456-1",
+                "pieces": 2,
+                "actualWeightPerPc": 4,
+                "chargeWeight": 10
+              }
+            ],
+            "charges": [
+              {
+                "chargeId": 1,
+                "description": "Freight",
+                "rate": 25,
+                "amount": 250,
+                "fuelApply": true,
+                "taxApply": true,
+                "total": 295
+              }
+            ]
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "429"
+        - name: etag
+          value: W/"1ad-EsUs00s1cHl37mFW9+thVC6QxUs"
+        - name: date
+          value: Tue, 24 Mar 2026 19:39:26 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 2,
+              "awbNo": "AWB123456",
+              "customerId": 1,
+              "vendorId": 1,
+              "productId": 1,
+              "origin": "MUMBAI",
+              "destination": "BANGALORE",
+              "pieces": 2,
+              "declaredWeight": "10",
+              "chargeWeight": null,
+              "paymentType": "CREDIT",
+              "currentStatus": "CREATED",
+              "version": 2,
+              "codAmount": null,
+              "isCod": false,
+              "createdAt": "2026-03-24T19:38:40.286Z",
+              "updatedAt": "2026-03-24T19:39:26.366Z",
+              "createdById": 1,
+              "updatedById": 1,
+              "deletedAt": null,
+              "deletedById": null
+            }
+          }
+
+docs: |-
+  Update shipment header. JWT + shipment.core.update.
+
+  Mandatory: version
+  Optional: all CreateShipmentDto fields (awbNo, bookDate, bookTime, referenceNo, customerId, shipperId, consigneeId, origin, destination, productId, vendorId, pieces, actualWeight, chargeWeight, paymentType, content, instruction, piecesRows, charges, etc.)

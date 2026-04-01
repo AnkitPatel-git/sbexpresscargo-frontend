@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,20 +37,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { clientRateService } from "@/services/masters/client-rate-service"
-import { ClientRate } from "@/types/masters/client-rate"
-import { ClientRateDrawer } from "@/components/masters/client-rate-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ClientRatesPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedRate, setSelectedRate] = useState<ClientRate | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -71,13 +69,11 @@ export default function ClientRatesPage() {
     })
 
     const handleCreate = () => {
-        setSelectedRate(null)
-        setDrawerOpen(true)
+        router.push('/masters/client-rates/create')
     }
 
-    const handleEdit = (rate: ClientRate) => {
-        setSelectedRate(rate)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/client-rates/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -99,7 +95,7 @@ export default function ClientRatesPage() {
                         Manage custom rates for clients based on products, zones, and destinations.
                     </p>
                 </div>
-                <PermissionGuard permission="client_rate_master_add">
+                <PermissionGuard permission="master.client_rate.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Rate
                     </Button>
@@ -153,13 +149,15 @@ export default function ClientRatesPage() {
                                     ) : (
                                         data?.data.map((rate) => (
                                             <TableRow key={rate.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{rate.customer}</TableCell>
-                                                <TableCell>{rate.product}</TableCell>
+                                                <TableCell className="font-medium text-blue-600">
+                                                    {rate.customer?.name || `ID: ${rate.customerId}`}
+                                                </TableCell>
+                                                <TableCell>{rate.product?.productName || `ID: ${rate.productId}`}</TableCell>
                                                 <TableCell>{rate.origin}</TableCell>
                                                 <TableCell>{rate.destination}</TableCell>
                                                 <TableCell>{rate.service}</TableCell>
                                                 <TableCell className="font-semibold">
-                                                    {typeof rate.rateValue === 'string' ? parseFloat(rate.rateValue).toFixed(2) : rate.rateValue.toFixed(2)}
+                                                    {typeof rate.rateValue === 'string' ? parseFloat(rate.rateValue).toFixed(2) : (rate.rateValue?.toFixed(2) || '0.00')}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
@@ -172,12 +170,12 @@ export default function ClientRatesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="client_rate_master_modify">
-                                                                <DropdownMenuItem onClick={() => handleEdit(rate)}>
+                                                            <PermissionGuard permission="master.client_rate.update">
+                                                                <DropdownMenuItem onClick={() => handleEdit(rate.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="client_rate_master_delete">
+                                                            <PermissionGuard permission="master.client_rate.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(rate.id)}
@@ -206,13 +204,13 @@ export default function ClientRatesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta?.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>
@@ -220,11 +218,6 @@ export default function ClientRatesPage() {
                 </CardContent>
             </Card>
 
-            <ClientRateDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                rate={selectedRate}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

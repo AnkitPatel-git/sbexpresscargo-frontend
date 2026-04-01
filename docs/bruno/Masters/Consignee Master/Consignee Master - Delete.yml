@@ -1,0 +1,20 @@
+info:
+  name: Consignee Master - Delete
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/consignee-master/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Consignee Master soft-delete by id. JWT + consignee_master_delete or consignee_master_all.

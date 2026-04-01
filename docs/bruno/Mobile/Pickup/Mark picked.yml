@@ -1,0 +1,28 @@
+info:
+  name: Mark picked
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/mobile/pickup/1/picked"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "remark": "Picked at door"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: mobile.pickup.update

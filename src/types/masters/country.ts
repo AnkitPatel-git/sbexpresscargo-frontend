@@ -2,7 +2,7 @@ export interface Country {
     id: number;
     code: string;
     name: string;
-    weightUnit: string;
+    weightUnit: 'KGS' | 'LBS' | string;
     currency: string;
     isdCode: string;
     createdAt: string;
@@ -23,12 +23,14 @@ export interface CountryFormData {
 
 export interface CountryListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Country[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface CountrySingleResponse {

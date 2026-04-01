@@ -11,9 +11,9 @@ export interface Customer {
     telNo1: string;
     email: string;
     mobile: string;
-    status: 'Active' | 'Inactive' | string;
-    customerType: string;
-    registerType: string;
+    status: 'ACTIVE' | 'INACTIVE';
+    customerType: 'CUSTOMER' | 'VENDOR' | 'AGENT';
+    registerType: 'REGISTERED' | 'UNREGISTERED';
     gstNo: string;
     createdAt: string;
     updatedAt: string;
@@ -34,9 +34,9 @@ export interface CustomerFormData {
     telNo1: string;
     email: string;
     mobile: string;
-    status: string;
-    customerType: string;
-    registerType: string;
+    status: 'ACTIVE' | 'INACTIVE';
+    customerType: 'CUSTOMER' | 'VENDOR' | 'AGENT';
+    registerType: 'REGISTERED' | 'UNREGISTERED';
     gstNo: string;
 }
 
@@ -44,10 +44,12 @@ export interface CustomerListResponse {
     success: boolean;
     message: string;
     data: Customer[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface CustomerSingleResponse {

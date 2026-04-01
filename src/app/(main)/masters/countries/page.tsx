@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -37,19 +38,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { countryService } from "@/services/masters/country-service"
 import { Country } from "@/types/masters/country"
-import { CountryDrawer } from "@/components/masters/country-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function CountriesPage() {
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
 
-    const [drawerOpen, setDrawerOpen] = useState(false)
-    const [selectedCountry, setSelectedCountry] = useState<Country | null>(null)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
@@ -71,13 +70,11 @@ export default function CountriesPage() {
     })
 
     const handleCreate = () => {
-        setSelectedCountry(null)
-        setDrawerOpen(true)
+        router.push("/masters/countries/create")
     }
 
-    const handleEdit = (country: Country) => {
-        setSelectedCountry(country)
-        setDrawerOpen(true)
+    const handleEdit = (id: number) => {
+        router.push(`/masters/countries/${id}/edit`)
     }
 
     const handleDeleteRequest = (id: number) => {
@@ -99,7 +96,7 @@ export default function CountriesPage() {
                         Manage your service countries and international zones.
                     </p>
                 </div>
-                <PermissionGuard permission="country_master_add">
+                <PermissionGuard permission="master.country.create">
                     <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" /> Create Country
                     </Button>
@@ -152,9 +149,9 @@ export default function CountriesPage() {
                                     ) : (
                                         data?.data.map((country) => (
                                             <TableRow key={country.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{country.code}</TableCell>
+                                                <TableCell className="font-medium text-blue-600 uppercase">{country.code}</TableCell>
                                                 <TableCell className="font-medium">{country.name}</TableCell>
-                                                <TableCell>{country.weightUnit}</TableCell>
+                                                <TableCell className="uppercase">{country.weightUnit}</TableCell>
                                                 <TableCell>{country.currency}</TableCell>
                                                 <TableCell>{country.isdCode}</TableCell>
                                                 <TableCell className="text-right">
@@ -168,12 +165,12 @@ export default function CountriesPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="country_master_modify">
-                                                                <DropdownMenuItem onClick={() => handleEdit(country)}>
+                                                            <PermissionGuard permission="master.country.update">
+                                                                <DropdownMenuItem onClick={() => handleEdit(country.id)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
-                                                            <PermissionGuard permission="country_master_delete">
+                                                            <PermissionGuard permission="master.country.delete">
                                                                 <DropdownMenuItem
                                                                     className="text-red-600"
                                                                     onClick={() => handleDeleteRequest(country.id)}
@@ -203,13 +200,13 @@ export default function CountriesPage() {
                             Previous
                         </Button>
                         <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
+                            Page {page} of {data?.meta.totalPages || 1}
                         </div>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
+                            disabled={!data || page >= (data.meta?.totalPages || 1)}
                         >
                             Next
                         </Button>
@@ -217,11 +214,6 @@ export default function CountriesPage() {
                 </CardContent>
             </Card>
 
-            <CountryDrawer
-                open={drawerOpen}
-                onOpenChange={setDrawerOpen}
-                country={selectedCountry}
-            />
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

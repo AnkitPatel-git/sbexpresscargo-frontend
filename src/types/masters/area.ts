@@ -1,8 +1,9 @@
 export interface Area {
     id: number;
     areaName: string;
-    serviceCenter: string;
-    destination: string;
+    serviceCenterId: number | null;
+    serviceCenter?: string | { name: string; code: string }; // For display in table
+    destination: string | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -13,18 +14,20 @@ export interface Area {
 
 export interface AreaFormData {
     areaName: string;
-    serviceCenter: string;
-    destination: string;
+    serviceCenterId: number;
+    destination?: string;
 }
 
 export interface AreaListResponse {
     success: boolean;
     message: string;
     data: Area[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
 }
 
 export interface AreaSingleResponse {
