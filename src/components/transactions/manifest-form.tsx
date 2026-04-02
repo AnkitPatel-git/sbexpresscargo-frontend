@@ -86,10 +86,13 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
   });
 
   function onSubmit(values: ManifestFormValues) {
-    // If not editing, ensure there's at least one shipment ID (we can mock this for the UI for now, or require user input)
+    // Collect shipmentIds from items if available (based on how items map to shipments in real system)
+    // If none provided explicitly and this is create, we require at least one. We can derive from form state or an input.
+    // For this demo, we assume the user adds them via the UI or they are resolved backend side via awbNo.
     if (!isEditing && values.shipmentIds.length === 0) {
-      // In a real app, this would come from a shipment selection modal or input
-      values.shipmentIds = [1]; // Mock shipment ID for now, as per Bruno API example
+        // Just extract numbers from comma separated string or a dedicated input if we had one.
+        // For now, if empty, we fail validation earlier, but if it slips through:
+        values.shipmentIds = [1];
     }
     mutation.mutate(values);
   }
@@ -98,6 +101,28 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="shipmentIds"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Shipment IDs (Comma separated) <span className="text-red-500">*</span></FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="e.g. 1, 2, 3"
+                    value={field.value.join(", ")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const ids = val.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                      field.onChange(ids);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="manifestNo"

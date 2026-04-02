@@ -1,6 +1,16 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { DrsListResponse, DrsSingleResponse, DrsFormValues } from '@/types/transactions/drs';
 
+const getAuthHeaders = (isFormData = false) => {
+    const headers: Record<string, string> = {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+    };
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+};
+
 class DrsService {
     private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/drs`;
 
@@ -16,7 +26,7 @@ class DrsService {
             queryParams.append('search', search);
         }
 
-        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`);
+        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch DRS list');
         }
@@ -24,7 +34,7 @@ class DrsService {
     }
 
     async getDrsById(id: number): Promise<DrsSingleResponse> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`);
+        const response = await apiFetch(`${this.baseUrl}/${id}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch DRS');
         }
@@ -34,6 +44,7 @@ class DrsService {
     async createDrs(data: DrsFormValues): Promise<DrsSingleResponse> {
         const response = await apiFetch(`${this.baseUrl}/scan`, {
             method: 'POST',
+            headers: getAuthHeaders(true),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -45,6 +56,7 @@ class DrsService {
     async updateDrs(id: number, data: Partial<DrsFormValues>): Promise<DrsSingleResponse> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
+            headers: getAuthHeaders(true),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -56,6 +68,7 @@ class DrsService {
     async deleteDrs(id: number): Promise<void> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'DELETE',
+            headers: getAuthHeaders(true),
         });
         if (!response.ok) {
             throw new Error('Failed to delete DRS');

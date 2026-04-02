@@ -1,6 +1,16 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { MisroutedScanListResponse, MisroutedScanSingleResponse, MisroutedScanFormValues } from '@/types/transactions/misrouted-scan';
 
+const getAuthHeaders = (isFormData = false) => {
+    const headers: Record<string, string> = {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+    };
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+};
+
 class MisroutedScanService {
     private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/misrouted-scan`;
 
@@ -16,7 +26,7 @@ class MisroutedScanService {
             queryParams.append('search', search);
         }
 
-        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`);
+        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch misrouted scans');
         }
@@ -24,7 +34,7 @@ class MisroutedScanService {
     }
 
     async getMisroutedScanById(id: number): Promise<MisroutedScanSingleResponse> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`);
+        const response = await apiFetch(`${this.baseUrl}/${id}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch misrouted scan');
         }
@@ -34,6 +44,7 @@ class MisroutedScanService {
     async createMisroutedScan(data: MisroutedScanFormValues): Promise<MisroutedScanSingleResponse> {
         const response = await apiFetch(this.baseUrl, {
             method: 'POST',
+            headers: getAuthHeaders(true),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -45,6 +56,7 @@ class MisroutedScanService {
     async updateMisroutedScan(id: number, data: Partial<MisroutedScanFormValues>): Promise<MisroutedScanSingleResponse> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
+            headers: getAuthHeaders(true),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -56,6 +68,7 @@ class MisroutedScanService {
     async deleteMisroutedScan(id: number): Promise<void> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'DELETE',
+            headers: getAuthHeaders(true),
         });
         if (!response.ok) {
             throw new Error('Failed to delete misrouted scan');

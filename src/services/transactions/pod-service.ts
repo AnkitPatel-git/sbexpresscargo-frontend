@@ -1,12 +1,23 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { PodViewResponse } from '@/types/transactions/pod';
 
+const getAuthHeaders = (isFormData = false) => {
+    const headers: Record<string, string> = {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+    };
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+};
+
 class PodService {
     private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/pod`;
 
     async viewPod(awbNos: string[]): Promise<PodViewResponse> {
         const response = await apiFetch(`${this.baseUrl}/view`, {
             method: 'POST',
+            headers: getAuthHeaders(true),
             body: JSON.stringify({ awbNos }),
         });
         if (!response.ok) {
@@ -16,7 +27,7 @@ class PodService {
     }
 
     async downloadTemplate(): Promise<Blob> {
-        const response = await apiFetch(`${this.baseUrl}/template`);
+        const response = await apiFetch(`${this.baseUrl}/template`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to download POD template');
         }
@@ -29,6 +40,7 @@ class PodService {
 
         const response = await apiFetch(`${this.baseUrl}/upload`, {
             method: 'POST',
+            headers: getAuthHeaders(true),
             body: formData,
         });
         if (!response.ok) {

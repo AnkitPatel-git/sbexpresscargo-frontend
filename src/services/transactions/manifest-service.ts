@@ -1,6 +1,16 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { ManifestListResponse, ManifestSingleResponse, ManifestFormValues } from '@/types/transactions/manifest';
 
+const getAuthHeaders = (isFormData = false) => {
+    const headers: Record<string, string> = {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+    };
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+};
+
 class ManifestService {
     private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/manifest`;
 
@@ -16,7 +26,7 @@ class ManifestService {
             queryParams.append('search', search);
         }
 
-        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`);
+        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch manifests');
         }
@@ -24,7 +34,7 @@ class ManifestService {
     }
 
     async getManifestById(id: number): Promise<ManifestSingleResponse> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`);
+        const response = await apiFetch(`${this.baseUrl}/${id}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch manifest');
         }
@@ -34,6 +44,7 @@ class ManifestService {
     async createManifest(data: ManifestFormValues): Promise<ManifestSingleResponse> {
         const response = await apiFetch(this.baseUrl, {
             method: 'POST',
+            headers: getAuthHeaders(true),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -45,6 +56,7 @@ class ManifestService {
     async updateManifest(id: number, data: Partial<ManifestFormValues>): Promise<ManifestSingleResponse> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
+            headers: getAuthHeaders(true),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -56,6 +68,7 @@ class ManifestService {
     async deleteManifest(id: number): Promise<void> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'DELETE',
+            headers: getAuthHeaders(true),
         });
         if (!response.ok) {
             throw new Error('Failed to delete manifest');
