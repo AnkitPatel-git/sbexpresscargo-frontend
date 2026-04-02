@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { CustomerPaymentForm } from "@/components/transactions/customer-payment-form";
