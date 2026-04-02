@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { MisroutedScanForm } from "@/components/transactions/misrouted-scan-form";
