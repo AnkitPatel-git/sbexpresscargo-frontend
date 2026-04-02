@@ -1,6 +1,16 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { UndeliveredScanListResponse, UndeliveredScanSingleResponse, UndeliveredScanFormValues } from '@/types/transactions/undelivered-scan';
 
+const getAuthHeaders = (isFormData = false) => {
+    const headers: Record<string, string> = {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+    };
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+};
+
 class UndeliveredScanService {
     private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/undelivered-scan`;
 
@@ -16,7 +26,7 @@ class UndeliveredScanService {
             queryParams.append('search', search);
         }
 
-        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`);
+        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch undelivered scans');
         }
@@ -24,7 +34,7 @@ class UndeliveredScanService {
     }
 
     async getUndeliveredScanById(id: number): Promise<UndeliveredScanSingleResponse> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`);
+        const response = await apiFetch(`${this.baseUrl}/${id}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch undelivered scan');
         }
@@ -34,6 +44,7 @@ class UndeliveredScanService {
     async createUndeliveredScan(data: UndeliveredScanFormValues): Promise<UndeliveredScanSingleResponse> {
         const response = await apiFetch(this.baseUrl, {
             method: 'POST',
+            headers: getAuthHeaders(true),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -45,6 +56,7 @@ class UndeliveredScanService {
     async updateUndeliveredScan(id: number, data: Partial<UndeliveredScanFormValues>): Promise<UndeliveredScanSingleResponse> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
+            headers: getAuthHeaders(true),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -56,6 +68,7 @@ class UndeliveredScanService {
     async deleteUndeliveredScan(id: number): Promise<void> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'DELETE',
+            headers: getAuthHeaders(true),
         });
         if (!response.ok) {
             throw new Error('Failed to delete undelivered scan');

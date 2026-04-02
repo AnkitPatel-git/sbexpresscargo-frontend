@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Search, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import { PermissionGuard } from "@/components/auth/permission-guard";
 export default function PodPage() {
     const [awbInput, setAwbInput] = useState("");
     const [podData, setPodData] = useState<PodRow[] | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const viewMutation = useMutation({
         mutationFn: async (awbNos: string[]) => {
@@ -52,6 +53,41 @@ export default function PodPage() {
         }
 
         viewMutation.mutate(awbList);
+    };
+
+    const downloadMutation = useMutation({
+        mutationFn: () => podService.downloadTemplate(),
+        onSuccess: (blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'POD_Template.xlsx');
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            toast.success("Template downloaded successfully");
+        },
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to download template");
+        }
+    });
+
+    const uploadMutation = useMutation({
+        mutationFn: (file: File) => podService.uploadExcel(file),
+        onSuccess: () => {
+            toast.success("Excel uploaded successfully");
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        },
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to upload Excel");
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    });
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            uploadMutation.mutate(e.target.files[0]);
+        }
     };
 
     return (
@@ -103,17 +139,31 @@ export default function PodPage() {
                         </p>
                         <div className="flex gap-4">
                             <PermissionGuard permission="transaction.pod.create">
-                                <Button variant="outline" className="flex-1" onClick={() => {
-                                    // Normally you'd implement the actual file download trigger here
-                                    toast.info("Downloading template...");
-                                }}>
-                                    <Download className="mr-2 h-4 w-4" /> Download Template
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => downloadMutation.mutate()}
+                                    disabled={downloadMutation.isPending}
+                                >
+                                    {downloadMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                    Download Template
                                 </Button>
-                                <Button className="flex-1" onClick={() => {
-                                    // Normally you'd implement the actual file input click here
-                                    toast.info("Select file to upload...");
-                                }}>
-                                    <Upload className="mr-2 h-4 w-4" /> Upload Excel
+
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept=".xlsx, .xls, .csv"
+                                    onChange={handleFileUpload}
+                                />
+
+                                <Button
+                                    className="flex-1"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadMutation.isPending}
+                                >
+                                    {uploadMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                                    Upload Excel
                                 </Button>
                             </PermissionGuard>
                         </div>
