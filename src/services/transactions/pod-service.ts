@@ -15,19 +15,21 @@ class PodService {
     private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/pod`;
 
     async viewPod(awbNos: string[]): Promise<PodViewResponse> {
+        // Changed to getAuthHeaders(false) because we are sending JSON, not FormData
         const response = await apiFetch(`${this.baseUrl}/view`, {
             method: 'POST',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(false),
             body: JSON.stringify({ awbNos }),
         });
         if (!response.ok) {
-            throw new Error('Failed to fetch POD data');
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch POD data');
         }
         return response.json();
     }
 
     async downloadTemplate(): Promise<Blob> {
-        const response = await apiFetch(`${this.baseUrl}/template`, { headers: getAuthHeaders() });
+        const response = await apiFetch(`${this.baseUrl}/example`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to download POD template');
         }
@@ -44,9 +46,21 @@ class PodService {
             body: formData,
         });
         if (!response.ok) {
-            throw new Error('Failed to upload POD Excel file');
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to upload POD Excel file');
         }
         return response.json();
+    }
+
+    async exportExcel(awbNos: string[]): Promise<Blob> {
+        const awbParams = awbNos.join(',');
+        const response = await apiFetch(`${this.baseUrl}/export?awbNos=${awbParams}`, {
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to export POD Excel file');
+        }
+        return response.blob();
     }
 }
 

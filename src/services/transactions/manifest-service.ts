@@ -44,7 +44,7 @@ class ManifestService {
     async createManifest(data: ManifestFormValues): Promise<ManifestSingleResponse> {
         const response = await apiFetch(this.baseUrl, {
             method: 'POST',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -56,7 +56,7 @@ class ManifestService {
     async updateManifest(id: number, data: Partial<ManifestFormValues>): Promise<ManifestSingleResponse> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -68,7 +68,7 @@ class ManifestService {
     async deleteManifest(id: number): Promise<void> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'DELETE',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(),
         });
         if (!response.ok) {
             throw new Error('Failed to delete manifest');

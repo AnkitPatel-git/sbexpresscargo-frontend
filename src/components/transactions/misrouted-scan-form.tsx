@@ -3,9 +3,10 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { Loader2, Plus, Trash2, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { misroutedScanFormSchema, MisroutedScanFormValues, MisroutedScan } from "@/types/transactions/misrouted-scan";
 import { misroutedScanService } from "@/services/transactions/misrouted-scan-service";
+import { serviceCenterService } from "@/services/masters/service-center-service";
+import { Combobox } from "@/components/ui/combobox";
 
 interface MisroutedScanFormProps {
   initialData?: MisroutedScan | null;
@@ -28,14 +31,30 @@ export function MisroutedScanForm({ initialData }: MisroutedScanFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
+  
+  const { data: serviceCentersResponse } = useQuery({
+    queryKey: ["service-centers-master"],
+    queryFn: () => serviceCenterService.getServiceCenters({ limit: 100 }),
+  });
+
+  const serviceCenterOptions = serviceCentersResponse?.data.map((sc) => ({
+    label: `${sc.name} (${sc.code || sc.id})`,
+    value: sc.id,
+  })) || [];
 
   const form = useForm<MisroutedScanFormValues>({
     resolver: zodResolver(misroutedScanFormSchema),
     defaultValues: {
       scanDate: initialData?.scanAt ? initialData.scanAt.split("T")[0] : new Date().toISOString().split("T")[0],
-      scanTime: initialData?.scanAt ? new Date(initialData.scanAt).toISOString().split("T")[1].substring(0, 5) : "10:00",
+      scanTime: (initialData?.scanAt && !isNaN(new Date(initialData.scanAt).getTime())) 
+        ? format(new Date(initialData.scanAt), "HH:mm") 
+        : "10:00",
       serviceCenterId: initialData?.serviceCenterId || undefined,
-      items: initialData?.items || [{ awbNo: "" }],
+      items: initialData?.items?.map(item => ({
+        id: item.id,
+        awbNo: item.awbNo,
+        shipmentId: item.shipmentId
+      })) || [{ awbNo: "" }],
     },
   });
 
@@ -104,10 +123,16 @@ export function MisroutedScanForm({ initialData }: MisroutedScanFormProps) {
             control={form.control}
             name="serviceCenterId"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Service Center ID</FormLabel>
+              <FormItem className="flex flex-col">
+                <FormLabel>Service Center</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || undefined)} />
+                  <Combobox
+                    options={serviceCenterOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Service Center"
+                    searchPlaceholder="Search by name or code..."
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

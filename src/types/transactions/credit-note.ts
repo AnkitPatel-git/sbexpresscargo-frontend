@@ -18,6 +18,7 @@ export const creditNoteItemSchema = z.object({
 export const creditNoteFormSchema = z.object({
     noteNo: z.string().min(1, "Note No is required"),
     creditNoteNo: z.number().optional(),
+    version: z.number().optional(),
     cnDate: z.string().min(1, "Date is required"),
     customerId: z.number().min(1, "Customer is required"),
     invoiceRef: z.string().optional(),
@@ -54,6 +55,7 @@ export interface CreditNote {
     grandTotal?: string;
     serviceCenterId?: number;
     status: string;
+    version: number;
     createdAt: string;
     updatedAt: string;
     createdById: number;

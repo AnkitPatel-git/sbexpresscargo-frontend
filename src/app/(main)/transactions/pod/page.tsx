@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, Search, Upload, Download } from "lucide-react";
+import { Loader2, Search, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,30 @@ export default function PodPage() {
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     });
+
+    const exportMutation = useMutation({
+        mutationFn: (awbNos: string[]) => podService.exportExcel(awbNos),
+        onSuccess: (blob, awbNos) => {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const timestamp = new Date().getTime();
+            link.setAttribute('download', `POD_Export_${timestamp}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            toast.success(`Exported ${awbNos.length} records`);
+        },
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to export data");
+        }
+    });
+
+    const handleExport = () => {
+        if (!podData || podData.length === 0) return;
+        const awbNos = podData.map(row => row.AWBNo);
+        exportMutation.mutate(awbNos);
+    };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -173,8 +197,26 @@ export default function PodPage() {
 
             {podData && (
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Results</CardTitle>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Results</CardTitle>
+                            <CardDescription>Found {podData.length} records</CardDescription>
+                        </div>
+                        <PermissionGuard permission="transaction.pod.read">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExport}
+                                disabled={exportMutation.isPending || podData.length === 0}
+                            >
+                                {exportMutation.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+                                )}
+                                Export to Excel
+                            </Button>
+                        </PermissionGuard>
                     </CardHeader>
                     <CardContent>
                         <div className="border rounded-md">
@@ -184,37 +226,44 @@ export default function PodPage() {
                                         <TableHead>AWB No</TableHead>
                                         <TableHead>Delivery Date/Time</TableHead>
                                         <TableHead>Receiver</TableHead>
-                                        <TableHead>Status / Remark</TableHead>
+                                        <TableHead>Remark</TableHead>
+                                        <TableHead>Comment</TableHead>
+                                        <TableHead>Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {podData.map((row, idx) => (
                                         <TableRow key={idx} className="hover:bg-gray-50/50">
-                                            <TableCell className="font-medium">{row.AWBNo}</TableCell>
+                                            <TableCell className="font-medium text-blue-600">{row.AWBNo}</TableCell>
                                             <TableCell>
                                                 {row.DelvDate ? `${row.DelvDate} ${row.DelvTime}` : "-"}
                                             </TableCell>
                                             <TableCell>
-                                                {row.Recivername || "-"}
-                                                {row.ReciverTelNo && <div className="text-xs text-gray-500">{row.ReciverTelNo}</div>}
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{row.Recivername || "-"}</span>
+                                                    {row.ReciverTelNo && <span className="text-xs text-muted-foreground">{row.ReciverTelNo}</span>}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="max-w-[150px] truncate" title={row.Remark}>
+                                                {row.Remark || "-"}
+                                            </TableCell>
+                                            <TableCell className="max-w-[150px] truncate" title={row.Comment}>
+                                                {row.Comment || "-"}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex flex-col gap-1 items-start">
-                                                    {row.MSG ? (
-                                                        <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                                                            {row.MSG}
-                                                        </Badge>
-                                                    ) : (
-                                                        <span className="text-gray-400 text-sm">No Status</span>
-                                                    )}
-                                                    {row.Remark && <span className="text-xs text-gray-500">{row.Remark}</span>}
-                                                </div>
+                                                {row.MSG ? (
+                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                        {row.MSG}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs italic">Pending</span>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))}
                                     {podData.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center py-10 text-gray-500">
+                                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                                                 No tracking information found for the entered AWBs.
                                             </TableCell>
                                         </TableRow>

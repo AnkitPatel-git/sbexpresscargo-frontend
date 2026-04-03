@@ -12,7 +12,6 @@ export const drsFormSchema = z.object({
     drsTime: z.string().optional(),
     courierId: z.number().optional(),
     areaId: z.number().optional(),
-    serviceCenter: z.string().optional(),
     serviceCenterId: z.number().optional(),
     remark: z.string().optional(),
     items: z.array(drsItemSchema).min(1, "At least one item is required"),
@@ -28,7 +27,6 @@ export interface Drs {
     drsTime?: string;
     courierId?: number;
     areaId?: number;
-    serviceCenter?: string;
     serviceCenterId?: number;
     remark?: string;
     status: string;

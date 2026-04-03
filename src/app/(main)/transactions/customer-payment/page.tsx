@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Edit, MoreHorizontal, Plus, Search, Trash, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { Edit, MoreHorizontal, Plus, Search, Trash, CheckCircle2, XCircle, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -64,6 +64,23 @@ export default function CustomerPaymentListPage() {
       toast.error(error instanceof Error ? error.message : "Failed to delete payment");
       setDeleteId(null);
     },
+  });
+
+  const downloadMutation = useMutation({
+    mutationFn: (payment: CustomerPayment) => customerPaymentService.getCustomerPaymentFile(payment.id),
+    onSuccess: (blob, payment) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', payment.fileName || `payment_${payment.id}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      toast.success("File downloaded successfully");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to download file");
+    }
   });
 
   const handleDelete = () => {
@@ -150,11 +167,16 @@ export default function CustomerPaymentListPage() {
                     </TableCell>
                     <TableCell>
                         {payment.fileName ? (
-                            <div className="flex items-center text-blue-600 text-sm">
-                                <FileText className="w-4 h-4 mr-1"/> {payment.fileName}
-                            </div>
+                            <button
+                                onClick={() => downloadMutation.mutate(payment)}
+                                className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                                disabled={downloadMutation.isPending}
+                            >
+                                <FileText className="w-4 h-4 mr-1"/>
+                                <span className="max-w-[150px] truncate">{payment.fileName}</span>
+                            </button>
                         ) : (
-                            <span className="text-gray-400 text-sm">No File</span>
+                            <span className="text-gray-400 text-sm italic">No Attachment</span>
                         )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -174,6 +196,15 @@ export default function CustomerPaymentListPage() {
                               Edit
                             </DropdownMenuItem>
                           </PermissionGuard>
+                          {payment.fileName && (
+                            <DropdownMenuItem
+                              onClick={() => downloadMutation.mutate(payment)}
+                             disabled={downloadMutation.isPending}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Download File
+                            </DropdownMenuItem>
+                          )}
                           <PermissionGuard permission="transaction.customer-payment.delete">
                             <DropdownMenuItem
                               onClick={() => setDeleteId(payment.id)}

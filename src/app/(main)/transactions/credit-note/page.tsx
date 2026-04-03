@@ -69,7 +69,7 @@ export default function CreditNoteListPage() {
   });
 
   const postMutation = useMutation({
-    mutationFn: creditNoteService.postCreditNote,
+    mutationFn: ({ id, version }: { id: number, version: number }) => creditNoteService.postCreditNote(id, version),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["credit-notes"] });
       toast.success("Credit note posted successfully");
@@ -85,8 +85,8 @@ export default function CreditNoteListPage() {
     }
   };
 
-  const handlePost = (id: number) => {
-      postMutation.mutate(id);
+  const handlePost = (id: number, version: number) => {
+      postMutation.mutate({ id, version });
   }
 
   return (
@@ -181,7 +181,7 @@ export default function CreditNoteListPage() {
                           {note.status === "DRAFT" && (
                               <>
                                 <PermissionGuard permission="transaction.credit-note.update">
-                                    <DropdownMenuItem onClick={() => handlePost(note.id)}>
+                                    <DropdownMenuItem onClick={() => handlePost(note.id, note.version)}>
                                         <Send className="mr-2 h-4 w-4" />
                                         Post Note
                                     </DropdownMenuItem>

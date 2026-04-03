@@ -3,9 +3,9 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +18,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Combobox } from "@/components/ui/combobox";
 import { drsFormSchema, DrsFormValues, Drs } from "@/types/transactions/drs";
 import { drsService } from "@/services/transactions/drs-service";
+import { serviceCenterService } from "@/services/masters/service-center-service";
+import { courierService } from "@/services/masters/courier-service";
+import { areaService } from "@/services/masters/area-service";
 
 interface DrsFormProps {
   initialData?: Drs | null;
@@ -30,6 +34,36 @@ export function DrsForm({ initialData }: DrsFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
 
+  const { data: serviceCentersData } = useQuery({
+    queryKey: ["service-centers"],
+    queryFn: () => serviceCenterService.getServiceCenters(),
+  });
+
+  const { data: couriersData } = useQuery({
+    queryKey: ["couriers"],
+    queryFn: () => courierService.getCouriers({ limit: 100 }),
+  });
+
+  const { data: areasData } = useQuery({
+    queryKey: ["areas"],
+    queryFn: () => areaService.getAreas({ limit: 100 }),
+  });
+
+  const serviceCenterOptions = serviceCentersData?.data?.map(sc => ({
+    label: sc.name,
+    value: sc.id
+  })) || [];
+
+  const courierOptions = couriersData?.data?.map(c => ({
+    label: c.name,
+    value: c.id
+  })) || [];
+
+  const areaOptions = areasData?.data?.map(a => ({
+    label: a.areaName,
+    value: a.id
+  })) || [];
+
   const form = useForm<DrsFormValues>({
     resolver: zodResolver(drsFormSchema),
     defaultValues: {
@@ -38,7 +72,6 @@ export function DrsForm({ initialData }: DrsFormProps) {
       drsTime: initialData?.drsTime || "10:00",
       courierId: initialData?.courierId || undefined,
       areaId: initialData?.areaId || undefined,
-      serviceCenter: initialData?.serviceCenter || "",
       serviceCenterId: initialData?.serviceCenterId || undefined,
       remark: initialData?.remark || "",
       items: initialData?.items || [{ awbNo: "" }],
@@ -122,12 +155,55 @@ export function DrsForm({ initialData }: DrsFormProps) {
 
           <FormField
             control={form.control}
-            name="serviceCenter"
+            name="courierId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Courier</FormLabel>
+                <FormControl>
+                  <Combobox
+                    options={courierOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Courier"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="areaId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Area</FormLabel>
+                <FormControl>
+                  <Combobox
+                    options={areaOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Area"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="serviceCenterId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Service Center</FormLabel>
                 <FormControl>
-                  <Input placeholder="Service Center Name" {...field} />
+                  <Combobox
+                    options={serviceCenterOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Service Center"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

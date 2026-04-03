@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,8 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { manifestFormSchema, ManifestFormValues, Manifest } from "@/types/transactions/manifest";
 import { manifestService } from "@/services/transactions/manifest-service";
+import { shipmentService } from "@/services/transactions/shipment-service";
 
 interface ManifestFormProps {
   initialData?: Manifest | null;
@@ -37,6 +39,16 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
+
+  const { data: shipmentsData } = useQuery({
+    queryKey: ["shipments-list"],
+    queryFn: () => shipmentService.getShipments({ limit: 100 }),
+  });
+
+  const shipmentOptions = shipmentsData?.data?.map(s => ({
+    label: s.awbNo,
+    value: s.id
+  })) || [];
 
   const form = useForm<ManifestFormValues>({
     resolver: zodResolver(manifestFormSchema),
@@ -55,7 +67,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
       pdfType: initialData?.pdfType || "A4",
       accountNo: initialData?.accountNo || "",
       department: initialData?.department || "",
-      shipmentIds: [], // Would typically be pre-filled from an API if initialData is provided
+      shipmentIds: initialData?.items?.map(it => it.id).filter(id => id !== undefined) as number[] || [],
       items: initialData?.items || [],
     },
   });
@@ -86,15 +98,22 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
   });
 
   function onSubmit(values: ManifestFormValues) {
-    // Collect shipmentIds from items if available (based on how items map to shipments in real system)
-    // If none provided explicitly and this is create, we require at least one. We can derive from form state or an input.
-    // For this demo, we assume the user adds them via the UI or they are resolved backend side via awbNo.
-    if (!isEditing && values.shipmentIds.length === 0) {
-        // Just extract numbers from comma separated string or a dedicated input if we had one.
-        // For now, if empty, we fail validation earlier, but if it slips through:
-        values.shipmentIds = [1];
+    // Combine date and time into a full ISO 8601 string
+    const manifestAt = new Date(`${values.manifestDate}T${values.manifestTime || "10:00"}:00`).toISOString();
+    
+    // @ts-ignore - The API expects ISO string for manifestDate in this case
+    const payload = {
+      ...values,
+      manifestDate: manifestAt,
+      shipmentIds: values.shipmentIds.map(id => Number(id)).filter(id => id >= 1)
+    };
+
+    if (payload.shipmentIds.length === 0) {
+        toast.error("Please select at least one shipment");
+        return;
     }
-    mutation.mutate(values);
+
+    mutation.mutate(payload as any);
   }
 
   return (
@@ -106,16 +125,14 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             name="shipmentIds"
             render={({ field }) => (
               <FormItem className="md:col-span-2">
-                <FormLabel>Shipment IDs (Comma separated) <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>Shipment IDs <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="e.g. 1, 2, 3"
-                    value={field.value.join(", ")}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const ids = val.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                      field.onChange(ids);
-                    }}
+                  <MultiSelect
+                    options={shipmentOptions}
+                    selected={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select shipments..."
+                    searchPlaceholder="Search AWB..."
                   />
                 </FormControl>
                 <FormMessage />

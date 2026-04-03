@@ -94,3 +94,62 @@ export interface TrackingDetailResponse {
         ndrProgress: any[];
     }
 }
+export interface TrackingMetrics {
+    totalShipments: number;
+    inTransit: number;
+    delivered: number;
+    exceptions: number;
+    lastUpdated: string;
+}
+
+export interface ManualUpdatePayload {
+    awbNo: string;
+    status: string;
+    remark?: string;
+    serviceCenterId?: number;
+}
+
+export interface DeadLetterLog {
+    id: number;
+    awbNo: string;
+    carrier: string;
+    status: string;
+    error: string;
+    payload: string;
+    createdAt: string;
+    retryCount: number;
+}
+
+export interface MetricsResponse {
+    success: boolean;
+    data: TrackingMetrics;
+}
+
+export interface DeadLettersResponse {
+    success: boolean;
+    data: DeadLetterLog[];
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+    };
+}
+
+export interface TrackingSummary {
+    awbNo: string;
+    currentStatus: string;
+    lastStatusAt: string;
+    origin: string;
+    destination: string;
+    pieces: number;
+    weight: string;
+    customerName: string;
+    vendorName: string;
+    productName: string;
+    cod: boolean;
+}
+
+export interface TrackingSummaryResponse {
+    success: boolean;
+    data: TrackingSummary;
+}

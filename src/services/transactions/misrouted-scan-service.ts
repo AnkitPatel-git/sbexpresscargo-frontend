@@ -44,7 +44,7 @@ class MisroutedScanService {
     async createMisroutedScan(data: MisroutedScanFormValues): Promise<MisroutedScanSingleResponse> {
         const response = await apiFetch(this.baseUrl, {
             method: 'POST',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(false),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -54,10 +54,15 @@ class MisroutedScanService {
     }
 
     async updateMisroutedScan(id: number, data: Partial<MisroutedScanFormValues>): Promise<MisroutedScanSingleResponse> {
+        // Strip ids from items as the API prohibits then in the update payload
+        const updatedData = {
+            ...data,
+            items: data.items?.map(({ id, ...item }) => item)
+        };
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
-            headers: getAuthHeaders(true),
-            body: JSON.stringify(data),
+            headers: getAuthHeaders(false),
+            body: JSON.stringify(updatedData),
         });
         if (!response.ok) {
             throw new Error('Failed to update misrouted scan');
@@ -68,11 +73,26 @@ class MisroutedScanService {
     async deleteMisroutedScan(id: number): Promise<void> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'DELETE',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(false),
         });
         if (!response.ok) {
             throw new Error('Failed to delete misrouted scan');
         }
+    }
+
+    async exportMisroutedScansCsv(search: string = ''): Promise<Blob> {
+        const queryParams = new URLSearchParams();
+        if (search) {
+            queryParams.append('search', search);
+        }
+
+        const response = await apiFetch(`${this.baseUrl}/export/csv?${queryParams.toString()}`, { 
+            headers: getAuthHeaders() 
+        });
+        if (!response.ok) {
+            throw new Error('Failed to export misrouted scans');
+        }
+        return response.blob();
     }
 }
 

@@ -44,7 +44,7 @@ class UndeliveredScanService {
     async createUndeliveredScan(data: UndeliveredScanFormValues): Promise<UndeliveredScanSingleResponse> {
         const response = await apiFetch(this.baseUrl, {
             method: 'POST',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(false),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -54,10 +54,15 @@ class UndeliveredScanService {
     }
 
     async updateUndeliveredScan(id: number, data: Partial<UndeliveredScanFormValues>): Promise<UndeliveredScanSingleResponse> {
+        // Strip ids from items as the API prohibits then in the update payload
+        const updatedData = {
+            ...data,
+            items: data.items?.map(({ id, ...item }) => item)
+        };
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
-            headers: getAuthHeaders(true),
-            body: JSON.stringify(data),
+            headers: getAuthHeaders(false),
+            body: JSON.stringify(updatedData),
         });
         if (!response.ok) {
             throw new Error('Failed to update undelivered scan');
@@ -68,11 +73,26 @@ class UndeliveredScanService {
     async deleteUndeliveredScan(id: number): Promise<void> {
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'DELETE',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(false),
         });
         if (!response.ok) {
             throw new Error('Failed to delete undelivered scan');
         }
+    }
+
+    async exportUndeliveredScansCsv(search: string = ''): Promise<Blob> {
+        const queryParams = new URLSearchParams();
+        if (search) {
+            queryParams.append('search', search);
+        }
+
+        const response = await apiFetch(`${this.baseUrl}/export/csv?${queryParams.toString()}`, { 
+            headers: getAuthHeaders() 
+        });
+        if (!response.ok) {
+            throw new Error('Failed to export undelivered scans');
+        }
+        return response.blob();
     }
 }
 

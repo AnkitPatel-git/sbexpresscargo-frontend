@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Edit, MoreHorizontal, Plus, Search, Trash } from "lucide-react";
+import { Edit, MoreHorizontal, Plus, Search, Trash, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -39,6 +39,7 @@ import { PermissionGuard } from "@/components/auth/permission-guard";
 import { useDebounce } from "@/hooks/use-debounce";
 import { misroutedScanService } from "@/services/transactions/misrouted-scan-service";
 import { MisroutedScan } from "@/types/transactions/misrouted-scan";
+import { Loader2 } from "lucide-react";
 
 export default function MisroutedScanListPage() {
   const router = useRouter();
@@ -67,6 +68,23 @@ export default function MisroutedScanListPage() {
     },
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => misroutedScanService.exportMisroutedScansCsv(debouncedSearch),
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `misrouted-scans-${format(new Date(), "yyyy-MM-dd")}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("CSV exported successfully");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to export CSV");
+    },
+  });
+
   const handleDelete = () => {
     if (deleteId) {
       deleteMutation.mutate(deleteId);
@@ -80,11 +98,25 @@ export default function MisroutedScanListPage() {
           <h1 className="text-3xl font-bold tracking-tight">Misrouted Scans</h1>
           <p className="text-muted-foreground">Log and manage misrouted packages.</p>
         </div>
-        <PermissionGuard permission="transaction.misrouted-scan.create">
-          <Button onClick={() => router.push("/transactions/misrouted-scan/create")}>
-            <Plus className="mr-2 h-4 w-4" /> Create Scan
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => exportMutation.mutate()}
+            disabled={exportMutation.isPending}
+          >
+            {exportMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Export CSV
           </Button>
-        </PermissionGuard>
+          <PermissionGuard permission="transaction.misrouted-scan.create">
+            <Button onClick={() => router.push("/transactions/misrouted-scan/create")}>
+              <Plus className="mr-2 h-4 w-4" /> Create Scan
+            </Button>
+          </PermissionGuard>
+        </div>
       </div>
 
       <Card className="p-4">

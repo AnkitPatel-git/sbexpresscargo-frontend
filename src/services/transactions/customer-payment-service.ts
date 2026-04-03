@@ -94,6 +94,14 @@ class CustomerPaymentService {
             throw new Error('Failed to delete customer payment');
         }
     }
+
+    async getCustomerPaymentFile(id: number): Promise<Blob> {
+        const response = await apiFetch(`${this.baseUrl}/${id}/file`, { headers: getAuthHeaders() });
+        if (!response.ok) {
+            throw new Error('Failed to fetch payment file');
+        }
+        return response.blob();
+    }
 }
 
 export const customerPaymentService = new CustomerPaymentService();

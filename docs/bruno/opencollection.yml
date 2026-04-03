@@ -36,6 +36,12 @@ request:
       value: "1"
     - name: mobileAttendanceId
       value: "1"
+    - name: shipmentId
+      value: "1"
+    - name: pickupId
+      value: "3"
+    - name: drsId
+      value: "1"
 
 docs:
   content: |-
@@ -45,7 +51,9 @@ docs:
 
     **List APIs** (portal) return paginated response: `{ success, message, data, total, page, limit, totalPages }`. Mobile endpoints return JSON bodies directly unless noted.
 
-    Collection variables: `{{mobileAwbNo}}`, `{{mobileManifestId}}`, `{{mobileDrsId}}`, `{{mobileNotificationId}}`, `{{mobileAttendanceId}}` for path params.
+    **Dashboard** (`/dashboard/*`): Operation summary, sales summary (with daily series), and sales-by-service-center reports; requires `dashboard.core.read`. See folder **Dashboard**.
+
+    Collection variables: `{{mobileAwbNo}}`, `{{mobileManifestId}}`, `{{mobileDrsId}}`, `{{mobileNotificationId}}`, `{{mobileAttendanceId}}` for mobile path params. Portal detail routes: `{{shipmentId}}`, `{{pickupId}}`, `{{drsId}}`.
   type: text/markdown
 bundled: false
 extensions:

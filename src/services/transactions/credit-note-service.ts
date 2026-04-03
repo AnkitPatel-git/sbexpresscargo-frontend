@@ -44,7 +44,7 @@ class CreditNoteService {
     async createCreditNote(data: CreditNoteFormValues): Promise<CreditNoteSingleResponse> {
         const response = await apiFetch(this.baseUrl, {
             method: 'POST',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(false),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -54,10 +54,15 @@ class CreditNoteService {
     }
 
     async updateCreditNote(id: number, data: Partial<CreditNoteFormValues>): Promise<CreditNoteSingleResponse> {
+        // Strip ids from items as the API prohibits then in the update payload
+        const updatedData = {
+            ...data,
+            items: data.items?.map(({ id, ...item }) => item)
+        };
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
-            headers: getAuthHeaders(true),
-            body: JSON.stringify(data),
+            headers: getAuthHeaders(false),
+            body: JSON.stringify(updatedData),
         });
         if (!response.ok) {
             throw new Error('Failed to update credit note');
@@ -75,10 +80,11 @@ class CreditNoteService {
         }
     }
 
-    async postCreditNote(id: number): Promise<CreditNoteSingleResponse> {
+    async postCreditNote(id: number, version: number): Promise<CreditNoteSingleResponse> {
         const response = await apiFetch(`${this.baseUrl}/${id}/post`, {
             method: 'POST',
-            headers: getAuthHeaders(true),
+            headers: getAuthHeaders(false),
+            body: JSON.stringify({ version }),
         });
         if (!response.ok) {
             throw new Error('Failed to post credit note');

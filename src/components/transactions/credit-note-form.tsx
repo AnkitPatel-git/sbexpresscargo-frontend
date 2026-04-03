@@ -3,9 +3,9 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { creditNoteFormSchema, CreditNoteFormValues, CreditNote } from "@/types/transactions/credit-note";
 import { creditNoteService } from "@/services/transactions/credit-note-service";
+import { customerService } from "@/services/masters/customer-service";
+import { Combobox } from "@/components/ui/combobox";
 
 interface CreditNoteFormProps {
   initialData?: CreditNote | null;
@@ -31,13 +33,24 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
 
+  const { data: customersResponse } = useQuery({
+    queryKey: ["customers-master"],
+    queryFn: () => customerService.getCustomers({ limit: 100 }),
+  });
+
+  const customerOptions = customersResponse?.data.map((c) => ({
+    label: `${c.name} (${c.code || c.id})`,
+    value: c.id,
+  })) || [];
+
   const form = useForm<CreditNoteFormValues>({
     resolver: zodResolver(creditNoteFormSchema),
     defaultValues: {
       noteNo: initialData?.noteNo || "",
       creditNoteNo: initialData?.creditNoteNo || undefined,
+      version: initialData?.version || undefined,
       cnDate: initialData?.cnDate ? initialData.cnDate.split("T")[0] : new Date().toISOString().split("T")[0],
-      customerId: initialData?.customerId || 1, // Defaulting for demo
+      customerId: initialData?.customerId || undefined,
       invoiceRef: initialData?.invoiceRef || "",
       narration: initialData?.narration || "",
       gst: initialData?.gst || false,
@@ -49,7 +62,13 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
       grandTotal: initialData?.grandTotal ? parseFloat(initialData.grandTotal) : undefined,
       serviceCenterId: initialData?.serviceCenterId || undefined,
       items: initialData?.items?.map(item => ({
-        ...item,
+        id: item.id || undefined,
+        awbNo: item.awbNo || "",
+        destination: item.destination || undefined,
+        product: item.product || undefined,
+        weight: item.weight ? parseFloat(item.weight.toString()) : undefined,
+        pcs: item.pcs ? parseInt(item.pcs.toString()) : undefined,
+        remark: item.remark || undefined,
         amount: item.amount ? parseFloat(item.amount.toString()) : undefined,
         igst: item.igst ? parseFloat(item.igst.toString()) : undefined,
         sgst: item.sgst ? parseFloat(item.sgst.toString()) : undefined,
@@ -85,12 +104,35 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
   });
 
   function onSubmit(values: CreditNoteFormValues) {
+    console.log("Submitting values:", values);
     mutation.mutate(values);
   }
 
+  const onFormError = (errors: any) => {
+    console.error("Form validation errors:", errors);
+    
+    // Helper to get nested error message
+    const getErrorMessage = (error: any): string => {
+      if (!error) return "";
+      if (error.message) return error.message;
+      if (Array.isArray(error)) {
+        return error.map((e, i) => e ? `Item ${i + 1}: ${getErrorMessage(e)}` : null).filter(Boolean).join(", ");
+      }
+      if (typeof error === 'object') {
+        const firstKey = Object.keys(error)[0];
+        return `${firstKey}: ${getErrorMessage(error[firstKey])}`;
+      }
+      return "Validation failed";
+    };
+
+    const firstKey = Object.keys(errors)[0];
+    const message = getErrorMessage(errors[firstKey]);
+    toast.error(`Validation Error: ${message} (${firstKey})`);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit, onFormError)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField
             control={form.control}
@@ -124,10 +166,16 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             control={form.control}
             name="customerId"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Customer ID <span className="text-red-500">*</span></FormLabel>
+              <FormItem className="flex flex-col">
+                <FormLabel>Customer <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                  <Combobox
+                    options={customerOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Customer"
+                    searchPlaceholder="Search by name or code..."
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -155,7 +203,7 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
               <FormItem>
                 <FormLabel>Base Amount</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                  <Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -169,7 +217,7 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
               <FormItem>
                 <FormLabel>Grand Total</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                  <Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -247,7 +295,7 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
                     <FormItem className="w-32">
                       <FormLabel>Amount</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                        <Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

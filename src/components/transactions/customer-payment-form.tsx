@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { customerPaymentFormSchema, CustomerPaymentFormValues, CustomerPayment } from "@/types/transactions/customer-payment";
 import { customerPaymentService } from "@/services/transactions/customer-payment-service";
+import { customerService } from "@/services/masters/customer-service";
+import { Combobox } from "@/components/ui/combobox";
 
 interface CustomerPaymentFormProps {
   initialData?: CustomerPayment | null;
@@ -33,13 +35,23 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
   const isEditing = !!initialData;
   const [file, setFile] = useState<File | undefined>();
 
+  const { data: customersResponse } = useQuery({
+    queryKey: ["customers-master"],
+    queryFn: () => customerService.getCustomers({ limit: 100 }),
+  });
+
+  const customerOptions = customersResponse?.data.map((c) => ({
+    label: `${c.name} (${c.code || c.id})`,
+    value: c.id,
+  })) || [];
+
   const form = useForm<CustomerPaymentFormValues>({
     resolver: zodResolver(customerPaymentFormSchema),
     defaultValues: {
       date: initialData?.date ? initialData.date.split("T")[0] : new Date().toISOString().split("T")[0],
       paidDate: initialData?.paidDate ? initialData.paidDate.split("T")[0] : new Date().toISOString().split("T")[0],
       amount: initialData?.amount || "",
-      customerId: initialData?.customerId || 1, // Defaulting to 1 for demo based on Bruno API example
+      customerId: initialData?.customerId || undefined,
       remark: initialData?.remark || "",
       approved: initialData?.approved || false,
     },
@@ -73,19 +85,25 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="customerId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Customer ID <span className="text-red-500">*</span></FormLabel>
-                <FormControl>
-                  <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="customerId"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Customer <span className="text-red-500">*</span></FormLabel>
+                  <FormControl>
+                    <Combobox
+                      options={customerOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select Customer"
+                      searchPlaceholder="Search by name or code..."
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
           <FormField
             control={form.control}

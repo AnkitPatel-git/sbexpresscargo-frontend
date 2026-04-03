@@ -58,6 +58,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { Combobox } from "@/components/ui/combobox"
 
 import { shipmentService } from '@/services/transactions/shipment-service'
 import { customerService } from '@/services/masters/customer-service'
@@ -79,9 +80,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const queryClient = useQueryClient()
     const isEdit = !!initialData
 
-    const [customerOpen, setCustomerOpen] = useState(false)
-    const [shipperOpen, setShipperOpen] = useState(false)
-    const [consigneeOpen, setConsigneeOpen] = useState(false)
     const [fieldExecOpen, setFieldExecOpen] = useState(false)
 
     // Lookup Data
@@ -190,6 +188,108 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
     }, [initialData, form])
 
+    // --- Automatic Calculations ---
+
+    // 1. Piece Volumetric weight and Row Totals
+    const watchedPiecesRows = form.watch('piecesRows')
+    useEffect(() => {
+        if (!watchedPiecesRows || watchedPiecesRows.length === 0) return;
+        
+        let totalPcs = 0;
+        let totalActualWeight = 0;
+        let totalVolWeight = 0;
+
+        watchedPiecesRows.forEach((row, index) => {
+            const pcs = Number(row.pieces) || 0;
+            const weightPerPc = Number(row.actualWeightPerPc) || 0;
+            const l = Number(row.length) || 0;
+            const w = Number(row.width) || 0;
+            const h = Number(row.height) || 0;
+
+            totalPcs += pcs;
+            totalActualWeight += weightPerPc * pcs;
+
+            if (l > 0 && w > 0 && h > 0) {
+                const volWeight = (l * w * h / 5000) * pcs;
+                const roundedVolWeight = parseFloat(volWeight.toFixed(2));
+                const currentVolValue = Number(row.volumetricWeight) || 0;
+                
+                if (Math.abs(currentVolValue - roundedVolWeight) > 0.001) {
+                    form.setValue(`piecesRows.${index}.volumetricWeight`, roundedVolWeight, { shouldValidate: true });
+                }
+                totalVolWeight += roundedVolWeight;
+            } else {
+                totalVolWeight += Number(row.volumetricWeight) || 0;
+            }
+        });
+
+        // Update main shipment weights
+        if (totalPcs > 0 && form.getValues('pieces') !== totalPcs) {
+            form.setValue('pieces', totalPcs, { shouldValidate: true });
+        }
+        if (totalActualWeight > 0 && Math.abs((form.getValues('actualWeight') || 0) - totalActualWeight) > 0.001) {
+            form.setValue('actualWeight', parseFloat(totalActualWeight.toFixed(2)), { shouldValidate: true });
+        }
+        if (totalVolWeight > 0 && Math.abs((form.getValues('volumetricWeight') || 0) - totalVolWeight) > 0.001) {
+            form.setValue('volumetricWeight', parseFloat(totalVolWeight.toFixed(2)), { shouldValidate: true });
+        }
+
+        const currentActual = totalActualWeight;
+        const currentVol = totalVolWeight;
+        const chargeWeight = Math.max(currentActual, currentVol);
+        if (chargeWeight > 0 && Math.abs((form.getValues('chargeWeight') || 0) - chargeWeight) > 0.001) {
+            form.setValue('chargeWeight', parseFloat(chargeWeight.toFixed(2)), { shouldValidate: true });
+        }
+    }, [JSON.stringify(watchedPiecesRows), form]);
+
+    // 2. Charges Row Total and Grand Totals
+    const watchedCharges = form.watch('charges')
+    useEffect(() => {
+        if (!watchedCharges || watchedCharges.length === 0) return;
+
+        let grandSubTotal = 0;
+        let grandTotalFuel = 0;
+        let grandTotalTax = 0;
+        let grandTotalAmount = 0;
+
+        watchedCharges.forEach((charge, index) => {
+            const amount = Number(charge.amount) || 0;
+            if (amount === 0) return;
+
+            const fuelApply = charge.fuelApply || false;
+            const taxApply = charge.taxApply || false;
+
+            const fuelAmount = fuelApply ? amount * 0.1 : 0;
+            const taxableAmount = amount + fuelAmount;
+            const taxAmount = taxApply ? taxableAmount * 0.18 : 0;
+            const total = taxableAmount + taxAmount;
+
+            const roundedTotal = parseFloat(total.toFixed(2));
+            const currentTotalValue = Number(charge.total) || 0;
+
+            if (Math.abs(currentTotalValue - roundedTotal) > 0.01) {
+                form.setValue(`charges.${index}.total`, roundedTotal, { shouldValidate: true });
+            }
+
+            grandSubTotal += amount;
+            grandTotalFuel += fuelAmount;
+            grandTotalTax += taxAmount;
+            grandTotalAmount += total;
+        });
+
+        if (Math.abs((form.getValues('subTotal') || 0) - grandSubTotal) > 0.01) {
+            form.setValue('subTotal', parseFloat(grandSubTotal.toFixed(2)), { shouldValidate: true });
+        }
+        if (Math.abs((form.getValues('totalFuel') || 0) - grandTotalFuel) > 0.01) {
+            form.setValue('totalFuel', parseFloat(grandTotalFuel.toFixed(2)), { shouldValidate: true });
+        }
+        if (Math.abs((form.getValues('totalAmount') || 0) - grandTotalAmount) > 0.01) {
+            form.setValue('totalAmount', parseFloat(grandTotalAmount.toFixed(2)), { shouldValidate: true });
+        }
+    }, [JSON.stringify(watchedCharges), form]);
+
+    // --- End Calculations ---
+
     const mutation = useMutation({
         mutationFn: (values: ShipmentFormValues) => {
             return isEdit
@@ -275,31 +375,42 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 />
                             </div>
 
-                            <FormField
-                                control={form.control}
-                                name="serviceCenterId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Service Center <span className="text-red-500">*</span></FormLabel>
-                                        <Select 
-                                            onValueChange={(val) => field.onChange(parseInt(val))} 
-                                            value={field.value?.toString()}
-                                        >
+                                <FormField
+                                    control={form.control}
+                                    name="serviceCenterId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Service Center <span className="text-red-500">*</span></FormLabel>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select Service Center" />
-                                                </SelectTrigger>
+                                                <Combobox
+                                                    options={serviceCentersData?.data?.map(sc => ({ label: sc.name, value: sc.id })) || []}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select Service Center"
+                                                />
                                             </FormControl>
-                                            <SelectContent>
-                                                {serviceCentersData?.data?.map((sc) => (
-                                                    <SelectItem key={sc.id} value={sc.id.toString()}>{sc.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="fieldExecutiveId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Field Executive <span className="text-red-500">*</span></FormLabel>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={executives.map(ex => ({ label: ex.name, value: ex.id })) || []}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select Executive"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                         </CardContent>
                     </Card>
 
@@ -315,45 +426,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                         <FormLabel>Customer <span className="text-red-500">*</span></FormLabel>
-                                        <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        className={cn("justify-between font-normal", !field.value && "text-muted-foreground")}
-                                                    >
-                                                        {field.value
-                                                            ? customersData?.data?.find(c => c.id === field.value)?.name
-                                                            : "Select Customer"}
-                                                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                                <Command>
-                                                    <CommandInput placeholder="Search customer..." />
-                                                    <CommandList>
-                                                        <CommandEmpty>No customer found.</CommandEmpty>
-                                                        <CommandGroup>
-                                                            {customersData?.data?.map((customer) => (
-                                                                <CommandItem
-                                                                    key={customer.id}
-                                                                    value={customer.name}
-                                                                    onSelect={() => {
-                                                                        form.setValue("customerId", customer.id)
-                                                                        setCustomerOpen(false)
-                                                                    }}
-                                                                >
-                                                                    <Check className={cn("mr-2 h-4 w-4", field.value === customer.id ? "opacity-100" : "opacity-0")} />
-                                                                    {customer.name}
-                                                                </CommandItem>
-                                                            ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
+                                        <FormControl>
+                                            <Combobox
+                                                options={customersData?.data?.map(c => ({ label: c.name, value: c.id })) || []}
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                placeholder="Select Customer"
+                                                searchPlaceholder="Search customer..."
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -366,45 +447,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Shipper</FormLabel>
-                                            <Popover open={shipperOpen} onOpenChange={setShipperOpen}>
-                                                <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                        <Button
-                                                            variant="outline"
-                                                            role="combobox"
-                                                            className={cn("justify-between font-normal", !field.value && "text-muted-foreground")}
-                                                        >
-                                                            {field.value
-                                                                ? shippersData?.data?.find(s => s.id === field.value)?.shipperName
-                                                                : "Select Shipper"}
-                                                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                        </Button>
-                                                    </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                                    <Command>
-                                                        <CommandInput placeholder="Search shipper..." />
-                                                        <CommandList>
-                                                            <CommandEmpty>No shipper found.</CommandEmpty>
-                                                            <CommandGroup>
-                                                                {shippersData?.data?.map((shipper) => (
-                                                                    <CommandItem
-                                                                        key={shipper.id}
-                                                                        value={shipper.shipperName}
-                                                                        onSelect={() => {
-                                                                            form.setValue("shipperId", shipper.id)
-                                                                            setShipperOpen(false)
-                                                                        }}
-                                                                    >
-                                                                        <Check className={cn("mr-2 h-4 w-4", field.value === shipper.id ? "opacity-100" : "opacity-0")} />
-                                                                        {shipper.shipperName}
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandGroup>
-                                                        </CommandList>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={shippersData?.data?.map(s => ({ label: s.shipperName, value: s.id })) || []}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select Shipper"
+                                                    searchPlaceholder="Search shipper..."
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -416,45 +467,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Consignee</FormLabel>
-                                            <Popover open={consigneeOpen} onOpenChange={setConsigneeOpen}>
-                                                <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                        <Button
-                                                            variant="outline"
-                                                            role="combobox"
-                                                            className={cn("justify-between font-normal", !field.value && "text-muted-foreground")}
-                                                        >
-                                                            {field.value
-                                                                ? consigneesData?.data?.find(c => c.id === field.value)?.name
-                                                                : "Select Consignee"}
-                                                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                        </Button>
-                                                    </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                                    <Command>
-                                                        <CommandInput placeholder="Search consignee..." />
-                                                        <CommandList>
-                                                            <CommandEmpty>No consignee found.</CommandEmpty>
-                                                            <CommandGroup>
-                                                                {consigneesData?.data?.map((consignee) => (
-                                                                    <CommandItem
-                                                                        key={consignee.id}
-                                                                        value={consignee.name}
-                                                                        onSelect={() => {
-                                                                            form.setValue("consigneeId", consignee.id)
-                                                                            setConsigneeOpen(false)
-                                                                        }}
-                                                                    >
-                                                                        <Check className={cn("mr-2 h-4 w-4", field.value === consignee.id ? "opacity-100" : "opacity-0")} />
-                                                                        {consignee.name}
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandGroup>
-                                                        </CommandList>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={consigneesData?.data?.map(c => ({ label: c.name, value: c.id })) || []}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select Consignee"
+                                                    searchPlaceholder="Search consignee..."
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -478,21 +499,32 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Product/Service <span className="text-red-500">*</span></FormLabel>
-                                            <Select 
-                                                onValueChange={(val) => field.onChange(parseInt(val))} 
-                                                value={field.value?.toString()}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select Product" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {productsData?.data?.map((p) => (
-                                                        <SelectItem key={p.id} value={p.id.toString()}>{p.productName}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={productsData?.data?.map(p => ({ label: p.productName, value: p.id })) || []}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select Product"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="serviceMapId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Service Map <span className="text-red-500">*</span></FormLabel>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={serviceMapsData?.data?.map(sm => ({ label: `${sm.serviceType} (${sm.id})`, value: sm.id })) || []}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select Service Map"
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -503,21 +535,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Vendor/Carrier</FormLabel>
-                                            <Select 
-                                                onValueChange={(val) => field.onChange(parseInt(val))} 
-                                                value={field.value?.toString()}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select Vendor" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {vendorsData?.data?.map((v) => (
-                                                        <SelectItem key={v.id} value={v.id.toString()}>{v.vendorName}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={vendorsData?.data?.map(v => ({ label: v.vendorName, value: v.id })) || []}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select Vendor"
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -600,18 +625,18 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Payment Type <span className="text-red-500">*</span></FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select Type" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="CASH">Cash</SelectItem>
-                                                    <SelectItem value="CREDIT">Credit</SelectItem>
-                                                    <SelectItem value="TOPAY">To Pay</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={[
+                                                        { label: "Cash", value: "CASH" },
+                                                        { label: "Credit", value: "CREDIT" },
+                                                        { label: "To Pay", value: "TOPAY" },
+                                                    ]}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select Type"
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -622,17 +647,17 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Currency</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="INR" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="INR">INR</SelectItem>
-                                                    <SelectItem value="USD">USD</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={[
+                                                        { label: "INR", value: "INR" },
+                                                        { label: "USD", value: "USD" },
+                                                    ]}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="INR"
+                                                />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -777,19 +802,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 {chargeFields.map((field, index) => (
                                     <TableRow key={field.id}>
                                         <TableCell className="w-[200px]">
-                                            <Select 
-                                                onValueChange={(val) => form.setValue(`charges.${index}.chargeId`, parseInt(val))}
-                                                defaultValue={field.chargeId?.toString()}
-                                            >
-                                                <SelectTrigger className="h-8">
-                                                    <SelectValue placeholder="Select Charge" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {masterChargesData?.data?.map((mc) => (
-                                                        <SelectItem key={mc.id} value={mc.id.toString()}>{mc.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <Combobox
+                                                options={masterChargesData?.data?.map(mc => ({ label: mc.name, value: mc.id })) || []}
+                                                value={form.watch(`charges.${index}.chargeId`)}
+                                                onChange={(val) => form.setValue(`charges.${index}.chargeId`, val as number)}
+                                                placeholder="Select Charge"
+                                                className="h-8"
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             <Input {...form.register(`charges.${index}.description` as const)} placeholder="Notes" className="h-8" />
