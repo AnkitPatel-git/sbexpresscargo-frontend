@@ -1,6 +1,8 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { Shipment, ShipmentListResponse, ShipmentSingleResponse, ShipmentFormValues } from '@/types/transactions/shipment';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
 export const shipmentService = {
     getShipments: async (params?: { 
         page?: number; 
@@ -16,7 +18,7 @@ export const shipmentService = {
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-        const response = await apiFetch(`/transaction/shipment?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/transaction/shipment?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -29,7 +31,7 @@ export const shipmentService = {
     },
 
     getShipmentById: async (id: number): Promise<ShipmentSingleResponse> => {
-        const response = await apiFetch(`/transaction/shipment/${id}`, {
+        const response = await apiFetch(`${API_URL}/transaction/shipment/${id}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -41,7 +43,7 @@ export const shipmentService = {
     },
 
     createShipment: async (data: ShipmentFormValues): Promise<ShipmentSingleResponse> => {
-        const response = await apiFetch('/transaction/shipment', {
+        const response = await apiFetch(`${API_URL}/transaction/shipment`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -57,7 +59,7 @@ export const shipmentService = {
     },
 
     updateShipment: async (id: number, data: ShipmentFormValues): Promise<ShipmentSingleResponse> => {
-        const response = await apiFetch(`/transaction/shipment/${id}`, {
+        const response = await apiFetch(`${API_URL}/transaction/shipment/${id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -73,7 +75,7 @@ export const shipmentService = {
     },
 
     deleteShipment: async (id: number): Promise<{ success: boolean; message?: string }> => {
-        const response = await apiFetch(`/transaction/shipment/${id}`, {
+        const response = await apiFetch(`${API_URL}/transaction/shipment/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

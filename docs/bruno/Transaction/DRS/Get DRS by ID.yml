@@ -1,11 +1,11 @@
 info:
-  name: Start DRS
+  name: Get DRS by ID
   type: http
-  seq: 2
+  seq: 6
 
 http:
-  method: POST
-  url: "{{baseUrl}}/transaction/drs/1/start"
+  method: GET
+  url: "{{baseUrl}}/transaction/drs/{{drsId}}"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
@@ -20,8 +20,8 @@ settings:
 examples:
   - name: "200"
     request:
-      url: "{{baseUrl}}/transaction/drs/1/start"
-      method: POST
+      url: "{{baseUrl}}/transaction/drs/{{drsId}}"
+      method: GET
       headers:
         - name: Authorization
           value: Bearer {{accessToken}}
@@ -58,11 +58,11 @@ examples:
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "131"
+          value: "519"
         - name: etag
-          value: W/"83-mQTARmsAd1wB53nqPoX+QIXsBZk"
+          value: W/"207-H4lpBlXhdAdBXsj4HYBtsM5stDQ"
         - name: date
-          value: Fri, 03 Apr 2026 08:48:51 GMT
+          value: Fri, 03 Apr 2026 08:49:16 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -73,18 +73,35 @@ examples:
           {
             "success": true,
             "data": {
-              "drsId": 1,
+              "id": 1,
               "drsNo": "DRS001",
-              "total": 1,
-              "succeeded": 1,
-              "failed": 0,
-              "results": [
+              "drsAt": "2026-03-20T04:30:00.000Z",
+              "status": "COMPLETED",
+              "courierId": 1,
+              "courierCode": "COUR01",
+              "courierName": "Courier Agent One Updated",
+              "areaId": 1,
+              "areaName": "Mumbai Central Updated",
+              "serviceCenterId": 1,
+              "remark": "DRS for Delhi area",
+              "items": [
                 {
+                  "id": 1,
                   "awbNo": "AWB123456",
-                  "ok": true
+                  "bookDate": null,
+                  "origin": "MUMBAI",
+                  "destination": "BANGALORE",
+                  "customer": "Default Customer",
+                  "consignee": null,
+                  "pcs": 2,
+                  "weight": 10,
+                  "ewayBillNo": null,
+                  "shipmentValue": null,
+                  "shipmentId": 2
                 }
-              ]
+              ],
+              "totalAwbCount": 1
             }
           }
 
-docs: Mark all DRS shipments OFD via tracking engine. JWT + drs_modify or drs_all.
+docs: DRS header with line items (AWB, customer name, weight, origin/destination) and courier/area context. JWT + drs_list/search/all. Set `drsId` in collection variables.

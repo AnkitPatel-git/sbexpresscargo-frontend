@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins, Wrench, Calculator, Droplet, Home, Search, Maximize, Bell, Info, Star, Link as LinkIcon, Wallet, FileText, ArrowLeftRight, BarChart3, Menu } from 'lucide-react';
+import { Package2, Users, LayoutDashboard, Settings, LogOut, User, ChevronDown, ChevronRight, Layers, Plane, Map as MapIcon, Globe, Landmark, Building2, Box, Package, Building, MapPin, UserRound, Percent, Truck, AlertTriangle, Coins, Wrench, Calculator, Droplet, Home, Search, Maximize, Bell, Info, Star, Link as LinkIcon, Wallet, FileText, ArrowLeftRight, BarChart3, Menu, ClipboardList, Car, Navigation, CheckSquare, CreditCard, Receipt, Map } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { PermissionGuard } from '@/components/auth/permission-guard';
 import { cn } from '@/lib/utils';
@@ -211,6 +211,30 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
                         </PermissionGuard>
                         <PermissionGuard permission="transaction.shipment.read">
                             <LinkItem href="/transactions/shipment" subItem active={isActive('/transactions/shipment')} icon={Package}>Shipment</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.manifest.read">
+                            <LinkItem href="/transactions/manifest" subItem active={isActive('/transactions/manifest')} icon={ClipboardList}>Manifest</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.drs.read">
+                            <LinkItem href="/transactions/drs" subItem active={isActive('/transactions/drs')} icon={Car}>DRS</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.tracking.read">
+                            <LinkItem href="/transactions/tracking" subItem active={isActive('/transactions/tracking')} icon={Navigation}>Tracking</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.pod.read">
+                            <LinkItem href="/transactions/pod" subItem active={isActive('/transactions/pod')} icon={CheckSquare}>POD</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.customer-payment.read">
+                            <LinkItem href="/transactions/customer-payment" subItem active={isActive('/transactions/customer-payment')} icon={CreditCard}>Customer Payment</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.credit-note.read">
+                            <LinkItem href="/transactions/credit-note" subItem active={isActive('/transactions/credit-note')} icon={Receipt}>Credit Note</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.undelivered-scan.read">
+                            <LinkItem href="/transactions/undelivered-scan" subItem active={isActive('/transactions/undelivered-scan')} icon={AlertTriangle}>Undelivered Scan</LinkItem>
+                        </PermissionGuard>
+                        <PermissionGuard permission="transaction.misrouted-scan.read">
+                            <LinkItem href="/transactions/misrouted-scan" subItem active={isActive('/transactions/misrouted-scan')} icon={Map}>Misrouted Scan</LinkItem>
                         </PermissionGuard>
                     </div>
                 )}
