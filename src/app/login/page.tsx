@@ -27,8 +27,10 @@ export default function LoginPage() {
     const [currentSlide, setCurrentSlide] = useState(0)
 
     const slides = [
-        "/sliders/1.png",
-        "/sliders/2.png"
+        "/sliders/images/1.png",
+        "/sliders/images/2.png",
+        "/sliders/images/3.png",
+        "/sliders/images/4.png",
     ]
 
     useEffect(() => {
@@ -73,20 +75,36 @@ export default function LoginPage() {
     return (
         <div className="flex min-h-screen w-full bg-white">
             {/* Left Side - Illustration */}
-            <div className="hidden lg:flex lg:w-[60%] bg-[#a5b2ef] relative items-center justify-center overflow-hidden">
-                <div className="relative w-full h-full max-w-4xl max-h-[800px] flex items-center justify-center p-12">
-                    <div className="relative w-full aspect-video">
+            <div className="hidden lg:flex lg:w-[60%] bg-slate-50 relative items-center justify-center overflow-hidden">
+                <div className="relative w-full h-full flex items-center justify-center p-8 sm:p-12">
+                    <div className="relative w-full h-full flex items-center justify-center">
                         {slides.map((slide, index) => (
                             <img 
                                 key={slide}
                                 src={slide} 
                                 alt={`Logistics Slider ${index + 1}`} 
-                                className={`absolute inset-0 object-contain w-full h-full transition-opacity duration-1000 ${
-                                    index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"
+                                className={`absolute inset-0 object-contain w-full h-full transition-all duration-1000 ease-in-out transform ${
+                                    index === currentSlide ? "opacity-100 z-10 scale-100" : "opacity-0 z-0 scale-95"
                                 }`}
                                 onError={(e) => {
                                     e.currentTarget.style.display = 'none';
                                 }}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Pagination Dots */}
+                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                        {slides.map((_, index) => (
+                            <button
+                                key={index}
+                                onClick={() => setCurrentSlide(index)}
+                                className={`h-2 rounded-full transition-all duration-300 shadow-sm ${
+                                    index === currentSlide 
+                                        ? "w-8 bg-blue-600" 
+                                        : "w-2 bg-slate-300 hover:bg-slate-400"
+                                }`}
+                                aria-label={`Go to slide ${index + 1}`}
                             />
                         ))}
                     </div>
