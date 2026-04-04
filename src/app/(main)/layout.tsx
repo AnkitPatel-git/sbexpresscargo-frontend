@@ -55,7 +55,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
             active
                 ? cn(
                     "bg-white text-[#0c1e35] font-semibold",
-                    isCollapsed ? "rounded-lg" : "border-r-4 border-blue-600 rounded-r-none"
+                    isCollapsed ? "rounded-lg" : "border-r-4 border-primary rounded-r-none"
                 )
                 : "text-gray-400 hover:text-white hover:bg-[#1a2e45]",
             isSubItem && !isCollapsed && "ml-4"
@@ -386,11 +386,11 @@ export default function DashboardLayout({
 
                         {/* Left: Nav Links */}
                         <div className="hidden sm:flex items-center gap-6">
-                            <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-blue-600 flex items-center gap-2">
+                            <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-primary flex items-center gap-2">
                                 <Home className="h-4 w-4" />
                                 Home
                             </Link>
-                            <Link href="/masters/products" className="text-sm font-medium text-gray-600 hover:text-blue-600 flex items-center gap-2">
+                            <Link href="/masters/products" className="text-sm font-medium text-gray-600 hover:text-primary flex items-center gap-2">
                                 <Box className="h-4 w-4" />
                                 Product
                             </Link>
@@ -400,15 +400,15 @@ export default function DashboardLayout({
                     {/* Center: Tracking Search */}
                     <div className="flex-1 max-w-md mx-auto hidden sm:block">
                         <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
                                 <Search className="h-4 w-4" />
                             </div>
                             <input
                                 type="text"
-                                className="block w-full pl-10 pr-24 py-2 border border-gray-200 rounded-full bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all shadow-sm"
+                                className="block w-full pl-10 pr-24 py-2 border border-gray-200 rounded-full bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all shadow-sm"
                                 placeholder="Tracking Search"
                             />
-                            <button className="absolute right-1 top-1 bottom-1 px-4 bg-blue-600 text-white rounded-full text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+                            <button className="absolute right-1 top-1 bottom-1 px-4 bg-primary text-white rounded-full text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm">
                                 Search
                             </button>
                         </div>
@@ -426,7 +426,7 @@ export default function DashboardLayout({
                                 { icon: User, label: 'User' },
                                 { icon: ArrowLeftRight, label: 'Activity' },
                             ].map((item, i) => (
-                                <Button key={i} variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title={item.label}>
+                                <Button key={i} variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg" title={item.label}>
                                     <item.icon className="h-4 w-4" />
                                 </Button>
                             ))}
@@ -436,7 +436,7 @@ export default function DashboardLayout({
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-yellow-500">
                                 <Star className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600 relative">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-primary relative">
                                 <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></div>
                                 <Bell className="h-4 w-4" />
                             </Button>
@@ -449,7 +449,7 @@ export default function DashboardLayout({
                                         variant="ghost" 
                                         className="flex items-center gap-2 pl-2 pr-1 h-9 hover:bg-gray-100 rounded-full border border-transparent hover:border-gray-200 transition-all"
                                     >
-                                        <div className="bg-blue-100 text-blue-700 h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white">
+                                        <div className="bg-primary/10 text-primary h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white">
                                             {initials}
                                         </div>
                                         <ChevronDown className="h-3 w-3 text-gray-400" />

@@ -234,7 +234,7 @@ export default function PodPage() {
                                 <TableBody>
                                     {podData.map((row, idx) => (
                                         <TableRow key={idx} className="hover:bg-gray-50/50">
-                                            <TableCell className="font-medium text-blue-600">{row.AWBNo}</TableCell>
+                                            <TableCell className="font-medium text-primary">{row.AWBNo}</TableCell>
                                             <TableCell>
                                                 {row.DelvDate ? `${row.DelvDate} ${row.DelvTime}` : "-"}
                                             </TableCell>

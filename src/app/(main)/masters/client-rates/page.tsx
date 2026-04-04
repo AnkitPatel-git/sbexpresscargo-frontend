@@ -149,7 +149,7 @@ export default function ClientRatesPage() {
                                     ) : (
                                         data?.data.map((rate) => (
                                             <TableRow key={rate.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">
+                                                <TableCell className="font-medium text-primary">
                                                     {rate.customer?.name || `ID: ${rate.customerId}`}
                                                 </TableCell>
                                                 <TableCell>{rate.product?.productName || `ID: ${rate.productId}`}</TableCell>

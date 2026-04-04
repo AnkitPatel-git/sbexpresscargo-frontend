@@ -169,7 +169,7 @@ export default function CustomerPaymentListPage() {
                         {payment.fileName ? (
                             <button
                                 onClick={() => downloadMutation.mutate(payment)}
-                                className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                                className="flex items-center text-primary hover:text-primary/80 text-sm font-medium transition-colors"
                                 disabled={downloadMutation.isPending}
                             >
                                 <FileText className="w-4 h-4 mr-1"/>

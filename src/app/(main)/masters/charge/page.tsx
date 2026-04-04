@@ -151,7 +151,7 @@ export default function ChargePage() {
                                     ) : (
                                         data?.data.map((charge: Charge) => (
                                             <TableRow key={charge.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{charge.code}</TableCell>
+                                                <TableCell className="font-medium text-primary">{charge.code}</TableCell>
                                                 <TableCell className="font-medium">{charge.name}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline">

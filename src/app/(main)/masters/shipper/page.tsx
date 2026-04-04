@@ -91,13 +91,13 @@ export default function ShipperPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Shipper Master</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-primary">Shipper Master</h1>
                     <p className="text-slate-500">
                         Manage shippers, their contact details, and account statuses.
                     </p>
                 </div>
                 <PermissionGuard permission="master.shipper.create">
-                    <Button onClick={handleCreate} className="bg-slate-900 hover:bg-slate-800 text-white">
+                    <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 text-white">
                         <Plus className="mr-2 h-4 w-4" /> Create Shipper
                     </Button>
                 </PermissionGuard>
@@ -151,14 +151,14 @@ export default function ShipperPage() {
                                     ) : (
                                         data?.data.map((shipper: Shipper) => (
                                             <TableRow key={shipper.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <TableCell className="font-medium text-blue-600">{shipper.shipperCode}</TableCell>
+                                                <TableCell className="font-medium text-primary">{shipper.shipperCode}</TableCell>
                                                 <TableCell className="font-medium text-slate-800">{shipper.shipperName}</TableCell>
                                                 <TableCell className="text-slate-600">{shipper.contactPerson}</TableCell>
                                                 <TableCell className="text-slate-600">{shipper.city}</TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900">
+                                                            <Button variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-primary">
                                                                 <span className="sr-only">Open menu</span>
                                                                 <MoreHorizontal className="h-4 w-4" />
                                                             </Button>

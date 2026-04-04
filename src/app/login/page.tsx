@@ -101,7 +101,7 @@ export default function LoginPage() {
                                 onClick={() => setCurrentSlide(index)}
                                 className={`h-2 rounded-full transition-all duration-300 shadow-sm ${
                                     index === currentSlide 
-                                        ? "w-8 bg-blue-600" 
+                                        ? "w-8 bg-primary" 
                                         : "w-2 bg-slate-300 hover:bg-slate-400"
                                 }`}
                                 aria-label={`Go to slide ${index + 1}`}
@@ -179,7 +179,7 @@ export default function LoginPage() {
                         </div>
 
                         <Button
-                            className="w-full h-12 text-base font-semibold bg-black hover:bg-black/90 text-white rounded-md"
+                            className="w-full h-12 text-base font-semibold"
                             type="submit"
                             disabled={loginMutation.isPending}
                         >
@@ -196,7 +196,7 @@ export default function LoginPage() {
                         <div className="pt-2">
                             <Link 
                                 href="/forgot-password" 
-                                className="text-[15px] font-semibold text-blue-600 hover:text-blue-800 hover:underline inline-block"
+                                className="text-[15px] font-semibold text-primary hover:text-primary/80 hover:underline inline-block"
                             >
                                 Forgot / Reset Password
                             </Link>

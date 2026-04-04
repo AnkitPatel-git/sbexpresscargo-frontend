@@ -137,7 +137,7 @@ export default function TrackingPage() {
                                 <h3 className="text-2xl font-bold">{metricsData?.data?.totalShipments || 0}</h3>
                             </div>
                             <div className="bg-blue-100 p-2 rounded-full">
-                                <Search className="h-5 w-5 text-blue-600" />
+                                <Search className="h-5 w-5 text-primary" />
                             </div>
                         </div>
                     </CardContent>
@@ -269,7 +269,7 @@ export default function TrackingPage() {
                                         {detailData.data.progress?.map((p, idx) => (
                                             <div key={idx} className="flex gap-4 relative">
                                                 <div className="flex flex-col items-center">
-                                                    <div className="h-3 w-3 rounded-full bg-blue-600 z-10"></div>
+                                                    <div className="h-3 w-3 rounded-full bg-primary z-10"></div>
                                                     {idx !== detailData.data.progress.length - 1 && (
                                                         <div className="w-0.5 h-full bg-blue-200 absolute top-3"></div>
                                                     )}
@@ -339,7 +339,7 @@ export default function TrackingPage() {
                                                             setSearchTerm(item.awbNo);
                                                         }}
                                                     >
-                                                        <TableCell className="font-medium text-blue-600 hover:underline">
+                                                        <TableCell className="font-medium text-primary hover:underline">
                                                             {item.awbNo}
                                                         </TableCell>
                                                         <TableCell>

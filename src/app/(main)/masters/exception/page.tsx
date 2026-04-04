@@ -150,7 +150,7 @@ export default function ExceptionPage() {
                                     ) : (
                                         data?.data.map((exception: ExceptionMaster) => (
                                             <TableRow key={exception.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{exception.code}</TableCell>
+                                                <TableCell className="font-medium text-primary">{exception.code}</TableCell>
                                                 <TableCell className="font-medium">{exception.name}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline">

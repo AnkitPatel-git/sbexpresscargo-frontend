@@ -148,7 +148,7 @@ export default function FlightsPage() {
                                     ) : (
                                         data?.data.map((flight) => (
                                             <TableRow key={flight.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{flight.flightCode}</TableCell>
+                                                <TableCell className="font-medium text-primary">{flight.flightCode}</TableCell>
                                                 <TableCell className="font-medium">{flight.flightName}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline" className="capitalize">

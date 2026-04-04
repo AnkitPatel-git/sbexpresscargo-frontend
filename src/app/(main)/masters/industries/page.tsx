@@ -146,7 +146,7 @@ export default function IndustriesPage() {
                                     ) : (
                                         data?.data.map((industry) => (
                                             <TableRow key={industry.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{industry.industryCode}</TableCell>
+                                                <TableCell className="font-medium text-primary">{industry.industryCode}</TableCell>
                                                 <TableCell className="font-medium">{industry.industryName}</TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>

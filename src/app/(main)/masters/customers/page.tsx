@@ -150,7 +150,7 @@ export default function CustomersPage() {
                                     ) : (
                                         data?.data.map((customer) => (
                                             <TableRow key={customer.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{customer.code}</TableCell>
+                                                <TableCell className="font-medium text-primary">{customer.code}</TableCell>
                                                 <TableCell className="font-medium">{customer.name}</TableCell>
                                                 <TableCell>{customer.contactPerson}</TableCell>
                                                 <TableCell>{customer.city}</TableCell>

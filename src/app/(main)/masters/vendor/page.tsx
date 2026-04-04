@@ -92,13 +92,13 @@ export default function VendorPage() {
         <div className="space-y-6 p-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Vendor Master</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-primary">Vendor Master</h1>
                     <p className="text-slate-500">
                         Manage vendors, their contact details, and account statuses.
                     </p>
                 </div>
                 <PermissionGuard permission="master.vendor.create">
-                    <Button onClick={handleCreate} className="bg-slate-900 hover:bg-slate-800 text-white">
+                    <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 text-white">
                         <Plus className="mr-2 h-4 w-4" /> Create Vendor
                     </Button>
                 </PermissionGuard>
@@ -153,7 +153,7 @@ export default function VendorPage() {
                                     ) : (
                                         data?.data.map((vendor: Vendor) => (
                                             <TableRow key={vendor.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <TableCell className="font-medium text-blue-600 pl-4">{vendor.vendorCode}</TableCell>
+                                                <TableCell className="font-medium text-primary pl-4">{vendor.vendorCode}</TableCell>
                                                 <TableCell className="font-medium text-slate-800">{vendor.vendorName}</TableCell>
                                                 <TableCell className="text-slate-600">{vendor.contactPerson}</TableCell>
                                                 <TableCell className="text-slate-600">{vendor.city}</TableCell>
@@ -169,7 +169,7 @@ export default function VendorPage() {
                                                 <TableCell className="text-right pr-4">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900">
+                                                            <Button variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-primary">
                                                                 <span className="sr-only">Open menu</span>
                                                                 <MoreHorizontal className="h-4 w-4" />
                                                             </Button>
@@ -232,7 +232,7 @@ export default function VendorPage() {
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent className="max-w-[400px]">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-slate-900">Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle className="text-primary">Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription className="text-slate-500">
                             This action cannot be undone. This will permanently delete the vendor record.
                         </AlertDialogDescription>

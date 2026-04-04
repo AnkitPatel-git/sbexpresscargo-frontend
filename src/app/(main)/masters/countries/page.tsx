@@ -149,7 +149,7 @@ export default function CountriesPage() {
                                     ) : (
                                         data?.data.map((country) => (
                                             <TableRow key={country.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600 uppercase">{country.code}</TableCell>
+                                                <TableCell className="font-medium text-primary uppercase">{country.code}</TableCell>
                                                 <TableCell className="font-medium">{country.name}</TableCell>
                                                 <TableCell className="uppercase">{country.weightUnit}</TableCell>
                                                 <TableCell>{country.currency}</TableCell>

@@ -161,7 +161,7 @@ export default function ShipmentsPage() {
                                 ) : (
                                     data?.data.map((shipment) => (
                                         <TableRow key={shipment.id} className="hover:bg-gray-50/30 transition-colors">
-                                            <TableCell className="font-medium underline text-blue-600 cursor-pointer">
+                                            <TableCell className="font-medium underline text-primary cursor-pointer">
                                                 {shipment.awbNo}
                                             </TableCell>
                                             <TableCell>

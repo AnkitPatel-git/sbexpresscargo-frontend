@@ -151,7 +151,7 @@ export default function StatesPage() {
                                     ) : (
                                         data?.data.map((state) => (
                                             <TableRow key={state.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{state.stateCode}</TableCell>
+                                                <TableCell className="font-medium text-primary">{state.stateCode}</TableCell>
                                                 <TableCell className="font-medium">{state.stateName}</TableCell>
                                                 <TableCell className="uppercase">{state.productType}</TableCell>
                                                 <TableCell>{state.zone?.name || "-"}</TableCell>

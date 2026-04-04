@@ -149,7 +149,7 @@ export default function ContentsPage() {
                                     ) : (
                                         data?.data.map((content) => (
                                             <TableRow key={content.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{content.contentCode}</TableCell>
+                                                <TableCell className="font-medium text-primary">{content.contentCode}</TableCell>
                                                 <TableCell className="font-medium">{content.contentName}</TableCell>
                                                 <TableCell>{content.hsnCode}</TableCell>
                                                 <TableCell>

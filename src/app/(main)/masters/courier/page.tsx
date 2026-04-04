@@ -150,7 +150,7 @@ export default function CourierPage() {
                                     ) : (
                                         data?.data.map((courier: Courier) => (
                                             <TableRow key={courier.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{courier.code}</TableCell>
+                                                <TableCell className="font-medium text-primary">{courier.code}</TableCell>
                                                 <TableCell className="font-medium">{courier.name}</TableCell>
                                                 <TableCell>{courier.serviceCenter?.name || 'N/A'}</TableCell>
                                                 <TableCell>{courier.destination}</TableCell>

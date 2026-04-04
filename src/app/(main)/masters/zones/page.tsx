@@ -149,7 +149,7 @@ export default function ZonesPage() {
                                     ) : (
                                         data?.data.map((zone) => (
                                             <TableRow key={zone.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{zone.code}</TableCell>
+                                                <TableCell className="font-medium text-primary">{zone.code}</TableCell>
                                                 <TableCell className="font-medium">{zone.name}</TableCell>
                                                 <TableCell>{zone.country}</TableCell>
                                                 <TableCell>

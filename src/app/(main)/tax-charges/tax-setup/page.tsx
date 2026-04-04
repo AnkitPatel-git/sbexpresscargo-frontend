@@ -156,7 +156,7 @@ export default function TaxSetupPage() {
                                     ) : (
                                         data?.data.map((taxSetup: TaxSetup) => (
                                             <TableRow key={taxSetup.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">
+                                                <TableCell className="font-medium text-primary">
                                                     {taxSetup.customer}
                                                 </TableCell>
                                                 <TableCell>{taxSetup.product}</TableCell>

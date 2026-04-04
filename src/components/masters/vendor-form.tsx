@@ -156,7 +156,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                     <Card className="shadow-sm border-slate-200">
                         <CardHeader className="bg-slate-50 border-b p-4">
                             <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</div>
+                                <div className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</div>
                                 Basic Information
                             </CardTitle>
                         </CardHeader>
@@ -230,7 +230,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                     <Card className="shadow-sm border-slate-200">
                         <CardHeader className="bg-slate-50 border-b p-4">
                             <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</div>
+                                <div className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</div>
                                 Communication
                             </CardTitle>
                         </CardHeader>
@@ -311,7 +311,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                     <Card className="md:col-span-2 shadow-sm border-slate-200">
                         <CardHeader className="bg-slate-50 border-b p-4">
                             <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</div>
+                                <div className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</div>
                                 Address & Statutory
                             </CardTitle>
                         </CardHeader>
@@ -459,7 +459,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={mutation.isPending} className="bg-slate-900 hover:bg-slate-800 text-white px-8">
+                    <Button type="submit" disabled={mutation.isPending} className="bg-primary hover:bg-primary/90 text-white px-8">
                         {mutation.isPending ? (
                             <div className="flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin" />

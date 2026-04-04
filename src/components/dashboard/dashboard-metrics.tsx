@@ -13,9 +13,9 @@ interface StatsCardProps {
   color?: string;
 }
 
-export function StatsCard({ title, value, icon: Icon, description, trend, color = "blue" }: StatsCardProps) {
+export function StatsCard({ title, value, icon: Icon, description, trend, color = "primary" }: StatsCardProps) {
   const colorClasses: Record<string, string> = {
-    blue: "text-blue-600 bg-blue-50",
+    primary: "text-primary bg-primary/10",
     green: "text-green-600 bg-green-50",
     orange: "text-orange-600 bg-orange-50",
     purple: "text-purple-600 bg-purple-50",
@@ -81,7 +81,7 @@ export function DashboardMetrics({ salesTotal, operationSummary }: DashboardMetr
         title="Total Sales"
         value={formatCurrency(salesTotal.totalSales)}
         icon={DollarSign}
-        color="blue"
+        color="primary"
         description="Gross revenue before deductions"
       />
       <StatsCard
@@ -109,7 +109,7 @@ export function DashboardMetrics({ salesTotal, operationSummary }: DashboardMetr
         title="Manifesting"
         value={operationSummary.manifesting}
         icon={Package}
-        color="blue"
+        color="primary"
         description="Active manifest events"
       />
       <StatsCard

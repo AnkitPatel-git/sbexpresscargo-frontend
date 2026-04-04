@@ -149,7 +149,7 @@ export default function ServiceCentersPage() {
                                     ) : (
                                         data?.data.map((sc) => (
                                             <TableRow key={sc.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{sc.code}</TableCell>
+                                                <TableCell className="font-medium text-primary">{sc.code}</TableCell>
                                                 <TableCell className="font-medium">{sc.name}</TableCell>
                                                 <TableCell>{sc.subName}</TableCell>
                                                 <TableCell>{sc.destination}</TableCell>

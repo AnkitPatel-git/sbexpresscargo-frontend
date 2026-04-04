@@ -161,7 +161,7 @@ export default function ServiceMapPage() {
                                     ) : (
                                         data?.data.map((serviceMap: ServiceMap) => (
                                             <TableRow key={serviceMap.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">
+                                                <TableCell className="font-medium text-primary">
                                                     <div className="flex items-center">
                                                         {getVendorName(serviceMap.vendorId)}
                                                         {serviceMap.vendorLink && (

@@ -147,7 +147,7 @@ export default function BanksPage() {
                                     ) : (
                                         data?.data.map((bank) => (
                                             <TableRow key={bank.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{bank.bankCode}</TableCell>
+                                                <TableCell className="font-medium text-primary">{bank.bankCode}</TableCell>
                                                 <TableCell className="font-medium">{bank.bankName}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={bank.status === "ACTIVE" ? "success" : "secondary"} className={

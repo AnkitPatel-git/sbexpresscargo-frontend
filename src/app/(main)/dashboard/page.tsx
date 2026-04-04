@@ -98,8 +98,8 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <LayoutDashboard className="h-6 w-6 text-blue-600" />
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Executive Dashboard</h1>
+            <LayoutDashboard className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight text-primary">Executive Dashboard</h1>
           </div>
           <p className="text-slate-500">Real-time overview of your logistics performance and sales.</p>
         </div>

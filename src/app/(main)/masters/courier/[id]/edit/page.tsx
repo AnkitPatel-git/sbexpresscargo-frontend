@@ -33,7 +33,7 @@ export default function EditCourierPage() {
                 <h3 className="text-xl font-semibold">Error loading courier</h3>
                 <p className="text-muted-foreground">The courier could not be found or there was an error fetching the data.</p>
                 <Button variant="outline" asChild className="mt-4">
-                    <Link href="/masters/courier text-blue-600">
+                    <Link href="/masters/courier text-primary">
                         Back to List
                     </Link>
                 </Button>

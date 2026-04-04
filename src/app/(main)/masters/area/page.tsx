@@ -147,7 +147,7 @@ export default function AreaPage() {
                                     ) : (
                                         data?.data.map((area: Area) => (
                                             <TableRow key={area.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{area.areaName}</TableCell>
+                                                <TableCell className="font-medium text-primary">{area.areaName}</TableCell>
                                                 <TableCell>{typeof area.serviceCenter === 'object' ? area.serviceCenter.name : area.serviceCenter || area.serviceCenterId}</TableCell>
                                                 <TableCell>{area.destination}</TableCell>
                                                 <TableCell className="text-right">

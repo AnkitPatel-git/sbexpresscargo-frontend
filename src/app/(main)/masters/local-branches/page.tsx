@@ -149,7 +149,7 @@ export default function LocalBranchesPage() {
                                     ) : (
                                         data?.data.map((branch) => (
                                             <TableRow key={branch.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">{branch.branchCode}</TableCell>
+                                                <TableCell className="font-medium text-primary">{branch.branchCode}</TableCell>
                                                 <TableCell className="font-medium">{branch.name}</TableCell>
                                                 <TableCell>{branch.city}</TableCell>
                                                 <TableCell>{branch.state}</TableCell>
