@@ -22,7 +22,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { drsFormSchema, DrsFormValues, Drs } from "@/types/transactions/drs";
 import { drsService } from "@/services/transactions/drs-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
-import { courierService } from "@/services/masters/courier-service";
+import { vendorService } from "@/services/masters/vendor-service";
 import { areaService } from "@/services/masters/area-service";
 
 interface DrsFormProps {
@@ -39,9 +39,9 @@ export function DrsForm({ initialData }: DrsFormProps) {
     queryFn: () => serviceCenterService.getServiceCenters(),
   });
 
-  const { data: couriersData } = useQuery({
-    queryKey: ["couriers"],
-    queryFn: () => courierService.getCouriers({ limit: 100 }),
+  const { data: vendorsData } = useQuery({
+    queryKey: ["vendors"],
+    queryFn: () => vendorService.getVendors({ limit: 100 }),
   });
 
   const { data: areasData } = useQuery({
@@ -54,9 +54,9 @@ export function DrsForm({ initialData }: DrsFormProps) {
     value: sc.id
   })) || [];
 
-  const courierOptions = couriersData?.data?.map(c => ({
-    label: c.name,
-    value: c.id
+  const vendorOptions = vendorsData?.data?.map((vendor) => ({
+    label: vendor.vendorName,
+    value: vendor.id
   })) || [];
 
   const areaOptions = areasData?.data?.map(a => ({
@@ -158,13 +158,13 @@ export function DrsForm({ initialData }: DrsFormProps) {
             name="courierId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Courier</FormLabel>
+                <FormLabel>Vendor</FormLabel>
                 <FormControl>
                   <Combobox
-                    options={courierOptions}
+                    options={vendorOptions}
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Select Courier"
+                    placeholder="Select Vendor"
                   />
                 </FormControl>
                 <FormMessage />

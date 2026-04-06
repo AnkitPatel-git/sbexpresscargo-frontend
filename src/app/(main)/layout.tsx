@@ -25,6 +25,42 @@ interface SidebarContentProps {
     onItemClick?: () => void;
 }
 
+const headerNavItems = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/masters/products", label: "Product Master" },
+    { href: "/masters/zones", label: "Zone" },
+    { href: "/masters/countries", label: "Country" },
+    { href: "/masters/states", label: "State Master" },
+    { href: "/masters/industries", label: "Industry Master" },
+    { href: "/masters/flights", label: "Flight Master" },
+    { href: "/masters/contents", label: "Content Master" },
+    { href: "/masters/banks", label: "Bank Master" },
+    { href: "/masters/local-branches", label: "Local Branch Master" },
+    { href: "/masters/service-centers", label: "Service Center Master" },
+    { href: "/masters/customers", label: "Customer Master" },
+    { href: "/masters/client-rates", label: "Client Rate Master" },
+    { href: "/masters/consignee", label: "Consignee Master" },
+    { href: "/masters/shipper", label: "Shipper Master" },
+    { href: "/masters/vendor", label: "Vendor Master" },
+    { href: "/masters/area", label: "Area Master" },
+    { href: "/masters/exception", label: "Exception Master" },
+    { href: "/masters/service-map", label: "Service Map Master" },
+    { href: "/masters/charge", label: "Charge Master" },
+    { href: "/transactions/pickup", label: "Pickup" },
+    { href: "/transactions/shipment", label: "Shipment" },
+    { href: "/transactions/manifest", label: "Manifest" },
+    { href: "/transactions/drs", label: "DRS" },
+    { href: "/transactions/tracking", label: "Tracking" },
+    { href: "/transactions/pod", label: "POD" },
+    { href: "/transactions/customer-payment", label: "Customer Payment" },
+    { href: "/transactions/credit-note", label: "Credit Note" },
+    { href: "/transactions/undelivered-scan", label: "Undelivered Scan" },
+    { href: "/transactions/misrouted-scan", label: "Misrouted Scan" },
+    { href: "/utilities/serviceable-pincodes", label: "Serviceable Pincodes" },
+    { href: "/tax-charges/fuel-setup", label: "Fuel Setup" },
+    { href: "/settings/permissions", label: "Permissions" },
+];
+
 const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarContentProps) => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(pathname.startsWith('/settings'));
     const [isMastersOpen, setIsMastersOpen] = useState(pathname.startsWith('/masters'));
@@ -54,7 +90,7 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
             isCollapsed ? "justify-center px-0 h-10 w-10 mx-auto" : "gap-3",
             active
                 ? cn(
-                    "bg-white text-[#0c1e35] font-semibold",
+                    "bg-white text-[#1c2a48] font-semibold",
                     isCollapsed ? "rounded-lg" : "border-r-4 border-primary rounded-r-none"
                 )
                 : "text-gray-400 hover:text-white hover:bg-[#1a2e45]",
@@ -165,9 +201,6 @@ const SidebarContent = ({ pathname, isCollapsed = false, onItemClick }: SidebarC
                         </PermissionGuard>
                         <PermissionGuard permission="master.vendor.read">
                             <LinkItem href="/masters/vendor" subItem active={isActive('/masters/vendor')} icon={Building2}>Vendor Master</LinkItem>
-                        </PermissionGuard>
-                        <PermissionGuard permission="master.courier.read">
-                            <LinkItem href="/masters/courier" subItem active={isActive('/masters/courier')} icon={Truck}>Courier Master</LinkItem>
                         </PermissionGuard>
                         <PermissionGuard permission="master.area.read">
                             <LinkItem href="/masters/area" subItem active={isActive('/masters/area')} icon={MapPin}>Area Master</LinkItem>
@@ -320,17 +353,20 @@ export default function DashboardLayout({
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const initials = user?.username?.substring(0, 2).toUpperCase() || 'US';
+    const activeHeaderItem = [...headerNavItems]
+        .sort((a, b) => b.href.length - a.href.length)
+        .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)) ?? headerNavItems[0];
 
     return (
         <div className="flex h-screen w-full bg-gray-100 overflow-hidden">
             {/* Sidebar (Desktop) */}
             <aside className={cn(
-                "hidden md:flex flex-col bg-[#0c1e35] text-white transition-all duration-300 ease-in-out h-full overflow-hidden",
+                "hidden md:flex flex-col bg-[#1c2a48] text-white transition-all duration-300 ease-in-out h-full overflow-hidden",
                 isSidebarCollapsed ? "w-20" : "w-64"
             )}>
-                <div className="flex h-14 items-center justify-between px-4 lg:h-[60px] bg-[#0c1e35] border-b border-gray-800/50">
+                <div className="flex h-14 items-center justify-between px-4 lg:h-[60px] bg-[#1c2a48] border-b border-gray-800/50">
                     {!isSidebarCollapsed && (
-                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md">
+                        <Link href="/dashboard" className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md">
                             <img 
                                 src="/logo/logo.png" 
                                 alt="SB Express Cargo" 
@@ -354,9 +390,9 @@ export default function DashboardLayout({
 
             {/* Mobile Sidebar (Sheet) */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetContent side="left" className="p-0 bg-[#0c1e35] text-white border-none w-64">
+                <SheetContent side="left" className="p-0 bg-[#1c2a48] text-white border-none w-64">
                     <div className="flex h-14 items-center px-4 border-b border-gray-800/50">
-                        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md">
+                        <Link href="/dashboard" className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md">
                             <img 
                                 src="/logo/logo.png" 
                                 alt="SB Express Cargo" 
@@ -390,9 +426,9 @@ export default function DashboardLayout({
                                 <Home className="h-4 w-4" />
                                 Home
                             </Link>
-                            <Link href="/masters/products" className="text-sm font-medium text-gray-600 hover:text-primary flex items-center gap-2">
-                                <Box className="h-4 w-4" />
-                                Product
+                            <Link href={activeHeaderItem.href} className="text-sm font-medium text-gray-600 hover:text-primary flex items-center gap-2">
+                                <ChevronRight className="h-4 w-4 text-gray-400" />
+                                {activeHeaderItem.label}
                             </Link>
                         </div>
                     </div>
