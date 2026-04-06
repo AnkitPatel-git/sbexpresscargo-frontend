@@ -114,6 +114,7 @@ export interface Shipment {
     shipmentValue?: number;
     currency: string;
     pieces: number;
+    declaredWeight?: string | number | null;
     actualWeight: number;
     volumetricWeight?: number;
     chargeWeight?: number;
@@ -155,6 +156,42 @@ export interface Shipment {
     updatedById?: number;
     piecesRows?: PieceRow[];
     charges?: ShipmentCharge[];
+    customer?: {
+        id: number;
+        code?: string;
+        name?: string;
+    };
+    shipper?: {
+        id: number;
+        shipperName?: string;
+        name?: string;
+    };
+    consignee?: {
+        id: number;
+        consigneeName?: string;
+        name?: string;
+    };
+    vendor?: {
+        id: number;
+        vendorCode?: string;
+        vendorName?: string;
+        name?: string;
+    };
+    product?: {
+        id: number;
+        productCode?: string;
+        productName?: string;
+        name?: string;
+    };
+    forwardings?: Array<{
+        id?: number;
+        deliveryVendor?: {
+            id: number;
+            vendorName?: string;
+            name?: string;
+        };
+        deliveryVendorId?: number;
+    }>;
 }
 
 export interface ShipmentListResponse {

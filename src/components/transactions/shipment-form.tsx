@@ -75,6 +75,39 @@ interface ShipmentFormProps {
     initialData?: Shipment | null
 }
 
+const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValues => {
+    const payload: ShipmentFormValues = { ...values }
+
+    const optionalNumberKeys: Array<keyof ShipmentFormValues> = [
+        "shipperId",
+        "consigneeId",
+        "vendorId",
+        "serviceMapId",
+        "fieldExecutiveId",
+        "serviceCenterId",
+        "codAmount",
+        "shipmentValue",
+        "chargeWeight",
+        "volumetricWeight",
+    ]
+
+    optionalNumberKeys.forEach((key) => {
+        const currentValue = payload[key]
+        if (typeof currentValue === "number" && currentValue <= 0) {
+            ;(payload as Record<string, unknown>)[key] = undefined
+        }
+    })
+
+    if (!payload.bookTime) {
+        payload.bookTime = undefined
+    }
+
+    payload.piecesRows = (payload.piecesRows || []).filter((row) => Number(row.pieces || 0) > 0)
+    payload.charges = (payload.charges || []).filter((charge) => Number(charge.chargeId || 0) > 0)
+
+    return payload
+}
+
 export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
@@ -292,9 +325,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     const mutation = useMutation({
         mutationFn: (values: ShipmentFormValues) => {
+            const payload = normalizeShipmentPayload(values)
             return isEdit
-                ? shipmentService.updateShipment(initialData!.id, values)
-                : shipmentService.createShipment(values)
+                ? shipmentService.updateShipment(initialData!.id, payload)
+                : shipmentService.createShipment(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['shipments'] })
@@ -312,22 +346,34 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-20">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Section 1: General Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">General Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-20">
+                <div className="rounded-md border border-border bg-card p-3">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <Button type="button" size="sm" variant="outline" className="h-7 text-xs">AWB No</Button>
+                            <Button type="button" size="sm" variant="outline" className="h-7 text-xs">Forwarding</Button>
+                            <Button type="button" size="sm" variant="outline" className="h-7 text-xs">KYC</Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Input className="h-7 w-28 text-xs" placeholder="AWB No" />
+                            <Input className="h-7 w-24 text-xs" placeholder="Search" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                        <Card className="border-border">
+                            <CardHeader className="border-b bg-muted/40 py-2">
+                                <CardTitle className="text-sm">AWB / Booking Details</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3 p-3">
+                                <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="awbNo"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>AWB No <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input {...field} placeholder="e.g. AWB123456" /></FormControl>
+                                            <FormControl><Input {...field} placeholder="AWB No" className="h-8" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -338,21 +384,21 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Reference No</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Ref #" /></FormControl>
+                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Reference No" className="h-8" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="bookDate"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Book Date <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input type="date" {...field} /></FormControl>
+                                            <FormControl><Input type="date" {...field} className="h-8" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -365,8 +411,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <FormLabel>Book Time</FormLabel>
                                             <FormControl>
                                                 <div className="relative">
-                                                    <Input type="time" {...field} value={field.value || ''} className="pl-10" />
-                                                    <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                                                    <Input type="time" {...field} value={field.value || ''} className="h-8 pl-10" />
+                                                    <Clock className="absolute left-3 top-2 h-4 w-4 text-gray-500" />
                                                 </div>
                                             </FormControl>
                                             <FormMessage />
@@ -375,6 +421,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 />
                             </div>
 
+                                <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="serviceCenterId"
@@ -387,6 +434,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="Select Service Center"
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -405,21 +453,22 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="Select Executive"
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
+                                </div>
                         </CardContent>
                     </Card>
 
-                    {/* Section 2: Parties */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Parties Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                        <Card className="border-border">
+                            <CardHeader className="border-b bg-muted/40 py-2">
+                                <CardTitle className="text-sm">Shipper / Consignee</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3 p-3">
                             <FormField
                                 control={form.control}
                                 name="customerId"
@@ -433,6 +482,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 onChange={field.onChange}
                                                 placeholder="Select Customer"
                                                 searchPlaceholder="Search customer..."
+                                                className="h-8"
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -440,7 +490,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 )}
                             />
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="shipperId"
@@ -454,6 +504,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     onChange={field.onChange}
                                                     placeholder="Select Shipper"
                                                     searchPlaceholder="Search shipper..."
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -474,6 +525,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     onChange={field.onChange}
                                                     placeholder="Select Consignee"
                                                     searchPlaceholder="Search consignee..."
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -483,16 +535,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             </div>
                         </CardContent>
                     </Card>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Section 3: Shipment Specs & Route */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Shipment Specifications & Route</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <Card className="border-border">
+                            <CardHeader className="border-b bg-muted/40 py-2">
+                                <CardTitle className="text-sm">Shipment Details</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3 p-3">
+                            <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="productId"
@@ -505,6 +554,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="Select Product"
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -523,6 +573,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="Select Service Map"
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -541,6 +592,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="Select Vendor"
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -549,14 +601,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="origin"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Origin</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="City Name" /></FormControl>
+                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Origin" className="h-8" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -567,21 +619,21 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Destination</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="City Name" /></FormControl>
+                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Destination" className="h-8" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-3 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="pieces"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Pieces <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                                            <FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -592,7 +644,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Actual Weight <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
+                                            <FormControl><Input type="number" step="0.01" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -603,22 +655,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Charge Weight</FormLabel>
-                                            <FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
+                                            <FormControl><Input type="number" step="0.01" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Section 4: Billing & Payment */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Billing & Payment</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="paymentType"
@@ -635,6 +678,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="Select Type"
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -656,6 +700,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="INR"
+                                                    className="h-8"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -664,25 +709,25 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <FormField
                                     control={form.control}
                                     name="shipmentValue"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Shipment Value</FormLabel>
-                                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
+                                            <FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <div className="space-y-2 pt-8">
+                                <div className="space-y-2 pt-7">
                                     <FormField
                                         control={form.control}
                                         name="isCod"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-2">
-                                                <FormLabel className="text-base">IS COD</FormLabel>
+                                            <FormItem className="flex h-8 flex-row items-center justify-between rounded-md border px-3">
+                                                <FormLabel className="text-sm">IS COD</FormLabel>
                                                 <FormControl>
                                                     <Switch
                                                         checked={field.value}
@@ -702,7 +747,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>COD Amount</FormLabel>
-                                            <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
+                                            <FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -710,17 +755,18 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             )}
                         </CardContent>
                     </Card>
+                    </div>
                 </div>
 
                 {/* Section 5: Piece Details */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg">Piece Details (Dimensions)</CardTitle>
+                <Card className="border-border">
+                    <CardHeader className="flex flex-row items-center justify-between border-b bg-primary py-2">
+                        <CardTitle className="text-sm text-primary-foreground">Click here to enter Piece Details</CardTitle>
                         <Button type="button" variant="outline" size="sm" onClick={() => appendPiece({ pieces: 1, actualWeightPerPc: 0 })}>
                             <Plus className="mr-2 h-4 w-4" /> Add Piece
                         </Button>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-3">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -778,14 +824,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 </Card>
 
                 {/* Section 6: Charges */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg">Charges</CardTitle>
+                <Card className="border-border">
+                    <CardHeader className="flex flex-row items-center justify-between border-b bg-primary py-2">
+                        <CardTitle className="text-sm text-primary-foreground">Click here to enter Charge Details</CardTitle>
                         <Button type="button" variant="outline" size="sm" onClick={() => appendCharge({ chargeId: 0, amount: 0, fuelApply: false, taxApply: false, taxOnFuel: false })}>
                             <Plus className="mr-2 h-4 w-4" /> Add Charge
                         </Button>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-3">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -843,8 +889,49 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     </CardContent>
                 </Card>
 
+                <Card className="border-border">
+                    <CardHeader className="border-b bg-primary py-2">
+                        <CardTitle className="text-sm text-primary-foreground">Shipment Type</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 gap-3 p-3 md:grid-cols-3">
+                        <FormField
+                            control={form.control}
+                            name="content"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Shipment Type</FormLabel>
+                                    <FormControl><Input {...field} value={field.value || ""} placeholder="Shipment Type" className="h-8" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="instruction"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Instruction</FormLabel>
+                                    <FormControl><Input {...field} value={field.value || ""} placeholder="Instruction" className="h-8" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="medicalCharges"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Medical Service</FormLabel>
+                                    <FormControl><Input type="number" {...field} value={field.value ?? 0} onChange={e => field.onChange(parseFloat(e.target.value))} className="h-8" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
                 {/* Submit Buttons */}
-                <div className="flex justify-end gap-3 pt-6 border-t bg-white sticky bottom-0 z-20 pb-4">
+                <div className="sticky bottom-0 z-20 flex justify-end gap-3 border-t bg-white pb-4 pt-4">
                     <Button
                         type="button"
                         variant="outline"
