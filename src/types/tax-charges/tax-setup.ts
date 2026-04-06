@@ -29,6 +29,12 @@ export interface TaxSetupListResponse {
     success: boolean;
     message: string;
     data: TaxSetup[];
+    meta?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
     total: number;
     page: number;
     limit: number;
