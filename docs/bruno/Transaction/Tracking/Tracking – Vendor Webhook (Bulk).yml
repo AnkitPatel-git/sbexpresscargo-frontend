@@ -1,5 +1,5 @@
 info:
-  name: Tracking – Carrier Webhook (Bulk)
+  name: Tracking – Vendor Webhook (Bulk)
   type: http
   seq: 6
 
@@ -16,7 +16,7 @@ http:
         "events": [
           {
             "awbNo": "AWB123456",
-            "carrierId": 1,
+            "vendorId": 1,
             "externalStatus": "PICKED_UP",
             "eventId": "bd-bulk-001",
             "sequence": 2,
@@ -27,7 +27,7 @@ http:
           },
           {
             "awbNo": "AWB123457",
-            "carrierId": 1,
+            "vendorId": 1,
             "externalStatus": "IN_TRANSIT",
             "eventId": "bd-bulk-002",
             "sequence": 3,
@@ -59,7 +59,7 @@ examples:
             "events": [
               {
                 "awbNo": "AWB123456",
-                "carrierId": 1,
+                "vendorId": 1,
                 "externalStatus": "PICKED_UP",
                 "eventId": "bd-bulk-001",
                 "sequence": 2,
@@ -70,7 +70,7 @@ examples:
               },
               {
                 "awbNo": "AWB123457",
-                "carrierId": 1,
+                "vendorId": 1,
                 "externalStatus": "IN_TRANSIT",
                 "eventId": "bd-bulk-002",
                 "sequence": 3,
@@ -152,7 +152,7 @@ examples:
           }
 
 docs: |-
-  **Public** bulk variant of **Carrier Webhook (Single)**. Same per-event fields as the single webhook (`awbNo`, `carrierId`, `externalStatus` required; `eventId`, `sequence`, `location`, `remarks`, `eventTime`, `rawData` optional).
+  **Public** bulk variant of **Vendor Webhook (Single)**. Same per-event fields as the single webhook (`awbNo`, `vendorId`, `externalStatus` required; `eventId`, `sequence`, `location`, `remarks`, `eventTime`, `rawData` optional).
 
   Response: `data.succeeded` / `data.failed` per index; `success` false if any event failed.
 

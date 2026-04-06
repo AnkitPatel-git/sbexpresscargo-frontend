@@ -15,7 +15,7 @@ http:
     type: json
     data: |-
       {
-        "vendorCode": "VEND03",
+        "vendorCode": "VEND05",
         "vendorName": "Logistics Partner Ltd",
         "contactPerson": "Vendor Contact",
         "address1": "400 Vendor Ave",
@@ -36,7 +36,7 @@ http:
         "origin": "MUMBAI",
         "vendorZip": "400004",
         "status": "ACTIVE",
-        "global": false,
+        "global": true,
         "gstType": "FORWARD",
         "volumetricRound": 5000
       }
@@ -343,7 +343,6 @@ examples:
               "updatedById": null,
               "deletedAt": null,
               "deletedById": null,
-              "carrierId": null
             }
           }
 

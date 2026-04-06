@@ -145,7 +145,6 @@ examples:
               "updatedById": 1,
               "deletedAt": null,
               "deletedById": null,
-              "carrierId": null
             }
           }
 

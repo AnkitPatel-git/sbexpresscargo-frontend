@@ -1,11 +1,11 @@
 info:
-  name: List Carrier Mappings
+  name: List Vendor Mappings
   type: http
   seq: 8
 
 http:
   method: GET
-  url: "{{baseUrl}}/transaction/shipment/2/carrier-mapping"
+  url: "{{baseUrl}}/transaction/shipment/2/vendor-mapping"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
@@ -20,7 +20,7 @@ settings:
 examples:
   - name: "200"
     request:
-      url: "{{baseUrl}}/transaction/shipment/1/carrier-mapping"
+      url: "{{baseUrl}}/transaction/shipment/1/vendor-mapping"
       method: GET
       headers:
         - name: Authorization
@@ -76,7 +76,7 @@ examples:
               {
                 "id": 1,
                 "shipmentId": 1,
-                "carrierId": 1,
+                "vendorId": 1,
                 "externalAwb": "BD123456789",
                 "externalOrderId": "ORD-2026-001",
                 "requestPayload": {
@@ -95,18 +95,18 @@ examples:
                 "updatedAt": "2026-03-24T20:36:43.166Z",
                 "deletedAt": null,
                 "deletedById": null,
-                "carrier": {
+                "vendor": {
                   "id": 1,
-                  "code": "BLUEDART",
-                  "name": "BLUEDART Cargo (updated)",
-                  "isActive": true
+                  "vendorCode": "BLUEDART",
+                  "vendorName": "BLUEDART Cargo (updated)",
+                  "status": "ACTIVE"
                 }
               }
             ]
           }
   - name: "200"
     request:
-      url: "{{baseUrl}}/transaction/shipment/2/carrier-mapping"
+      url: "{{baseUrl}}/transaction/shipment/2/vendor-mapping"
       method: GET
       headers:
         - name: Authorization
@@ -162,12 +162,12 @@ examples:
           }
 
 docs: |-
-  Returns all `ShipmentCarrierMapping` rows for the shipment (`shipment_carrier_mappings`): links your AWB to a **Carrier** (`carrierId`) with optional **externalAwb** / **externalOrderId** and booking API payloads.
+  Returns all `ShipmentVendorMapping` rows for the shipment (`shipment_vendor_mappings`): links your AWB to a **Vendor** (`vendorId`) with optional **externalAwb** / **externalOrderId** and booking API payloads.
 
   **Path:** `:id` — shipment id (not AWB string).
 
-  **Response:** `data` is an array; each row includes nested `carrier` `{ id, code, name, isActive }`.
+  **Response:** `data` is an array; each row includes nested `vendor` `{ id, vendorCode, vendorName, status }`.
 
-  Pairs with **Upsert Carrier Mapping** and **Tracking → Carrier webhook** (webhook uses your internal `awbNo` + `carrierId` + `externalStatus`; status mapping is in `CarrierStatusMapping` master).
+  Pairs with **Upsert Vendor Mapping** and **Tracking → Vendor webhook** (webhook uses your internal `awbNo` + `vendorId` + `externalStatus`; status mapping is in `VendorStatusMapping`).
 
   JWT + `shipment.core.read`

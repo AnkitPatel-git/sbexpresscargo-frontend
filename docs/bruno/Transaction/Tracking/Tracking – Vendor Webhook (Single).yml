@@ -1,5 +1,5 @@
 info:
-  name: Tracking – Carrier Webhook (Single)
+  name: Tracking – Vendor Webhook (Single)
   type: http
   seq: 5
 
@@ -14,7 +14,7 @@ http:
     data: |-
       {
         "awbNo": "AWB123456",
-        "carrierId": 1,
+        "vendorId": 1,
         "externalStatus": "OUT_FOR_DELIVERY",
         "eventId": "evt-unique-001",
         "sequence": 4,
@@ -42,13 +42,13 @@ docs: |-
   | Field | Required | Notes |
   |-------|----------|--------|
   | awbNo | **yes** | Your internal AWB (must exist on `shipments`) |
-  | carrierId | **yes** | Must match `Carrier` row |
-  | externalStatus | **yes** | Raw string from partner; must exist in **CarrierStatusMapping** for this `carrierId` |
+  | vendorId | **yes** | Must match `Vendor` row (logistics partner — BlueDart, DTDC, etc.) |
+  | externalStatus | **yes** | Raw string from partner; must exist in **VendorStatusMapping** for this `vendorId` |
   | eventId | no | Idempotency key; omitted → hash of payload |
   | sequence | no | Monotonic ordering vs other events |
   | location | no | Free text |
   | remarks | no | Free text |
   | eventTime | no | ISO 8601; used for ordering vs latest status |
-  | rawData | no | Any JSON stored on `CarrierTrackingLog` |
+  | rawData | no | Any JSON stored on `VendorTrackingLog` |
 
-  **Related:** `PUT /transaction/shipment/:id/carrier-mapping` stores partner waybill; this endpoint drives **status** via mappings + internal state machine.
+  **Related:** `PUT /transaction/shipment/:id/vendor-mapping` stores partner waybill; this endpoint drives **status** via mappings + internal state machine.

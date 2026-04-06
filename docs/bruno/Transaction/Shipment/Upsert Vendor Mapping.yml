@@ -1,11 +1,11 @@
 info:
-  name: Upsert Carrier Mapping
+  name: Upsert Vendor Mapping
   type: http
   seq: 9
 
 http:
   method: PUT
-  url: "{{baseUrl}}/transaction/shipment/1/carrier-mapping"
+  url: "{{baseUrl}}/transaction/shipment/1/vendor-mapping"
   headers:
     - name: Content-Type
       value: application/json
@@ -16,7 +16,7 @@ http:
     data: |-
       {
         "version": 2,
-        "carrierId": 1,
+        "vendorId": 1,
         "externalAwb": "BD123456789",
         "externalOrderId": "ORD-2026-001",
         "status": "AWB_ASSIGNED",
@@ -41,7 +41,7 @@ settings:
 examples:
   - name: "200"
     request:
-      url: "{{baseUrl}}/transaction/shipment/1/carrier-mapping"
+      url: "{{baseUrl}}/transaction/shipment/1/vendor-mapping"
       method: PUT
       headers:
         - name: Content-Type
@@ -53,7 +53,7 @@ examples:
         data: |-
           {
             "version": 2,
-            "carrierId": 1,
+            "vendorId": 1,
             "externalAwb": "BD123456789",
             "externalOrderId": "ORD-2026-001",
             "status": "AWB_ASSIGNED",
@@ -141,7 +141,7 @@ examples:
               "mapping": {
                 "id": 1,
                 "shipmentId": 1,
-                "carrierId": 1,
+                "vendorId": 1,
                 "externalAwb": "BD123456789",
                 "externalOrderId": "ORD-2026-001",
                 "requestPayload": {
@@ -160,18 +160,18 @@ examples:
                 "updatedAt": "2026-03-24T20:36:43.166Z",
                 "deletedAt": null,
                 "deletedById": null,
-                "carrier": {
+                "vendor": {
                   "id": 1,
-                  "code": "BLUEDART",
-                  "name": "BLUEDART Cargo (updated)",
-                  "isActive": true
+                  "vendorCode": "BLUEDART",
+                  "vendorName": "BLUEDART Cargo (updated)",
+                  "status": "ACTIVE"
                 }
               }
             }
           }
 
 docs: |-
-  Create or update the **unique** `(shipmentId, carrierId)` mapping (e.g. after booking with Blue Dart). Bumps shipment **version** (optimistic lock) like forwarding.
+  Create or update the **unique** `(shipmentId, vendorId)` mapping (e.g. after booking with Blue Dart). Bumps shipment **version** (optimistic lock) like forwarding.
 
   **Path:** `:id` — shipment id.
 
@@ -180,7 +180,7 @@ docs: |-
   | Field | Required | Type | Notes |
   |-------|----------|------|-------|
   | version | **yes** | number | Current `Shipment.version` |
-  | carrierId | **yes** | number | `Carrier` id (Carrier Master) |
+  | vendorId | **yes** | number | `Vendor` id (Vendor Master) |
   | externalAwb | no | string, max 128 | Partner waybill / consignment no. |
   | externalOrderId | no | string, max 128 | Partner order / booking id |
   | requestPayload | no | object | JSON — last booking request snapshot |
@@ -188,7 +188,7 @@ docs: |-
   | status | no | enum | `CREATED` \| `AWB_ASSIGNED` \| `FAILED` \| `RETRYING` \| `SYNCED` (default **CREATED** on insert) |
   | errorMessage | no | string, max 1000 | Last error text |
 
-  **Partial update:** on existing row, omit fields you do not want to change (except `version` + `carrierId` always required).
+  **Partial update:** on existing row, omit fields you do not want to change (except `version` + `vendorId` always required).
 
   **Blocked** when shipment is `DELIVERED` or `FAILED`.
 
