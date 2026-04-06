@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/transaction/shipment"
+  url: '{{baseUrl}}/transaction/shipment'
   headers:
     - name: Content-Type
       value: application/json
@@ -15,13 +15,10 @@ http:
     type: json
     data: |-
       {
-        "awbNo": "AWB123456",
         "bookDate": "2026-03-20",
         "bookTime": "10:30",
         "referenceNo": "REF001",
-        "customerId": 1,
-        "shipperId": 1,
-        "consigneeId": 1,
+        "clientId": 1,
         "origin": "MUMBAI",
         "originCode": "MUM",
         "destination": "DELHI",
@@ -40,7 +37,19 @@ http:
         "paymentType": "CREDIT",
         "content": "Documents",
         "instruction": "Handle with care",
-        "fieldExecutiveId": 1,
+        "fieldExecutiveId": null,
+        "shipper": {
+          "shipperName": "ABC Exporters",
+          "shipperOrigin": "VASAI",
+          "mobile": "9999999999",
+          "address1": "Vasai East"
+        },
+        "consignee": {
+          "name": "XYZ Imports",
+          "destination": "DELHI",
+          "mobile": "8888888888",
+          "address1": "Karol Bagh"
+        },
         "cashReceiptNo": 1001,
         "amountReceived": 500,
         "balanceAmount": 100,
@@ -55,7 +64,6 @@ http:
         "totalAmount": 560.5,
         "oda": false,
         "medicalCharges": 0,
-        "serviceCenterId": 1,
         "manifestNo": "CD12345",
         "manifestDate": "2026-03-20",
         "invoiceNo": "INV001",
@@ -73,7 +81,7 @@ http:
             "length": 30,
             "width": 20,
             "height": 15,
-            "division": 1,
+            "division": 5000,
             "volumetricWeight": 5.2,
             "chargeWeight": 5
           }
@@ -105,9 +113,9 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: '200'
     request:
-      url: "{{baseUrl}}/transaction/shipment"
+      url: '{{baseUrl}}/transaction/shipment'
       method: POST
       headers:
         - name: Content-Type
@@ -118,13 +126,10 @@ examples:
         type: json
         data: |-
           {
-            "awbNo": "AWB123456",
             "bookDate": "2026-03-20",
             "bookTime": "10:30",
             "referenceNo": "REF001",
-            "customerId": 1,
-            "shipperId": 1,
-            "consigneeId": 1,
+            "clientId": 1,
             "origin": "MUMBAI",
             "originCode": "MUM",
             "destination": "DELHI",
@@ -143,7 +148,19 @@ examples:
             "paymentType": "CREDIT",
             "content": "Documents",
             "instruction": "Handle with care",
-            "fieldExecutiveId": 1,
+            "fieldExecutiveId": null,
+            "shipper": {
+              "shipperName": "ABC Exporters",
+              "shipperOrigin": "VASAI",
+              "mobile": "9999999999",
+              "address1": "Vasai East"
+            },
+            "consignee": {
+              "name": "XYZ Imports",
+              "destination": "DELHI",
+              "mobile": "8888888888",
+              "address1": "Karol Bagh"
+            },
             "cashReceiptNo": 1001,
             "amountReceived": 500,
             "balanceAmount": 100,
@@ -158,7 +175,6 @@ examples:
             "totalAmount": 560.5,
             "oda": false,
             "medicalCharges": 0,
-            "serviceCenterId": 1,
             "manifestNo": "CD12345",
             "manifestDate": "2026-03-20",
             "invoiceNo": "INV001",
@@ -176,7 +192,7 @@ examples:
                 "length": 30,
                 "width": 20,
                 "height": 15,
-                "division": 1,
+                "division": 5000,
                 "volumetricWeight": 5.2,
                 "chargeWeight": 5
               }
@@ -226,13 +242,13 @@ examples:
         - name: x-permitted-cross-domain-policies
           value: none
         - name: x-xss-protection
-          value: "0"
+          value: '0'
         - name: vary
           value: Origin
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "1173"
+          value: '1173'
         - name: etag
           value: W/"495-qWo8rMoR0dB2s/9HD9drO5ut7z4"
         - name: date
@@ -248,8 +264,10 @@ examples:
             "success": true,
             "data": {
               "id": 2,
-              "awbNo": "AWB123456",
+              "awbNo": "AWB-20260320-000001",
               "customerId": 1,
+              "shipperId": 12,
+              "consigneeId": 24,
               "vendorId": 1,
               "productId": 1,
               "origin": "MUMBAI",
@@ -316,9 +334,9 @@ examples:
               ]
             }
           }
-  - name: "409"
+  - name: '409'
     request:
-      url: "{{baseUrl}}/transaction/shipment"
+      url: '{{baseUrl}}/transaction/shipment'
       method: POST
       headers:
         - name: Content-Type
@@ -329,11 +347,11 @@ examples:
         type: json
         data: |-
           {
-            "awbNo": "AWB123456",
+            "awbNo": "AWB-DUPLICATE-0001",
             "bookDate": "2026-03-20",
             "bookTime": "10:30",
             "referenceNo": "REF001",
-            "customerId": 1,
+            "clientId": 1,
             "shipperId": 1,
             "consigneeId": 1,
             "origin": "MUMBAI",
@@ -369,7 +387,6 @@ examples:
             "totalAmount": 560.5,
             "oda": false,
             "medicalCharges": 0,
-            "serviceCenterId": 1,
             "manifestNo": "CD12345",
             "manifestDate": "2026-03-20",
             "invoiceNo": "INV001",
@@ -437,13 +454,13 @@ examples:
         - name: x-permitted-cross-domain-policies
           value: none
         - name: x-xss-protection
-          value: "0"
+          value: '0'
         - name: vary
           value: Origin
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "80"
+          value: '80'
         - name: etag
           value: W/"50-iNJ0wjFMBxWErQ/fDvh7Q2WpfdQ"
         - name: date
@@ -464,5 +481,8 @@ examples:
 docs: |-
   Create shipment AWB. JWT + shipment.core.create.
 
-  Mandatory: awbNo, bookDate
-  Optional: bookTime, referenceNo, customerId, shipperId, consigneeId, origin, originCode, destination, destinationCode, productId, vendorId, serviceMapId, shipmentValue, currency, pieces, actualWeight, volumetricWeight, chargeWeight, km, commercial, paymentType, content, instruction, fieldExecutiveId, cashReceiptNo, amountReceived, balanceAmount, cashReceiptDate, contractCharges, otherCharges, subTotal, totalFuel, igst, cgst, sgst, totalAmount, oda, medicalCharges, serviceCenterId, manifestNo, manifestDate, invoiceNo, debitNoteNo, creditNoteNo, flightNo, podUserId, isCod, codAmount, piecesRows, charges
+  Mandatory: bookDate, customerId or clientId, origin, destination, paymentType, one positive weight value (actualWeight or volumetricWeight or chargeWeight), and shipper/consignee via id or nested details.
+  Optional: awbNo (if omitted, backend auto-generates a value like AWB-YYYYMMDD-000001), productId, vendorId, serviceMapId, shipmentValue, currency, pieces, km, commercial, content, instruction, fieldExecutiveId, cashReceiptNo, amountReceived, balanceAmount, cashReceiptDate, contractCharges, otherCharges, subTotal, totalFuel, igst, cgst, sgst, totalAmount, oda, medicalCharges, manifestNo, manifestDate, invoiceNo, debitNoteNo, creditNoteNo, flightNo, podUserId, isCod, codAmount, piecesRows, charges.
+
+  Response: created shipment always returns the final AWB in data.awbNo, including when backend auto-generates it.
+  Note: serviceCenterId is not stored on Shipment. If shipper is mapped to a service center, keep that relation on the shipper master.

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { ChangeEvent, useEffect, useState } from 'react'
 import { useForm, useFieldArray, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -79,8 +79,11 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
     const payload: ShipmentFormValues = { ...values }
 
     const optionalNumberKeys: Array<keyof ShipmentFormValues> = [
+        "customerId",
+        "clientId",
         "shipperId",
         "consigneeId",
+        "productId",
         "vendorId",
         "serviceMapId",
         "fieldExecutiveId",
@@ -98,14 +101,65 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         }
     })
 
+    payload.clientId = payload.customerId
+
     if (!payload.bookTime) {
         payload.bookTime = undefined
+    }
+
+    if (payload.shipperId) {
+        payload.shipper = undefined
+    } else if (!payload.shipper?.shipperName && !payload.shipper?.mobile && !payload.shipper?.shipperCode) {
+        payload.shipper = undefined
+    }
+
+    if (payload.consigneeId) {
+        payload.consignee = undefined
+    } else if (!payload.consignee?.name && !payload.consignee?.mobile && !payload.consignee?.code) {
+        payload.consignee = undefined
     }
 
     payload.piecesRows = (payload.piecesRows || []).filter((row) => Number(row.pieces || 0) > 0)
     payload.charges = (payload.charges || []).filter((charge) => Number(charge.chargeId || 0) > 0)
 
     return payload
+}
+
+const parseNum = (value?: string): number | undefined => {
+    if (!value) return undefined
+    const n = Number(value)
+    return Number.isFinite(n) ? n : undefined
+}
+
+const parsePiecesCsv = (raw: string): NonNullable<ShipmentFormValues["piecesRows"]> => {
+    const [headerLine, ...bodyLines] = raw.split(/\r?\n/).filter(Boolean)
+    if (!headerLine) return []
+
+    const headers = headerLine.split(",").map((h) => h.trim())
+    const get = (cells: string[], key: string) => {
+        const idx = headers.indexOf(key)
+        return idx >= 0 ? (cells[idx] || "").trim() : ""
+    }
+
+    return bodyLines.map((line) => {
+        const cells = line.split(",")
+        return {
+            childAwbNo: get(cells, "childAwbNo") || undefined,
+            actualWeightPerPc: parseNum(get(cells, "actualWeightPerPc")) || 0,
+            pieces: parseNum(get(cells, "pieces")) || 0,
+            length: parseNum(get(cells, "length")),
+            width: parseNum(get(cells, "width")),
+            height: parseNum(get(cells, "height")),
+            division: parseNum(get(cells, "division")),
+            volumetricWeight: parseNum(get(cells, "volumetricWeight")),
+            chargeWeight: parseNum(get(cells, "chargeWeight")),
+        }
+    }).filter((row) => row.pieces > 0)
+}
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof Error && error.message) return error.message
+    return fallback
 }
 
 export function ShipmentForm({ initialData }: ShipmentFormProps) {
@@ -166,13 +220,21 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const form = useForm<ShipmentFormValues>({
         resolver: zodResolver(shipmentSchema) as Resolver<ShipmentFormValues>,
         defaultValues: {
+            version: initialData?.version,
             awbNo: initialData?.awbNo || '',
             bookDate: initialData?.bookDate || new Date().toISOString().split('T')[0],
             bookTime: initialData?.bookTime || format(new Date(), "HH:mm"),
             referenceNo: initialData?.referenceNo || '',
             customerId: initialData?.customerId || 0,
+            clientId: initialData?.customerId || 0,
             shipperId: initialData?.shipperId || 0,
             consigneeId: initialData?.consigneeId || 0,
+            shipper: initialData?.shipper ? {
+                shipperName: initialData.shipper.shipperName || initialData.shipper.name || '',
+            } : undefined,
+            consignee: initialData?.consignee ? {
+                name: initialData.consignee.consigneeName || initialData.consignee.name || '',
+            } : undefined,
             origin: initialData?.origin || '',
             originCode: initialData?.originCode || '',
             destination: initialData?.destination || '',
@@ -191,7 +253,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             paymentType: initialData?.paymentType || 'CREDIT',
             content: initialData?.content || '',
             instruction: initialData?.instruction || '',
-            fieldExecutiveId: initialData?.fieldExecutiveId || 0,
+            fieldExecutiveId: initialData?.fieldExecutiveId ?? null,
             serviceCenterId: initialData?.serviceCenterId || 0,
             isCod: initialData?.isCod || false,
             codAmount: initialData?.codAmount || 0,
@@ -215,6 +277,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             form.reset({
                 ...initialData,
                 bookDate: initialData.bookDate.split('T')[0],
+                clientId: initialData.customerId,
+                version: initialData.version,
                 piecesRows: initialData.piecesRows || [],
                 charges: initialData.charges || [],
             })
@@ -335,438 +399,293 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             toast.success(`Shipment ${isEdit ? 'updated' : 'created'} successfully`)
             router.push('/transactions/shipment')
         },
-        onError: (error: any) => {
-            toast.error(error.message || `Failed to ${isEdit ? 'update' : 'create'} shipment`)
+        onError: (error: unknown) => {
+            toast.error(getErrorMessage(error, `Failed to ${isEdit ? 'update' : 'create'} shipment`))
         }
     })
 
+    const templateMutation = useMutation({
+        mutationFn: () => shipmentService.downloadPiecesTemplate(),
+        onSuccess: (blob) => {
+            const url = window.URL.createObjectURL(blob)
+            const anchor = document.createElement('a')
+            anchor.href = url
+            anchor.download = 'shipment-pieces-template.csv'
+            document.body.appendChild(anchor)
+            anchor.click()
+            anchor.remove()
+            window.URL.revokeObjectURL(url)
+            toast.success('Template downloaded')
+        },
+        onError: (error: unknown) => {
+            toast.error(getErrorMessage(error, 'Failed to download template'))
+        },
+    })
+
+    const handlePiecesCsvUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file) return
+        try {
+            const raw = await file.text()
+            const parsed = parsePiecesCsv(raw)
+            form.setValue('piecesRows', parsed, { shouldValidate: true })
+            toast.success(`${parsed.length} piece row(s) imported`)
+        } catch {
+            toast.error('Unable to parse uploaded template')
+        } finally {
+            event.target.value = ''
+        }
+    }
+
     const onSubmit = (values: ShipmentFormValues) => {
-        mutation.mutate(values)
+        const payload: ShipmentFormValues = isEdit
+            ? { ...values, version: values.version || initialData?.version }
+            : values
+        mutation.mutate(payload)
     }
 
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-20">
                 <div className="rounded-md border border-border bg-card p-3">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                            <Button type="button" size="sm" variant="outline" className="h-7 text-xs">AWB No</Button>
-                            <Button type="button" size="sm" variant="outline" className="h-7 text-xs">Forwarding</Button>
-                            <Button type="button" size="sm" variant="outline" className="h-7 text-xs">KYC</Button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Input className="h-7 w-28 text-xs" placeholder="AWB No" />
-                            <Input className="h-7 w-24 text-xs" placeholder="Search" />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                    <div className="space-y-3">
                         <Card className="border-border">
-                            <CardHeader className="border-b bg-muted/40 py-2">
-                                <CardTitle className="text-sm">AWB / Booking Details</CardTitle>
-                            </CardHeader>
                             <CardContent className="space-y-3 p-3">
-                                <div className="grid grid-cols-2 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="awbNo"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>AWB No <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input {...field} placeholder="AWB No" className="h-8" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="referenceNo"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Reference No</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Reference No" className="h-8" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="bookDate"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Book Date <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input type="date" {...field} className="h-8" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="bookTime"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Book Time</FormLabel>
-                                            <FormControl>
-                                                <div className="relative">
-                                                    <Input type="time" {...field} value={field.value || ''} className="h-8 pl-10" />
-                                                    <Clock className="absolute left-3 top-2 h-4 w-4 text-gray-500" />
-                                                </div>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="serviceCenterId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Service Center <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={serviceCentersData?.data?.map(sc => ({ label: sc.name, value: sc.id })) || []}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Select Service Center"
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="fieldExecutiveId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Field Executive <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={executives.map(ex => ({ label: ex.name, value: ex.id })) || []}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Select Executive"
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                </div>
-                        </CardContent>
-                    </Card>
-
-                        <Card className="border-border">
-                            <CardHeader className="border-b bg-muted/40 py-2">
-                                <CardTitle className="text-sm">Shipper / Consignee</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 p-3">
-                            <FormField
-                                control={form.control}
-                                name="customerId"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Customer <span className="text-red-500">*</span></FormLabel>
-                                        <FormControl>
-                                            <Combobox
-                                                options={customersData?.data?.map(c => ({ label: c.name, value: c.id })) || []}
-                                                value={field.value}
-                                                onChange={field.onChange}
-                                                placeholder="Select Customer"
-                                                searchPlaceholder="Search customer..."
-                                                className="h-8"
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="shipperId"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel>Shipper</FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={shippersData?.data?.map(s => ({ label: s.shipperName, value: s.id })) || []}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Select Shipper"
-                                                    searchPlaceholder="Search shipper..."
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="consigneeId"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel>Consignee</FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={consigneesData?.data?.map(c => ({ label: c.name, value: c.id })) || []}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Select Consignee"
-                                                    searchPlaceholder="Search consignee..."
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                        <Card className="border-border">
-                            <CardHeader className="border-b bg-muted/40 py-2">
-                                <CardTitle className="text-sm">Shipment Details</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 p-3">
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="productId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Product/Service <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={productsData?.data?.map(p => ({ label: p.productName, value: p.id })) || []}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Select Product"
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="serviceMapId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Service Map <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={serviceMapsData?.data?.map(sm => ({ label: `${sm.serviceType} (${sm.id})`, value: sm.id })) || []}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Select Service Map"
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="vendorId"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Vendor/Carrier</FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={vendorsData?.data?.map(v => ({ label: v.vendorName, value: v.id })) || []}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Select Vendor"
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="origin"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Origin</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Origin" className="h-8" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="destination"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Destination</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Destination" className="h-8" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="pieces"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Pieces <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="actualWeight"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Actual Weight <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl><Input type="number" step="0.01" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="chargeWeight"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Charge Weight</FormLabel>
-                                            <FormControl><Input type="number" step="0.01" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="paymentType"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Payment Type <span className="text-red-500">*</span></FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={[
-                                                        { label: "Cash", value: "CASH" },
-                                                        { label: "Credit", value: "CREDIT" },
-                                                        { label: "To Pay", value: "TOPAY" },
-                                                    ]}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="Select Type"
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="currency"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Currency</FormLabel>
-                                            <FormControl>
-                                                <Combobox
-                                                    options={[
-                                                        { label: "INR", value: "INR" },
-                                                        { label: "USD", value: "USD" },
-                                                    ]}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    placeholder="INR"
-                                                    className="h-8"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField
-                                    control={form.control}
-                                    name="shipmentValue"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Shipment Value</FormLabel>
-                                            <FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="space-y-2 pt-7">
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
                                     <FormField
                                         control={form.control}
-                                        name="isCod"
+                                        name="awbNo"
                                         render={({ field }) => (
-                                            <FormItem className="flex h-8 flex-row items-center justify-between rounded-md border px-3">
-                                                <FormLabel className="text-sm">IS COD</FormLabel>
+                                            <FormItem className="md:col-span-1">
+                                                <FormLabel>AWB No <span className="text-red-500">*</span></FormLabel>
+                                                <FormControl><Input {...field} placeholder="AWB No" className="h-8" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="bookDate"
+                                        render={({ field }) => (
+                                            <FormItem className="md:col-span-1">
+                                                <FormLabel>Book Date <span className="text-red-500">*</span></FormLabel>
+                                                <FormControl><Input type="date" {...field} className="h-8" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="bookTime"
+                                        render={({ field }) => (
+                                            <FormItem className="md:col-span-1">
+                                                <FormLabel>Time</FormLabel>
                                                 <FormControl>
-                                                    <Switch
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
+                                                    <div className="relative">
+                                                        <Input type="time" {...field} value={field.value || ''} className="h-8 pl-10" />
+                                                        <Clock className="absolute left-3 top-2 h-4 w-4 text-gray-500" />
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="referenceNo"
+                                        render={({ field }) => (
+                                            <FormItem className="md:col-span-1">
+                                                <FormLabel>Reference No</FormLabel>
+                                                <FormControl><Input {...field} value={field.value || ''} placeholder="Reference No" className="h-8" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="customerId"
+                                        render={({ field }) => (
+                                            <FormItem className="md:col-span-2">
+                                                <FormLabel>Client Name <span className="text-red-500">*</span></FormLabel>
+                                                <FormControl>
+                                                    <Combobox
+                                                        options={customersData?.data?.map(c => ({ label: c.name, value: c.id })) || []}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="Select Customer"
+                                                        searchPlaceholder="Search customer..."
+                                                        className="h-8"
                                                     />
                                                 </FormControl>
+                                                <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
 
-                            {form.watch('isCod') && (
-                                <FormField
-                                    control={form.control}
-                                    name="codAmount"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>COD Amount</FormLabel>
-                                            <FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            )}
-                        </CardContent>
-                    </Card>
+                        <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                            <Card className="relative border-border">
+                                <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Shipper Details</div>
+                                <CardContent className="space-y-3 p-3 pt-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="shipperId"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel>Shipper Master</FormLabel>
+                                                <FormControl>
+                                                    <Combobox
+                                                        options={shippersData?.data?.map(s => ({ label: s.shipperName, value: s.id })) || []}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="Select Shipper"
+                                                        searchPlaceholder="Search shipper..."
+                                                        className="h-8"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormField control={form.control} name="shipper.shipperOrigin" render={({ field }) => (<FormItem><FormLabel>Origin <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.shipperCode" render={({ field }) => (<FormItem><FormLabel>Code</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.shipperName" render={({ field }) => (<FormItem className="col-span-2"><FormLabel>Company Name <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.contactPerson" render={({ field }) => (<FormItem><FormLabel>Contact Name</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.address1" render={({ field }) => (<FormItem><FormLabel>Address 1</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.address2" render={({ field }) => (<FormItem className="col-span-2"><FormLabel>Address 2</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.pinCode" render={({ field }) => (<FormItem><FormLabel>Pincode</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.state" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.telephone1" render={({ field }) => (<FormItem><FormLabel>Telephone</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.mobile" render={({ field }) => (<FormItem><FormLabel>Mobile No.</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.email" render={({ field }) => (<FormItem><FormLabel>E-Mail</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="shipper.iecNo" render={({ field }) => (<FormItem><FormLabel>IEC No.</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="relative border-border">
+                                <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Consignee Details</div>
+                                <CardContent className="space-y-3 p-3 pt-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="consigneeId"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel>Consignee Master</FormLabel>
+                                                <FormControl>
+                                                    <Combobox
+                                                        options={consigneesData?.data?.map(c => ({ label: c.name, value: c.id })) || []}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="Select Consignee"
+                                                        searchPlaceholder="Search consignee..."
+                                                        className="h-8"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormField control={form.control} name="consignee.destination" render={({ field }) => (<FormItem><FormLabel>Destination <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.code" render={({ field }) => (<FormItem><FormLabel>Code</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.name" render={({ field }) => (<FormItem className="col-span-2"><FormLabel>Company Name <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.contactPerson" render={({ field }) => (<FormItem><FormLabel>Contact Name</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.address1" render={({ field }) => (<FormItem><FormLabel>Address 1</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.address2" render={({ field }) => (<FormItem className="col-span-2"><FormLabel>Address 2</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.pinCode" render={({ field }) => (<FormItem><FormLabel>Pincode</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.state" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.tel1" render={({ field }) => (<FormItem><FormLabel>Telephone</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.mobile" render={({ field }) => (<FormItem><FormLabel>Mobile No.</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.email" render={({ field }) => (<FormItem><FormLabel>E-Mail</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name="consignee.vat" render={({ field }) => (<FormItem><FormLabel>VAT</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8" /></FormControl><FormMessage /></FormItem>)} />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="relative border-border">
+                                <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Services Details</div>
+                                <CardContent className="space-y-3 p-3 pt-6">
+                                    <FormField control={form.control} name="productId" render={({ field }) => (
+                                        <FormItem><FormLabel>Product <span className="text-red-500">*</span></FormLabel><FormControl><Combobox options={productsData?.data?.map(p => ({ label: p.productName, value: p.id })) || []} value={field.value} onChange={field.onChange} placeholder="Select Product" className="h-8" /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="vendorId" render={({ field }) => (
+                                        <FormItem><FormLabel>Vendor <span className="text-red-500">*</span></FormLabel><FormControl><Combobox options={vendorsData?.data?.map(v => ({ label: v.vendorName, value: v.id })) || []} value={field.value} onChange={field.onChange} placeholder="Select Vendor" className="h-8" /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="serviceMapId" render={({ field }) => (
+                                        <FormItem><FormLabel>Service <span className="text-red-500">*</span></FormLabel><FormControl><Combobox options={serviceMapsData?.data?.map(sm => ({ label: `${sm.serviceType} (${sm.id})`, value: sm.id })) || []} value={field.value} onChange={field.onChange} placeholder="Select Service" className="h-8" /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormField control={form.control} name="shipmentValue" render={({ field }) => (
+                                            <FormItem><FormLabel>Shipment Value</FormLabel><FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="currency" render={({ field }) => (
+                                            <FormItem><FormLabel>Currency</FormLabel><FormControl><Combobox options={[{ label: "INR", value: "INR" }, { label: "USD", value: "USD" }]} value={field.value} onChange={field.onChange} placeholder="INR" className="h-8" /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="pieces" render={({ field }) => (
+                                            <FormItem><FormLabel>Pieces <span className="text-red-500">*</span></FormLabel><FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="actualWeight" render={({ field }) => (
+                                            <FormItem><FormLabel>Actual Weight <span className="text-red-500">*</span></FormLabel><FormControl><Input type="number" step="0.01" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="km" render={({ field }) => (
+                                            <FormItem><FormLabel>KM</FormLabel><FormControl><Input type="number" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="volumetricWeight" render={({ field }) => (
+                                            <FormItem><FormLabel>Volumetric Weight</FormLabel><FormControl><Input type="number" step="0.01" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="chargeWeight" render={({ field }) => (
+                                            <FormItem><FormLabel>Charge Weight <span className="text-red-500">*</span></FormLabel><FormControl><Input type="number" step="0.01" className="h-8" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="paymentType" render={({ field }) => (
+                                            <FormItem><FormLabel>Payment Type <span className="text-red-500">*</span></FormLabel><FormControl><Combobox options={[{ label: "Cash", value: "CASH" }, { label: "Credit", value: "CREDIT" }, { label: "To Pay", value: "TOPAY" }]} value={field.value} onChange={field.onChange} placeholder="Select Type" className="h-8" /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormField control={form.control} name="commercial" render={({ field }) => (
+                                            <FormItem className="flex h-8 flex-row items-center justify-between rounded-md border px-3"><FormLabel className="text-sm">Commercial</FormLabel><FormControl><Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} /></FormControl></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="oda" render={({ field }) => (
+                                            <FormItem className="flex h-8 flex-row items-center justify-between rounded-md border px-3"><FormLabel className="text-sm">ODA</FormLabel><FormControl><Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} /></FormControl></FormItem>
+                                        )} />
+                                    </div>
+                                    <FormField control={form.control} name="medicalCharges" render={({ field }) => (
+                                        <FormItem><FormLabel>Medical Charges</FormLabel><FormControl><Input type="number" className="h-8" value={field.value ?? 0} onChange={e => field.onChange(parseFloat(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormField control={form.control} name="serviceCenterId" render={({ field }) => (
+                                            <FormItem><FormLabel>Service Center <span className="text-red-500">*</span></FormLabel><FormControl><Combobox options={serviceCentersData?.data?.map(sc => ({ label: sc.name, value: sc.id })) || []} value={field.value} onChange={field.onChange} placeholder="Select Service Center" className="h-8" /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="fieldExecutiveId" render={({ field }) => (
+                                            <FormItem><FormLabel>Field Executive</FormLabel><FormControl><Combobox options={executives.map(ex => ({ label: ex.name, value: ex.id })) || []} value={field.value || 0} onChange={(val) => field.onChange(val || null)} placeholder="Select Executive" className="h-8" /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
                 </div>
 
                 {/* Section 5: Piece Details */}
-                <Card className="border-border">
-                    <CardHeader className="flex flex-row items-center justify-between border-b bg-primary py-2">
-                        <CardTitle className="text-sm text-primary-foreground">Click here to enter Piece Details</CardTitle>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendPiece({ pieces: 1, actualWeightPerPc: 0 })}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Piece
-                        </Button>
-                    </CardHeader>
-                    <CardContent className="p-3">
+                <Card className="relative border-border">
+                    <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Piece Details</div>
+                    <CardContent className="space-y-3 p-3 pt-6">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={() => templateMutation.mutate()} disabled={templateMutation.isPending}>
+                                Download Template
+                            </Button>
+                            <Input type="file" accept=".csv" onChange={handlePiecesCsvUpload} className="h-8 w-[230px] bg-white" />
+                            <Button type="button" variant="outline" size="sm" onClick={() => appendPiece({ pieces: 1, actualWeightPerPc: 0 })}>
+                                <Plus className="mr-2 h-4 w-4" /> Add Piece
+                            </Button>
+                        </div>
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -824,14 +743,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 </Card>
 
                 {/* Section 6: Charges */}
-                <Card className="border-border">
-                    <CardHeader className="flex flex-row items-center justify-between border-b bg-primary py-2">
-                        <CardTitle className="text-sm text-primary-foreground">Click here to enter Charge Details</CardTitle>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendCharge({ chargeId: 0, amount: 0, fuelApply: false, taxApply: false, taxOnFuel: false })}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Charge
-                        </Button>
-                    </CardHeader>
-                    <CardContent className="p-3">
+                <Card className="relative border-border">
+                    <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Charge Details</div>
+                    <CardContent className="space-y-3 p-3 pt-6">
+                        <div className="flex justify-end">
+                            <Button type="button" variant="outline" size="sm" onClick={() => appendCharge({ chargeId: 0, amount: 0, fuelApply: false, taxApply: false, taxOnFuel: false })}>
+                                <Plus className="mr-2 h-4 w-4" /> Add Charge
+                            </Button>
+                        </div>
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -889,11 +808,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     </CardContent>
                 </Card>
 
-                <Card className="border-border">
-                    <CardHeader className="border-b bg-primary py-2">
-                        <CardTitle className="text-sm text-primary-foreground">Shipment Type</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 gap-3 p-3 md:grid-cols-3">
+                <Card className="relative border-border">
+                    <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Shipment Type</div>
+                    <CardContent className="grid grid-cols-1 gap-3 p-3 pt-6 md:grid-cols-3">
                         <FormField
                             control={form.control}
                             name="content"
@@ -940,7 +857,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={mutation.isPending}>
+                    <Button
+                        type="submit"
+                        disabled={mutation.isPending}
+                        className={!isEdit ? "bg-green-600 hover:bg-green-700 text-white" : undefined}
+                    >
                         {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {isEdit ? 'Update Shipment' : 'Create Shipment'}
                     </Button>

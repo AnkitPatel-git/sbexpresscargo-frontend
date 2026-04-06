@@ -16,20 +16,20 @@ http:
     data: |-
       {
         "version": 1,
-        "awbNo": "AWB123456",
-        "bookDate": "2026-03-20",
-        "bookTime": "10:30",
-        "referenceNo": "REF001",
-        "customerId": 1,
-        "shipperId": 1,
-        "consigneeId": 1,
+        "clientId": 1,
         "origin": "MUMBAI",
-        "originCode": "MUM",
         "destination": "BANGALORE",
-        "destinationCode": "BLR",
         "productId": 1,
         "vendorId": 1,
-        "serviceMapId": 1,
+        "shipper": {
+          "shipperName": "ABC Exporters",
+          "mobile": "9999999999"
+        },
+        "consignee": {
+          "name": "XYZ Imports",
+          "mobile": "8888888888"
+        },
+        "fieldExecutiveId": null,
         "pieces": 2,
         "actualWeight": 8,
         "volumetricWeight": 10,
@@ -80,20 +80,20 @@ examples:
         data: |-
           {
             "version": 1,
-            "awbNo": "AWB123456",
-            "bookDate": "2026-03-20",
-            "bookTime": "10:30",
-            "referenceNo": "REF001",
-            "customerId": 1,
-            "shipperId": 1,
-            "consigneeId": 1,
+            "clientId": 1,
             "origin": "MUMBAI",
-            "originCode": "MUM",
             "destination": "BANGALORE",
-            "destinationCode": "BLR",
             "productId": 1,
             "vendorId": 1,
-            "serviceMapId": 1,
+            "shipper": {
+              "shipperName": "ABC Exporters",
+              "mobile": "9999999999"
+            },
+            "consignee": {
+              "name": "XYZ Imports",
+              "mobile": "8888888888"
+            },
+            "fieldExecutiveId": null,
             "pieces": 2,
             "actualWeight": 8,
             "volumetricWeight": 10,
@@ -197,4 +197,4 @@ docs: |-
   Update shipment header. JWT + shipment.core.update.
 
   Mandatory: version
-  Optional: all CreateShipmentDto fields (awbNo, bookDate, bookTime, referenceNo, customerId, shipperId, consigneeId, origin, destination, productId, vendorId, pieces, actualWeight, chargeWeight, paymentType, content, instruction, piecesRows, charges, etc.)
+  Optional: all CreateShipmentDto fields including customerId/clientId alias, shipperId/consigneeId OR nested shipper/consignee objects, weights/pieces/commercial fields, and fieldExecutiveId (optional).
