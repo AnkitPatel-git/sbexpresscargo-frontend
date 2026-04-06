@@ -19,7 +19,7 @@ request:
     - name: baseUrl
       value: http://localhost:3001/api
     - name: accessToken
-      value: ""
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWRtaW5Ac3lzdGVtLmNvbSIsInJvbGVJZCI6MSwicm9sZUlkZW50aWZpZXIiOiJTVVBFUl9BRE1JTiIsInBsYXRmb3JtIjoicG9ydGFsIiwianRpIjoiNmIxZjlkZjAtYjNlZS00ZjRjLWI2OTYtNWUzZTI2NGI5YWUxIiwiaWF0IjoxNzc1NDU0ODg3LCJleHAiOjE3NzgwNDY4ODd9.9mR-sFU7dTsV0QCRbBXATpQ1dGUGGd0Svry-N2Aie1k
     - name: roleId
       value: "1"
     - name: permissionId

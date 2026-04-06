@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -34,11 +34,20 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 import { serviceCenterService } from "@/services/masters/service-center-service"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
+
+function SortArrows() {
+    return (
+        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
+            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
+            <ChevronDown className="h-2.5 w-2.5" />
+        </span>
+    )
+}
 
 export default function ServiceCentersPage() {
     const router = useRouter()
@@ -47,6 +56,14 @@ export default function ServiceCentersPage() {
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
+    const [colFilters, setColFilters] = useState({
+        code: "",
+        name: "",
+        subName: "",
+        city: "",
+        state: "",
+        telephone: "",
+    })
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -86,135 +103,116 @@ export default function ServiceCentersPage() {
         }
     }
 
+    const total = data?.meta?.total ?? 0
+    const from = total === 0 ? 0 : (page - 1) * limit + 1
+    const to = Math.min(page * limit, total)
+    const filteredRows =
+        data?.data.filter((sc) => {
+            if (colFilters.code && !(sc.code || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
+            if (colFilters.name && !(sc.name || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
+            if (colFilters.subName && !(sc.subName || "").toLowerCase().includes(colFilters.subName.toLowerCase())) return false
+            if (colFilters.city && !(sc.destination || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
+            if (colFilters.state && !(sc.state || "").toLowerCase().includes(colFilters.state.toLowerCase())) return false
+            if (colFilters.telephone && !(sc.telephone || "").toLowerCase().includes(colFilters.telephone.toLowerCase())) return false
+            return true
+        }) ?? []
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Service Center Master</h1>
-                    <p className="text-muted-foreground">
-                        Manage regional service centers, their locations, and contact info.
-                    </p>
+        <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <PermissionGuard permission="master.service_center.create">
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
+                            <FilePlus className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
+                        <FileUp className="h-4 w-4" />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-centers"], type: "active" })}>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                 </div>
                 <PermissionGuard permission="master.service_center.create">
-                    <Button onClick={handleCreate}>
-                        <Plus className="mr-2 h-4 w-4" /> Create SC
+                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Service Center">
+                        <Plus className="mr-1 h-4 w-4" /> Add Service Center
                     </Button>
                 </PermissionGuard>
             </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Service Centers</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center py-4">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search service centers..."
-                                className="pl-8"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="rounded-md border overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-gray-50">
-                                        <TableHead className="w-[120px]">Code</TableHead>
-                                        <TableHead className="min-w-[200px]">SC Name</TableHead>
-                                        <TableHead>Sub Name</TableHead>
-                                        <TableHead>City</TableHead>
-                                        <TableHead>State</TableHead>
-                                        <TableHead>Telephone</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {isLoading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
-                                                Loading service centers...
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : data?.data.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                                                No service centers found.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        data?.data.map((sc) => (
-                                            <TableRow key={sc.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-primary">{sc.code}</TableCell>
-                                                <TableCell className="font-medium">{sc.name}</TableCell>
-                                                <TableCell>{sc.subName}</TableCell>
-                                                <TableCell>{sc.destination}</TableCell>
-                                                <TableCell>{sc.state}</TableCell>
-                                                <TableCell>{sc.telephone}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">Open menu</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="master.service_center.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(sc.id)}>
-                                                                    <Edit className="mr-2 h-4 w-4" /> Edit
-                                                                </DropdownMenuItem>
-                                                            </PermissionGuard>
-                                                            <PermissionGuard permission="master.service_center.delete">
-                                                                <DropdownMenuItem
-                                                                    className="text-red-600"
-                                                                    onClick={() => handleDeleteRequest(sc.id)}
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                                </DropdownMenuItem>
-                                                            </PermissionGuard>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-end space-x-2 py-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                            disabled={page === 1}
-                        >
-                            Previous
-                        </Button>
-                        <div className="text-sm font-medium">
-                            Page {page} of {data?.meta?.totalPages || 1}
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= (data.meta?.totalPages || 1)}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Search:</span>
+                <Input placeholder="Search service centers..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <div className="overflow-x-auto rounded-md border border-border">
+                <Table className="min-w-[1150px] border-0">
+                    <TableHeader>
+                        <TableRow className="border-0 bg-primary hover:bg-primary">
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Code <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">SC Name <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Sub Name <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">City <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Telephone <SortArrows /></span></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
+                        </TableRow>
+                        <TableRow className="border-b border-border bg-card hover:bg-card">
+                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="SC Name" className="h-8 border-border bg-background text-xs" value={colFilters.name} onChange={(e) => setColFilters((f) => ({ ...f, name: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Sub Name" className="h-8 border-border bg-background text-xs" value={colFilters.subName} onChange={(e) => setColFilters((f) => ({ ...f, subName: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="City" className="h-8 border-border bg-background text-xs" value={colFilters.city} onChange={(e) => setColFilters((f) => ({ ...f, city: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="State" className="h-8 border-border bg-background text-xs" value={colFilters.state} onChange={(e) => setColFilters((f) => ({ ...f, state: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Telephone" className="h-8 border-border bg-background text-xs" value={colFilters.telephone} onChange={(e) => setColFilters((f) => ({ ...f, telephone: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2" />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading service centers...</TableCell>
+                            </TableRow>
+                        ) : filteredRows.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No service centers found.</TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredRows.map((sc, index) => (
+                                <TableRow key={sc.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
+                                    <TableCell className="font-medium text-foreground">{sc.code}</TableCell>
+                                    <TableCell className="font-medium text-foreground">{sc.name}</TableCell>
+                                    <TableCell className="text-foreground">{sc.subName}</TableCell>
+                                    <TableCell className="text-foreground">{sc.destination}</TableCell>
+                                    <TableCell className="text-foreground">{sc.state}</TableCell>
+                                    <TableCell className="text-foreground">{sc.telephone}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <PermissionGuard permission="master.service_center.update">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" title="Edit" onClick={() => handleEdit(sc.id)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                            <PermissionGuard permission="master.service_center.delete">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" title="Delete" onClick={() => handleDeleteRequest(sc.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+            <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <p className="text-sm text-muted-foreground">Showing {from} to {to} of {total} entries</p>
+                <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage(1)} title="First">«</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage((p) => Math.max(p - 1, 1))} title="Previous">‹</Button>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{page}</span>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data?.meta?.totalPages || 1)} onClick={() => setPage((p) => p + 1)} title="Next">›</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data?.meta?.totalPages || 1)} onClick={() => setPage(data?.meta?.totalPages ?? 1)} title="Last">»</Button>
+                </div>
+            </div>
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

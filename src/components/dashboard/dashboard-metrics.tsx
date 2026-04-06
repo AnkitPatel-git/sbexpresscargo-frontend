@@ -16,6 +16,7 @@ interface StatsCardProps {
 export function StatsCard({ title, value, icon: Icon, description, trend, color = "primary" }: StatsCardProps) {
   const colorClasses: Record<string, string> = {
     primary: "text-primary bg-primary/10",
+    blue: "text-[var(--express-link)] bg-[var(--express-link)]/10",
     green: "text-green-600 bg-green-50",
     orange: "text-orange-600 bg-orange-50",
     purple: "text-purple-600 bg-purple-50",
@@ -23,7 +24,7 @@ export function StatsCard({ title, value, icon: Icon, description, trend, color 
   };
 
   return (
-    <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow bg-white/50 backdrop-blur-sm">
+    <Card className="overflow-hidden py-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] transition-shadow hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <div className={`p-2 rounded-lg ${colorClasses[color]}`}>

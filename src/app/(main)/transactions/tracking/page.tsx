@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Loader2, BarChart3, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info } from "lucide-react";
+import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, ChevronUp, ChevronDown, FilePlus, FileUp, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,16 @@ import { TrackingListItem, DeadLetterLog } from "@/types/transactions/tracking";
 import { ManualUpdateDialog } from "@/components/transactions/manual-update-dialog";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
+
+function SortArrows() {
+    return (
+        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
+            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
+            <ChevronDown className="h-2.5 w-2.5" />
+        </span>
+    );
+}
 
 export default function TrackingPage() {
     const [searchInput, setSearchInput] = useState("");
@@ -31,6 +41,8 @@ export default function TrackingPage() {
     const [activeView, setActiveView] = useState<'search' | 'logs'>('search');
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [selectedAwb, setSelectedAwb] = useState<string | null>(null);
+    const [listFilters, setListFilters] = useState({ awb: "", origin: "", destination: "", payment: "" });
+    const [logFilters, setLogFilters] = useState({ awb: "", carrier: "", error: "" });
 
     const { data: metricsData } = useQuery({
         queryKey: ["trackingMetrics"],
@@ -62,6 +74,13 @@ export default function TrackingPage() {
         queryFn: () => trackingService.getDeadLetters(page, limit),
         enabled: activeView === 'logs',
     });
+    const logFilteredRows =
+        deadLettersData?.data.filter((log) => {
+            if (logFilters.awb && !(log.awbNo || "").toLowerCase().includes(logFilters.awb.toLowerCase())) return false;
+            if (logFilters.carrier && !(log.carrier || "").toLowerCase().includes(logFilters.carrier.toLowerCase())) return false;
+            if (logFilters.error && !(log.error || "").toLowerCase().includes(logFilters.error.toLowerCase())) return false;
+            return true;
+        }) ?? [];
 
     const retryMutation = useMutation({
         mutationFn: (id: number) => trackingService.retryFailedLogs([id]),
@@ -102,27 +121,58 @@ export default function TrackingPage() {
         }
     };
 
+    const listFilteredRows =
+        listData?.data.filter((item) => {
+            if (listFilters.awb && !(item.awbNo || "").toLowerCase().includes(listFilters.awb.toLowerCase())) return false;
+            if (listFilters.origin && !(item.city || "").toLowerCase().includes(listFilters.origin.toLowerCase())) return false;
+            if (listFilters.destination && !(item.destination || "").toLowerCase().includes(listFilters.destination.toLowerCase())) return false;
+            if (listFilters.payment && !(item.paymentType || "").toLowerCase().includes(listFilters.payment.toLowerCase())) return false;
+            return true;
+        }) ?? [];
+
+    const listTotal = listData?.meta?.total ?? 0;
+    const listFrom = listTotal === 0 ? 0 : (page - 1) * limit + 1;
+    const listTo = Math.min(page * limit, listTotal);
+
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Tracking Dashboard</h1>
-                    <p className="text-muted-foreground">Monitor real-time shipment status and carrier performance.</p>
-                </div>
-                <div className="flex gap-2 bg-gray-100 p-1 rounded-md">
-                    <Button
-                        variant={activeView === 'search' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => setActiveView('search')}
-                    >
-                        Search
+        <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary">
+                        <FilePlus className="h-4 w-4" />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary">
+                        <FileUp className="h-4 w-4" />
                     </Button>
                     <Button
-                        variant={activeView === 'logs' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => setActiveView('logs')}
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary"
+                        onClick={() => activeView === "logs" ? refetchLogs() : undefined}
                     >
-                        Carrier Logs
+                        <RefreshCcw className="h-4 w-4" />
+                    </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex gap-2 rounded-md bg-gray-100 p-1">
+                        <Button variant={activeView === 'search' ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveView('search')}>Search</Button>
+                        <Button variant={activeView === 'logs' ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveView('logs')}>Carrier Logs</Button>
+                    </div>
+                    <Button
+                        type="button"
+                        className="h-9 rounded-md px-3"
+                        onClick={() => {
+                            const awb = detailData?.data?.awbNo || searchInput || selectedAwb;
+                            if (!awb) {
+                                toast.info("Search and open an AWB to add tracking update.");
+                                return;
+                            }
+                            setSelectedAwb(awb);
+                            setIsUpdateModalOpen(true);
+                        }}
+                    >
+                        <Plus className="mr-1 h-4 w-4" /> Add Tracking Update
                     </Button>
                 </div>
             </div>
@@ -300,14 +350,21 @@ export default function TrackingPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="border rounded-md">
-                                    <Table>
-                                        <TableHeader className="bg-gray-50">
+                                    <Table className="min-w-[920px] border-0">
+                                        <TableHeader>
+                                            <TableRow className="border-0 bg-primary hover:bg-primary">
+                                                <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">AWB No <SortArrows /></span></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Date <SortArrows /></span></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Origin / Dest <SortArrows /></span></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Pcs / Wt <SortArrows /></span></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Payment <SortArrows /></span></TableHead>
+                                            </TableRow>
                                             <TableRow>
-                                                <TableHead>AWB No</TableHead>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead>Origin / Dest</TableHead>
-                                                <TableHead>Pcs / Wt</TableHead>
-                                                <TableHead>Payment</TableHead>
+                                                <TableHead className="p-2"><Input placeholder="AWB No" className="h-8 border-border bg-background text-xs" value={listFilters.awb} onChange={(e) => setListFilters((f) => ({ ...f, awb: e.target.value }))} /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Date" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Origin / Dest" className="h-8 border-border bg-background text-xs" value={listFilters.destination} onChange={(e) => setListFilters((f) => ({ ...f, destination: e.target.value }))} /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Pcs / Wt" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Payment" className="h-8 border-border bg-background text-xs" value={listFilters.payment} onChange={(e) => setListFilters((f) => ({ ...f, payment: e.target.value }))} /></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -323,17 +380,17 @@ export default function TrackingPage() {
                                                         Failed to load tracking list
                                                     </TableCell>
                                                 </TableRow>
-                                            ) : listData?.data.length === 0 ? (
+                                            ) : listFilteredRows.length === 0 ? (
                                                 <TableRow>
                                                     <TableCell colSpan={5} className="text-center py-10">
                                                         No shipments found.
                                                     </TableCell>
                                                 </TableRow>
                                             ) : (
-                                                listData?.data.map((item: TrackingListItem) => (
+                                                listFilteredRows.map((item: TrackingListItem, index) => (
                                                     <TableRow
                                                         key={item.awbNo}
-                                                        className="hover:bg-gray-50/50 cursor-pointer"
+                                                        className={cn("cursor-pointer border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}
                                                         onClick={() => {
                                                             setSearchInput(item.awbNo);
                                                             setSearchTerm(item.awbNo);
@@ -364,25 +421,30 @@ export default function TrackingPage() {
                                 {listData && listData.meta.totalPages > 1 && (
                                     <div className="flex items-center justify-between mt-4">
                                         <div className="text-sm text-gray-500">
-                                            Page {listData.meta.page} of {listData.meta.totalPages}
+                                            Showing {listFrom} to {listTo} of {listTotal} entries
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" onClick={() => setPage(1)} disabled={page === 1}>«</Button>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
+                                                className="h-8 min-w-8 px-2"
                                                 onClick={() => setPage(p => Math.max(1, p - 1))}
                                                 disabled={page === 1}
                                             >
-                                                Previous
+                                                ‹
                                             </Button>
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{page}</span>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
+                                                className="h-8 min-w-8 px-2"
                                                 onClick={() => setPage(p => Math.min(listData.meta.totalPages, p + 1))}
                                                 disabled={page === listData.meta.totalPages}
                                             >
-                                                Next
+                                                ›
                                             </Button>
+                                            <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" onClick={() => setPage(listData.meta.totalPages)} disabled={page === listData.meta.totalPages}>»</Button>
                                         </div>
                                     </div>
                                 )}
@@ -405,15 +467,23 @@ export default function TrackingPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="border rounded-md">
-                            <Table>
-                                <TableHeader className="bg-gray-50">
+                            <Table className="min-w-[980px] border-0">
+                                <TableHeader>
+                                    <TableRow className="border-0 bg-primary hover:bg-primary">
+                                        <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">AWB No <SortArrows /></span></TableHead>
+                                        <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Carrier <SortArrows /></span></TableHead>
+                                        <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Failure Reason <SortArrows /></span></TableHead>
+                                        <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Retries <SortArrows /></span></TableHead>
+                                        <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Date <SortArrows /></span></TableHead>
+                                        <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
+                                    </TableRow>
                                     <TableRow>
-                                        <TableHead>AWB No</TableHead>
-                                        <TableHead>Carrier</TableHead>
-                                        <TableHead>Failure Reason</TableHead>
-                                        <TableHead>Retries</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead className="text-right">Action</TableHead>
+                                        <TableHead className="p-2"><Input placeholder="AWB No" className="h-8 border-border bg-background text-xs" value={logFilters.awb} onChange={(e) => setLogFilters((f) => ({ ...f, awb: e.target.value }))} /></TableHead>
+                                        <TableHead className="p-2"><Input placeholder="Carrier" className="h-8 border-border bg-background text-xs" value={logFilters.carrier} onChange={(e) => setLogFilters((f) => ({ ...f, carrier: e.target.value }))} /></TableHead>
+                                        <TableHead className="p-2"><Input placeholder="Failure Reason" className="h-8 border-border bg-background text-xs" value={logFilters.error} onChange={(e) => setLogFilters((f) => ({ ...f, error: e.target.value }))} /></TableHead>
+                                        <TableHead className="p-2"><Input placeholder="Retries" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                                        <TableHead className="p-2"><Input placeholder="Date" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                                        <TableHead className="p-2" />
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -423,7 +493,7 @@ export default function TrackingPage() {
                                                 <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
                                             </TableCell>
                                         </TableRow>
-                                    ) : deadLettersData?.data.length === 0 ? (
+                                    ) : logFilteredRows.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                                                 <Info className="h-8 w-8 mx-auto mb-2 opacity-20" />
@@ -431,8 +501,8 @@ export default function TrackingPage() {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        deadLettersData?.data.map((log: DeadLetterLog) => (
-                                            <TableRow key={log.id}>
+                                        logFilteredRows.map((log: DeadLetterLog, index) => (
+                                            <TableRow key={log.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                                 <TableCell className="font-medium">{log.awbNo}</TableCell>
                                                 <TableCell>{log.carrier}</TableCell>
                                                 <TableCell className="max-w-[300px] truncate" title={log.error}>
@@ -440,15 +510,15 @@ export default function TrackingPage() {
                                                 </TableCell>
                                                 <TableCell>{log.retryCount}</TableCell>
                                                 <TableCell>{format(new Date(log.createdAt), "dd MMM, HH:mm")}</TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell>
                                                     <Button
                                                         variant="ghost"
-                                                        size="sm"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-primary hover:bg-primary/10"
                                                         onClick={() => retryMutation.mutate(log.id)}
                                                         disabled={retryMutation.isPending}
                                                     >
-                                                        <RefreshCcw className={`h-4 w-4 mr-1 ${retryMutation.isPending ? 'animate-spin' : ''}`} />
-                                                        Retry
+                                                        <RefreshCcw className={`h-4 w-4 ${retryMutation.isPending ? 'animate-spin' : ''}`} />
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>

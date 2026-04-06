@@ -19,6 +19,12 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        success:
+          "bg-[var(--express-success,#76c16c)] text-white hover:brightness-95 focus-visible:ring-[var(--express-success,#76c16c)]/30",
+        expressDanger:
+          "bg-[var(--express-danger,#d1544a)] text-white hover:brightness-95 focus-visible:ring-[var(--express-danger,#d1544a)]/30",
+        expressNext:
+          "bg-[var(--express-muted-blue,#5c7b99)] text-white hover:brightness-95",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

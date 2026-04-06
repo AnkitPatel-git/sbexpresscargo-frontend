@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -34,12 +34,21 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 import { shipperService } from "@/services/masters/shipper-service"
 import { Shipper } from "@/types/masters/shipper"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
+
+function SortArrows() {
+    return (
+        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
+            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
+            <ChevronDown className="h-2.5 w-2.5" />
+        </span>
+    )
+}
 
 export default function ShipperPage() {
     const router = useRouter()
@@ -48,6 +57,12 @@ export default function ShipperPage() {
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
+    const [colFilters, setColFilters] = useState({
+        code: "",
+        shipperName: "",
+        contactPerson: "",
+        city: "",
+    })
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -87,137 +102,108 @@ export default function ShipperPage() {
         }
     }
 
+    const total = data?.meta?.total ?? 0
+    const from = total === 0 ? 0 : (page - 1) * limit + 1
+    const to = Math.min(page * limit, total)
+    const filteredRows =
+        data?.data.filter((shipper: Shipper) => {
+            if (colFilters.code && !shipper.shipperCode.toLowerCase().includes(colFilters.code.toLowerCase())) return false
+            if (colFilters.shipperName && !shipper.shipperName.toLowerCase().includes(colFilters.shipperName.toLowerCase())) return false
+            if (colFilters.contactPerson && !(shipper.contactPerson || "").toLowerCase().includes(colFilters.contactPerson.toLowerCase())) return false
+            if (colFilters.city && !(shipper.city || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
+            return true
+        }) ?? []
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">Shipper Master</h1>
-                    <p className="text-slate-500">
-                        Manage shippers, their contact details, and account statuses.
-                    </p>
+        <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <PermissionGuard permission="master.shipper.create">
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
+                            <FilePlus className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
+                        <FileUp className="h-4 w-4" />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["shippers"], type: "active" })}>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                 </div>
                 <PermissionGuard permission="master.shipper.create">
-                    <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 text-white">
-                        <Plus className="mr-2 h-4 w-4" /> Create Shipper
+                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Shipper">
+                        <Plus className="mr-1 h-4 w-4" /> Add Shipper
                     </Button>
                 </PermissionGuard>
             </div>
-
-            <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                    <CardTitle className="text-slate-800 text-lg font-semibold">Shippers</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center py-4">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Search shippers..."
-                                className="pl-8 border-slate-200 focus:ring-slate-400"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 transition-colors">
-                                        <TableHead className="w-[120px] font-semibold text-slate-700">Code</TableHead>
-                                        <TableHead className="min-w-[200px] font-semibold text-slate-700">Shipper Name</TableHead>
-                                        <TableHead className="font-semibold text-slate-700">Contact Person</TableHead>
-                                        <TableHead className="font-semibold text-slate-700">City</TableHead>
-                                        <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {isLoading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
-                                                <div className="flex items-center justify-center gap-2 text-slate-500">
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Loading shippers...
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : data?.data && data.data.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center text-slate-500 italic">
-                                                No shippers found.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        data?.data.map((shipper: Shipper) => (
-                                            <TableRow key={shipper.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <TableCell className="font-medium text-primary">{shipper.shipperCode}</TableCell>
-                                                <TableCell className="font-medium text-slate-800">{shipper.shipperName}</TableCell>
-                                                <TableCell className="text-slate-600">{shipper.contactPerson}</TableCell>
-                                                <TableCell className="text-slate-600">{shipper.city}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-primary">
-                                                                <span className="sr-only">Open menu</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-40">
-                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="master.shipper.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(shipper.id)}>
-                                                                    <Edit className="mr-2 h-4 w-4" /> Edit
-                                                                </DropdownMenuItem>
-                                                            </PermissionGuard>
-                                                            <PermissionGuard permission="master.shipper.delete">
-                                                                <DropdownMenuItem
-                                                                    className="text-red-600"
-                                                                    onClick={() => handleDeleteRequest(shipper.id)}
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                                </DropdownMenuItem>
-                                                            </PermissionGuard>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-between py-4">
-                        <div className="text-sm text-slate-500 font-medium">
-                            Showing page {page} of {data?.meta?.totalPages || 1}
-                        </div>
-                        <div className="flex space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-slate-200 text-slate-600 hover:bg-slate-50"
-                                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                                disabled={page === 1}
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-slate-200 text-slate-600 hover:bg-slate-50"
-                                onClick={() => setPage((prev) => prev + 1)}
-                                disabled={!data || page >= (data.meta?.totalPages || 1)}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Search:</span>
+                <Input placeholder="Search shippers..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <div className="overflow-x-auto rounded-md border border-border">
+                <Table className="min-w-[1000px] border-0">
+                    <TableHeader>
+                        <TableRow className="border-0 bg-primary hover:bg-primary">
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Code <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Shipper Name <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Contact Person <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">City <SortArrows /></span></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
+                        </TableRow>
+                        <TableRow className="border-b border-border bg-card hover:bg-card">
+                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Shipper Name" className="h-8 border-border bg-background text-xs" value={colFilters.shipperName} onChange={(e) => setColFilters((f) => ({ ...f, shipperName: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Contact Person" className="h-8 border-border bg-background text-xs" value={colFilters.contactPerson} onChange={(e) => setColFilters((f) => ({ ...f, contactPerson: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="City" className="h-8 border-border bg-background text-xs" value={colFilters.city} onChange={(e) => setColFilters((f) => ({ ...f, city: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2" />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Loading shippers...</TableCell>
+                            </TableRow>
+                        ) : filteredRows.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No shippers found.</TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredRows.map((shipper: Shipper, index) => (
+                                <TableRow key={shipper.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
+                                    <TableCell className="font-medium text-foreground">{shipper.shipperCode}</TableCell>
+                                    <TableCell className="font-medium text-foreground">{shipper.shipperName}</TableCell>
+                                    <TableCell className="text-foreground">{shipper.contactPerson}</TableCell>
+                                    <TableCell className="text-foreground">{shipper.city}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <PermissionGuard permission="master.shipper.update">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" title="Edit" onClick={() => handleEdit(shipper.id)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                            <PermissionGuard permission="master.shipper.delete">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" title="Delete" onClick={() => handleDeleteRequest(shipper.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+            <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <p className="text-sm text-muted-foreground">Showing {from} to {to} of {total} entries</p>
+                <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage(1)} title="First">«</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage((p) => Math.max(p - 1, 1))} title="Previous">‹</Button>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{page}</span>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data?.meta?.totalPages || 1)} onClick={() => setPage((p) => p + 1)} title="Next">›</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data?.meta?.totalPages || 1)} onClick={() => setPage(data?.meta?.totalPages ?? 1)} title="Last">»</Button>
+                </div>
+            </div>
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

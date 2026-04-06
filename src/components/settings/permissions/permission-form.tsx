@@ -63,7 +63,7 @@ export function PermissionForm({ initialData }: PermissionFormProps) {
                 queryClient.invalidateQueries({ queryKey: ['permission', Number(initialData.id)] })
             }
             toast.success(isEdit ? "Permission updated successfully" : "Permission created successfully")
-            router.push("/settings/permissions")
+            router.push("/utilities/permissions")
         },
         onError: (error: any) => {
             toast.error(error.message || "Something went wrong")
@@ -124,7 +124,7 @@ export function PermissionForm({ initialData }: PermissionFormProps) {
                     <Button 
                         type="button" 
                         variant="ghost" 
-                        onClick={() => router.push("/settings/permissions")}
+                        onClick={() => router.push("/utilities/permissions")}
                         disabled={mutation.isPending}
                     >
                         Cancel

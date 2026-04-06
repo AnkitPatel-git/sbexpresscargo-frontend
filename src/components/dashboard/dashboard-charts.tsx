@@ -34,7 +34,7 @@ export function SalesTrendChart({ data, title = "Sales Trend", description = "Da
   };
 
   return (
-    <Card className="col-span-4 border-none shadow-md bg-white/50 backdrop-blur-sm">
+    <Card className="col-span-4 border border-border/80 py-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
@@ -91,7 +91,7 @@ export function ServiceCenterSalesChart({ data }: ServiceCenterSalesChartProps) 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
 
   return (
-    <Card className="col-span-1 border-none shadow-md bg-white/50 backdrop-blur-sm">
+    <Card className="col-span-1 border border-border/80 py-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
       <CardHeader>
         <CardTitle>Sales by Service Center</CardTitle>
         <CardDescription>Revenue distribution across branches</CardDescription>
@@ -133,7 +133,7 @@ export function OperationPieChart({ data }: OperationPieChartProps) {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'];
 
   return (
-    <Card className="col-span-1 border-none shadow-md bg-white/50 backdrop-blur-sm">
+    <Card className="col-span-1 border border-border/80 py-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
       <CardHeader>
         <CardTitle>Delivery Breakdown</CardTitle>
         <CardDescription>Status distribution of inbound packages</CardDescription>
