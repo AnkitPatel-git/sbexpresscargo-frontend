@@ -53,27 +53,6 @@ class DrsService {
         return response.json();
     }
 
-    async updateDrs(id: number, data: Partial<DrsFormValues>): Promise<DrsSingleResponse> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to update DRS');
-        }
-        return response.json();
-    }
-
-    async deleteDrs(id: number): Promise<void> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to delete DRS');
-        }
-    }
 }
 
 export const drsService = new DrsService();

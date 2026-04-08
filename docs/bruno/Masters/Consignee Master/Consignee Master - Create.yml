@@ -21,7 +21,7 @@ http:
         "contactPerson": "Reception",
         "address1": "200 Delivery Lane",
         "address2": "Floor 1",
-        "pinCode": "110001",
+        "pinCodeId": "110001",
         "city": "Delhi",
         "state": "Delhi",
         "industry": "Logistics",
@@ -63,7 +63,7 @@ examples:
             "contactPerson": "Reception",
             "address1": "200 Delivery Lane",
             "address2": "Floor 1",
-            "pinCode": "110001",
+            "pinCodeId": "110001",
             "city": "Delhi",
             "state": "Delhi",
             "industry": "Logistics",
@@ -146,7 +146,7 @@ examples:
             "contactPerson": "Reception",
             "address1": "200 Delivery Lane",
             "address2": "Floor 1",
-            "pinCode": "110001",
+            "pinCodeId": "110001",
             "city": "Delhi",
             "state": "Delhi",
             "industry": "Logistics",
@@ -215,7 +215,7 @@ examples:
               "contactPerson": "Reception",
               "address1": "200 Delivery Lane",
               "address2": "Floor 1",
-              "pinCode": "110001",
+              "pinCodeId": "110001",
               "city": "Delhi",
               "state": "Delhi",
               "industry": "Logistics",
@@ -240,4 +240,4 @@ docs: |-
   Consignee Master create. JWT + consignee_master_add or consignee_master_all.
 
   Mandatory: code, name
-  Optional: destination, contactPerson, address1, address2, pinCode, city, state, industry, tel1, tel2, fax, email, mobile, serviceCenterCode, serviceCenterId, eori, vat
+  Optional: destination, contactPerson, address1, address2, pinCodeId, city, state, industry, tel1, tel2, fax, email, mobile, serviceCenterCode, serviceCenterId, eori, vat

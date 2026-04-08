@@ -24,9 +24,7 @@ http:
         "destination": "DELHI",
         "destinationCode": "DEL",
         "productId": 1,
-        "vendorId": 1,
-        "serviceMapId": 1,
-        "shipmentValue": 5000,
+                "shipmentValue": 5000,
         "currency": "INR",
         "pieces": 1,
         "actualWeight": 4.5,
@@ -135,9 +133,7 @@ examples:
             "destination": "DELHI",
             "destinationCode": "DEL",
             "productId": 1,
-            "vendorId": 1,
-            "serviceMapId": 1,
-            "shipmentValue": 5000,
+                        "shipmentValue": 5000,
             "currency": "INR",
             "pieces": 1,
             "actualWeight": 4.5,
@@ -268,8 +264,7 @@ examples:
               "customerId": 1,
               "shipperId": 12,
               "consigneeId": 24,
-              "vendorId": 1,
-              "productId": 1,
+                            "productId": 1,
               "origin": "MUMBAI",
               "destination": "DELHI",
               "pieces": 1,
@@ -359,9 +354,7 @@ examples:
             "destination": "DELHI",
             "destinationCode": "DEL",
             "productId": 1,
-            "vendorId": 1,
-            "serviceMapId": 1,
-            "shipmentValue": 5000,
+                        "shipmentValue": 5000,
             "currency": "INR",
             "pieces": 1,
             "actualWeight": 4.5,
@@ -482,7 +475,7 @@ docs: |-
   Create shipment AWB. JWT + shipment.core.create.
 
   Mandatory: bookDate, customerId or clientId, origin, destination, paymentType, one positive weight value (actualWeight or volumetricWeight or chargeWeight), and shipper/consignee via id or nested details.
-  Optional: awbNo (if omitted, backend auto-generates a value like AWB-YYYYMMDD-000001), productId, vendorId, serviceMapId, shipmentValue, currency, pieces, km, commercial, content, instruction, fieldExecutiveId, cashReceiptNo, amountReceived, balanceAmount, cashReceiptDate, contractCharges, otherCharges, subTotal, totalFuel, igst, cgst, sgst, totalAmount, oda, medicalCharges, manifestNo, manifestDate, invoiceNo, debitNoteNo, creditNoteNo, flightNo, podUserId, isCod, codAmount, piecesRows, charges.
+  Optional: awbNo (if omitted, backend auto-generates a value like AWB-YYYYMMDD-000001), productId, shipmentValue, currency, pieces, km, commercial, content, instruction, fieldExecutiveId, cashReceiptNo, amountReceived, balanceAmount, cashReceiptDate, contractCharges, otherCharges, subTotal, totalFuel, igst, cgst, sgst, totalAmount, oda, medicalCharges, manifestNo, manifestDate, invoiceNo, debitNoteNo, creditNoteNo, flightNo, podUserId, isCod, codAmount, piecesRows, charges.
 
   Response: created shipment always returns the final AWB in data.awbNo, including when backend auto-generates it.
   Note: serviceCenterId is not stored on Shipment. If shipper is mapped to a service center, keep that relation on the shipper master.

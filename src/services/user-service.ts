@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client";
 
 type ProfilePayload = {
+  email?: string;
   username?: string;
   mobile?: string;
   profile?: {

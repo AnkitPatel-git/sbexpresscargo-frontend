@@ -137,11 +137,10 @@ examples:
                 "piecesRows": [],
                 "charges": [],
                 "statuses": [],
-                "forwardings": [],
+                "forwarding": null,
                 "proformas": [],
                 "kycDocuments": [],
                 "receipt": null,
-                "vendorMappings": [],
                 "packages": [],
                 "trackingSummary": null,
                 "comments": []

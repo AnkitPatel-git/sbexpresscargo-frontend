@@ -15,10 +15,9 @@ http:
     type: json
     data: |-
       {
-        "vendorCode": "VEND01",
+        "vendorId": 1,
         "serviceType": "AIR",
-        "billingVendorCode": "VEND01",
-        "minWeight": 0,
+                "minWeight": 0,
         "maxWeight": 50,
         "status": "ACTIVE",
         "vendorLink": "https://vendor.com/track",
@@ -46,10 +45,9 @@ examples:
         type: json
         data: |-
           {
-            "vendorCode": "VEND01",
+            "vendorId": 1,
             "serviceType": "AIR",
-            "billingVendorCode": "VEND01",
-            "minWeight": 0,
+                        "minWeight": 0,
             "maxWeight": 50,
             "status": "ACTIVE",
             "vendorLink": "https://vendor.com/track",
@@ -105,8 +103,7 @@ examples:
             "data": {
               "id": 1,
               "vendorId": 1,
-              "billingVendorId": 1,
-              "serviceType": "AIR",
+                            "serviceType": "AIR",
               "minWeight": "0",
               "maxWeight": "50",
               "status": "ACTIVE",
@@ -125,4 +122,4 @@ docs: |-
   Service Map Master create. JWT + service_map_master_add or service_map_master_all.
 
   Mandatory: (none - all optional)
-  Optional: vendorCode, serviceType (AIR|SURFACE), billingVendorCode, minWeight, maxWeight, status (ACTIVE|INACTIVE), vendorLink, isSinglePiece
+  Optional: vendorId, serviceType (AIR|SURFACE), minWeight, maxWeight, status (ACTIVE|INACTIVE), vendorLink, isSinglePiece

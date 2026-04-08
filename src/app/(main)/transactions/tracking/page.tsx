@@ -70,8 +70,8 @@ export default function TrackingPage() {
     };
 
     const { data: deadLettersData, isLoading: isLogsLoading, refetch: refetchLogs } = useQuery({
-        queryKey: ["deadLetters", page, limit],
-        queryFn: () => trackingService.getDeadLetters(page, limit),
+        queryKey: ["deadLetters", limit],
+        queryFn: () => trackingService.getDeadLetters(limit),
         enabled: activeView === 'logs',
     });
     const logFilteredRows =
@@ -83,7 +83,7 @@ export default function TrackingPage() {
         }) ?? [];
 
     const retryMutation = useMutation({
-        mutationFn: (id: number) => trackingService.retryFailedLogs([id]),
+        mutationFn: () => trackingService.retryFailedLogs(1),
         onSuccess: () => {
             toast.success("Retry initiated successfully");
             refetchLogs();
@@ -515,7 +515,7 @@ export default function TrackingPage() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-8 w-8 text-primary hover:bg-primary/10"
-                                                        onClick={() => retryMutation.mutate(log.id)}
+                                                        onClick={() => retryMutation.mutate()}
                                                         disabled={retryMutation.isPending}
                                                     >
                                                         <RefreshCcw className={`h-4 w-4 ${retryMutation.isPending ? 'animate-spin' : ''}`} />

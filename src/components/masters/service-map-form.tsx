@@ -48,9 +48,8 @@ import { vendorService } from '@/services/masters/vendor-service'
 import { ServiceMap } from '@/types/masters/service-map'
 
 const serviceMapSchema = z.object({
-    vendorCode: z.string().min(1, "Vendor is required"),
+    vendorId: z.coerce.number().min(1, "Vendor is required"),
     serviceType: z.enum(['AIR', 'SURFACE', 'EXPRESS']),
-    billingVendorCode: z.string().min(1, "Billing vendor is required"),
     minWeight: z.coerce.number().min(0, "Min weight must be at least 0"),
     maxWeight: z.coerce.number().min(0, "Max weight must be at least 0"),
     status: z.enum(['ACTIVE', 'INACTIVE']),
@@ -59,6 +58,7 @@ const serviceMapSchema = z.object({
 })
 
 type ServiceMapFormValues = z.infer<typeof serviceMapSchema>
+type ServiceMapPayload = ServiceMapFormValues
 
 interface ServiceMapFormProps {
     initialData?: ServiceMap | null
@@ -69,7 +69,6 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
     const queryClient = useQueryClient()
     const isEdit = !!initialData
     const [vendorOpen, setVendorOpen] = useState(false)
-    const [billingVendorOpen, setBillingVendorOpen] = useState(false)
 
     const { data: vendorsData } = useQuery({
         queryKey: ['vendors-list'],
@@ -79,9 +78,8 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
     const form = useForm<ServiceMapFormValues>({
         resolver: zodResolver(serviceMapSchema) as Resolver<ServiceMapFormValues>,
         defaultValues: {
-            vendorCode: '',
+            vendorId: 0,
             serviceType: 'EXPRESS',
-            billingVendorCode: '',
             minWeight: 0,
             maxWeight: 0,
             status: 'ACTIVE',
@@ -89,9 +87,8 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
             isSinglePiece: false,
         },
         values: initialData ? {
-            vendorCode: vendorsData?.data?.find(v => v.id === initialData.vendorId)?.vendorCode || '',
+            vendorId: initialData.vendorId || 0,
             serviceType: initialData.serviceType as any,
-            billingVendorCode: vendorsData?.data?.find(v => v.id === initialData.billingVendorId)?.vendorCode || '',
             minWeight: Number(initialData.minWeight),
             maxWeight: Number(initialData.maxWeight),
             status: initialData.status as any,
@@ -101,7 +98,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
     })
 
     const mutation = useMutation({
-        mutationFn: (data: ServiceMapFormValues) => {
+        mutationFn: (data: ServiceMapPayload) => {
             if (isEdit && initialData) {
                 return serviceMapService.updateServiceMap(initialData.id, data)
             }
@@ -138,7 +135,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={form.control}
-                        name="vendorCode"
+                        name="vendorId"
                         render={({ field }) => (
                             <FloatingFormItem label="Vendor" itemClassName="flex flex-col">
                                 <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
@@ -149,13 +146,13 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                                 role="combobox"
                                                 className={cn(
                                                     FLOATING_INNER_COMBO,
-                                                    !field.value && "text-muted-foreground"
+                                                    (!field.value || field.value <= 0) && "text-muted-foreground"
                                                 )}
                                             >
                                                 <span className="truncate">
-                                                    {field.value
+                                                    {field.value && field.value > 0
                                                         ? vendorsData?.data?.find(
-                                                            (vendor) => vendor.vendorCode === field.value
+                                                            (vendor) => vendor.id === field.value
                                                         )?.vendorName
                                                         : "Select vendor"}
                                                 </span>
@@ -174,14 +171,14 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                                             key={vendor.id}
                                                             value={vendor.vendorName}
                                                             onSelect={() => {
-                                                                form.setValue("vendorCode", vendor.vendorCode)
+                                                                form.setValue("vendorId", vendor.id)
                                                                 setVendorOpen(false)
                                                             }}
                                                         >
                                                             <Check
                                                                 className={cn(
                                                                     "mr-2 h-4 w-4",
-                                                                    vendor.vendorCode === field.value
+                                                                    vendor.id === field.value
                                                                         ? "opacity-100"
                                                                         : "opacity-0"
                                                                 )}
@@ -219,68 +216,6 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                         <SelectItem value="AIR">AIR</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            </FloatingFormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="billingVendorCode"
-                        render={({ field }) => (
-                            <FloatingFormItem label="Billing Vendor" itemClassName="flex flex-col">
-                                <Popover open={billingVendorOpen} onOpenChange={setBillingVendorOpen}>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                className={cn(
-                                                    FLOATING_INNER_COMBO,
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <span className="truncate">
-                                                    {field.value
-                                                        ? vendorsData?.data?.find(
-                                                            (vendor) => vendor.vendorCode === field.value
-                                                        )?.vendorName
-                                                        : "Select billing vendor"}
-                                                </span>
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search billing vendor..." />
-                                            <CommandList>
-                                                <CommandEmpty>No vendor found.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {vendorsData?.data?.map((vendor) => (
-                                                        <CommandItem
-                                                            key={vendor.id}
-                                                            value={vendor.vendorName}
-                                                            onSelect={() => {
-                                                                form.setValue("billingVendorCode", vendor.vendorCode)
-                                                                setBillingVendorOpen(false)
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    vendor.vendorCode === field.value
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {vendor.vendorName} ({vendor.vendorCode})
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
                             </FloatingFormItem>
                         )}
                     />

@@ -2,9 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
-import { toast } from "sonner"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Plus, Edit, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -17,16 +16,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 
 import { shipmentService } from "@/services/transactions/shipment-service"
@@ -51,8 +40,6 @@ export default function ShipmentsPage() {
         vendor: "",
     })
 
-    const [deleteId, setDeleteId] = useState<number | null>(null)
-
     const { data, isLoading } = useQuery({
         queryKey: ["shipments", page, debouncedSearch],
         queryFn: () => shipmentService.getShipments({ page, limit, search: debouncedSearch, sortBy: "id", sortOrder: "desc" }),
@@ -69,19 +56,6 @@ export default function ShipmentsPage() {
         "—"
 
 
-    const deleteMutation = useMutation({
-        mutationFn: (id: number) => shipmentService.deleteShipment(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["shipments"] })
-            toast.success("Shipment deleted successfully")
-            setDeleteId(null)
-        },
-        onError: (error: Error) => {
-            toast.error(error.message || "Failed to delete shipment")
-            setDeleteId(null)
-        },
-    })
-
     const handleCreate = () => {
         router.push("/transactions/shipment/create")
     }
@@ -92,16 +66,6 @@ export default function ShipmentsPage() {
 
     const handleViewDetails = (shipment: Shipment) => {
         router.push(`/transactions/shipment/${shipment.id}`)
-    }
-
-    const handleDeleteRequest = (id: number) => {
-        setDeleteId(id)
-    }
-
-    const confirmDelete = () => {
-        if (deleteId) {
-            deleteMutation.mutate(deleteId)
-        }
     }
 
     const total = data?.meta?.total ?? 0
@@ -217,7 +181,6 @@ export default function ShipmentsPage() {
                                             <TableCell className="sticky right-0 z-10 min-w-[100px] bg-inherit">
                                                 <div className="flex items-center justify-center gap-1">
                                                     <PermissionGuard permission="transaction.shipment.update"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => handleEdit(shipment)}><Edit className="h-4 w-4" /></Button></PermissionGuard>
-                                                    <PermissionGuard permission="transaction.shipment.delete"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" onClick={() => handleDeleteRequest(shipment.id)}><Trash2 className="h-4 w-4" /></Button></PermissionGuard>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -237,26 +200,6 @@ export default function ShipmentsPage() {
                 </div>
             </div>
 
-            <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the shipment
-                            record from our servers.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmDelete}
-                            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-                        >
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
     )
 }

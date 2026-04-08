@@ -16,9 +16,8 @@ http:
     data: |-
       {
         "version": 1,
-        "deliveryAwb": "DLV123456",
         "deliveryVendorId": 1,
-        "deliveryProductId": 1,
+        "deliveryServiceMapId": 10,
         "totalAmount": 500.0
       }
   auth: inherit
@@ -44,9 +43,8 @@ examples:
         data: |-
           {
             "version": 1,
-            "deliveryAwb": "DLV123456",
             "deliveryVendorId": 1,
-            "deliveryProductId": 1,
+            "deliveryServiceMapId": 10,
             "totalAmount": 500.0
           }
     response:
@@ -101,7 +99,6 @@ examples:
                 "id": 1,
                 "awbNo": "M1774333957282E4A4B3",
                 "customerId": 1,
-                "vendorId": 1,
                 "productId": 1,
                 "origin": "MUM",
                 "destination": "DEL",
@@ -123,9 +120,7 @@ examples:
               "forwarding": {
                 "id": 1,
                 "shipmentId": 1,
-                "deliveryAwb": "DLV123456",
                 "forwardingAwb": null,
-                "deliveryProductId": 1,
                 "deliveryVendorId": 1,
                 "deliveryServiceMapId": null,
                 "vendorWeight": null,
@@ -149,4 +144,4 @@ examples:
             }
           }
 
-docs: Create or update forwarding details with charges. JWT + shipment.core.update.
+docs: Create or update forwarding details with charges. JWT + shipment.core.update. Use deliveryVendorId first, then pick deliveryServiceMapId mapped to that vendor (dependent dropdown).

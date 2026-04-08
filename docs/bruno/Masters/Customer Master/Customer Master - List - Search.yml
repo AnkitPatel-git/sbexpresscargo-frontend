@@ -113,7 +113,7 @@ examples:
                 "contactPerson": null,
                 "address1": null,
                 "address2": null,
-                "pinCode": null,
+                "pinCodeId": null,
                 "city": null,
                 "state": null,
                 "telNo1": null,

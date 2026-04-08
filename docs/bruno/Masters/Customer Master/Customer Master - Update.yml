@@ -19,7 +19,7 @@ http:
         "name": "Acme Corp Updated",
         "contactPerson": "Jane Doe",
         "address1": "100 Business Park",
-        "pinCode": "400001",
+        "pinCodeId": "400001",
         "city": "Mumbai",
         "state": "Maharashtra",
         "telNo1": "022-12345678",
@@ -56,7 +56,7 @@ examples:
             "name": "Acme Corp Updated",
             "contactPerson": "Jane Doe",
             "address1": "100 Business Park",
-            "pinCode": "400001",
+            "pinCodeId": "400001",
             "city": "Mumbai",
             "state": "Maharashtra",
             "telNo1": "022-12345678",
@@ -134,7 +134,7 @@ examples:
             "name": "Acme Corp Updated",
             "contactPerson": "Jane Doe",
             "address1": "100 Business Park",
-            "pinCode": "400001",
+            "pinCodeId": "400001",
             "city": "Mumbai",
             "state": "Maharashtra",
             "telNo1": "022-12345678",
@@ -200,7 +200,7 @@ examples:
               "contactPerson": "Jane Doe",
               "address1": "100 Business Park",
               "address2": "Floor 3",
-              "pinCode": "400001",
+              "pinCodeId": "400001",
               "city": "Mumbai",
               "state": "Maharashtra",
               "telNo1": "022-12345678",
@@ -236,4 +236,4 @@ docs: |-
   Customer Master update by id. JWT + customer_master_modify or customer_master_all.
 
   Mandatory: (none - all optional for partial update)
-  Optional: code, name, contactPerson, address1, address2, pinCode, city, state, telNo1, telNo2, email, mobile, faxNo, billingState, serviceCenter, startDate, status, origin, gstNo, aadhaarNo, dobOnAadhaar, passportNo, panNo, tanNo, invoiceFormat, customerType, registerType, signatureFile, logoFile
+  Optional: code, name, contactPerson, address1, address2, pinCodeId, city, state, telNo1, telNo2, email, mobile, faxNo, billingState, serviceCenter, startDate, status, origin, gstNo, aadhaarNo, dobOnAadhaar, passportNo, panNo, tanNo, invoiceFormat, customerType, registerType, signatureFile, logoFile

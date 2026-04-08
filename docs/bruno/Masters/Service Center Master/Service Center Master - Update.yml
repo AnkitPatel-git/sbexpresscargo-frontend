@@ -24,7 +24,7 @@ http:
         "telephone": "022-33334444",
         "email": "sc@sbexpress.com",
         "gstNo": "27AABCU9603R1ZM",
-        "pinCode": "400002"
+        "pinCodeId": "400002"
       }
   auth: inherit
 
@@ -57,7 +57,7 @@ examples:
             "telephone": "022-33334444",
             "email": "sc@sbexpress.com",
             "gstNo": "27AABCU9603R1ZM",
-            "pinCode": "400002"
+            "pinCodeId": "400002"
           }
     response:
       status: 200
@@ -121,7 +121,7 @@ examples:
               "email": "sc@sbexpress.com",
               "icnNo": null,
               "stNo": null,
-              "pinCode": "400002",
+              "pinCodeId": "400002",
               "companyLogo": "https://example.com/logo.png",
               "signatoryLogo": "https://example.com/sign.png",
               "version": 1,
@@ -139,4 +139,4 @@ docs: |-
   Service Center Master update by id. JWT + service_center_master_modify or service_center_master_all.
 
   Mandatory: (none - all optional for partial update)
-  Optional: code, name, subName, address1, address2, address3, address4, destination, state, telephone, email, gstNo, gstTelephone, panNo, icnNo, stNo, pinCode, companyLogo, signatoryLogo, terms, bankName, accountNo, accountName, bankAddress, ifsc, micr, lastInvoicePrefix, lastInvoiceNo, lastInvoiceSuffix, freeFormPrefix, lastFreeFormInvoiceNo, freeFormSuffix, debitNotePrefix, debitNoteLastInvoiceNo, debitNoteSuffix, creditNotePrefix, creditNoteLastInvoiceNo, creditNoteSuffix, rcpLastNo
+  Optional: code, name, subName, address1, address2, address3, address4, destination, state, telephone, email, gstNo, gstTelephone, panNo, icnNo, stNo, pinCodeId, companyLogo, signatoryLogo, terms, bankId, accountNo, accountName, bankAddress, ifsc, micr, lastInvoicePrefix, lastInvoiceNo, lastInvoiceSuffix, freeFormPrefix, lastFreeFormInvoiceNo, freeFormSuffix, debitNotePrefix, debitNoteLastInvoiceNo, debitNoteSuffix, creditNotePrefix, creditNoteLastInvoiceNo, creditNoteSuffix, rcpLastNo

@@ -133,73 +133,38 @@ examples:
                   "source": "CORE"
                 }
               ],
-              "forwardings": [
-                {
-                  "id": 1,
-                  "shipmentId": 1,
-                  "deliveryAwb": "DLV123456",
-                  "forwardingAwb": null,
-                  "deliveryProductId": 1,
-                  "deliveryVendorId": 1,
-                  "deliveryServiceMapId": null,
-                  "vendorWeight": null,
-                  "vendorAmount": null,
-                  "vendorInvoice": null,
-                  "contractCharges": null,
-                  "otherCharges": null,
-                  "subTotal": null,
-                  "totalFuel": null,
-                  "igst": null,
-                  "cgst": null,
-                  "sgst": null,
-                  "totalAmount": "500",
-                  "createdAt": "2026-03-24T19:43:47.873Z",
-                  "updatedAt": "2026-03-24T19:43:47.873Z",
-                  "createdById": 1,
-                  "updatedById": 1,
-                  "deletedAt": null,
-                  "deletedById": null,
-                  "charges": []
-                }
-              ],
+              "forwarding": {
+                "id": 1,
+                "shipmentId": 1,
+                "forwardingAwb": null,
+                                "deliveryVendorId": 1,
+                "deliveryServiceMapId": null,
+                "vendorWeight": null,
+                "vendorAmount": null,
+                "vendorInvoice": null,
+                "contractCharges": null,
+                "otherCharges": null,
+                "subTotal": null,
+                "totalFuel": null,
+                "igst": null,
+                "cgst": null,
+                "sgst": null,
+                "totalAmount": "500",
+                "createdAt": "2026-03-24T19:43:47.873Z",
+                "updatedAt": "2026-03-24T19:43:47.873Z",
+                "createdById": 1,
+                "updatedById": 1,
+                "deletedAt": null,
+                "deletedById": null,
+                "charges": []
+              },
               "proformas": [],
               "kycDocuments": [],
               "receipt": null,
-              "vendorMappings": [
-                {
-                  "id": 1,
-                  "shipmentId": 1,
-                  "vendorId": 1,
-                  "externalAwb": "BD123456789",
-                  "externalOrderId": "ORD-2026-001",
-                  "requestPayload": {
-                    "origin": "MUM",
-                    "destination": "DEL",
-                    "productCode": "AIR"
-                  },
-                  "responsePayload": {
-                    "waybill": "BD123456789",
-                    "labelUrl": "https://example.com/label.pdf"
-                  },
-                  "status": "AWB_ASSIGNED",
-                  "retryCount": 0,
-                  "errorMessage": null,
-                  "createdAt": "2026-03-24T20:36:43.166Z",
-                  "updatedAt": "2026-03-24T20:36:43.166Z",
-                  "deletedAt": null,
-                  "deletedById": null,
-                  "vendor": {
-                    "id": 1,
-                    "vendorCode": "BLUEDART",
-                    "vendorName": "BLUEDART Cargo (updated)",
-                    "status": "ACTIVE"
-                  }
-                }
-              ],
               "packages": [],
               "trackingSummary": null,
               "comments": []
             }
           }
 
-docs: Full shipment detail (masters, pieces, charges, statuses, forwarding, vendor mappings, tracking summary, etc.). JWT + shipment.core.read. Same RBAC as list (e.g. customer scope). Set `shipmentId` in collection variables.
+docs: Full shipment detail (masters, pieces, charges, statuses, single forwarding object, tracking summary, etc.). JWT + shipment.core.read. Same RBAC as list (e.g. customer scope). Set `shipmentId` in collection variables.

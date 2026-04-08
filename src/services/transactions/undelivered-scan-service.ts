@@ -86,7 +86,7 @@ class UndeliveredScanService {
             queryParams.append('search', search);
         }
 
-        const response = await apiFetch(`${this.baseUrl}/export/csv?${queryParams.toString()}`, { 
+        const response = await apiFetch(`${this.baseUrl}/export?${queryParams.toString()}`, { 
             headers: getAuthHeaders() 
         });
         if (!response.ok) {

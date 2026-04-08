@@ -25,7 +25,7 @@ http:
         "contact": "John Doe",
         "address1": "100 Business Park",
         "address2": "Floor 3",
-        "zipCode": "400001",
+        "pinCodeId": "400001",
         "city": "Mumbai",
         "state": "Maharashtra",
         "payOption": "CREDIT",
@@ -82,7 +82,7 @@ examples:
             "contact": "John Doe",
             "address1": "100 Business Park",
             "address2": "Floor 3",
-            "zipCode": "400001",
+            "pinCodeId": "400001",
             "city": "Mumbai",
             "state": "Maharashtra",
             "payOption": "CREDIT",
@@ -183,7 +183,7 @@ examples:
             "contact": "John Doe",
             "address1": "100 Business Park",
             "address2": "Floor 3",
-            "zipCode": "400001",
+            "pinCodeId": "400001",
             "city": "Mumbai",
             "state": "Maharashtra",
             "payOption": "CREDIT",
@@ -275,7 +275,7 @@ examples:
               "contact": "John Doe",
               "address1": "100 Business Park",
               "address2": "Floor 3",
-              "pinCode": "400001",
+              "pinCodeId": "400001",
               "city": "Mumbai",
               "state": "Maharashtra",
               "payOption": "CREDIT",
@@ -313,7 +313,7 @@ docs: |-
 
   Mandatory: idempotencyKey, customerId, serviceCenterId, pickupType (INTERNAL|EXTERNAL)
 
-  Optional (persisted on pickups row): bookingNo, vendorId, fieldExecutiveId, salesExecutiveId, pickupAt, pickupWindowStart, pickupWindowEnd (ISO 8601), origin, mobile, shipperName, contact, address1, address2, zipCode (maps to pin_code), city, state, payOption, consigneeId, consigneeName, consigneeDetails, vehicle, vehicleReq, area, specialInstructions, reason, pickupReady.
+  Optional (persisted on pickups row): bookingNo, vendorId, fieldExecutiveId, salesExecutiveId, pickupAt, pickupWindowStart, pickupWindowEnd (ISO 8601), origin, mobile, shipperName, contact, address1, address2, pinCodeId (maps to pin_code), city, state, payOption, consigneeId, consigneeName, consigneeDetails, vehicle, vehicleReq, area, specialInstructions, reason, pickupReady.
 
   Optional (request-only, not DB columns): fieldExecutive, salesExecutive, serviceCenter, pickupTime — prefer fieldExecutiveId, salesExecutiveId, serviceCenterId, and pickupAt / window for data that must round-trip.
 

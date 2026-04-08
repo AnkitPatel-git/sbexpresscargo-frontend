@@ -108,8 +108,7 @@ examples:
               {
                 "id": 1,
                 "vendorId": 1,
-                "billingVendorId": 1,
-                "serviceType": "AIR",
+                                "serviceType": "AIR",
                 "minWeight": "0",
                 "maxWeight": "50",
                 "status": "ACTIVE",

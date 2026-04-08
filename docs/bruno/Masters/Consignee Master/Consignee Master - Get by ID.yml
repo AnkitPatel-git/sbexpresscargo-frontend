@@ -80,7 +80,7 @@ examples:
               "contactPerson": "Reception",
               "address1": "200 Delivery Lane",
               "address2": "Floor 1",
-              "pinCode": "110001",
+              "pinCodeId": "110001",
               "city": "Delhi",
               "state": "Delhi",
               "industry": "Logistics",

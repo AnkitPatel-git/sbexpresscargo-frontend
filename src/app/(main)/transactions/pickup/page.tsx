@@ -2,9 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
-import { toast } from "sonner"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Plus, Edit, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -17,16 +16,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 
@@ -60,25 +49,11 @@ export default function PickupsPage() {
         execution: "",
     })
 
-    const [deleteId, setDeleteId] = useState<number | null>(null)
-
     const { data, isLoading } = useQuery({
         queryKey: ["pickups", page, debouncedSearch],
         queryFn: () => pickupService.getPickups({ page, limit, search: debouncedSearch }),
     })
 
-    const deleteMutation = useMutation({
-        mutationFn: (id: number) => pickupService.deletePickup(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["pickups"] })
-            toast.success("Pickup deleted successfully")
-            setDeleteId(null)
-        },
-        onError: (error: Error) => {
-            toast.error(error.message || "Failed to delete pickup")
-            setDeleteId(null)
-        },
-    })
 
     const handleCreate = () => {
         router.push("/transactions/pickup/create")
@@ -86,14 +61,6 @@ export default function PickupsPage() {
 
     const handleEdit = (pickup: Pickup) => {
         router.push(`/transactions/pickup/${pickup.id}/edit`)
-    }
-
-    const handleDeleteRequest = (id: number) => {
-        setDeleteId(id)
-    }
-
-    const confirmDelete = () => {
-        if (deleteId) deleteMutation.mutate(deleteId)
     }
 
     const total = data?.meta.total ?? 0
@@ -294,18 +261,6 @@ export default function PickupsPage() {
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
                                             </PermissionGuard>
-                                            <PermissionGuard permission="shipment.pickup.delete">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10"
-                                                    title="Delete"
-                                                    onClick={() => handleDeleteRequest(pickup.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </PermissionGuard>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -366,25 +321,6 @@ export default function PickupsPage() {
                 </div>
             </div>
 
-            <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the pickup record from our servers.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmDelete}
-                            className="bg-[var(--express-danger)] hover:opacity-95"
-                        >
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
     )
 }

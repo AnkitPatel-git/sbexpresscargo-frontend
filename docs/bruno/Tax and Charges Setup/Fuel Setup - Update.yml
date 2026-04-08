@@ -20,8 +20,7 @@ http:
         "vendor": "CARD",
         "product": "CARD",
         "destination": "CARD",
-        "service": "SURFACE",
-        "fromDate": "2026-01-01",
+                "fromDate": "2026-01-01",
         "toDate": "2026-01-31",
         "percentage": 20.5
       }
@@ -52,8 +51,7 @@ examples:
             "vendor": "CARD",
             "product": "CARD",
             "destination": "CARD",
-            "service": "CARD",
-            "fromDate": "2026-01-01",
+                        "fromDate": "2026-01-01",
             "toDate": "2026-01-31",
             "percentage": 20.5
           }
@@ -104,7 +102,7 @@ examples:
         data: |-
           {
             "success": false,
-            "message": "service must be one of the following values: AIR, SURFACE, EXPRESS, STANDARD",
+            "message": "Invalid request data.",
             "data": {}
           }
   - name: "200"
@@ -125,8 +123,7 @@ examples:
             "vendor": "CARD",
             "product": "CARD",
             "destination": "CARD",
-            "service": "SURFACE",
-            "fromDate": "2026-01-01",
+                        "fromDate": "2026-01-01",
             "toDate": "2026-01-31",
             "percentage": 20.5
           }
@@ -185,8 +182,7 @@ examples:
               "vendorId": null,
               "productId": null,
               "destination": "CARD",
-              "service": "SURFACE",
-              "fromDate": "2026-01-01T00:00:00.000Z",
+                            "fromDate": "2026-01-01T00:00:00.000Z",
               "toDate": "2026-01-31T00:00:00.000Z",
               "percentage": "20.5",
               "createdAt": "2026-03-24T13:03:50.772Z",
@@ -202,4 +198,4 @@ docs: |-
   Update fuel setup by id. JWT + fuel_setup_modify/all.
 
   Mandatory: (none - all optional for partial update)
-  Optional: entryCode, customer, vendor, product, destination, service, fromDate, toDate, percentage
+  Optional: entryCode, customer, vendor, product, destination, fromDate, toDate, percentage

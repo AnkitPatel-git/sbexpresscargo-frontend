@@ -60,19 +60,19 @@ class TrackingService {
         return response.json();
     }
 
-    async getDeadLetters(page: number = 1, limit: number = 20): Promise<DeadLettersResponse> {
-        const response = await apiFetch(`${this.baseUrl}/dead-letters?page=${page}&limit=${limit}`, { headers: getAuthHeaders() });
+    async getDeadLetters(limit: number = 100): Promise<DeadLettersResponse> {
+        const response = await apiFetch(`${this.baseUrl}/dead-letters?limit=${limit}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch dead letters');
         }
         return response.json();
     }
 
-    async retryFailedLogs(ids: number[]): Promise<{ success: boolean; message: string }> {
-        const response = await apiFetch(`${this.baseUrl}/logs/retry`, {
+    async retryFailedLogs(limit: number = 50): Promise<{ success: boolean; message: string }> {
+        const response = await apiFetch(`${this.baseUrl}/retry-failed`, {
             method: 'POST',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ ids }),
+            body: JSON.stringify({ limit }),
         });
         if (!response.ok) {
             const error = await response.json();

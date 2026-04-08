@@ -53,7 +53,10 @@ class ManifestService {
         return response.json();
     }
 
-    async updateManifest(id: number, data: Partial<ManifestFormValues>): Promise<ManifestSingleResponse> {
+    async updateManifest(id: number, data: Partial<ManifestFormValues> & { version?: number }): Promise<ManifestSingleResponse> {
+        if (!data.version) {
+            throw new Error('Manifest version is required for update');
+        }
         const response = await apiFetch(`${this.baseUrl}/${id}`, {
             method: 'PUT',
             headers: getAuthHeaders(),

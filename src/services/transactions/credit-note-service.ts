@@ -53,7 +53,10 @@ class CreditNoteService {
         return response.json();
     }
 
-    async updateCreditNote(id: number, data: Partial<CreditNoteFormValues>): Promise<CreditNoteSingleResponse> {
+    async updateCreditNote(id: number, data: Partial<CreditNoteFormValues> & { version?: number }): Promise<CreditNoteSingleResponse> {
+        if (!data.version) {
+            throw new Error('Credit note version is required for update');
+        }
         // Strip ids from items as the API prohibits then in the update payload
         const updatedData = {
             ...data,

@@ -125,7 +125,7 @@ examples:
                 "contact": "John Doe",
                 "address1": "100 Business Park",
                 "address2": "Floor 3",
-                "pinCode": "400001",
+                "pinCodeId": "400001",
                 "city": "Mumbai",
                 "state": "Maharashtra",
                 "payOption": "CREDIT",

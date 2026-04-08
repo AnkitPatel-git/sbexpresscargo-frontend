@@ -63,7 +63,10 @@ export const pickupService = {
         return response.json();
     },
 
-    async updatePickup(id: number, data: Partial<PickupFormValues>): Promise<PickupSingleResponse> {
+    async updatePickup(id: number, data: Partial<PickupFormValues> & { version?: number }): Promise<PickupSingleResponse> {
+        if (!data.version) {
+            throw new Error('Pickup version is required for update');
+        }
         const response = await apiFetch(`${API_URL}/transaction/pickup/${id}`, {
             method: 'PUT',
             headers: {
@@ -76,22 +79,6 @@ export const pickupService = {
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.message || 'Failed to update pickup');
-        }
-
-        return response.json();
-    },
-
-    async deletePickup(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await apiFetch(`${API_URL}/transaction/pickup/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to delete pickup');
         }
 
         return response.json();

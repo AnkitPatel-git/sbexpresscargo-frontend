@@ -87,18 +87,10 @@ export function DrsForm({ initialData }: DrsFormProps) {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: DrsFormValues) => {
-      if (isEditing && initialData?.id) {
-        return drsService.updateDrs(initialData.id, data);
-      }
-      return drsService.createDrs(data);
-    },
+    mutationFn: async (data: DrsFormValues) => drsService.createDrs(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drs"] });
-      if (isEditing) {
-        queryClient.invalidateQueries({ queryKey: ["drs", initialData.id] });
-      }
-      toast.success(isEditing ? "DRS updated successfully" : "DRS created successfully");
+      toast.success(isEditing ? "DRS copied successfully" : "DRS created successfully");
       router.push("/transactions/drs");
     },
     onError: (error) => {

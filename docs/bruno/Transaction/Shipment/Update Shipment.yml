@@ -20,8 +20,7 @@ http:
         "origin": "MUMBAI",
         "destination": "BANGALORE",
         "productId": 1,
-        "vendorId": 1,
-        "shipper": {
+                "shipper": {
           "shipperName": "ABC Exporters",
           "mobile": "9999999999"
         },
@@ -84,8 +83,7 @@ examples:
             "origin": "MUMBAI",
             "destination": "BANGALORE",
             "productId": 1,
-            "vendorId": 1,
-            "shipper": {
+                        "shipper": {
               "shipperName": "ABC Exporters",
               "mobile": "9999999999"
             },
@@ -172,8 +170,7 @@ examples:
               "id": 2,
               "awbNo": "AWB123456",
               "customerId": 1,
-              "vendorId": 1,
-              "productId": 1,
+                            "productId": 1,
               "origin": "MUMBAI",
               "destination": "BANGALORE",
               "pieces": 2,

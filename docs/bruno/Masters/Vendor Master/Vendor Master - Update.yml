@@ -19,10 +19,10 @@ http:
         "vendorName": "Logistics Partner Ltd Updated",
         "contactPerson": "Vendor Contact",
         "address1": "400 Vendor Ave",
-        "pinCode": "400004",
+        "pinCodeId": "400004",
         "city": "Mumbai",
         "state": "Maharashtra",
-        "telephone1": "022-77778888",
+        "telephone": "022-77778888",
         "email": "vendor@partner.com",
         "mobile": "9876543213",
         "website": "https://vendor.com",
@@ -55,10 +55,10 @@ examples:
             "vendorName": "Logistics Partner Ltd Updated",
             "contactPerson": "Vendor Contact",
             "address1": "400 Vendor Ave",
-            "pinCode": "400004",
+            "pinCodeId": "400004",
             "city": "Mumbai",
             "state": "Maharashtra",
-            "telephone1": "022-77778888",
+            "telephone": "022-77778888",
             "email": "vendor@partner.com",
             "mobile": "9876543213",
             "website": "https://vendor.com",
@@ -120,12 +120,11 @@ examples:
               "contactPerson": "Vendor Contact",
               "address1": "400 Vendor Ave",
               "address2": "Floor 1",
-              "pinCode": "400004",
+              "pinCodeId": "400004",
               "city": "Mumbai",
               "state": "Maharashtra",
-              "telephone1": "022-77778888",
-              "telephone2": "022-88889999",
-              "fax": "022-99990000",
+              "telephone": "022-77778888",
+                            "fax": "022-99990000",
               "email": "vendor@partner.com",
               "mobile": "9876543213",
               "website": "https://vendor.com",
@@ -152,4 +151,4 @@ docs: |-
   Vendor Master update by id. JWT + vendor_master_modify or vendor_master_all.
 
   Mandatory: (none - all optional for partial update)
-  Optional: vendorCode, vendorName, contactPerson, address1, address2, pinCode, city, state, telephone1, telephone2, fax, email, mobile, website, gstNo, mode, fuelHead, currency, origin, vendorZip, status, global, gstType, volumetricRound
+  Optional: vendorCode, vendorName, contactPerson, address1, address2, pinCodeId, city, state, telephone, fax, email, mobile, website, gstNo, mode, fuelHead, currency, origin, vendorZip, status, global, gstType, volumetricRound

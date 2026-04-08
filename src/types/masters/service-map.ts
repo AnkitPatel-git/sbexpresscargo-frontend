@@ -20,9 +20,8 @@ export interface ServiceMap {
 }
 
 export interface ServiceMapFormData {
-    vendorCode: string;
+    vendorId: number;
     serviceType: ServiceTypeEnums;
-    billingVendorCode: string;
     minWeight: number;
     maxWeight: number;
     status: ServiceMapStatus;

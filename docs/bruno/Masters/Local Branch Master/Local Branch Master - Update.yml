@@ -19,10 +19,10 @@ http:
         "companyName": "SB Express",
         "name": "Mumbai Branch Updated",
         "address1": "123 Main St",
-        "pinCode": "400001",
+        "pinCodeId": 1,
         "city": "Mumbai",
         "state": "Maharashtra",
-        "telephone1": "022-87654321",
+        "telephone": "022-87654321",
         "email": "mumbai@sbexpress.com",
         "gstNo": "27AABCU9603R1ZM"
       }
@@ -52,10 +52,10 @@ examples:
             "companyName": "SB Express",
             "name": "Mumbai Branch Updated",
             "address1": "123 Main St",
-            "pinCode": "400001",
+            "pinCodeId": 1,
             "city": "Mumbai",
             "state": "Maharashtra",
-            "telephone1": "022-87654321",
+            "telephone": "022-87654321",
             "email": "mumbai@sbexpress.com",
             "gstNo": "27AABCU9603R1ZM"
           }
@@ -113,13 +113,12 @@ examples:
               "name": "Mumbai Branch Updated",
               "address1": "123 Main St",
               "address2": "Floor 2",
-              "pinCode": "400001",
+              "pinCodeId": 1,
               "city": "Mumbai",
               "state": "Maharashtra",
               "serviceCenterId": 2,
-              "telephone1": "022-87654321",
-              "telephone2": "022-87654321",
-              "fax": "022-11112222",
+              "telephone": "022-87654321",
+                            "fax": "022-11112222",
               "website": "https://sbexpress.com",
               "email": "mumbai@sbexpress.com",
               "panNo": "AABCU9603R",
@@ -130,7 +129,7 @@ examples:
               "serviceRegistrationNo": "SR001",
               "companyLogo": "https://example.com/logo.png",
               "signatoryLogo": "https://example.com/sign.png",
-              "bankName": "State Bank",
+              "bankId": 1,
               "accountNo": "1234567890",
               "accountName": "SB Express",
               "bankAddress": "Mumbai",
@@ -162,4 +161,4 @@ docs: |-
   Local Branch Master update by id. JWT + local_branch_master_modify or local_branch_master_all.
 
   Mandatory: (none - all optional for partial update)
-  Optional: branchCode, companyName, name, address1, address2, pinCode, city, state, serviceCenterCode, serviceCenterId, telephone1, telephone2, fax, website, email, panNo, serviceTaxNo, billingState, stateCode, gstNo, serviceRegistrationNo, companyLogo, signatoryLogo, terms, bankName, accountNo, accountName, bankAddress, ifsc, micr, lastInvoiceNo, invoicePrefix, invoiceSuffix, lastFreeFormInvoiceNo, freeFormPrefix, freeFormSuffix, debitNotePrefix, debitNoteLastInvoiceNo, debitNoteSuffix, creditNotePrefix, creditNoteLastInvoiceNo, creditNoteSuffix, rcpLastNo
+  Optional: branchCode, companyName, name, address1, address2, pinCodeId, city, state, serviceCenterCode, serviceCenterId, telephone, fax, website, email, panNo, serviceTaxNo, billingState, stateCode, gstNo, serviceRegistrationNo, companyLogo, signatoryLogo, terms, bankId, accountNo, accountName, bankAddress, ifsc, micr, lastInvoiceNo, invoicePrefix, invoiceSuffix, lastFreeFormInvoiceNo, freeFormPrefix, freeFormSuffix, debitNotePrefix, debitNoteLastInvoiceNo, debitNoteSuffix, creditNotePrefix, creditNoteLastInvoiceNo, creditNoteSuffix, rcpLastNo

@@ -30,7 +30,7 @@ export const shipmentChargeSchema = z.object({
 
 export const shipmentSchema = z.object({
     version: z.number().int().positive().optional(),
-    awbNo: z.string().min(1, "AWB No is required"),
+    awbNo: z.string().optional(),
     bookDate: z.string().min(1, "Book Date is required"),
     bookTime: z.string().optional(),
     referenceNo: z.string().optional(),
@@ -244,12 +244,16 @@ export interface Shipment {
     };
     forwardings?: Array<{
         id?: number;
+        deliveryAwb?: string;
+        forwardingAwb?: string;
         deliveryVendor?: {
             id: number;
             vendorName?: string;
             name?: string;
         };
         deliveryVendorId?: number;
+        deliveryServiceMapId?: number;
+        totalAmount?: string | number | null;
     }>;
 }
 

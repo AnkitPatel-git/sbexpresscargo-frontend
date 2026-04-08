@@ -87,9 +87,9 @@ const headerNavItems = [
   { href: "/masters/consignee", label: "Consignee Master" },
   { href: "/masters/shipper", label: "Shipper Master" },
   { href: "/masters/vendor", label: "Vendor Master" },
+  { href: "/masters/service-map", label: "Service Map Master" },
   { href: "/masters/area", label: "Area Master" },
   { href: "/masters/exception", label: "Exception Master" },
-  { href: "/masters/service-map", label: "Service Map Master" },
   { href: "/masters/charge", label: "Charge Master" },
   { href: "/transactions/pickup", label: "Pickup" },
   { href: "/transactions/shipment", label: "Shipment" },
@@ -210,6 +210,12 @@ const MASTER_GROUP_ITEMS = {
       icon: Building2,
       permission: "master.vendor.read",
     },
+    {
+      href: "/masters/service-map",
+      label: "Service Map Master",
+      icon: MapIcon,
+      permission: "master.service_map.read",
+    },
   ],
   operations: [
     {
@@ -223,12 +229,6 @@ const MASTER_GROUP_ITEMS = {
       label: "Exception Master",
       icon: AlertTriangle,
       permission: "master.exception.read",
-    },
-    {
-      href: "/masters/service-map",
-      label: "Service Map Master",
-      icon: MapIcon,
-      permission: "master.service_map.read",
     },
     {
       href: "/masters/charge",
@@ -251,14 +251,13 @@ const resolveMasterGroupFromPath = (
     return "customer";
   }
 
-  if (path.startsWith("/masters/vendor")) {
+  if (path.startsWith("/masters/vendor") || path.startsWith("/masters/service-map")) {
     return "vendor";
   }
 
   if (
     path.startsWith("/masters/area") ||
     path.startsWith("/masters/exception") ||
-    path.startsWith("/masters/service-map") ||
     path.startsWith("/masters/charge")
   ) {
     return "operations";

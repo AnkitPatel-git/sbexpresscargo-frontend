@@ -87,7 +87,7 @@ examples:
               "email": null,
               "icnNo": null,
               "stNo": null,
-              "pinCode": null,
+              "pinCodeId": null,
               "companyLogo": null,
               "signatoryLogo": null,
               "version": 1,

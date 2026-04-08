@@ -62,7 +62,6 @@ export default function ServiceMapPage() {
     const [colFilters, setColFilters] = useState({
         vendor: "",
         serviceType: "",
-        billingVendor: "",
         weight: "",
         status: "",
     })
@@ -120,12 +119,10 @@ export default function ServiceMapPage() {
     const filteredRows =
         data?.data.filter((serviceMap: ServiceMap) => {
             const vendorName = getVendorName(serviceMap.vendorId)
-            const billingVendorName = getVendorName(serviceMap.billingVendorId)
             const weightText = `${serviceMap.minWeight} - ${serviceMap.maxWeight} kg`
 
             if (colFilters.vendor && !vendorName.toLowerCase().includes(colFilters.vendor.toLowerCase())) return false
             if (colFilters.serviceType && !serviceMap.serviceType.toLowerCase().includes(colFilters.serviceType.toLowerCase())) return false
-            if (colFilters.billingVendor && !billingVendorName.toLowerCase().includes(colFilters.billingVendor.toLowerCase())) return false
             if (colFilters.weight && !weightText.toLowerCase().includes(colFilters.weight.toLowerCase())) return false
             if (colFilters.status && !serviceMap.status.toLowerCase().includes(colFilters.status.toLowerCase())) return false
             return true
@@ -163,7 +160,6 @@ export default function ServiceMapPage() {
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Vendor <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Service Type <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Billing Vendor <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Weight (Min-Max) <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Single Pc <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Status <SortArrows /></span></TableHead>
@@ -172,7 +168,6 @@ export default function ServiceMapPage() {
                         <TableRow className="border-b border-border bg-card hover:bg-card">
                             <TableHead className="p-2"><Input placeholder="Vendor" className="h-8 border-border bg-background text-xs" value={colFilters.vendor} onChange={(e) => setColFilters((f) => ({ ...f, vendor: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Service Type" className="h-8 border-border bg-background text-xs" value={colFilters.serviceType} onChange={(e) => setColFilters((f) => ({ ...f, serviceType: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Billing Vendor" className="h-8 border-border bg-background text-xs" value={colFilters.billingVendor} onChange={(e) => setColFilters((f) => ({ ...f, billingVendor: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Weight" className="h-8 border-border bg-background text-xs" value={colFilters.weight} onChange={(e) => setColFilters((f) => ({ ...f, weight: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Single Pc" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Status" className="h-8 border-border bg-background text-xs" value={colFilters.status} onChange={(e) => setColFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
@@ -182,11 +177,11 @@ export default function ServiceMapPage() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading service maps...</TableCell>
+                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Loading service maps...</TableCell>
                             </TableRow>
                         ) : filteredRows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No service maps found.</TableCell>
+                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No service maps found.</TableCell>
                             </TableRow>
                         ) : (
                             filteredRows.map((serviceMap: ServiceMap, index) => (
@@ -204,7 +199,6 @@ export default function ServiceMapPage() {
                                     <TableCell>
                                         <Badge variant="outline">{serviceMap.serviceType}</Badge>
                                     </TableCell>
-                                    <TableCell className="text-foreground">{getVendorName(serviceMap.billingVendorId)}</TableCell>
                                     <TableCell className="text-foreground">{serviceMap.minWeight} - {serviceMap.maxWeight} kg</TableCell>
                                     <TableCell className="text-center">
                                         {serviceMap.isSinglePiece ? (

@@ -15,10 +15,9 @@ http:
     type: json
     data: |-
       {
-        "vendorCode": "VEND01",
+        "vendorId": 1,
         "serviceType": "AIR",
-        "billingVendorCode": "VEND01",
-        "minWeight": 0,
+                "minWeight": 0,
         "maxWeight": 100,
         "status": "ACTIVE",
         "vendorLink": "https://vendor.com/track",
@@ -46,10 +45,9 @@ examples:
         type: json
         data: |-
           {
-            "vendorCode": "VEND01",
+            "vendorId": 1,
             "serviceType": "AIR",
-            "billingVendorCode": "VEND01",
-            "minWeight": 0,
+                        "minWeight": 0,
             "maxWeight": 100,
             "status": "ACTIVE",
             "vendorLink": "https://vendor.com/track",
@@ -105,8 +103,7 @@ examples:
             "data": {
               "id": 1,
               "vendorId": 1,
-              "billingVendorId": 1,
-              "serviceType": "AIR",
+                            "serviceType": "AIR",
               "minWeight": "0",
               "maxWeight": "100",
               "status": "ACTIVE",
@@ -125,4 +122,4 @@ docs: |-
   Service Map Master update by id. JWT + service_map_master_modify or service_map_master_all.
 
   Mandatory: (none - all optional for partial update)
-  Optional: vendorCode, serviceType, billingVendorCode, minWeight, maxWeight, status, vendorLink, isSinglePiece
+  Optional: vendorId, serviceType, minWeight, maxWeight, status, vendorLink, isSinglePiece

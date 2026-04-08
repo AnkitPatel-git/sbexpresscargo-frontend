@@ -20,7 +20,7 @@ http:
         "name": "Receiver Company Updated",
         "contactPerson": "New Contact",
         "address1": "200 Delivery Lane",
-        "pinCode": "110001",
+        "pinCodeId": "110001",
         "city": "Delhi",
         "state": "Delhi",
         "tel1": "011-12345678",
@@ -55,7 +55,7 @@ examples:
             "name": "Receiver Company Updated",
             "contactPerson": "New Contact",
             "address1": "200 Delivery Lane",
-            "pinCode": "110001",
+            "pinCodeId": "110001",
             "city": "Delhi",
             "state": "Delhi",
             "tel1": "011-12345678",
@@ -118,7 +118,7 @@ examples:
               "contactPerson": "New Contact",
               "address1": "200 Delivery Lane",
               "address2": "Floor 1",
-              "pinCode": "110001",
+              "pinCodeId": "110001",
               "city": "Delhi",
               "state": "Delhi",
               "industry": "Logistics",
@@ -143,4 +143,4 @@ docs: |-
   Consignee Master update by id. JWT + consignee_master_modify or consignee_master_all.
 
   Mandatory: (none - all optional for partial update)
-  Optional: destination, code, name, contactPerson, address1, address2, pinCode, city, state, industry, tel1, tel2, fax, email, mobile, serviceCenterCode, serviceCenterId, eori, vat
+  Optional: destination, code, name, contactPerson, address1, address2, pinCodeId, city, state, industry, tel1, tel2, fax, email, mobile, serviceCenterCode, serviceCenterId, eori, vat

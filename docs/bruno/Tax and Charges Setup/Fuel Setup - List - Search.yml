@@ -113,8 +113,7 @@ examples:
                 "vendorId": null,
                 "productId": null,
                 "destination": "CARD",
-                "service": "SURFACE",
-                "fromDate": "2026-01-01T00:00:00.000Z",
+                                "fromDate": "2026-01-01T00:00:00.000Z",
                 "toDate": "2026-01-31T00:00:00.000Z",
                 "percentage": "20",
                 "createdAt": "2026-03-24T13:03:50.772Z",
@@ -133,4 +132,4 @@ examples:
             }
           }
 
-docs: "List fuel setups. Pagination: page, limit. Sort: sortBy, sortOrder. Search: search. Filters: entryCode, customer, vendor, product, destination, service, fromDate, toDate. Response: data, total, page, limit, totalPages. JWT + fuel_setup_list/search/all."
+docs: "List fuel setups. Pagination: page, limit. Sort: sortBy, sortOrder. Search: search. Filters: entryCode, customer, vendor, product, destination, fromDate, toDate. Response: data, total, page, limit, totalPages. JWT + fuel_setup_list/search/all."

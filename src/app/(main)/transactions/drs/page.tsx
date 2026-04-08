@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Edit, Plus, Trash, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -17,16 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { PermissionGuard } from "@/components/auth/permission-guard";
@@ -41,32 +30,12 @@ export default function DrsListPage() {
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [colFilters, setColFilters] = useState({ drsNo: "", serviceCenter: "", status: "" });
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["drs", page, limit, debouncedSearch],
     queryFn: () => drsService.getDrs(page, limit, debouncedSearch),
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: drsService.deleteDrs,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["drs"] });
-      toast.success("DRS deleted successfully");
-      setDeleteId(null);
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to delete DRS");
-      setDeleteId(null);
-    },
-  });
-
-  const handleDelete = () => {
-    if (deleteId) {
-      deleteMutation.mutate(deleteId);
-    }
-  };
 
   const total = data?.total ?? 0;
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
@@ -144,8 +113,7 @@ export default function DrsListPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
-                        <PermissionGuard permission="transaction.drs.update"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => router.push(`/transactions/drs/${drs.id}/edit`)}><Edit className="h-4 w-4" /></Button></PermissionGuard>
-                        <PermissionGuard permission="transaction.drs.delete"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" onClick={() => setDeleteId(drs.id)}><Trash className="h-4 w-4" /></Button></PermissionGuard>
+                        <span className="text-xs text-muted-foreground">-</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -165,29 +133,6 @@ export default function DrsListPage() {
         </div>
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the DRS.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleDelete();
-              }}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
