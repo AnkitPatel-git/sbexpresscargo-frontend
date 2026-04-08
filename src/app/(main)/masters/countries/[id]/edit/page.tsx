@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { CountryForm } from "@/components/masters/country-form"
 import { countryService } from "@/services/masters/country-service"
 
@@ -52,14 +52,9 @@ export default function EditCountryPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Country Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <CountryForm initialData={countryData.data} />
-                </CardContent>
-            </Card>
+            <FormSection title="Country Details">
+                <CountryForm initialData={countryData.data} />
+            </FormSection>
         </div>
     )
 }

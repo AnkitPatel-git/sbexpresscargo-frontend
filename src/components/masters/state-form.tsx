@@ -12,10 +12,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -110,13 +112,11 @@ export function StateForm({ initialData }: StateFormProps) {
                         control={form.control}
                         name="stateCode"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>State Code</FormLabel>
+                            <FloatingFormItem label="State Code">
                                 <FormControl>
-                                    <Input placeholder="e.g. DL, MH" {...field} />
+                                    <Input placeholder="e.g. DL, MH" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -124,13 +124,11 @@ export function StateForm({ initialData }: StateFormProps) {
                         control={form.control}
                         name="gstAlias"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>GST Alias</FormLabel>
+                            <FloatingFormItem label="GST Alias">
                                 <FormControl>
-                                    <Input placeholder="e.g. 07, 27" {...field} />
+                                    <Input placeholder="e.g. 07, 27" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -139,13 +137,11 @@ export function StateForm({ initialData }: StateFormProps) {
                     control={form.control}
                     name="stateName"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>State Name</FormLabel>
+                        <FloatingFormItem label="State Name">
                             <FormControl>
-                                <Input placeholder="e.g. Delhi, Maharashtra" {...field} />
+                                <Input placeholder="e.g. Delhi, Maharashtra" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 
@@ -154,11 +150,10 @@ export function StateForm({ initialData }: StateFormProps) {
                         control={form.control}
                         name="productType"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Product Type</FormLabel>
+                            <FloatingFormItem label="Product Type">
                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select type" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -168,8 +163,7 @@ export function StateForm({ initialData }: StateFormProps) {
                                         <SelectItem value="LOCAL">Local</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -177,14 +171,13 @@ export function StateForm({ initialData }: StateFormProps) {
                         control={form.control}
                         name="zoneId"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Zone</FormLabel>
+                            <FloatingFormItem label="Zone">
                                 <Select
                                     onValueChange={(val) => field.onChange(parseInt(val))}
                                     value={field.value ? field.value.toString() : ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select zone" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -196,8 +189,7 @@ export function StateForm({ initialData }: StateFormProps) {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -206,20 +198,16 @@ export function StateForm({ initialData }: StateFormProps) {
                     control={form.control}
                     name="unionTerritory"
                     render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                            <FormControl>
-                                <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                                <FormLabel>
-                                    Union Territory
-                                </FormLabel>
-                                <FormMessage />
+                        <FloatingFormItem label="Union Territory">
+                            <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={(v) => field.onChange(Boolean(v))}
+                                    />
+                                </FormControl>
                             </div>
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 

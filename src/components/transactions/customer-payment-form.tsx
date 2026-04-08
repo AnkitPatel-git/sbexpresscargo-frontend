@@ -6,17 +6,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
   FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
+import {
+  FloatingFormItem,
+  FLOATING_INNER_COMBO,
+  FLOATING_INNER_CONTROL,
+  FLOATING_INNER_TEXTAREA,
+  OutlinedFieldShell,
+} from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +28,7 @@ import { customerPaymentFormSchema, CustomerPaymentFormValues, CustomerPayment }
 import { customerPaymentService } from "@/services/transactions/customer-payment-service";
 import { customerService } from "@/services/masters/customer-service";
 import { Combobox } from "@/components/ui/combobox";
+import { cn } from "@/lib/utils";
 
 interface CustomerPaymentFormProps {
   initialData?: CustomerPayment | null;
@@ -85,37 +90,34 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="customerId"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Customer <span className="text-red-500">*</span></FormLabel>
-                  <FormControl>
-                    <Combobox
-                      options={customerOptions}
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="Select Customer"
-                      searchPlaceholder="Search by name or code..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={form.control}
+            name="customerId"
+            render={({ field }) => (
+              <FloatingFormItem label={<>Customer <span className="text-red-500">*</span></>}>
+                <FormControl>
+                  <Combobox
+                    options={customerOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Customer"
+                    searchPlaceholder="Search by name or code..."
+                    className={FLOATING_INNER_COMBO}
+                  />
+                </FormControl>
+              </FloatingFormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
             name="amount"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Amount <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Amount <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} />
+                  <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -123,13 +125,11 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="date"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Date <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Date <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -137,13 +137,11 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="paidDate"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Paid Date <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Paid Date <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -151,28 +149,28 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="remark"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Remark</FormLabel>
+              <FloatingFormItem label="Remark" itemClassName="md:col-span-2">
                 <FormControl>
-                  <Textarea placeholder="Payment remarks" {...field} />
+                  <Textarea placeholder="Payment remarks" {...field} className={FLOATING_INNER_TEXTAREA} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
-          <div className="space-y-2 md:col-span-2">
-            <FormLabel>Receipt / Image File</FormLabel>
-            <Input
+          <div className="md:col-span-2 space-y-1">
+            <OutlinedFieldShell label="Receipt / Image File">
+              <Input
                 type="file"
                 onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                        setFile(e.target.files[0]);
-                    }
+                  if (e.target.files && e.target.files.length > 0) {
+                    setFile(e.target.files[0]);
+                  }
                 }}
-            />
+                className={cn(FLOATING_INNER_CONTROL, "cursor-pointer file:mr-2")}
+              />
+            </OutlinedFieldShell>
             {initialData?.fileName && (
-                <p className="text-sm text-gray-500">Current file: {initialData.fileName}</p>
+              <p className="text-sm text-muted-foreground">Current file: {initialData.fileName}</p>
             )}
           </div>
 
@@ -180,17 +178,16 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="approved"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm md:col-span-2">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Approved</FormLabel>
+              <FloatingFormItem label="Approved" itemClassName="md:col-span-2">
+                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </div>
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
         </div>

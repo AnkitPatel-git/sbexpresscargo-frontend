@@ -13,10 +13,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,7 +30,7 @@ import {
     CommandList,
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { stateService } from '@/services/masters/state-service'
 import { ServiceCenter } from '@/types/masters/service-center'
@@ -141,83 +143,64 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* General Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">General Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="General Information" contentClassName="space-y-4">
                             <FormField
                                 control={form.control}
                                 name="code"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Service Center Code</FormLabel>
+                                    <FloatingFormItem label="Service Center Code">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="e.g. SC001" />
+                                            <Input {...field} value={field.value || ''} placeholder="e.g. SC001" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="name"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Service Center Name</FormLabel>
+                                    <FloatingFormItem label="Service Center Name">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Full Name" />
+                                            <Input {...field} value={field.value || ''} placeholder="Full Name" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="subName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Sub Name (Optional)</FormLabel>
+                                    <FloatingFormItem label="Sub Name (Optional)">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="e.g. Mumbai Regional" />
+                                            <Input {...field} value={field.value || ''} placeholder="e.g. Mumbai Regional" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Contact & Tax Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Contact & Tax Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Contact & Tax Details" contentClassName="space-y-4">
                             <FormField
                                 control={form.control}
                                 name="email"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email Address</FormLabel>
+                                    <FloatingFormItem label="Email Address">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="email@example.com" />
+                                            <Input {...field} value={field.value || ''} placeholder="email@example.com" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="telephone"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Telephone</FormLabel>
+                                    <FloatingFormItem label="Telephone">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Telephone No" />
+                                            <Input {...field} value={field.value || ''} placeholder="Telephone No" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -225,88 +208,75 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                     control={form.control}
                                     name="icnNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>ICN Number</FormLabel>
+                                        <FloatingFormItem label="ICN Number">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="ICN No" />
+                                                <Input {...field} value={field.value || ''} placeholder="ICN No" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="stNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Service Tax No</FormLabel>
+                                        <FloatingFormItem label="Service Tax No">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="ST No" />
+                                                <Input {...field} value={field.value || ''} placeholder="ST No" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Address Information */}
-                    <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Address Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormSection
+                        className="md:col-span-2"
+                        title="Address Details"
+                        contentClassName="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
                             <FormField
                                 control={form.control}
                                 name="address1"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Line 1</FormLabel>
+                                    <FloatingFormItem label="Line 1">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Street Address" />
+                                            <Input {...field} value={field.value || ''} placeholder="Street Address" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="address2"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Line 2</FormLabel>
+                                    <FloatingFormItem label="Line 2">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Building/Floor" />
+                                            <Input {...field} value={field.value || ''} placeholder="Building/Floor" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="address3"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Line 3</FormLabel>
+                                    <FloatingFormItem label="Line 3">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Area/Locality" />
+                                            <Input {...field} value={field.value || ''} placeholder="Area/Locality" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="address4"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Line 4</FormLabel>
+                                    <FloatingFormItem label="Line 4">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Landmark" />
+                                            <Input {...field} value={field.value || ''} placeholder="Landmark" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
@@ -314,26 +284,22 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                     control={form.control}
                                     name="destination"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>City / Destination</FormLabel>
+                                        <FloatingFormItem label="City / Destination">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="City Name" />
+                                                <Input {...field} value={field.value || ''} placeholder="City Name" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="pinCode"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Pin Code</FormLabel>
+                                        <FloatingFormItem label="Pin Code">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="Pin Code" />
+                                                <Input {...field} value={field.value || ''} placeholder="Pin Code" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -341,8 +307,7 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                 control={form.control}
                                 name="state"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col md:col-span-2">
-                                        <FormLabel className="mb-1">State</FormLabel>
+                                    <FloatingFormItem label="State" itemClassName="md:col-span-2">
                                         <Popover open={stateOpen} onOpenChange={setStateOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -351,7 +316,7 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                                         role="combobox"
                                                         aria-expanded={stateOpen}
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -393,47 +358,40 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Logos & Assets */}
-                    <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Logos & Assets</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormSection
+                        className="md:col-span-2"
+                        title="Logos & Assets"
+                        contentClassName="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
                             <FormField
                                 control={form.control}
                                 name="companyLogo"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Company Logo URL</FormLabel>
+                                    <FloatingFormItem label="Company Logo URL">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="https://..." />
+                                            <Input {...field} value={field.value || ''} placeholder="https://..." className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="signatoryLogo"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Signatory Logo URL</FormLabel>
+                                    <FloatingFormItem label="Signatory Logo URL">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="https://..." />
+                                            <Input {...field} value={field.value || ''} placeholder="https://..." className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">

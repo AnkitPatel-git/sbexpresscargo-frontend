@@ -12,10 +12,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -93,13 +95,11 @@ export function FlightForm({ initialData }: FlightFormProps) {
                     control={form.control}
                     name="flightCode"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Flight Code</FormLabel>
+                        <FloatingFormItem label="Flight Code">
                             <FormControl>
-                                <Input placeholder="e.g. 6E101, AI201" {...field} />
+                                <Input placeholder="e.g. 6E101, AI201" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 
@@ -107,13 +107,11 @@ export function FlightForm({ initialData }: FlightFormProps) {
                     control={form.control}
                     name="flightName"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Flight Name</FormLabel>
+                        <FloatingFormItem label="Flight Name">
                             <FormControl>
-                                <Input placeholder="e.g. IndiGo Prime 101" {...field} />
+                                <Input placeholder="e.g. IndiGo Prime 101" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 
@@ -121,11 +119,10 @@ export function FlightForm({ initialData }: FlightFormProps) {
                     control={form.control}
                     name="flightType"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Flight Type</FormLabel>
+                        <FloatingFormItem label="Flight Type">
                             <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                         <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                 </FormControl>
@@ -134,8 +131,7 @@ export function FlightForm({ initialData }: FlightFormProps) {
                                     <SelectItem value="GCR">GCR</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 

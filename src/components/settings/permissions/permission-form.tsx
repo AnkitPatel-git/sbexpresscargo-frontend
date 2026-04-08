@@ -13,10 +13,8 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import { FloatingFormItem, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { permissionService } from "@/services/permission-service"
 import { Permission, CreatePermissionDto } from "@/types/permission"
@@ -82,26 +80,22 @@ export function PermissionForm({ initialData }: PermissionFormProps) {
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Name</FormLabel>
+                            <FloatingFormItem label="Name">
                                 <FormControl>
-                                    <Input placeholder="e.g. User Master - List" {...field} />
+                                    <Input placeholder="e.g. User Master - List" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="underMenu"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Under Menu / Module</FormLabel>
+                            <FloatingFormItem label="Under Menu / Module">
                                 <FormControl>
-                                    <Input placeholder="e.g. Masters" {...field} />
+                                    <Input placeholder="e.g. Masters" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -110,13 +104,11 @@ export function PermissionForm({ initialData }: PermissionFormProps) {
                     control={form.control}
                     name="description"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Description</FormLabel>
+                        <FloatingFormItem label="Description">
                             <FormControl>
-                                <Input placeholder="Describe what this permission allows" {...field} />
+                                <Input placeholder="Describe what this permission allows" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 

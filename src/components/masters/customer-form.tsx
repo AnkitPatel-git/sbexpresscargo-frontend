@@ -13,10 +13,13 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,7 +38,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { customerService } from '@/services/masters/customer-service'
 import { stateService } from '@/services/masters/state-service'
 import { Customer } from '@/types/masters/customer'
@@ -142,36 +145,28 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Basic Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Basic Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Basic Information" contentClassName="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="code"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Customer Code</FormLabel>
+                                        <FloatingFormItem label="Customer Code">
                                             <FormControl>
-                                                <Input {...field} placeholder="e.g. CUST01" />
+                                                <Input {...field} placeholder="e.g. CUST01" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Customer Name</FormLabel>
+                                        <FloatingFormItem label="Customer Name">
                                             <FormControl>
-                                                <Input {...field} placeholder="e.g. Acme Corp" />
+                                                <Input {...field} placeholder="e.g. Acme Corp" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -179,48 +174,37 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                 control={form.control}
                                 name="contactPerson"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Contact Person</FormLabel>
+                                    <FloatingFormItem label="Contact Person">
                                         <FormControl>
-                                            <Input {...field} placeholder="Full Name" />
+                                            <Input {...field} placeholder="Full Name" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="gstNo"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>GST Number</FormLabel>
+                                    <FloatingFormItem label="GST Number">
                                         <FormControl>
-                                            <Input {...field} placeholder="15-digit GSTIN" />
+                                            <Input {...field} placeholder="15-digit GSTIN" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Contact Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Contact Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Contact Details" contentClassName="space-y-4">
                             <FormField
                                 control={form.control}
                                 name="email"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email Address</FormLabel>
+                                    <FloatingFormItem label="Email Address">
                                         <FormControl>
-                                            <Input {...field} placeholder="email@example.com" />
+                                            <Input {...field} placeholder="email@example.com" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -228,83 +212,71 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="telNo1"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Telephone</FormLabel>
+                                        <FloatingFormItem label="Telephone">
                                             <FormControl>
-                                                <Input {...field} placeholder="Telephone No" />
+                                                <Input {...field} placeholder="Telephone No" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="mobile"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Mobile</FormLabel>
+                                        <FloatingFormItem label="Mobile">
                                             <FormControl>
-                                                <Input {...field} placeholder="Mobile No" />
+                                                <Input {...field} placeholder="Mobile No" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Address Information */}
-                    <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Address Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormSection
+                        className="md:col-span-2"
+                        title="Address Details"
+                        contentClassName="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
                             <FormField
                                 control={form.control}
                                 name="address1"
                                 render={({ field }) => (
-                                    <FormItem className="md:col-span-2">
-                                        <FormLabel>Address / Building</FormLabel>
+                                    <FloatingFormItem label="Address / Building" itemClassName="md:col-span-2">
                                         <FormControl>
-                                            <Input {...field} placeholder="Street address, building, floor" />
+                                            <Input {...field} placeholder="Street address, building, floor" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="city"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>City</FormLabel>
+                                    <FloatingFormItem label="City">
                                         <FormControl>
-                                            <Input {...field} placeholder="City" />
+                                            <Input {...field} placeholder="City" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="pinCode"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Pin Code</FormLabel>
+                                    <FloatingFormItem label="Pin Code">
                                         <FormControl>
-                                            <Input {...field} placeholder="Pin Code" />
+                                            <Input {...field} placeholder="Pin Code" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="state"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col md:col-span-2">
-                                        <FormLabel className="mb-1">State</FormLabel>
+                                    <FloatingFormItem label="State" itemClassName="md:col-span-2">
                                         <Popover open={stateOpen} onOpenChange={setStateOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -313,7 +285,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                         role="combobox"
                                                         aria-expanded={stateOpen}
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -355,28 +327,25 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Classification & Status */}
-                    <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Classification & Status</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FormSection
+                        className="md:col-span-2"
+                        title="Classification & Status"
+                        contentClassName="grid grid-cols-1 md:grid-cols-3 gap-6"
+                    >
                             <FormField
                                 control={form.control}
                                 name="customerType"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Customer Type</FormLabel>
+                                    <FloatingFormItem label="Customer Type">
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                     <SelectValue placeholder="Select type" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -386,19 +355,17 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                 <SelectItem value="AGENT">Agent</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="registerType"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Register Type</FormLabel>
+                                    <FloatingFormItem label="Register Type">
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                     <SelectValue placeholder="Select type" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -407,19 +374,17 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                 <SelectItem value="UNREGISTERED">Unregistered</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="status"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Status</FormLabel>
+                                    <FloatingFormItem label="Status">
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                     <SelectValue placeholder="Select status" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -428,12 +393,10 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                 <SelectItem value="INACTIVE">Inactive</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">

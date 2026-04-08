@@ -3,7 +3,7 @@
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { CountryForm } from "@/components/masters/country-form"
 
 export default function CreateCountryPage() {
@@ -23,14 +23,9 @@ export default function CreateCountryPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Country Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <CountryForm />
-                </CardContent>
-            </Card>
+            <FormSection title="Country Details">
+                <CountryForm />
+            </FormSection>
         </div>
     )
 }

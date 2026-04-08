@@ -1,7 +1,7 @@
 "use client"
 
 import { ProductForm } from "@/components/masters/product-form"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -23,14 +23,9 @@ export default function CreateProductPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Product Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ProductForm />
-                </CardContent>
-            </Card>
+            <FormSection title="Product Details">
+                <ProductForm />
+            </FormSection>
         </div>
     )
 }

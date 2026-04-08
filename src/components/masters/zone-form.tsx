@@ -7,16 +7,19 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
+import { Check, Loader2, Search } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import {
     Popover,
     PopoverContent,
@@ -118,26 +121,22 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Zone Name</FormLabel>
+                            <FloatingFormItem label="Zone Name">
                                 <FormControl>
-                                    <Input placeholder="Enter zone name" {...field} />
+                                    <Input placeholder="Enter zone name" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Zone Code</FormLabel>
+                            <FloatingFormItem label="Zone Code">
                                 <FormControl>
-                                    <Input placeholder="Enter zone code" {...field} disabled={isEdit} />
+                                    <Input placeholder="Enter zone code" {...field} disabled={isEdit} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -147,8 +146,7 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         control={form.control}
                         name="country"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Country</FormLabel>
+                            <FloatingFormItem label="Country" itemClassName="flex flex-col">
                                 <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -156,12 +154,12 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                                                 variant="outline"
                                                 role="combobox"
                                                 className={cn(
-                                                    "w-full justify-between font-normal",
+                                                    FLOATING_INNER_COMBO,
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
                                                 {field.value || "Select country"}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </FormControl>
                                     </PopoverTrigger>
@@ -196,22 +194,20 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="zoneType"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Zone Type</FormLabel>
+                            <FloatingFormItem label="Zone Type">
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select zone type" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -220,8 +216,7 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                                         <SelectItem value="VENDOR">Vendor</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>

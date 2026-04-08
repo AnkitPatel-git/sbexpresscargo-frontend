@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,14 +12,21 @@ import {
   Form,
   FormControl,
   FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
+import {
+  FloatingFormItem,
+  FLOATING_INNER_COMBO,
+  FLOATING_INNER_CONTROL,
+  FLOATING_INNER_TEXTAREA,
+} from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { creditNoteFormSchema, CreditNoteFormValues, CreditNote } from "@/types/transactions/credit-note";
+import {
+  creditNoteFormSchema,
+  CreditNoteFormValues,
+  CreditNote,
+} from "@/types/transactions/credit-note";
 import { creditNoteService } from "@/services/transactions/credit-note-service";
 import { customerService } from "@/services/masters/customer-service";
 import { Combobox } from "@/components/ui/combobox";
@@ -38,10 +45,11 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
     queryFn: () => customerService.getCustomers({ limit: 100 }),
   });
 
-  const customerOptions = customersResponse?.data.map((c) => ({
-    label: `${c.name} (${c.code || c.id})`,
-    value: c.id,
-  })) || [];
+  const customerOptions =
+    customersResponse?.data.map((c) => ({
+      label: `${c.name} (${c.code || c.id})`,
+      value: c.id,
+    })) || [];
 
   const form = useForm<CreditNoteFormValues>({
     resolver: zodResolver(creditNoteFormSchema),
@@ -49,7 +57,9 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
       noteNo: initialData?.noteNo || "",
       creditNoteNo: initialData?.creditNoteNo || undefined,
       version: initialData?.version || undefined,
-      cnDate: initialData?.cnDate ? initialData.cnDate.split("T")[0] : new Date().toISOString().split("T")[0],
+      cnDate: initialData?.cnDate
+        ? initialData.cnDate.split("T")[0]
+        : new Date().toISOString().split("T")[0],
       customerId: initialData?.customerId || undefined,
       invoiceRef: initialData?.invoiceRef || "",
       narration: initialData?.narration || "",
@@ -58,10 +68,14 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
       igst: initialData?.igst ? parseFloat(initialData.igst) : undefined,
       sgst: initialData?.sgst ? parseFloat(initialData.sgst) : undefined,
       cgst: initialData?.cgst ? parseFloat(initialData.cgst) : undefined,
-      totalAmount: initialData?.totalAmount ? parseFloat(initialData.totalAmount) : undefined,
-      grandTotal: initialData?.grandTotal ? parseFloat(initialData.grandTotal) : undefined,
+      totalAmount: initialData?.totalAmount
+        ? parseFloat(initialData.totalAmount)
+        : undefined,
+      grandTotal: initialData?.grandTotal
+        ? parseFloat(initialData.grandTotal)
+        : undefined,
       serviceCenterId: initialData?.serviceCenterId || undefined,
-      items: initialData?.items?.map(item => ({
+      items: initialData?.items?.map((item) => ({
         id: item.id || undefined,
         awbNo: item.awbNo || "",
         destination: item.destination || undefined,
@@ -93,9 +107,15 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["credit-notes"] });
       if (isEditing) {
-        queryClient.invalidateQueries({ queryKey: ["credit-note", initialData.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["credit-note", initialData.id],
+        });
       }
-      toast.success(isEditing ? "Credit note updated successfully" : "Credit note created successfully");
+      toast.success(
+        isEditing
+          ? "Credit note updated successfully"
+          : "Credit note created successfully",
+      );
       router.push("/transactions/credit-note");
     },
     onError: (error) => {
@@ -108,43 +128,61 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
     mutation.mutate(values);
   }
 
-  const onFormError = (errors: any) => {
+  const onFormError = (errors: FieldErrors<CreditNoteFormValues>) => {
     console.error("Form validation errors:", errors);
-    
+
     // Helper to get nested error message
-    const getErrorMessage = (error: any): string => {
+    const getErrorMessage = (error: unknown): string => {
       if (!error) return "";
-      if (error.message) return error.message;
-      if (Array.isArray(error)) {
-        return error.map((e, i) => e ? `Item ${i + 1}: ${getErrorMessage(e)}` : null).filter(Boolean).join(", ");
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof error.message === "string"
+      ) {
+        return error.message;
       }
-      if (typeof error === 'object') {
-        const firstKey = Object.keys(error)[0];
-        return `${firstKey}: ${getErrorMessage(error[firstKey])}`;
+      if (Array.isArray(error)) {
+        return error
+          .map((e, i) => (e ? `Item ${i + 1}: ${getErrorMessage(e)}` : null))
+          .filter(Boolean)
+          .join(", ");
+      }
+      if (typeof error === "object") {
+        const errorRecord = error as Record<string, unknown>;
+        const firstKey = Object.keys(errorRecord)[0];
+        if (!firstKey) return "Validation failed";
+        return `${firstKey}: ${getErrorMessage(errorRecord[firstKey])}`;
       }
       return "Validation failed";
     };
 
-    const firstKey = Object.keys(errors)[0];
+    const errorKeys = Object.keys(errors) as Array<keyof CreditNoteFormValues>;
+    const firstKey = errorKeys[0];
+    if (!firstKey) {
+      toast.error("Validation Error: Please check the form");
+      return;
+    }
     const message = getErrorMessage(errors[firstKey]);
-    toast.error(`Validation Error: ${message} (${firstKey})`);
+    toast.error(`Validation Error: ${message} (${String(firstKey)})`);
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, onFormError)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, onFormError)}
+        className="space-y-6"
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="noteNo"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Note No <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Note No <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input placeholder="Note No" {...field} />
+                  <Input placeholder="Note No" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -152,13 +190,11 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             control={form.control}
             name="cnDate"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Date <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Date <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -166,8 +202,7 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             control={form.control}
             name="customerId"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Customer <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Customer <span className="text-red-500">*</span></>}>
                 <FormControl>
                   <Combobox
                     options={customerOptions}
@@ -175,10 +210,10 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
                     onChange={field.onChange}
                     placeholder="Select Customer"
                     searchPlaceholder="Search by name or code..."
+                    className={FLOATING_INNER_COMBO}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -186,27 +221,36 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             control={form.control}
             name="invoiceRef"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Invoice Reference</FormLabel>
+              <FloatingFormItem label="Invoice Reference">
                 <FormControl>
-                  <Input placeholder="Invoice Ref" {...field} />
+                  <Input placeholder="Invoice Ref" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
-           <FormField
+          <FormField
             control={form.control}
             name="amount"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Base Amount</FormLabel>
+              <FloatingFormItem label="Base Amount">
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    className={FLOATING_INNER_CONTROL}
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value === ""
+                          ? undefined
+                          : parseFloat(e.target.value),
+                      )
+                    }
+                  />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -214,13 +258,24 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             control={form.control}
             name="grandTotal"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Grand Total</FormLabel>
+              <FloatingFormItem label="Grand Total">
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    className={FLOATING_INNER_CONTROL}
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value === ""
+                          ? undefined
+                          : parseFloat(e.target.value),
+                      )
+                    }
+                  />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -228,13 +283,11 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             control={form.control}
             name="narration"
             render={({ field }) => (
-              <FormItem className="md:col-span-3">
-                <FormLabel>Narration</FormLabel>
+              <FloatingFormItem label="Narration" itemClassName="md:col-span-3">
                 <FormControl>
-                  <Textarea placeholder="Narration or reason" {...field} />
+                  <Textarea placeholder="Narration or reason" {...field} className={FLOATING_INNER_TEXTAREA} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -242,17 +295,16 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             control={form.control}
             name="gst"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm md:col-span-1">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Includes GST</FormLabel>
+              <FloatingFormItem label="Includes GST" itemClassName="md:col-span-1">
+                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </div>
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
         </div>
@@ -273,18 +325,19 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
 
           <div className="space-y-4">
             {fields.map((field, index) => (
-              <div key={field.id} className="flex flex-wrap gap-4 items-end border p-4 rounded-md bg-gray-50/50">
+              <div
+                key={field.id}
+                className="flex flex-wrap gap-4 items-end border p-4 rounded-md bg-gray-50/50"
+              >
                 <FormField
                   control={form.control}
                   name={`items.${index}.awbNo`}
                   render={({ field }) => (
-                    <FormItem className="flex-1 min-w-[200px]">
-                      <FormLabel>AWB No</FormLabel>
+                    <FloatingFormItem label="AWB No" itemClassName="min-w-[200px] flex-1">
                       <FormControl>
-                        <Input placeholder="AWB No" {...field} />
+                        <Input placeholder="AWB No" {...field} className={FLOATING_INNER_CONTROL} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
 
@@ -292,13 +345,24 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
                   control={form.control}
                   name={`items.${index}.amount`}
                   render={({ field }) => (
-                    <FormItem className="w-32">
-                      <FormLabel>Amount</FormLabel>
+                    <FloatingFormItem label="Amount" itemClassName="w-32 shrink-0">
                       <FormControl>
-                        <Input type="number" step="0.01" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className={FLOATING_INNER_CONTROL}
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? undefined
+                                : parseFloat(e.target.value),
+                            )
+                          }
+                        />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
 
@@ -306,13 +370,11 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
                   control={form.control}
                   name={`items.${index}.remark`}
                   render={({ field }) => (
-                    <FormItem className="flex-1 min-w-[200px]">
-                      <FormLabel>Remark</FormLabel>
+                    <FloatingFormItem label="Remark" itemClassName="min-w-[200px] flex-1">
                       <FormControl>
-                        <Input placeholder="Remark" {...field} />
+                        <Input placeholder="Remark" {...field} className={FLOATING_INNER_CONTROL} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
 
@@ -329,7 +391,7 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             ))}
             {fields.length === 0 && (
               <div className="text-center py-4 text-gray-500 border rounded-md border-dashed">
-                No items added. Click "Add Item" to begin.
+                No items added. Click &quot;Add Item&quot; to begin.
               </div>
             )}
           </div>
@@ -345,7 +407,9 @@ export function CreditNoteForm({ initialData }: CreditNoteFormProps) {
             Cancel
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {mutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
             {isEditing ? "Update" : "Create"} Credit Note
           </Button>
         </div>

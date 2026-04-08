@@ -6,8 +6,8 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { OutlinedFieldShell, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item";
 import { userService } from "@/services/user-service";
 import { useAuth } from "@/context/auth-context";
 
@@ -48,18 +48,15 @@ export default function ChangePasswordPage() {
       </div>
 
       <div className="space-y-4">
-        <div className="space-y-1.5">
-          <Label>Current Password</Label>
-          <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>New Password</Label>
-          <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Confirm New Password</Label>
-          <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-        </div>
+        <OutlinedFieldShell label="Current Password">
+          <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={FLOATING_INNER_CONTROL} />
+        </OutlinedFieldShell>
+        <OutlinedFieldShell label="New Password">
+          <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={FLOATING_INNER_CONTROL} />
+        </OutlinedFieldShell>
+        <OutlinedFieldShell label="Confirm New Password">
+          <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={FLOATING_INNER_CONTROL} />
+        </OutlinedFieldShell>
       </div>
 
       <div className="mt-5">

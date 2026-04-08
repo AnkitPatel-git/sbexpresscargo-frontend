@@ -5,17 +5,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Search } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
   FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
+import {
+  FloatingFormItem,
+  FLOATING_INNER_COMBO,
+  FLOATING_INNER_CONTROL,
+  FLOATING_INNER_TEXTAREA,
+} from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
@@ -115,13 +118,11 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="drsNo"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>DRS No <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>DRS No <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input placeholder="DRS No" {...field} />
+                  <Input placeholder="DRS No" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -129,13 +130,11 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="drsDate"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>DRS Date <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>DRS Date <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -143,13 +142,11 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="drsTime"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>DRS Time</FormLabel>
+              <FloatingFormItem label="DRS Time">
                 <FormControl>
-                  <Input type="time" {...field} />
+                  <Input type="time" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -157,18 +154,17 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="courierId"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vendor</FormLabel>
+              <FloatingFormItem label="Vendor">
                 <FormControl>
                   <Combobox
                     options={vendorOptions}
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="Select Vendor"
+                    className={FLOATING_INNER_COMBO}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -176,18 +172,17 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="areaId"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Area</FormLabel>
+              <FloatingFormItem label="Area">
                 <FormControl>
                   <Combobox
                     options={areaOptions}
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="Select Area"
+                    className={FLOATING_INNER_COMBO}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -195,18 +190,17 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="serviceCenterId"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Service Center</FormLabel>
+              <FloatingFormItem label="Service Center">
                 <FormControl>
                   <Combobox
                     options={serviceCenterOptions}
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="Select Service Center"
+                    className={FLOATING_INNER_COMBO}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -214,13 +208,11 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="remark"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Remark</FormLabel>
+              <FloatingFormItem label="Remark" itemClassName="md:col-span-2">
                 <FormControl>
-                  <Textarea placeholder="Remarks or notes" {...field} />
+                  <Textarea placeholder="Remarks or notes" {...field} className={FLOATING_INNER_TEXTAREA} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
         </div>
@@ -246,13 +238,11 @@ export function DrsForm({ initialData }: DrsFormProps) {
                   control={form.control}
                   name={`items.${index}.awbNo`}
                   render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>AWB No</FormLabel>
+                    <FloatingFormItem label="AWB No" itemClassName="flex-1">
                       <FormControl>
-                        <Input placeholder="Scan or type AWB No" {...field} />
+                        <Input placeholder="Scan or type AWB No" {...field} className={FLOATING_INNER_CONTROL} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
 
@@ -271,7 +261,7 @@ export function DrsForm({ initialData }: DrsFormProps) {
             ))}
             {fields.length === 0 && (
               <div className="text-center py-4 text-gray-500 border rounded-md border-dashed">
-                No items added. Click "Add Scan" to begin.
+                No items added. Click &quot;Add Scan&quot; to begin.
               </div>
             )}
           </div>

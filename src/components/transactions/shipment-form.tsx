@@ -31,6 +31,7 @@ import {
     FLOATING_INNER_COMBO,
     FLOATING_INNER_CONTROL,
     OutlinedFieldShell,
+    OutlinedFormSection,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -50,7 +51,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
@@ -571,8 +572,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-20">
                 <div className="rounded-md border border-border bg-card p-3">
                     <div className="space-y-3">
-                        <Card className="border-border">
-                            <CardContent className="space-y-3 p-3">
+                        <FormSection title="Booking & Client" contentClassName="space-y-3 px-3 pb-3 pt-6">
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
                                     <FormField
                                         control={form.control}
@@ -645,13 +645,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         )}
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
+                        </FormSection>
 
                         <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-                            <Card className="relative border-border">
-                                <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Shipper Details</div>
-                                <CardContent className="space-y-3 p-3 pt-6">
+                            <FormSection title="Shipper Details" contentClassName="space-y-3 p-3 pt-6">
                                     <FormField
                                         control={form.control}
                                         name="shipperId"
@@ -826,12 +823,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             )}
                                         />
                                     </div>
-                                </CardContent>
-                            </Card>
+                            </FormSection>
 
-                            <Card className="relative border-border">
-                                <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Consignee Details</div>
-                                <CardContent className="space-y-3 p-3 pt-6">
+                            <FormSection title="Consignee Details" contentClassName="space-y-3 p-3 pt-6">
                                     <FormField
                                         control={form.control}
                                         name="consigneeId"
@@ -1006,12 +1000,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             )}
                                         />
                                     </div>
-                                </CardContent>
-                            </Card>
+                            </FormSection>
 
-                            <Card className="relative border-border">
-                                <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Services Details</div>
-                                <CardContent className="space-y-3 p-3 pt-6">
+                            <FormSection title="Services Details" contentClassName="space-y-3 p-3 pt-6">
                                     <FormField
                                         control={form.control}
                                         name="productId"
@@ -1254,43 +1245,49 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             )}
                                         />
                                     </div>
-                                </CardContent>
-                            </Card>
+                            </FormSection>
                         </div>
                     </div>
                 </div>
 
                 {/* Section 5: Piece Details */}
-                <Card className="relative border-border">
-                    <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Piece Details</div>
-                    <CardContent className="space-y-3 p-3 pt-6">
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                            <Button type="button" variant="outline" size="sm" onClick={() => templateMutation.mutate()} disabled={templateMutation.isPending}>
-                                Download Template
-                            </Button>
-                            <OutlinedFieldShell label="Import CSV" className="w-[230px]">
-                                <Input
-                                    type="file"
-                                    accept=".csv"
-                                    onChange={handlePiecesCsvUpload}
-                                    className={cn(FLOATING_INNER_CONTROL, "cursor-pointer file:mr-2")}
-                                />
-                            </OutlinedFieldShell>
-                            <Button type="button" variant="outline" size="sm" onClick={() => appendPiece({ pieces: 1, actualWeightPerPc: 0 })}>
-                                <Plus className="mr-2 h-4 w-4" /> Add Piece
-                            </Button>
-                        </div>
+                <OutlinedFormSection label="Piece Details" labelTone="navy">
+                    <div className="flex flex-wrap items-end justify-end gap-2 border-b border-border/70 pb-3">
+                        <Button type="button" variant="outline" size="sm" onClick={() => templateMutation.mutate()} disabled={templateMutation.isPending}>
+                            Download Template
+                        </Button>
+                        <OutlinedFieldShell label="Import CSV" className="w-full min-w-[200px] sm:w-[230px]">
+                            <Input
+                                type="file"
+                                accept=".csv"
+                                onChange={handlePiecesCsvUpload}
+                                className={cn(FLOATING_INNER_CONTROL, "cursor-pointer file:mr-2")}
+                            />
+                        </OutlinedFieldShell>
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendPiece({ pieces: 1, actualWeightPerPc: 0 })}>
+                            <Plus className="mr-2 h-4 w-4" /> Add Piece
+                        </Button>
+                    </div>
+                    <div className="overflow-hidden rounded-md border border-border/70 bg-muted/20">
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Child AWB</TableHead>
-                                    <TableHead>Pcs</TableHead>
-                                    <TableHead>Weight/Pc</TableHead>
-                                    <TableHead>L</TableHead>
-                                    <TableHead>W</TableHead>
-                                    <TableHead>H</TableHead>
-                                    <TableHead>Vol. Weight</TableHead>
-                                    <TableHead className="w-[50px]"></TableHead>
+                                <TableRow className="border-b-0 bg-primary hover:bg-primary">
+                                    <TableHead className="whitespace-nowrap text-primary-foreground first:rounded-tl-md">
+                                        Child AWB
+                                    </TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">
+                                        Pcs
+                                    </TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">
+                                        Weight/Pc
+                                    </TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">L</TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">W</TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">H</TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">
+                                        Vol. Weight
+                                    </TableHead>
+                                    <TableHead className="w-[50px] text-primary-foreground last:rounded-tr-md" />
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1326,35 +1323,40 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 ))}
                                 {pieceFields.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center text-muted-foreground py-4">
+                                        <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
                                             No piece details added.
                                         </TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
-                    </CardContent>
-                </Card>
+                    </div>
+                </OutlinedFormSection>
 
                 {/* Section 6: Charges */}
-                <Card className="relative border-border">
-                    <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Charge Details</div>
-                    <CardContent className="space-y-3 p-3 pt-6">
-                        <div className="flex justify-end">
-                            <Button type="button" variant="outline" size="sm" onClick={() => appendCharge({ chargeId: 0, amount: 0, fuelApply: false, taxApply: false, taxOnFuel: false })}>
-                                <Plus className="mr-2 h-4 w-4" /> Add Charge
-                            </Button>
-                        </div>
+                <OutlinedFormSection label="Charge Details" labelTone="navy">
+                    <div className="flex justify-end border-b border-border/70 pb-3">
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendCharge({ chargeId: 0, amount: 0, fuelApply: false, taxApply: false, taxOnFuel: false })}>
+                            <Plus className="mr-2 h-4 w-4" /> Add Charge
+                        </Button>
+                    </div>
+                    <div className="overflow-hidden rounded-md border border-border/70 bg-muted/20">
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Charge</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead>Fuel</TableHead>
-                                    <TableHead>Tax</TableHead>
-                                    <TableHead>Total</TableHead>
-                                    <TableHead className="w-[50px]"></TableHead>
+                                <TableRow className="border-b-0 bg-primary hover:bg-primary">
+                                    <TableHead className="whitespace-nowrap text-primary-foreground first:rounded-tl-md">
+                                        Charge
+                                    </TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">
+                                        Description
+                                    </TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">
+                                        Amount
+                                    </TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">Fuel</TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">Tax</TableHead>
+                                    <TableHead className="whitespace-nowrap text-primary-foreground">Total</TableHead>
+                                    <TableHead className="w-[50px] text-primary-foreground last:rounded-tr-md" />
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1376,15 +1378,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <Input type="number" {...form.register(`charges.${index}.amount` as const, { valueAsNumber: true })} className="h-8 w-24" />
                                         </TableCell>
                                         <TableCell>
-                                            <Switch 
-                                                checked={form.watch(`charges.${index}.fuelApply`)} 
-                                                onCheckedChange={(val) => form.setValue(`charges.${index}.fuelApply`, val)} 
+                                            <Switch
+                                                checked={form.watch(`charges.${index}.fuelApply`)}
+                                                onCheckedChange={(val) => form.setValue(`charges.${index}.fuelApply`, val)}
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <Switch 
-                                                checked={form.watch(`charges.${index}.taxApply`)} 
-                                                onCheckedChange={(val) => form.setValue(`charges.${index}.taxApply`, val)} 
+                                            <Switch
+                                                checked={form.watch(`charges.${index}.taxApply`)}
+                                                onCheckedChange={(val) => form.setValue(`charges.${index}.taxApply`, val)}
                                             />
                                         </TableCell>
                                         <TableCell>
@@ -1397,14 +1399,19 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                                {chargeFields.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+                                            No charges added.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
-                    </CardContent>
-                </Card>
+                    </div>
+                </OutlinedFormSection>
 
-                <Card className="relative border-border">
-                    <div className="absolute -top-3 left-3 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Shipment Type</div>
-                    <CardContent className="grid grid-cols-1 gap-3 p-3 pt-6 md:grid-cols-2">
+                <FormSection title="Shipment Type" contentClassName="grid grid-cols-1 gap-3 p-3 pt-6 md:grid-cols-2">
                         <FormField
                             control={form.control}
                             name="content"
@@ -1427,8 +1434,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 </FloatingFormItem>
                             )}
                         />
-                    </CardContent>
-                </Card>
+                </FormSection>
 
                 {/* Submit Buttons */}
                 <div className="sticky bottom-0 z-20 flex justify-end gap-3 border-t bg-white pb-4 pt-4">

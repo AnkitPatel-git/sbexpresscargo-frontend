@@ -1,22 +1,24 @@
 "use client";
 
-import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Search } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
   FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
+import {
+  FloatingFormItem,
+  FLOATING_INNER_COMBO,
+  FLOATING_INNER_CONTROL,
+  FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -98,10 +100,8 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
   });
 
   function onSubmit(values: ManifestFormValues) {
-    // Combine date and time into a full ISO 8601 string
     const manifestAt = new Date(`${values.manifestDate}T${values.manifestTime || "10:00"}:00`).toISOString();
-    
-    // @ts-ignore - The API expects ISO string for manifestDate in this case
+
     const payload = {
       ...values,
       manifestDate: manifestAt,
@@ -113,7 +113,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
         return;
     }
 
-    mutation.mutate(payload as any);
+    mutation.mutate(payload as ManifestFormValues & { manifestDate: string });
   }
 
   return (
@@ -124,8 +124,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="shipmentIds"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Shipment IDs <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Shipment IDs <span className="text-red-500">*</span></>} itemClassName="md:col-span-2">
                 <FormControl>
                   <MultiSelect
                     options={shipmentOptions}
@@ -133,10 +132,10 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
                     onChange={field.onChange}
                     placeholder="Select shipments..."
                     searchPlaceholder="Search AWB..."
+                    className={FLOATING_INNER_COMBO}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -144,13 +143,11 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="manifestNo"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Manifest No <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Manifest No <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input placeholder="Manifest No" {...field} />
+                  <Input placeholder="Manifest No" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -158,13 +155,11 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="masterAwbNo"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Master AWB No</FormLabel>
+              <FloatingFormItem label="Master AWB No">
                 <FormControl>
-                  <Input placeholder="Master AWB No" {...field} />
+                  <Input placeholder="Master AWB No" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -172,13 +167,11 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="manifestDate"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Manifest Date <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Manifest Date <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -186,13 +179,11 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="manifestTime"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Manifest Time</FormLabel>
+              <FloatingFormItem label="Manifest Time">
                 <FormControl>
-                  <Input type="time" {...field} />
+                  <Input type="time" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -200,13 +191,11 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="location"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Location</FormLabel>
+              <FloatingFormItem label="Location">
                 <FormControl>
-                  <Input placeholder="Location" {...field} />
+                  <Input placeholder="Location" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -214,13 +203,11 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="connectStation"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Connect Station</FormLabel>
+              <FloatingFormItem label="Connect Station">
                 <FormControl>
-                  <Input placeholder="Connect Station" {...field} />
+                  <Input placeholder="Connect Station" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -228,11 +215,10 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="format"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Format</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FloatingFormItem label="Format">
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                       <SelectValue placeholder="Select format" />
                     </SelectTrigger>
                   </FormControl>
@@ -241,8 +227,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
                     <SelectItem value="detailed">Detailed</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -250,11 +235,10 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="pdfType"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>PDF Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FloatingFormItem label="PDF Type">
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                       <SelectValue placeholder="Select PDF type" />
                     </SelectTrigger>
                   </FormControl>
@@ -263,8 +247,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
                     <SelectItem value="Letter">Letter</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -272,13 +255,11 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="accountNo"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Account No</FormLabel>
+              <FloatingFormItem label="Account No">
                 <FormControl>
-                  <Input placeholder="Account No" {...field} />
+                  <Input placeholder="Account No" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -286,13 +267,11 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="department"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Department</FormLabel>
+              <FloatingFormItem label="Department">
                 <FormControl>
-                  <Input placeholder="Department" {...field} />
+                  <Input placeholder="Department" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -300,17 +279,16 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="singleLine"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm md:col-span-2">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Single Line</FormLabel>
+              <FloatingFormItem label="Single Line" itemClassName="md:col-span-2">
+                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </div>
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
         </div>
@@ -331,64 +309,56 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
 
           <div className="space-y-4">
             {fields.map((field, index) => (
-              <div key={field.id} className="flex gap-4 items-end border p-4 rounded-md">
+              <div key={field.id} className="flex flex-wrap gap-4 items-end border p-4 rounded-md">
                 <FormField
                   control={form.control}
                   name={`items.${index}.bagNo`}
                   render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Bag No</FormLabel>
+                    <FloatingFormItem label="Bag No" itemClassName="min-w-[120px] flex-1">
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} className={FLOATING_INNER_CONTROL} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
                   name={`items.${index}.awbNo`}
                   render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>AWB No</FormLabel>
+                    <FloatingFormItem label="AWB No" itemClassName="min-w-[120px] flex-1">
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} className={FLOATING_INNER_CONTROL} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
                   name={`items.${index}.pieces`}
                   render={({ field }) => (
-                    <FormItem className="w-24">
-                      <FormLabel>Pieces</FormLabel>
+                    <FloatingFormItem label="Pieces" itemClassName="w-24 shrink-0">
                       <FormControl>
-                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                        <Input type="number" {...field} className={FLOATING_INNER_CONTROL} onChange={e => field.onChange(parseInt(e.target.value, 10))} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
                   name={`items.${index}.chargeWeight`}
                   render={({ field }) => (
-                    <FormItem className="w-32">
-                      <FormLabel>Weight</FormLabel>
+                    <FloatingFormItem label="Weight" itemClassName="w-32 shrink-0">
                       <FormControl>
-                        <Input type="number" step="0.1" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                        <Input type="number" step="0.1" {...field} className={FLOATING_INNER_CONTROL} onChange={e => field.onChange(parseFloat(e.target.value))} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-100 shrink-0"
                   onClick={() => remove(index)}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -397,7 +367,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             ))}
             {fields.length === 0 && (
               <div className="text-center py-4 text-gray-500 border rounded-md border-dashed">
-                No items added. Click "Add Item" to begin.
+                No items added. Click &quot;Add Item&quot; to begin.
               </div>
             )}
           </div>

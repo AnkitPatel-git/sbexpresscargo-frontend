@@ -13,10 +13,8 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import { FloatingFormItem, FLOATING_INNER_COMBO, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -126,13 +124,11 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="pinCode"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Pin Code</FormLabel>
+                            <FloatingFormItem label="Pin Code">
                                 <FormControl>
-                                    <Input placeholder="e.g. 110001" disabled={isEdit} {...field} />
+                                    <Input placeholder="e.g. 110001" disabled={isEdit} {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -140,13 +136,11 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="pinCodeName"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Pin Code Name</FormLabel>
+                            <FloatingFormItem label="Pin Code Name">
                                 <FormControl>
-                                    <Input placeholder="e.g. NEW DELHI" {...field} />
+                                    <Input placeholder="e.g. NEW DELHI" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -154,8 +148,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="serviceCenterId"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Service Center</FormLabel>
+                            <FloatingFormItem label="Service Center">
                                 <Popover open={scOpen} onOpenChange={setScOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -163,7 +156,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                                 variant="outline"
                                                 role="combobox"
                                                 className={cn(
-                                                    "w-full justify-between font-normal",
+                                                    FLOATING_INNER_COMBO,
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
@@ -210,8 +203,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -219,32 +211,29 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="destination"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Destination</FormLabel>
+                            <FloatingFormItem label="Destination">
                                 <FormControl>
-                                    <Input placeholder="e.g. NEW DELHI" {...field} />
+                                    <Input placeholder="e.g. NEW DELHI" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
-                    <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                    <div className="flex flex-col sm:flex-row gap-4 pt-2 md:col-span-2">
                         <FormField
                             control={form.control}
                             name="serviceable"
                             render={({ field }) => (
-                                <FormItem className="flex-1 flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>Serviceable</FormLabel>
+                                <FloatingFormItem label="Serviceable" itemClassName="flex-1">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={(v) => field.onChange(Boolean(v))}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
 
@@ -252,17 +241,16 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                             control={form.control}
                             name="oda"
                             render={({ field }) => (
-                                <FormItem className="flex-1 flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>ODA (Out of Delivery Area)</FormLabel>
+                                <FloatingFormItem label="ODA (Out of Delivery Area)" itemClassName="flex-1">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={(v) => field.onChange(Boolean(v))}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                     </div>

@@ -3,7 +3,7 @@
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { FlightForm } from "@/components/masters/flight-form"
 
 export default function CreateFlightPage() {
@@ -23,14 +23,9 @@ export default function CreateFlightPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Flight Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <FlightForm />
-                </CardContent>
-            </Card>
+            <FormSection title="Flight Details">
+                <FlightForm />
+            </FormSection>
         </div>
     )
 }

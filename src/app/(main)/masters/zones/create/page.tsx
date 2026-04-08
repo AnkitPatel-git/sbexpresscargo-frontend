@@ -1,7 +1,7 @@
 "use client"
 
 import { ZoneForm } from "@/components/masters/zone-form"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -23,14 +23,9 @@ export default function CreateZonePage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Zone Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ZoneForm />
-                </CardContent>
-            </Card>
+            <FormSection title="Zone Details">
+                <ZoneForm />
+            </FormSection>
         </div>
     )
 }

@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OutlinedFieldShell, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 export default function UserSetupPage() {
@@ -139,20 +139,37 @@ export default function UserSetupPage() {
                   <DialogTitle>{editId ? "Edit User" : "Add User"}</DialogTitle>
                 </DialogHeader>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div><Label>Username</Label><Input value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))} /></div>
-                  <div><Label>Email</Label><Input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} /></div>
-                  {!editId && <div><Label>Password</Label><Input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} /></div>}
-                  <div>
-                    <Label>Role</Label>
+                  <OutlinedFieldShell label="Username">
+                    <Input value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))} className={FLOATING_INNER_CONTROL} />
+                  </OutlinedFieldShell>
+                  <OutlinedFieldShell label="Email">
+                    <Input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} className={FLOATING_INNER_CONTROL} />
+                  </OutlinedFieldShell>
+                  {!editId && (
+                    <OutlinedFieldShell label="Password">
+                      <Input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} className={FLOATING_INNER_CONTROL} />
+                    </OutlinedFieldShell>
+                  )}
+                  <OutlinedFieldShell label="Role">
                     <Select value={form.roleId} onValueChange={(value) => setForm((p) => ({ ...p, roleId: value }))}>
-                      <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                      <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
                       <SelectContent>
-                        {roles.map((r: any) => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}
+                        {roles.map((r: any) => (
+                          <SelectItem key={r.id} value={String(r.id)}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div><Label>Mobile</Label><Input value={form.mobile} onChange={(e) => setForm((p) => ({ ...p, mobile: e.target.value }))} /></div>
-                  <div><Label>Origin</Label><Input value={form.origin} onChange={(e) => setForm((p) => ({ ...p, origin: e.target.value }))} /></div>
+                  </OutlinedFieldShell>
+                  <OutlinedFieldShell label="Mobile">
+                    <Input value={form.mobile} onChange={(e) => setForm((p) => ({ ...p, mobile: e.target.value }))} className={FLOATING_INNER_CONTROL} />
+                  </OutlinedFieldShell>
+                  <OutlinedFieldShell label="Origin">
+                    <Input value={form.origin} onChange={(e) => setForm((p) => ({ ...p, origin: e.target.value }))} className={FLOATING_INNER_CONTROL} />
+                  </OutlinedFieldShell>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>

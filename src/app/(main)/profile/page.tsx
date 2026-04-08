@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { OutlinedFieldShell, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item";
 import { userService } from "@/services/user-service";
 import { useAuth } from "@/context/auth-context";
 
@@ -106,47 +106,45 @@ export default function ProfilePage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label>Username</Label>
+        <OutlinedFieldShell label="Username">
           <Input
             value={form.username}
             disabled={!isAdmin}
             onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
+            className={FLOATING_INNER_CONTROL}
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Email (read-only)</Label>
-          <Input value={profile?.email ?? ""} disabled />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Role (read-only)</Label>
-          <Input value={profile?.role?.name ?? ""} disabled />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Mobile</Label>
+        </OutlinedFieldShell>
+        <OutlinedFieldShell label="Email (read-only)">
+          <Input value={profile?.email ?? ""} disabled className={FLOATING_INNER_CONTROL} />
+        </OutlinedFieldShell>
+        <OutlinedFieldShell label="Role (read-only)">
+          <Input value={profile?.role?.name ?? ""} disabled className={FLOATING_INNER_CONTROL} />
+        </OutlinedFieldShell>
+        <OutlinedFieldShell label="Mobile">
           <Input
             value={form.mobile}
             disabled={!isAdmin}
             onChange={(e) => setForm((prev) => ({ ...prev, mobile: e.target.value }))}
+            className={FLOATING_INNER_CONTROL}
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Origin</Label>
+        </OutlinedFieldShell>
+        <OutlinedFieldShell label="Origin">
           <Input
             value={form.origin}
             disabled={!isAdmin}
             onChange={(e) => setForm((prev) => ({ ...prev, origin: e.target.value }))}
+            className={FLOATING_INNER_CONTROL}
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Birth Date</Label>
+        </OutlinedFieldShell>
+        <OutlinedFieldShell label="Birth Date">
           <Input
             type="date"
             value={form.birthDate}
             disabled={!isAdmin}
             onChange={(e) => setForm((prev) => ({ ...prev, birthDate: e.target.value }))}
+            className={FLOATING_INNER_CONTROL}
           />
-        </div>
+        </OutlinedFieldShell>
       </div>
 
       <div className="mt-5 flex gap-2">

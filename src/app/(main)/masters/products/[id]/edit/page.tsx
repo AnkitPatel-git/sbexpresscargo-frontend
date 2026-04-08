@@ -4,7 +4,7 @@ import { useParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { ProductForm } from "@/components/masters/product-form"
 import { productService } from "@/services/masters/product-service"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -54,14 +54,9 @@ export default function EditProductPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Product Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ProductForm key={data.data.id} initialData={data.data} />
-                </CardContent>
-            </Card>
+            <FormSection title="Product Details">
+                <ProductForm key={data.data.id} initialData={data.data} />
+            </FormSection>
         </div>
     )
 }

@@ -11,10 +11,8 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import { FloatingFormItem, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import {
     Sheet,
@@ -144,13 +142,11 @@ export function TaxSetupDrawer({
                                 control={form.control}
                                 name="customer"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Customer</FormLabel>
+                                    <FloatingFormItem label="Customer">
                                         <FormControl>
-                                            <Input placeholder="e.g. CARD" {...field} disabled={isEditing} />
+                                            <Input placeholder="e.g. CARD" {...field} disabled={isEditing} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
@@ -158,13 +154,11 @@ export function TaxSetupDrawer({
                                 control={form.control}
                                 name="product"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Product</FormLabel>
+                                    <FloatingFormItem label="Product">
                                         <FormControl>
-                                            <Input placeholder="e.g. CARD" {...field} disabled={isEditing} />
+                                            <Input placeholder="e.g. CARD" {...field} disabled={isEditing} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
@@ -173,13 +167,11 @@ export function TaxSetupDrawer({
                                     control={form.control}
                                     name="fromDate"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>From Date</FormLabel>
+                                        <FloatingFormItem label="From Date">
                                             <FormControl>
-                                                <Input type="date" {...field} disabled={isEditing} />
+                                                <Input type="date" {...field} disabled={isEditing} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
 
@@ -187,13 +179,11 @@ export function TaxSetupDrawer({
                                     control={form.control}
                                     name="toDate"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>To Date</FormLabel>
+                                        <FloatingFormItem label="To Date">
                                             <FormControl>
-                                                <Input type="date" {...field} disabled={isEditing} />
+                                                <Input type="date" {...field} disabled={isEditing} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -203,13 +193,11 @@ export function TaxSetupDrawer({
                                     control={form.control}
                                     name="igst"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>IGST (%)</FormLabel>
+                                        <FloatingFormItem label="IGST (%)">
                                             <FormControl>
-                                                <Input type="number" step="0.01" {...field} />
+                                                <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
 
@@ -217,13 +205,11 @@ export function TaxSetupDrawer({
                                     control={form.control}
                                     name="cgst"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>CGST (%)</FormLabel>
+                                        <FloatingFormItem label="CGST (%)">
                                             <FormControl>
-                                                <Input type="number" step="0.01" {...field} />
+                                                <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
 
@@ -231,13 +217,11 @@ export function TaxSetupDrawer({
                                     control={form.control}
                                     name="sgst"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>SGST (%)</FormLabel>
+                                        <FloatingFormItem label="SGST (%)">
                                             <FormControl>
-                                                <Input type="number" step="0.01" {...field} />
+                                                <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>

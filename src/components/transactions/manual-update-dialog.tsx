@@ -20,10 +20,13 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form";
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_SELECT_TRIGGER,
+    FLOATING_INNER_TEXTAREA,
+} from "@/components/ui/floating-form-item";
 import {
     Select,
     SelectContent,
@@ -138,11 +141,10 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                             control={form.control}
                             name="status"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FloatingFormItem label="Status">
+                                    <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
-                                            <SelectTrigger>
+                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                 <SelectValue placeholder="Select status" />
                                             </SelectTrigger>
                                         </FormControl>
@@ -154,8 +156,7 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <FormMessage />
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
 
@@ -163,18 +164,17 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                             control={form.control}
                             name="serviceCenterId"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Service Center</FormLabel>
+                                <FloatingFormItem label="Service Center">
                                     <FormControl>
                                         <Combobox
                                             options={serviceCenterOptions}
                                             value={field.value}
                                             onChange={field.onChange}
                                             placeholder="Select Service Center"
+                                            className={FLOATING_INNER_COMBO}
                                         />
                                     </FormControl>
-                                    <FormMessage />
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
 
@@ -182,17 +182,15 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                             control={form.control}
                             name="remark"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Remark</FormLabel>
+                                <FloatingFormItem label="Remark">
                                     <FormControl>
                                         <Textarea
                                             placeholder="Reason for manual update"
-                                            className="resize-none"
                                             {...field}
+                                            className={FLOATING_INNER_TEXTAREA}
                                         />
                                     </FormControl>
-                                    <FormMessage />
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
 

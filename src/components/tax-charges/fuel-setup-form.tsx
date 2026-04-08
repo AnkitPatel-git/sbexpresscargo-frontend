@@ -16,10 +16,8 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import { FloatingFormItem, FLOATING_INNER_COMBO, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import {
     Popover,
@@ -155,13 +153,11 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="entryCode"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Entry Code</FormLabel>
+                            <FloatingFormItem label="Entry Code">
                                 <FormControl>
-                                    <Input type="number" placeholder="Entry Code" {...field} disabled={isEditing} />
+                                    <Input type="number" placeholder="Entry Code" {...field} disabled={isEditing} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -169,8 +165,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="customer"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Customer</FormLabel>
+                            <FloatingFormItem label="Customer">
                                 <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -178,7 +173,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                                                 variant="outline"
                                                 role="combobox"
                                                 className={cn(
-                                                    "w-full justify-between font-normal",
+                                                    FLOATING_INNER_COMBO,
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                                 disabled={isEditing}
@@ -232,8 +227,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -241,8 +235,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="vendor"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Vendor</FormLabel>
+                            <FloatingFormItem label="Vendor">
                                 <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -250,7 +243,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                                                 variant="outline"
                                                 role="combobox"
                                                 className={cn(
-                                                    "w-full justify-between font-normal",
+                                                    FLOATING_INNER_COMBO,
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                                 disabled={isEditing}
@@ -304,8 +297,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -313,8 +305,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="product"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Product</FormLabel>
+                            <FloatingFormItem label="Product">
                                 <Popover open={productOpen} onOpenChange={setProductOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -322,7 +313,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                                                 variant="outline"
                                                 role="combobox"
                                                 className={cn(
-                                                    "w-full justify-between font-normal",
+                                                    FLOATING_INNER_COMBO,
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                                 disabled={isEditing}
@@ -376,8 +367,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -385,13 +375,11 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="destination"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Destination</FormLabel>
+                            <FloatingFormItem label="Destination">
                                 <FormControl>
-                                    <Input placeholder="Destination Code" {...field} disabled={isEditing} />
+                                    <Input placeholder="Destination Code" {...field} disabled={isEditing} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -399,8 +387,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="service"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Service</FormLabel>
+                            <FloatingFormItem label="Service">
                                 <Select 
                                     key={field.value}
                                     onValueChange={field.onChange} 
@@ -408,7 +395,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                                     disabled={isEditing}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select service" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -419,8 +406,7 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                                         <SelectItem value="STANDARD">STANDARD</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -428,13 +414,11 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="fromDate"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>From Date</FormLabel>
+                            <FloatingFormItem label="From Date">
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={isEditing} />
+                                    <Input type="date" {...field} disabled={isEditing} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -442,13 +426,11 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="toDate"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>To Date</FormLabel>
+                            <FloatingFormItem label="To Date">
                                 <FormControl>
-                                    <Input type="date" {...field} disabled={isEditing} />
+                                    <Input type="date" {...field} disabled={isEditing} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -456,13 +438,11 @@ export function FuelSetupForm({ initialData }: FuelSetupFormProps) {
                         control={form.control}
                         name="percentage"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Percentage (%)</FormLabel>
+                            <FloatingFormItem label="Percentage (%)">
                                 <FormControl>
-                                    <Input type="number" step="0.01" {...field} />
+                                    <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>

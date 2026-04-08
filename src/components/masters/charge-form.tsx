@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect } from 'react'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -11,10 +10,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -123,26 +124,22 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Charge Code</FormLabel>
+                            <FloatingFormItem label="Charge Code">
                                 <FormControl>
-                                    <Input placeholder="e.g. CHG01" {...field} />
+                                    <Input placeholder="e.g. CHG01" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Charge Name</FormLabel>
+                            <FloatingFormItem label="Charge Name">
                                 <FormControl>
-                                    <Input placeholder="e.g. Freight Charge" {...field} />
+                                    <Input placeholder="e.g. Freight Charge" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -150,15 +147,14 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                         control={form.control}
                         name="chargeType"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Charge Type</FormLabel>
-                                <Select 
+                            <FloatingFormItem label="Charge Type">
+                                <Select
                                     key={field.value}
-                                    onValueChange={field.onChange} 
+                                    onValueChange={field.onChange}
                                     value={field.value}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select type" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -170,23 +166,21 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                                         <SelectItem value="OTHER">OTHER</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="calculationBase"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Calculation Base</FormLabel>
-                                <Select 
+                            <FloatingFormItem label="Calculation Base">
+                                <Select
                                     key={field.value}
-                                    onValueChange={field.onChange} 
+                                    onValueChange={field.onChange}
                                     value={field.value}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select base" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -195,8 +189,7 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                                         <SelectItem value="FLAT">FLAT</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -204,26 +197,35 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                         control={form.control}
                         name="chargeRate"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Charge Rate</FormLabel>
+                            <FloatingFormItem label="Charge Rate">
                                 <FormControl>
-                                    <Input type="number" step="0.01" {...field} />
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        className={FLOATING_INNER_CONTROL}
+                                        {...field}
+                                        value={field.value === undefined || field.value === null ? "" : field.value}
+                                        onChange={(e) => field.onChange(e.target.value === "" ? undefined : e.target.value)}
+                                    />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="sequence"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Sequence</FormLabel>
+                            <FloatingFormItem label="Sequence">
                                 <FormControl>
-                                    <Input type="number" {...field} />
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        {...field}
+                                        value={field.value === undefined || field.value === null ? "" : field.value}
+                                        onChange={(e) => field.onChange(e.target.value === "" ? undefined : e.target.value)}
+                                    />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -231,13 +233,11 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                         control={form.control}
                         name="hsnCode"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>HSN Code</FormLabel>
+                            <FloatingFormItem label="HSN Code">
                                 <FormControl>
-                                    <Input placeholder="996511" {...field} />
+                                    <Input placeholder="996511" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -246,34 +246,32 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                             control={form.control}
                             name="applyFuel"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>Apply Fuel</FormLabel>
+                                <FloatingFormItem label="Apply Fuel">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                         <FormField
                             control={form.control}
                             name="applyTaxOnFuel"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>Apply Tax on Fuel</FormLabel>
+                                <FloatingFormItem label="Apply Tax on Fuel">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                     </div>
@@ -283,34 +281,32 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                             control={form.control}
                             name="applyTax"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>Apply Tax</FormLabel>
+                                <FloatingFormItem label="Apply Tax">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                         <FormField
                             control={form.control}
                             name="multipleCharges"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>Multiple Charges</FormLabel>
+                                <FloatingFormItem label="Multiple Charges">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                     </div>

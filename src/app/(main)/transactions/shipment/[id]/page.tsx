@@ -7,7 +7,7 @@ import { format } from "date-fns"
 import { Loader2, Pencil, ArrowLeft } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { shipmentService } from "@/services/transactions/shipment-service"
 
 const fallbackText = (value?: string | number | null) => {
@@ -67,60 +67,40 @@ export default function ShipmentDetailsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Core Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                        <p><span className="text-muted-foreground">AWB No:</span> {fallbackText(shipment.awbNo)}</p>
-                        <p>
-                            <span className="text-muted-foreground">Book Date:</span>{" "}
-                            {shipment.bookDate ? format(new Date(shipment.bookDate), "dd/MM/yyyy") : "—"}
-                        </p>
-                        <p><span className="text-muted-foreground">Book Time:</span> {fallbackText(shipment.bookTime)}</p>
-                        <p><span className="text-muted-foreground">Reference No:</span> {fallbackText(shipment.referenceNo)}</p>
-                        <p><span className="text-muted-foreground">Status:</span> {fallbackText(shipment.currentStatus)}</p>
-                    </CardContent>
-                </Card>
+                <FormSection title="Core Details" contentClassName="space-y-2 text-sm">
+                    <p><span className="text-muted-foreground">AWB No:</span> {fallbackText(shipment.awbNo)}</p>
+                    <p>
+                        <span className="text-muted-foreground">Book Date:</span>{" "}
+                        {shipment.bookDate ? format(new Date(shipment.bookDate), "dd/MM/yyyy") : "—"}
+                    </p>
+                    <p><span className="text-muted-foreground">Book Time:</span> {fallbackText(shipment.bookTime)}</p>
+                    <p><span className="text-muted-foreground">Reference No:</span> {fallbackText(shipment.referenceNo)}</p>
+                    <p><span className="text-muted-foreground">Status:</span> {fallbackText(shipment.currentStatus)}</p>
+                </FormSection>
 
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Party & Route</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                        <p><span className="text-muted-foreground">Customer:</span> {fallbackText(shipment.customer?.name)}</p>
-                        <p><span className="text-muted-foreground">Shipper:</span> {fallbackText(shipment.shipper?.shipperName || shipment.shipper?.name)}</p>
-                        <p><span className="text-muted-foreground">Consignee:</span> {fallbackText(shipment.consignee?.consigneeName || shipment.consignee?.name)}</p>
-                        <p><span className="text-muted-foreground">Origin:</span> {fallbackText(shipment.origin)}</p>
-                        <p><span className="text-muted-foreground">Destination:</span> {fallbackText(shipment.destination)}</p>
-                    </CardContent>
-                </Card>
+                <FormSection title="Party & Route" contentClassName="space-y-2 text-sm">
+                    <p><span className="text-muted-foreground">Customer:</span> {fallbackText(shipment.customer?.name)}</p>
+                    <p><span className="text-muted-foreground">Shipper:</span> {fallbackText(shipment.shipper?.shipperName || shipment.shipper?.name)}</p>
+                    <p><span className="text-muted-foreground">Consignee:</span> {fallbackText(shipment.consignee?.consigneeName || shipment.consignee?.name)}</p>
+                    <p><span className="text-muted-foreground">Origin:</span> {fallbackText(shipment.origin)}</p>
+                    <p><span className="text-muted-foreground">Destination:</span> {fallbackText(shipment.destination)}</p>
+                </FormSection>
 
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Service & Billing</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                        <p><span className="text-muted-foreground">Product:</span> {fallbackText(shipment.product?.productName || shipment.product?.name)}</p>
-                        <p><span className="text-muted-foreground">Vendor:</span> {fallbackText(shipment.vendor?.vendorName || shipment.vendor?.name)}</p>
-                        <p><span className="text-muted-foreground">Payment Type:</span> {fallbackText(shipment.paymentType)}</p>
-                        <p><span className="text-muted-foreground">Currency:</span> {fallbackText(shipment.currency)}</p>
-                        <p><span className="text-muted-foreground">COD:</span> {shipment.isCod ? `Yes (${fallbackText(shipment.codAmount)})` : "No"}</p>
-                    </CardContent>
-                </Card>
+                <FormSection title="Service & Billing" contentClassName="space-y-2 text-sm">
+                    <p><span className="text-muted-foreground">Product:</span> {fallbackText(shipment.product?.productName || shipment.product?.name)}</p>
+                    <p><span className="text-muted-foreground">Vendor:</span> {fallbackText(shipment.vendor?.vendorName || shipment.vendor?.name)}</p>
+                    <p><span className="text-muted-foreground">Payment Type:</span> {fallbackText(shipment.paymentType)}</p>
+                    <p><span className="text-muted-foreground">Currency:</span> {fallbackText(shipment.currency)}</p>
+                    <p><span className="text-muted-foreground">COD:</span> {shipment.isCod ? `Yes (${fallbackText(shipment.codAmount)})` : "No"}</p>
+                </FormSection>
 
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Weight & Pieces</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                        <p><span className="text-muted-foreground">Pieces:</span> {fallbackText(shipment.pieces)}</p>
-                        <p><span className="text-muted-foreground">Declared Weight:</span> {fallbackText(shipment.declaredWeight)}</p>
-                        <p><span className="text-muted-foreground">Actual Weight:</span> {fallbackText(shipment.actualWeight)}</p>
-                        <p><span className="text-muted-foreground">Volumetric Weight:</span> {fallbackText(shipment.volumetricWeight)}</p>
-                        <p><span className="text-muted-foreground">Charge Weight:</span> {fallbackText(shipment.chargeWeight)}</p>
-                    </CardContent>
-                </Card>
+                <FormSection title="Weight & Pieces" contentClassName="space-y-2 text-sm">
+                    <p><span className="text-muted-foreground">Pieces:</span> {fallbackText(shipment.pieces)}</p>
+                    <p><span className="text-muted-foreground">Declared Weight:</span> {fallbackText(shipment.declaredWeight)}</p>
+                    <p><span className="text-muted-foreground">Actual Weight:</span> {fallbackText(shipment.actualWeight)}</p>
+                    <p><span className="text-muted-foreground">Volumetric Weight:</span> {fallbackText(shipment.volumetricWeight)}</p>
+                    <p><span className="text-muted-foreground">Charge Weight:</span> {fallbackText(shipment.chargeWeight)}</p>
+                </FormSection>
             </div>
         </div>
     )
