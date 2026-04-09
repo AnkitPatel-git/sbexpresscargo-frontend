@@ -6,7 +6,7 @@ Update the frontend codebase to fully align with the latest backend changes.
 
 ## 🧠 Source of Truth (STRICT)
 
-1. **Bruno / OpenCollection export** — folder `docs/SBExpress Cargo API/` (YAML requests + `opencollection.yml` at the collection root). This is the canonical HTTP contract for the portal (plus `Mobile/**` for the native app only).
+1. **Bruno / OpenCollection export** — folder `docs/bruno/` (YAML requests + `opencollection.yml` at the collection root). This is the canonical HTTP contract for the portal (plus `Mobile/**` for the native app only).
 2. **API schema** — `docs/schema.prisma` defines structure, validation, and data contracts where applicable.
 
 These are ABSOLUTE and must override any existing frontend assumptions.
@@ -123,8 +123,8 @@ Work step-by-step and ensure correctness over speed.
 ## Bruno ↔ frontend API audit
 
 **Review date:** 2026-04-10  
-**Collection:** `docs/SBExpress Cargo API/` (OpenCollection/Bruno YAML; see `opencollection.yml` for variables and collection-wide notes).  
-**Excluded from portal scope:** `docs/SBExpress Cargo API/Mobile/**` — `/mobile/*`; reserved for the native app. Do not wire these in the web client unless product explicitly requires it.
+**Collection:** `docs/bruno/` (OpenCollection/Bruno YAML; see `opencollection.yml` for variables and collection-wide notes).  
+**Excluded from portal scope:** `docs/bruno/Mobile/**` — `/mobile/*`; reserved for the native app. Do not wire these in the web client unless product explicitly requires it.
 
 **Legend**
 
