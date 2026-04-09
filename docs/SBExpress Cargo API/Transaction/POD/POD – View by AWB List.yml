@@ -1,0 +1,28 @@
+info:
+  name: POD – View by AWB List
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/pod/view"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "awbNos": ["AWB123456", "AWB123457"]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: View POD data for AWBs. JWT + pod_list/pod_view/pod_all.

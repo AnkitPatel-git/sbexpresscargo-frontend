@@ -1,0 +1,57 @@
+info:
+  name: Update Manifest
+  type: http
+  seq: 7
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/transaction/manifest/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1,
+        "manifestNo": "CD12345",
+        "masterAwbNo": "MAWB123",
+        "manifestDate": "2026-03-20",
+        "manifestTime": "10:00",
+        "location": "MUMBAI",
+        "serviceCenter": "VASAI",
+        "serviceCenterId": 1,
+        "connectStation": "DELHI",
+        "vendorId": 1,
+        "productId": 1,
+        "format": "standard",
+        "singleLine": false,
+        "pdfType": "A4",
+        "accountNo": "ACC001",
+        "department": "Operations",
+        "shipmentIds": [1, 2, 3, 4],
+        "items": [
+          {
+            "awbNo": "AWB123456",
+            "pieces": 1,
+            "chargeWeight": 5,
+            "origin": "MUMBAI",
+            "destination": "DELHI"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Update manifest header/items. JWT + manifest_modify or manifest_all.
+
+  Mandatory: version
+  Optional: manifestNo, masterAwbNo, manifestDate, manifestTime, location, serviceCenter, serviceCenterId, connectStation, vendorId, productId, format, singleLine, pdfType, accountNo, department, shipmentIds, items

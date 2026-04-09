@@ -12,6 +12,7 @@ export const zoneService = {
         sortOrder?: 'asc' | 'desc';
         exportType?: string;
         country?: string;
+        zoneType?: string;
     }): Promise<ZoneListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -21,6 +22,7 @@ export const zoneService = {
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
         if (params?.exportType) queryParams.append('exportType', params.exportType);
         if (params?.country) queryParams.append('country', params.country);
+        if (params?.zoneType) queryParams.append('zoneType', params.zoneType);
 
         const response = await apiFetch(`${API_URL}/rate-master/zones?${queryParams.toString()}`, {
             headers: {
@@ -67,9 +69,12 @@ export const zoneService = {
         return response.json();
     },
 
-    async updateZone(id: number, data: Partial<ZoneFormData>): Promise<ZoneSingleResponse> {
+    async updateZone(
+        id: number,
+        data: Partial<ZoneFormData> & { version: number },
+    ): Promise<ZoneSingleResponse> {
         const response = await apiFetch(`${API_URL}/rate-master/zones/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

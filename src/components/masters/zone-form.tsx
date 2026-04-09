@@ -45,10 +45,11 @@ import { Button } from "@/components/ui/button"
 import { zoneService } from '@/services/masters/zone-service'
 import { countryService } from '@/services/masters/country-service'
 import { Zone, ZoneFormData } from '@/types/masters/zone'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const zoneSchema = z.object({
     name: z.string().min(1, 'Name is required'),
-    code: z.string().min(1, 'Code is required'),
+    code: optionalMasterCode(1),
     country: z.string().min(1, 'Country is required'),
     zoneType: z.enum(['DOMESTIC', 'VENDOR']),
 });
@@ -91,10 +92,14 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: ZoneFormData) => {
+            const payload = omitEmptyCodeFields(data, ['code']) as ZoneFormData
             if (isEdit && initialData) {
-                return zoneService.updateZone(initialData.id, data)
+                return zoneService.updateZone(initialData.id, {
+                    ...payload,
+                    version: initialData.version ?? 1,
+                })
             }
-            return zoneService.createZone(data)
+            return zoneService.createZone(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['zones'] })
@@ -132,9 +137,9 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FloatingFormItem label="Zone Code">
+                            <FloatingFormItem label="Zone Code (optional)">
                                 <FormControl>
-                                    <Input placeholder="Enter zone code" {...field} disabled={isEdit} className={FLOATING_INNER_CONTROL} />
+                                    <Input placeholder={isEdit ? '' : 'Blank = auto-generate'} {...field} disabled={isEdit} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
                             </FloatingFormItem>
                         )}

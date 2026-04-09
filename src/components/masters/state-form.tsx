@@ -31,9 +31,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { stateService } from '@/services/masters/state-service'
 import { zoneService } from '@/services/masters/zone-service'
 import { State, StateFormData } from '@/types/masters/state'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const stateSchema = z.object({
-    stateCode: z.string().min(2, "State code must be at least 2 characters"),
+    stateCode: optionalMasterCode(2),
     stateName: z.string().min(3, "State name must be at least 3 characters"),
     productType: z.string().min(1, "Product type is required"),
     zoneId: z.number().min(1, "Zone is required"),
@@ -82,10 +83,11 @@ export function StateForm({ initialData }: StateFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: StateFormData) => {
+            const payload = omitEmptyCodeFields(data, ['stateCode']) as StateFormData
             if (isEdit && initialData) {
-                return stateService.updateState(initialData.id, data)
+                return stateService.updateState(initialData.id, payload)
             }
-            return stateService.createState(data)
+            return stateService.createState(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['states'] })
@@ -112,9 +114,9 @@ export function StateForm({ initialData }: StateFormProps) {
                         control={form.control}
                         name="stateCode"
                         render={({ field }) => (
-                            <FloatingFormItem label="State Code">
+                            <FloatingFormItem label="State Code (optional)">
                                 <FormControl>
-                                    <Input placeholder="e.g. DL, MH" {...field} className={FLOATING_INNER_CONTROL} />
+                                    <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
                             </FloatingFormItem>
                         )}

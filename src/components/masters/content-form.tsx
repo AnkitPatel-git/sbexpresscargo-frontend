@@ -39,9 +39,10 @@ import { contentService } from '@/services/masters/content-service'
 import { countryService } from '@/services/masters/country-service'
 import { vendorService } from '@/services/masters/vendor-service'
 import { Content } from '@/types/masters/content'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const contentSchema = z.object({
-    contentCode: z.string().min(2, "Content code must be at least 2 characters"),
+    contentCode: optionalMasterCode(2),
     contentName: z.string().min(3, "Content name must be at least 3 characters"),
     hsnCode: z.string().min(4, "HSN code must be at least 4 characters"),
     vendorId: z.number().nullable().optional(),
@@ -147,8 +148,8 @@ export function ContentForm({ initialData }: ContentFormProps) {
         mutationFn: (data: ContentFormValues) => {
             // Sanitize payload: remove display-only string fields
             // The backend rejects 'vendor' and 'country' strings for updates
-            const { vendor, country, ...payload } = data as any;
-            
+            const { vendor, country, ...rest } = data as any;
+            const payload = omitEmptyCodeFields(rest, ['contentCode']);
             if (isEdit && initialData) {
                 return contentService.updateContent(initialData.id, payload)
             }
@@ -180,9 +181,9 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                 control={form.control}
                                 name="contentCode"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Content Code">
+                                    <FloatingFormItem label="Content Code (optional)">
                                         <FormControl>
-                                            <Input placeholder="e.g. CONT01" {...field} className={FLOATING_INNER_CONTROL} />
+                                            <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}

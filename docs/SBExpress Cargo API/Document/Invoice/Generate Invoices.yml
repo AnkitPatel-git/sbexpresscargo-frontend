@@ -1,0 +1,40 @@
+info:
+  name: Generate Invoices
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/document/invoice/generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "year": "2026",
+        "fromDate": "2026-03-01",
+        "toDate": "2026-03-31",
+        "productType": "DOMESTIC",
+        "serviceCenterId": 1,
+        "billingType": "standard",
+        "registerType": "REGISTERED",
+        "customerId": 1,
+        "showAwb": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Generate invoices: create Invoice records and set Shipment.invoiceNo. JWT + invoice.core.create.
+
+  Mandatory: year, fromDate, toDate
+  Optional: productType, serviceCenterId, billingType, registerType, customerId, showAwb

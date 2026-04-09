@@ -48,9 +48,10 @@ import { cn } from "@/lib/utils"
 import { vendorService } from "@/services/masters/vendor-service"
 import { stateService } from "@/services/masters/state-service"
 import { Vendor } from "@/types/masters/vendor"
+import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
 
 const vendorSchema = z.object({
-    vendorCode: z.string().min(2, "Code must be at least 2 characters"),
+    vendorCode: optionalMasterCode(2),
     vendorName: z.string().min(3, "Name must be at least 3 characters"),
     contactPerson: z.string().min(3, "Contact person is required"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
@@ -129,10 +130,11 @@ export function VendorForm({ initialData }: VendorFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: VendorFormValues) => {
+            const payload = omitEmptyCodeFields(data, ["vendorCode"]) as VendorFormValues
             if (isEdit && initialData) {
-                return vendorService.updateVendor(initialData.id, data as any)
+                return vendorService.updateVendor(initialData.id, payload as any)
             }
-            return vendorService.createVendor(data as any)
+            return vendorService.createVendor(payload as any)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["vendors"] })
@@ -172,9 +174,9 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control as any}
                                     name="vendorCode"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Vendor Code*">
+                                        <FloatingFormItem label="Vendor Code (optional)">
                                             <FormControl>
-                                                <Input placeholder="e.g. V001" {...field} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}

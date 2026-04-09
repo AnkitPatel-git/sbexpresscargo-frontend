@@ -11,12 +11,14 @@ export const shipmentService = {
         sortBy?: string; 
         sortOrder?: string;
     }): Promise<ShipmentListResponse> => {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append('page', params.page.toString());
-        if (params?.limit) queryParams.append('limit', params.limit.toString());
-        if (params?.search) queryParams.append('search', params.search);
-        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        // Bruno: .../shipment?page=1&limit=20&sortBy=id&sortOrder=desc&search=
+        const queryParams = new URLSearchParams({
+            page: String(params?.page ?? 1),
+            limit: String(params?.limit ?? 20),
+            sortBy: params?.sortBy ?? 'id',
+            sortOrder: params?.sortOrder ?? 'desc',
+            search: params?.search ?? '',
+        });
 
         const response = await apiFetch(`${API_URL}/transaction/shipment?${queryParams.toString()}`, {
             headers: {
@@ -63,7 +65,7 @@ export const shipmentService = {
             throw new Error('Shipment version is required for update')
         }
         const response = await apiFetch(`${API_URL}/transaction/shipment/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

@@ -1,0 +1,7 @@
+info:
+  name: Content Master
+  type: folder
+  seq: 4
+
+request:
+  auth: inherit

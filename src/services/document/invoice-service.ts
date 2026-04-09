@@ -1,5 +1,13 @@
 import { apiClient } from "@/lib/api-client";
-import { ApiResponse, InvoiceGenerationPayload, InvoiceListResponse } from "@/types/document/invoice";
+import { apiFetch } from "@/lib/api-fetch";
+import {
+  ApiResponse,
+  InvoiceGenerationPayload,
+  InvoiceListResponse,
+  InvoiceSendEmailPayload,
+} from "@/types/document/invoice";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
 export const invoiceService = {
   listInvoices: (params: { page?: number; limit?: number; search?: string } = {}) => {
@@ -40,4 +48,30 @@ export const invoiceService = {
 
   getInvoiceLockLog: () =>
     apiClient<ApiResponse<unknown>>("/document/invoice/lock-log"),
+
+  sendInvoiceEmail: (payload: InvoiceSendEmailPayload) =>
+    apiClient<ApiResponse<unknown>>("/document/invoice/send-email", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  /** GET /document/invoice/export — CSV file (not JSON). */
+  exportInvoicesCsv: async (): Promise<Blob> => {
+    const response = await apiFetch(`${API_URL}/document/invoice/export`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken") ?? ""}`,
+      },
+    });
+    if (!response.ok) {
+      let message = "Failed to export invoices";
+      try {
+        const err = await response.json();
+        if (err && typeof err.message === "string") message = err.message;
+      } catch {
+        /* non-JSON error body */
+      }
+      throw new Error(message);
+    }
+    return response.blob();
+  },
 };

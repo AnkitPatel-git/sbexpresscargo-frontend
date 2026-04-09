@@ -1,0 +1,91 @@
+opencollection: 1.0.0
+
+info:
+  name: SBExpress Cargo API
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  variables:
+    - name: baseUrl
+      value: http://localhost:3001/api
+    - name: accessToken
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlSWQiOjEsInJvbGVJZGVudGlmaWVyIjoiU1VQRVJfQURNSU4iLCJwbGF0Zm9ybSI6InBvcnRhbCIsImp0aSI6ImNmMDBiYzM4LTJhZGItNGQ0My04YjJmLWI4ZjM4OTM2MWYyYyIsImlhdCI6MTc3NTc2NTkyNiwiZXhwIjoxNzc4MzU3OTI2fQ.OXOwZW5Y__tHLTBUxlSG2KPzNK_-4exG555eXgpkt0I
+    - name: roleId
+      value: "1"
+    - name: permissionId
+      value: "125"
+    - name: sessionId
+      value: "10"
+    - name: mobileAwbNo
+      value: YOUR_AWB
+    - name: mobileManifestId
+      value: "1"
+    - name: mobileDrsId
+      value: "1"
+    - name: mobileNotificationId
+      value: "1"
+    - name: mobileAttendanceId
+      value: "1"
+    - name: shipmentId
+      value: "1"
+    - name: drsId
+      value: "1"
+    - name: receiptId
+      value: "1"
+    - name: auditLogId
+      value: "1"
+    - name: vendorStatusMappingId
+      value: "1"
+    - name: vendorTrackingLogId
+      value: "1"
+    - name: trackingSummaryShipmentId
+      value: "1"
+    - name: vendorConfigId
+      value: "1"
+    - name: vehicleId
+      value: "1"
+
+docs:
+  content: |-
+    Full API collection. Set `baseUrl` (e.g. `http://localhost:3000/api` or your dev API). Run **Utilities → Users → Login** (`POST /utilities/users/login`) first: the after-response script saves `accessToken` with `bru.setVar` for `Authorization: Bearer {{accessToken}}`. Paste a JWT into `accessToken` manually if you disable scripts. Login requires `platform`: `portal` or `mobile`.
+
+    **Mobile** routes live under `/mobile/*`. Use **Mobile → Auth → Login (Mobile)** so `platform` is `mobile`; `MobilePlatformGuard` rejects portal tokens. User profile should have `mobileAppLens=true`.
+
+    **List APIs** (portal) return paginated response: `{ success, message, data, total, page, limit, totalPages }`. Mobile endpoints return JSON bodies directly unless noted.
+
+    **Dashboard** (`/dashboard/*`): Operation summary, sales summary (with daily series), and sales-by-service-center reports; requires `dashboard.core.read`. See folder **Dashboard**.
+
+    Collection variables: `{{mobileAwbNo}}`, `{{mobileManifestId}}`, `{{mobileDrsId}}`, `{{mobileNotificationId}}`, `{{mobileAttendanceId}}` for mobile path params. Portal detail routes: `{{shipmentId}}`, `{{drsId}}`, `{{receiptId}}`, `{{auditLogId}}`, `{{vendorStatusMappingId}}`, `{{vendorTrackingLogId}}`, `{{trackingSummaryShipmentId}}`, `{{vendorConfigId}}`, `{{vehicleId}}`.
+
+    **Logistics vendors** (BlueDart, DTDC, etc.) use **Vendor Master** (`/vendor-master`), shipment **vendor-mapping**, and tracking **vendor webhooks** (`vendorId` in body). The separate Carrier Master API was removed in favor of a single vendor model.
+
+    **Rate System Refactor**:
+    - Legacy APIs/data model were removed: `Client Rate Master` and `Fuel Setup`.
+    - `Rate Master` now uses `flatRate` (legacy `rateValue/taxValue/fuelValue` removed).
+    - Collection folder structure for rate domain now mirrors code modules: `Masters/Rate Master` and `Masters/Zone Master`.
+    - Zone list: `GET /zone-master` (paginated; same as `GET /rate-master/zones`). In Bruno: **Zone Master - List** (under Zone Master) and **Rate Master - List Zones** (under Rate Master). Other zone CRUD/import/export remain under `/rate-master/zones`.
+    - Rate helper API is available at `POST /rate-master/calculate` and `POST /rate/preview` (pre-shipment estimation with full breakdown support). Optional `distanceKm`: omit for **DISTANCE_MATRIX** to resolve distance from pincodes (Nominatim + OSRM; haversine fallback).
+    - Shipment create supports dynamic rating inputs: `serviceType`, `pickupPincode`, `deliveryPincode`, optional manual `km`, `shipmentValue`, dimensions via `piecesRows`.
+    - If `charges` is omitted/empty in shipment create, backend auto-rates using `RateEngineService` and persists `rateMasterId`, `baseFreight`, `totalAmount`, and charge breakdown.
+
+    **Module Reorganization**:
+    - `Serviceable Pincode` belongs to the `master` module domain (HTTP path `/utilities/serviceable-pincodes`). In this collection, requests are under **Masters → Serviceable Pincode**.
+    - Portal **Users**, **Roles**, and **Permissions** APIs are mounted under `/utilities/users`, `/utilities/roles`, and `/utilities/permissions`. In this collection they live under **Utilities → Users**, **Utilities → Roles**, and **Utilities → Permissions** (with **Audit Logs** in the same **Utilities** folder).
+    - Existing request examples are intentionally preserved (URLs updated to match the routes above).
+  type: text/markdown
+bundled: false
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git

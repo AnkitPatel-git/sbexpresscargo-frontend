@@ -1,6 +1,8 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { TrackingListResponse, TrackingDetailResponse, MetricsResponse, ManualUpdatePayload, DeadLettersResponse, TrackingSummaryResponse } from '@/types/transactions/tracking';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
 const getAuthHeaders = (isFormData = false) => {
     const headers: Record<string, string> = {
         'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -12,17 +14,15 @@ const getAuthHeaders = (isFormData = false) => {
 };
 
 class TrackingService {
-    private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/tracking`;
+    private readonly baseUrl = `${API_URL}/transaction/tracking`;
 
     async searchTracking(page: number, limit: number, search: string = ''): Promise<TrackingListResponse> {
         const queryParams = new URLSearchParams({
             page: page.toString(),
             limit: limit.toString(),
+            // Bruno: .../search?page=1&limit=20&search= (param present even when empty)
+            search: search ?? '',
         });
-
-        if (search) {
-            queryParams.append('search', search);
-        }
 
         const response = await apiFetch(`${this.baseUrl}/search?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
@@ -97,6 +97,33 @@ class TrackingService {
             throw new Error('Failed to export tracking history');
         }
         return response.blob();
+    }
+
+    /** Bruno: vendor webhook (often public; portal may still send Bearer). */
+    async postVendorWebhook(body: unknown): Promise<unknown> {
+        const response = await apiFetch(`${this.baseUrl}/webhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Webhook request failed');
+        }
+        return response.json();
+    }
+
+    async postVendorWebhookBulk(body: unknown): Promise<unknown> {
+        const response = await apiFetch(`${this.baseUrl}/webhook/bulk`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Bulk webhook request failed');
+        }
+        return response.json();
     }
 }
 

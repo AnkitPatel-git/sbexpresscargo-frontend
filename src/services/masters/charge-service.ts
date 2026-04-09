@@ -31,6 +31,20 @@ export const chargeService = {
         return response.json();
     },
 
+    async getChargesByProduct(productId: number): Promise<ChargeListResponse> {
+        const response = await apiFetch(`${API_URL}/charge-master/by-product/${productId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch charges for product');
+        }
+
+        return response.json();
+    },
+
     async getChargeById(id: number): Promise<ChargeSingleResponse> {
         const response = await apiFetch(`${API_URL}/charge-master/${id}`, {
             headers: {
@@ -63,9 +77,12 @@ export const chargeService = {
         return response.json();
     },
 
-    async updateCharge(id: number, data: Partial<ChargeFormData>): Promise<ChargeSingleResponse> {
+    async updateCharge(
+        id: number,
+        data: Partial<ChargeFormData> & { version: number },
+    ): Promise<ChargeSingleResponse> {
         const response = await apiFetch(`${API_URL}/charge-master/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

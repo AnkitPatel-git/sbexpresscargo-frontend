@@ -1,6 +1,8 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { CreditNoteListResponse, CreditNoteSingleResponse, CreditNoteFormValues } from '@/types/transactions/credit-note';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
 const getAuthHeaders = (isFormData = false) => {
     const headers: Record<string, string> = {
         'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -12,16 +14,14 @@ const getAuthHeaders = (isFormData = false) => {
 };
 
 class CreditNoteService {
-    private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/receipt-expenses/credit-note`;
+    private readonly baseUrl = `${API_URL}/transaction/receipt-expenses/credit-note`;
 
     async getCreditNotes(page: number, limit: number, search: string = ''): Promise<CreditNoteListResponse> {
+        // Bruno: GET .../receipt-expenses/credit-note?page=1&limit=20 only
         const queryParams = new URLSearchParams({
             page: page.toString(),
             limit: limit.toString(),
-            sortBy: 'noteNo',
-            sortOrder: 'desc',
         });
-
         if (search) {
             queryParams.append('search', search);
         }
@@ -81,18 +81,6 @@ class CreditNoteService {
         if (!response.ok) {
             throw new Error('Failed to delete credit note');
         }
-    }
-
-    async postCreditNote(id: number, version: number): Promise<CreditNoteSingleResponse> {
-        const response = await apiFetch(`${this.baseUrl}/${id}/post`, {
-            method: 'POST',
-            headers: getAuthHeaders(false),
-            body: JSON.stringify({ version }),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to post credit note');
-        }
-        return response.json();
     }
 }
 

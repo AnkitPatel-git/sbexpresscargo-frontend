@@ -1,0 +1,32 @@
+info:
+  name: Service Center Master - Update
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/service-center-master/2"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1,
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Service Center Master update by id. JWT + service_center_master_modify or service_center_master_all.
+
+  Mandatory: version
+  Optional: code, name, subName, address1, address2, address3, address4, state, telephone, email, gstNo, gstTelephone, panNo, icnNo, stNo, pinCodeId, companyLogo, signatoryLogo, terms, bankId, accountNo, accountName, bankAddress, ifsc, micr, lastInvoicePrefix, lastInvoiceNo, lastInvoiceSuffix, freeFormPrefix, lastFreeFormInvoiceNo, freeFormSuffix, debitNotePrefix, debitNoteLastInvoiceNo, debitNoteSuffix, creditNotePrefix, creditNoteLastInvoiceNo, creditNoteSuffix, rcpLastNo

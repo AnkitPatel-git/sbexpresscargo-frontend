@@ -1,0 +1,65 @@
+info:
+  name: Create Manifest
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/manifest"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "manifestNo": "CD12345",
+        "masterAwbNo": "MAWB123",
+        "manifestDate": "2026-03-20",
+        "manifestTime": "10:00",
+        "location": "MUMBAI",
+        "serviceCenter": "VASAI",
+        "serviceCenterId": 1,
+        "connectStation": "DELHI",
+        "vendorId": 1,
+        "productId": 1,
+        "format": "standard",
+        "singleLine": false,
+        "pdfType": "A4",
+        "accountNo": "ACC001",
+        "department": "Operations",
+        "shipmentIds": [1],
+        "items": [
+          {
+            "bagNo": "BAG123",
+            "forwardingNo": "FWD001",
+            "awbNo": "AWB123456",
+            "refNo": "REF001",
+            "crnMhbsNo": "CRN001",
+            "pieces": 1,
+            "chargeWeight": 5,
+            "bookDate": "2026-03-20",
+            "origin": "MUMBAI",
+            "destination": "DELHI",
+            "code": "PROD01",
+            "customer": "Acme Corp",
+            "consignee": "Receiver Co",
+            "instruction": "Handle with care"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Create manifest and attach shipments. JWT + manifest_add or manifest_all.
+
+  Mandatory: manifestNo, manifestDate, shipmentIds
+  Optional: masterAwbNo, manifestTime, location, serviceCenter, serviceCenterId, connectStation, vendorId, productId, format, singleLine, pdfType, accountNo, department, items (bagNo, forwardingNo, awbNo, refNo, crnMhbsNo, pieces, chargeWeight, bookDate, origin, destination, code, customer, consignee, instruction)

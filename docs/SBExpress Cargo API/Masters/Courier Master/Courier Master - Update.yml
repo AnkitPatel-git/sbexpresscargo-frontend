@@ -1,0 +1,29 @@
+info:
+  name: Courier Master - Update
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/courier-master/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "serviceCenterId": 2,
+        "pickupCharge": 30,
+        "deliveryCharge": 45,
+        "inActive": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

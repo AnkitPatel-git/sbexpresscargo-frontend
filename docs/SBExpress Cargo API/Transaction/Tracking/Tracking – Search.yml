@@ -1,0 +1,20 @@
+info:
+  name: Tracking – Search
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/transaction/tracking/search?page=1&limit=20&search="
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Search tracking list. JWT + tracking_view/tracking_search/tracking_all.

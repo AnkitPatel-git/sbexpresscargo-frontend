@@ -5,7 +5,9 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
         const urlStr = typeof input === 'string' ? input : input.toString();
         
         // Don't intercept 401s for the login endpoint to allow proper error handling there
-        if (!urlStr.includes('/users/login') && typeof window !== 'undefined') {
+        const isLoginRequest =
+            urlStr.includes('/utilities/users/login') || urlStr.includes('/users/login');
+        if (!isLoginRequest && typeof window !== 'undefined') {
             if (window.location.pathname !== '/login') {
                 // Clear local storage auth data
                 localStorage.removeItem("accessToken");

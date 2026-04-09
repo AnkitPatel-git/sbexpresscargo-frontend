@@ -75,6 +75,7 @@ import { vendorService } from '@/services/masters/vendor-service'
 import { serviceMapService } from '@/services/masters/service-map-service'
 import { chargeService } from '@/services/masters/charge-service'
 import { shipmentSchema, ShipmentFormValues, Shipment } from '@/types/transactions/shipment'
+import { omitEmptyCodeFields } from '@/lib/master-code-schema'
 import type { Shipper } from '@/types/masters/shipper'
 import type { Consignee } from '@/types/masters/consignee'
 
@@ -130,14 +131,24 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
 
     if (payload.shipperId) {
         payload.shipper = undefined
-    } else if (!payload.shipper?.shipperName && !payload.shipper?.mobile && !payload.shipper?.shipperCode) {
-        payload.shipper = undefined
+    } else if (payload.shipper) {
+        const s = omitEmptyCodeFields({ ...payload.shipper }, ['shipperCode']) as NonNullable<ShipmentFormValues['shipper']>
+        if (!s.shipperName?.trim() && !s.mobile?.trim() && !s.shipperCode?.trim()) {
+            payload.shipper = undefined
+        } else {
+            payload.shipper = s
+        }
     }
 
     if (payload.consigneeId) {
         payload.consignee = undefined
-    } else if (!payload.consignee?.name && !payload.consignee?.mobile && !payload.consignee?.code) {
-        payload.consignee = undefined
+    } else if (payload.consignee) {
+        const c = omitEmptyCodeFields({ ...payload.consignee }, ['code']) as NonNullable<ShipmentFormValues['consignee']>
+        if (!c.name?.trim() && !c.mobile?.trim() && !c.code?.trim()) {
+            payload.consignee = undefined
+        } else {
+            payload.consignee = c
+        }
     }
 
     payload.piecesRows = (payload.piecesRows || []).filter((row) => Number(row.pieces || 0) > 0)
@@ -496,7 +507,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (chargeWeight > 0 && Math.abs((form.getValues('chargeWeight') || 0) - chargeWeight) > 0.001) {
             form.setValue('chargeWeight', parseFloat(chargeWeight.toFixed(2)), { shouldValidate: true });
         }
-    }, [JSON.stringify(watchedPiecesRows), form]);
+    }, [watchedPiecesRows, form]);
 
     // 2. Charges Row Total and Grand Totals
     const watchedCharges = form.watch('charges')
@@ -542,7 +553,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (Math.abs((form.getValues('totalAmount') || 0) - grandTotalAmount) > 0.01) {
             form.setValue('totalAmount', parseFloat(grandTotalAmount.toFixed(2)), { shouldValidate: true });
         }
-    }, [JSON.stringify(watchedCharges), form]);
+    }, [watchedCharges, form]);
 
     // --- End Calculations ---
 
@@ -855,9 +866,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="shipper.shipperCode"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Code">
+                                                <FloatingFormItem label="Shipper code (optional)">
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -1032,9 +1043,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="consignee.code"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Code">
+                                                <FloatingFormItem label="Consignee code (optional)">
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}

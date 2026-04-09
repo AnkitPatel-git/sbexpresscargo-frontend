@@ -1,0 +1,7 @@
+info:
+  name: Manifest
+  type: folder
+  seq: 2
+
+request:
+  auth: inherit

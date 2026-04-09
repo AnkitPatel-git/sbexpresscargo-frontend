@@ -1,0 +1,173 @@
+info:
+  name: Vendor Master - Create
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/vendor-master"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "vendorCode": "VEND05",
+        "vendorName": "Bluedart",
+        "contactPerson": "Vendor Contact",
+        "address1": "400 Vendor Ave",
+        "address2": "Floor 1",
+        "pinCodeId": "486001",
+        "telephone": "022-77778888",
+                "fax": "022-99990000",
+        "email": "vendor@partner.com",
+        "mobile": "9876543213",
+        "website": "https://vendor.com",
+        "gstNo": "27AABCU9603R1ZM",
+        "mode": "AIR",
+        "fuelHead": "ADVANCED",
+        "currency": "INR",
+        "origin": "MUMBAI",
+        "vendorZip": "400004",
+        "status": "ACTIVE",
+        "global": true,
+        "gstType": "FORWARD",
+        "volumetricRound": 5000
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/vendor-master"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "vendorCode": "VEND05",
+            "vendorName": "Bluedart",
+            "contactPerson": "Vendor Contact",
+            "address1": "400 Vendor Ave",
+            "address2": "Floor 1",
+            "pinCodeId": "486001",
+            "telephone": "022-77778888",
+                    "fax": "022-99990000",
+            "email": "vendor@partner.com",
+            "mobile": "9876543213",
+            "website": "https://vendor.com",
+            "gstNo": "27AABCU9603R1ZM",
+            "mode": "AIR",
+            "fuelHead": "ADVANCED",
+            "currency": "INR",
+            "origin": "MUMBAI",
+            "vendorZip": "400004",
+            "status": "ACTIVE",
+            "global": true,
+            "gstType": "FORWARD",
+            "volumetricRound": 5000
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "697"
+        - name: etag
+          value: W/"2b9-rgd3E/P1DcRJ/i3zmY4RfUULFQc"
+        - name: date
+          value: Thu, 09 Apr 2026 14:13:49 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 1,
+              "vendorCode": "VEND05",
+              "vendorName": "Bluedart",
+              "version": 1,
+              "contactPerson": "Vendor Contact",
+              "address1": "400 Vendor Ave",
+              "address2": "Floor 1",
+              "pinCodeId": 3,
+              "countryId": 1,
+              "stateId": 3,
+              "zoneId": null,
+              "telephone": "022-77778888",
+              "fax": "022-99990000",
+              "email": "vendor@partner.com",
+              "mobile": "9876543213",
+              "website": "https://vendor.com",
+              "gstNo": "27AABCU9603R1ZM",
+              "mode": "AIR",
+              "fuelHead": "ADVANCED",
+              "currency": "INR",
+              "origin": "MUMBAI",
+              "vendorZip": "400004",
+              "status": "ACTIVE",
+              "global": true,
+              "gstType": "FORWARD",
+              "volumetricRound": 5000,
+              "createdAt": "2026-04-09T14:13:49.229Z",
+              "updatedAt": "2026-04-09T14:13:49.229Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null
+            }
+          }
+
+docs: |-
+  Vendor Master create. JWT + vendor_master_add or vendor_master_all.
+
+  Mandatory: vendorName
+  Optional: vendorCode (if omitted, backend assigns next `VEN` + numeric suffix), contactPerson, address1, address2, pinCodeId, city, state, telephone, fax, email, mobile, website, gstNo, mode, fuelHead, currency, origin, vendorZip, status, global, gstType, volumetricRound

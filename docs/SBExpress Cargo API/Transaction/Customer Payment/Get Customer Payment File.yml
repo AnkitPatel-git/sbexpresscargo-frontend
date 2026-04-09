@@ -1,0 +1,20 @@
+info:
+  name: Get Customer Payment File
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/transaction/customer-payment/1/file"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Serve attached file for payment. JWT + customer_payment_list or customer_payment_all.

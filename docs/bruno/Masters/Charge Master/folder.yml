@@ -1,7 +1,0 @@
-info:
-  name: Charge Master
-  type: folder
-  seq: 19
-
-request:
-  auth: inherit

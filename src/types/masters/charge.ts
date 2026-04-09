@@ -1,8 +1,23 @@
-export type ChargeCalculationBase = 'CHARGE_WEIGHT' | 'FLAT';
-export type ChargeTypeEnums = 'FREIGHT' | 'AIRWAYBILL' | 'FUEL_SURCHARGE' | 'DOCUMENTATION' | 'OTHER';
+export type ChargeCalculationBase =
+    | 'CHARGE_WEIGHT'
+    | 'FLAT'
+    | 'ACTUAL_WEIGHT'
+    | 'FREIGHT'
+    | 'SHIPMENT_VALUE';
+
+/** Prisma `ChargeType` */
+export type ChargeTypeEnums =
+    | 'AIRWAYBILL'
+    | 'FREIGHT'
+    | 'FUEL'
+    | 'OBC'
+    | 'FLAT'
+    | 'OTHER';
 
 export interface Charge {
     id: number;
+    /** Optimistic locking; older APIs may omit until backfilled */
+    version?: number;
     code: string;
     name: string;
     chargeType: ChargeTypeEnums | string | null;

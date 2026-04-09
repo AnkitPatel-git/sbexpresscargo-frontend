@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Client Rate Master",
+    title: "Rate Master",
 };
 
 export default function ClientRateMasterLayout({

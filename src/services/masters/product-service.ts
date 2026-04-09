@@ -65,7 +65,7 @@ export const productService = {
 
     async updateProduct(id: number, data: Partial<ProductFormData>): Promise<ProductSingleResponse> {
         const response = await apiFetch(`${API_URL}/product-master/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

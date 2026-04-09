@@ -34,13 +34,18 @@ export default function DrsListPage() {
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["drs", page, limit, debouncedSearch],
-    queryFn: () => drsService.getDrs(page, limit, debouncedSearch),
+    queryFn: () => drsService.getDrs(page, limit),
   });
 
   const total = data?.total ?? 0;
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
   const to = Math.min(page * limit, total);
   const filteredRows = data?.data.filter((drs) => {
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      const hay = `${drs.drsNo || ""} ${drs.status || ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     if (colFilters.drsNo && !(drs.drsNo || "").toLowerCase().includes(colFilters.drsNo.toLowerCase())) return false;
     if (colFilters.serviceCenter && !(drs.serviceCenter || "").toLowerCase().includes(colFilters.serviceCenter.toLowerCase())) return false;
     if (colFilters.status && !(drs.status || "").toLowerCase().includes(colFilters.status.toLowerCase())) return false;

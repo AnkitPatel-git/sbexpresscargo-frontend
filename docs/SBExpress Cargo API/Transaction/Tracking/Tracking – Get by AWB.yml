@@ -1,0 +1,20 @@
+info:
+  name: Tracking – Get by AWB
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/transaction/tracking/awb/AWB123456"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Full tracking detail for one AWB. JWT + tracking_view or tracking_all.

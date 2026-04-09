@@ -31,6 +31,20 @@ export const serviceMapService = {
         return response.json();
     },
 
+    async getServiceMapsByVendor(vendorId: number): Promise<ServiceMapListResponse> {
+        const response = await apiFetch(`${API_URL}/service-map-master/by-vendor/${vendorId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch service maps for vendor');
+        }
+
+        return response.json();
+    },
+
     async getServiceMapById(id: number): Promise<ServiceMapSingleResponse> {
         const response = await apiFetch(`${API_URL}/service-map-master/${id}`, {
             headers: {

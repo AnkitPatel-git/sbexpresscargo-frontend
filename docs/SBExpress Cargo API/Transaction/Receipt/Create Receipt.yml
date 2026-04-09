@@ -1,0 +1,39 @@
+info:
+  name: Create Receipt
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/receipt"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "shipmentId": 1,
+        "amount": 1000,
+        "totalRcp": 600,
+        "balance": 400,
+        "lines": [
+          {
+            "receiptNo": "RCPT-001",
+            "receiptDate": "2026-04-09",
+            "amount": 600,
+            "receiptType": "BANK",
+            "referenceNo": "UTR-123",
+            "bankId": 1
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

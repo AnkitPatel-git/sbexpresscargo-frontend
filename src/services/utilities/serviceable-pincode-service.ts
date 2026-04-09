@@ -11,12 +11,15 @@ export const serviceablePincodeService = {
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
     }): Promise<ServiceablePincodeListResponse> {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append('page', params.page.toString());
-        if (params?.limit) queryParams.append('limit', params.limit.toString());
-        if (params?.search) queryParams.append('search', params.search);
-        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        // Bruno: Masters → Serviceable Pincode → List - Search
+        // .../utilities/serviceable-pincodes?page=1&limit=20&sortBy=pinCode&sortOrder=asc&search=
+        const queryParams = new URLSearchParams({
+            page: String(params?.page ?? 1),
+            limit: String(params?.limit ?? 20),
+            sortBy: params?.sortBy ?? 'pinCode',
+            sortOrder: params?.sortOrder ?? 'asc',
+            search: params?.search ?? '',
+        });
 
         const response = await apiFetch(`${API_URL}/utilities/serviceable-pincodes?${queryParams.toString()}`, {
             headers: {

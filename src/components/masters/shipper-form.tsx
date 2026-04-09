@@ -49,9 +49,10 @@ import { shipperService } from "@/services/masters/shipper-service"
 import { stateService } from "@/services/masters/state-service"
 import { serviceCenterService } from "@/services/masters/service-center-service"
 import { Shipper } from "@/types/masters/shipper"
+import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
 
 const shipperSchema = z.object({
-    shipperCode: z.string().min(2, "Code must be at least 2 characters"),
+    shipperCode: optionalMasterCode(2),
     shipperName: z.string().min(3, "Name must be at least 3 characters"),
     shipperOrigin: z.string().optional().nullable(),
     contactPerson: z.string().optional().nullable(),
@@ -183,10 +184,11 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: ShipperFormValues) => {
+            const payload = omitEmptyCodeFields(data, ["shipperCode"]) as ShipperFormValues
             if (isEdit && initialData) {
-                return shipperService.updateShipper(initialData.id, data as any)
+                return shipperService.updateShipper(initialData.id, payload as any)
             }
-            return shipperService.createShipper(data as any)
+            return shipperService.createShipper(payload as any)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["shippers"] })
@@ -226,9 +228,9 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                     control={form.control}
                                     name="shipperCode"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Shipper Code*">
+                                        <FloatingFormItem label="Shipper Code (optional)">
                                             <FormControl>
-                                                <Input placeholder="e.g. SHIP01" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="Blank = auto-generate" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}

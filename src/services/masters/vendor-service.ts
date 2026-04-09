@@ -65,7 +65,7 @@ export const vendorService = {
 
     async updateVendor(id: number, data: Partial<VendorFormData>): Promise<VendorSingleResponse> {
         const response = await apiFetch(`${API_URL}/vendor-master/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

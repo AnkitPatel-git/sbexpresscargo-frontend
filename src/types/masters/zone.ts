@@ -1,5 +1,6 @@
 export interface Zone {
     id: number;
+    version?: number;
     name: string;
     code: string;
     country: string;

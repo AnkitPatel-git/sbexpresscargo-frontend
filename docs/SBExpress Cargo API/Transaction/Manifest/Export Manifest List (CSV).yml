@@ -1,0 +1,20 @@
+info:
+  name: Export Manifest List (CSV)
+  type: http
+  seq: 13
+
+http:
+  method: GET
+  url: "{{baseUrl}}/transaction/manifest/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Stream manifest headers as CSV. JWT + manifest_list/search/all.

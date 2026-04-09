@@ -29,9 +29,10 @@ import {
 } from "@/components/ui/select"
 import { countryService } from '@/services/masters/country-service'
 import { Country, CountryFormData } from '@/types/masters/country'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const countrySchema = z.object({
-    code: z.string().min(2, "Country code must be at least 2 characters"),
+    code: optionalMasterCode(2),
     name: z.string().min(3, "Country name must be at least 3 characters"),
     weightUnit: z.string().min(1, "Weight unit is required"),
     currency: z.string().min(1, "Currency is required"),
@@ -72,10 +73,11 @@ export function CountryForm({ initialData }: CountryFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: CountryFormData) => {
+            const payload = omitEmptyCodeFields(data, ['code']) as CountryFormData
             if (isEdit && initialData) {
-                return countryService.updateCountry(initialData.id, data)
+                return countryService.updateCountry(initialData.id, payload)
             }
-            return countryService.createCountry(data)
+            return countryService.createCountry(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['countries'] })
@@ -102,9 +104,9 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FloatingFormItem label="Country Code">
+                            <FloatingFormItem label="Country Code (optional)">
                                 <FormControl>
-                                    <Input placeholder="e.g. IND, USA" {...field} className={FLOATING_INNER_CONTROL} />
+                                    <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
                             </FloatingFormItem>
                         )}

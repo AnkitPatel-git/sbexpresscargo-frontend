@@ -1,0 +1,36 @@
+info:
+  name: List Manifests
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/transaction/manifest?page=1&limit=20&sortBy=manifestNo&sortOrder=desc&search="
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  params:
+    - name: page
+      value: "1"
+      type: query
+    - name: limit
+      value: "20"
+      type: query
+    - name: sortBy
+      value: manifestNo
+      type: query
+    - name: sortOrder
+      value: desc
+      type: query
+    - name: search
+      value: ""
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: List/search manifests. JWT + manifest_list/search/all.

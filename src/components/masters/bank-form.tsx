@@ -29,9 +29,10 @@ import {
 import { FormSection } from "@/components/ui/form-section"
 import { bankService } from '@/services/masters/bank-service'
 import { Bank } from '@/types/masters/bank'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const bankSchema = z.object({
-    bankCode: z.string().min(2, "Bank code must be at least 2 characters"),
+    bankCode: optionalMasterCode(2),
     bankName: z.string().min(3, "Bank name must be at least 3 characters"),
     status: z.string().min(1, "Status is required"),
 })
@@ -68,10 +69,11 @@ export function BankForm({ initialData }: BankFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: BankFormValues) => {
+            const payload = omitEmptyCodeFields(data, ['bankCode']) as BankFormValues
             if (isEdit && initialData) {
-                return bankService.updateBank(initialData.id, data)
+                return bankService.updateBank(initialData.id, payload)
             }
-            return bankService.createBank(data)
+            return bankService.createBank(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['banks'] })
@@ -99,9 +101,9 @@ export function BankForm({ initialData }: BankFormProps) {
                                 control={form.control}
                                 name="bankCode"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Bank Code">
+                                    <FloatingFormItem label="Bank Code (optional)">
                                         <FormControl>
-                                            <Input placeholder="e.g. HDFC, ICICI" {...field} className={FLOATING_INNER_CONTROL} />
+                                            <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}

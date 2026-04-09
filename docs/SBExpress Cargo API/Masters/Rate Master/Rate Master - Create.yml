@@ -1,0 +1,47 @@
+info:
+  name: Rate Master - Create
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/rate-master"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "updateType": "AWB_ENTRY_RATE",
+        "fromDate": "2026-03-01",
+        "toDate": "2026-03-31",
+        "customerId": 1,
+        "serviceType": "EXPRESS",
+        "rateType": "ZONE_MATRIX",
+        "zoneId": 1,
+        "origin": "400001",
+        "destination": "110001",
+        "paymentType": "CREDIT",
+        "zeroContract": false,
+        "flatRate": 25.5
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Create rate master. JWT + master.rate.create.
+
+  Required: `updateType`, `fromDate`, `toDate` (ISO date strings, e.g. `2026-03-01`).
+  Optional: `customerId` (omit only if you rely on backend default customer), `serviceType`, `rateType`, `zoneId`, `origin`, `destination` (often pincodes for zone-matrix scope), `paymentType`, `zeroContract`, `flatRate`.
+
+  The DTO also allows `serviceCenter`, `customer`, `product`, `vendor` as strings, but **create does not resolve or store them**—use `customerId` for the customer FK. `productId`, `vendorId`, and `serviceCenterId` are not set by this endpoint (response shows `null` unless you extend the API).
+
+  Date range max 31 days; `fromDate` must be before `toDate`. Overlap with an existing contract for the same customer + scope is rejected.

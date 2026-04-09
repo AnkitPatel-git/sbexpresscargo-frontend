@@ -1,0 +1,58 @@
+info:
+  name: Update Credit Note
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/transaction/receipt-expenses/credit-note/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1,
+        "creditNoteNo": "CN001",
+        "noteNo": "CN001",
+        "cnDate": "2026-03-20",
+        "customerId": 1,
+        "serviceCenter": "VASAI",
+        "serviceCenterId": 1,
+        "invoiceRef": "INV001",
+        "narration": "Updated narration",
+        "gst": true,
+        "totalAmount": 450,
+        "grandTotal": 450,
+        "items": [
+          {
+            "awbNo": "AWB123456",
+            "destination": "DELHI",
+            "product": "Express",
+            "weight": 5,
+            "pcs": 1,
+            "remark": "Refund for delay",
+            "amount": 450,
+            "igst": 81,
+            "sgst": 0,
+            "cgst": 0,
+            "total": 531
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Update credit note header/items. JWT + credit_note_modify or credit_note_all.
+
+  Mandatory: version
+  Optional: noteNo, creditNoteNo, cnDate, customerId, invoiceRef, narration, gst, amount, igst, sgst, cgst, totalAmount, grandTotal, serviceCenter, serviceCenterId, items

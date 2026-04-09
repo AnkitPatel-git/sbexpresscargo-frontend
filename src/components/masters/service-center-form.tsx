@@ -34,9 +34,10 @@ import { FormSection } from "@/components/ui/form-section"
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { stateService } from '@/services/masters/state-service'
 import { ServiceCenter } from '@/types/masters/service-center'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const serviceCenterSchema = z.object({
-    code: z.string().min(2, "Code must be at least 2 characters"),
+    code: optionalMasterCode(2),
     name: z.string().min(3, "Name must be at least 3 characters"),
     subName: z.string().nullable().optional(),
     address1: z.string().nullable().optional(),
@@ -117,10 +118,12 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
     }, [initialData, form])
 
     const mutation = useMutation({
-        mutationFn: (values: ServiceCenterFormValues) =>
-            isEdit
-                ? serviceCenterService.updateServiceCenter(initialData!.id, values)
-                : serviceCenterService.createServiceCenter(values),
+        mutationFn: (values: ServiceCenterFormValues) => {
+            const payload = omitEmptyCodeFields(values, ['code']) as ServiceCenterFormValues
+            return isEdit
+                ? serviceCenterService.updateServiceCenter(initialData!.id, payload)
+                : serviceCenterService.createServiceCenter(payload)
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['service-centers'] })
             if (isEdit && initialData) {
@@ -148,9 +151,9 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                 control={form.control}
                                 name="code"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Service Center Code">
+                                    <FloatingFormItem label="Service Center Code (optional)">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="e.g. SC001" className={FLOATING_INNER_CONTROL} />
+                                            <Input {...field} value={field.value || ''} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}

@@ -1,0 +1,55 @@
+info:
+  name: Create Customer Payment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/customer-payment"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: multipart-form
+    data:
+      - name: date
+        type: text
+        value: 2026-03-20
+        description: Mandatory
+      - name: paidDate
+        type: text
+        value: 2026-03-20
+        description: Mandatory
+      - name: amount
+        type: text
+        value: "1000.00"
+        description: Mandatory
+      - name: customerId
+        type: text
+        value: "1"
+        description: Mandatory
+      - name: invoiceNo
+        type: text
+        value: INV-0001
+        description: Mandatory
+      - name: remark
+        type: text
+        value: NEFT payment
+        description: Optional
+      - name: approved
+        type: text
+        value: "false"
+        description: Optional
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Create customer payment (with optional file). JWT + customer_payment_add or customer_payment_all.
+
+  Mandatory: date, paidDate, amount, customerId, invoiceNo
+  Optional: remark, approved

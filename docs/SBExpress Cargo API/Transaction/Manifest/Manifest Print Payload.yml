@@ -1,0 +1,20 @@
+info:
+  name: Manifest Print Payload
+  type: http
+  seq: 12
+
+http:
+  method: GET
+  url: "{{baseUrl}}/transaction/manifest/1/print"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Get manifest print payload. JWT + manifest_list/search/all.

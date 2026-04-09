@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { optionalMasterCode } from '@/lib/master-code-schema';
 
 export const pieceRowSchema = z.object({
     childAwbNo: z.string().optional(),
@@ -39,7 +40,7 @@ export const shipmentSchema = z.object({
     shipperId: z.number().optional(),
     consigneeId: z.number().optional(),
     shipper: z.object({
-        shipperCode: z.string().optional(),
+        shipperCode: optionalMasterCode(2).optional(),
         shipperName: z.string().optional(),
         shipperOrigin: z.string().optional(),
         contactPerson: z.string().optional(),
@@ -72,7 +73,7 @@ export const shipmentSchema = z.object({
         lutTillDate: z.string().optional(),
     }).optional(),
     consignee: z.object({
-        code: z.string().optional(),
+        code: optionalMasterCode(2).optional(),
         name: z.string().optional(),
         destination: z.string().optional(),
         contactPerson: z.string().optional(),

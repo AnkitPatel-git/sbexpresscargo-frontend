@@ -1,99 +1,72 @@
-import { apiFetch } from '@/lib/api-fetch';
-import { UndeliveredScanListResponse, UndeliveredScanSingleResponse, UndeliveredScanFormValues } from '@/types/transactions/undelivered-scan';
+import { apiFetch } from "@/lib/api-fetch";
 
-const getAuthHeaders = (isFormData = false) => {
-    const headers: Record<string, string> = {
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-    };
-    if (!isFormData) {
-        headers['Content-Type'] = 'application/json';
-    }
-    return headers;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const BASE = `${API_URL}/transaction/undelivered-scan`;
+
+const headers = (json = true) => {
+  const h: Record<string, string> = {
+    Authorization: `Bearer ${localStorage.getItem("accessToken") ?? ""}`,
+  };
+  if (json) h["Content-Type"] = "application/json";
+  return h;
 };
 
-class UndeliveredScanService {
-    private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/undelivered-scan`;
+/** Bruno: Transaction → Undelivered Scan. */
+export const undeliveredScanService = {
+  async list(page = 1, limit = 20) {
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const response = await apiFetch(`${BASE}?${q}`, { headers: headers() });
+    if (!response.ok) throw new Error("Failed to list undelivered scans");
+    return response.json();
+  },
 
-    async getUndeliveredScans(page: number, limit: number, search: string = ''): Promise<UndeliveredScanListResponse> {
-        const queryParams = new URLSearchParams({
-            page: page.toString(),
-            limit: limit.toString(),
-            sortBy: 'scanAt',
-            sortOrder: 'desc',
-        });
+  async getById(id: number | string) {
+    const response = await apiFetch(`${BASE}/${id}`, { headers: headers() });
+    if (!response.ok) throw new Error("Failed to fetch undelivered scan");
+    return response.json();
+  },
 
-        if (search) {
-            queryParams.append('search', search);
-        }
-
-        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`, { headers: getAuthHeaders() });
-        if (!response.ok) {
-            throw new Error('Failed to fetch undelivered scans');
-        }
-        return response.json();
+  async create(body: unknown) {
+    const response = await apiFetch(BASE, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error((err as { message?: string }).message || "Failed to create undelivered scan");
     }
+    return response.json();
+  },
 
-    async getUndeliveredScanById(id: number): Promise<UndeliveredScanSingleResponse> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`, { headers: getAuthHeaders() });
-        if (!response.ok) {
-            throw new Error('Failed to fetch undelivered scan');
-        }
-        return response.json();
+  async update(id: number | string, body: unknown) {
+    const response = await apiFetch(`${BASE}/${id}`, {
+      method: "PUT",
+      headers: headers(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error((err as { message?: string }).message || "Failed to update undelivered scan");
     }
+    return response.json();
+  },
 
-    async createUndeliveredScan(data: UndeliveredScanFormValues): Promise<UndeliveredScanSingleResponse> {
-        const response = await apiFetch(this.baseUrl, {
-            method: 'POST',
-            headers: getAuthHeaders(false),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to create undelivered scan');
-        }
-        return response.json();
+  async delete(id: number | string) {
+    const response = await apiFetch(`${BASE}/${id}`, {
+      method: "DELETE",
+      headers: headers(false),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error((err as { message?: string }).message || "Failed to delete undelivered scan");
     }
+    return response.json().catch(() => ({}));
+  },
 
-    async updateUndeliveredScan(id: number, data: Partial<UndeliveredScanFormValues>): Promise<UndeliveredScanSingleResponse> {
-        // Strip ids from items as the API prohibits then in the update payload
-        const updatedData = {
-            ...data,
-            items: data.items?.map(({ id, ...item }) => item)
-        };
-        const response = await apiFetch(`${this.baseUrl}/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(false),
-            body: JSON.stringify(updatedData),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to update undelivered scan');
-        }
-        return response.json();
-    }
-
-    async deleteUndeliveredScan(id: number): Promise<void> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(false),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to delete undelivered scan');
-        }
-    }
-
-    async exportUndeliveredScansCsv(search: string = ''): Promise<Blob> {
-        const queryParams = new URLSearchParams();
-        if (search) {
-            queryParams.append('search', search);
-        }
-
-        const response = await apiFetch(`${this.baseUrl}/export?${queryParams.toString()}`, { 
-            headers: getAuthHeaders() 
-        });
-        if (!response.ok) {
-            throw new Error('Failed to export undelivered scans');
-        }
-        return response.blob();
-    }
-}
-
-export const undeliveredScanService = new UndeliveredScanService();
+  async exportCsv(): Promise<Blob> {
+    const response = await apiFetch(`${BASE}/export`, { headers: headers(false) });
+    if (!response.ok) throw new Error("Failed to export undelivered scans");
+    return response.blob();
+  },
+};

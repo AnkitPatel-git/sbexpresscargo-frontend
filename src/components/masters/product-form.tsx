@@ -29,17 +29,16 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { productService } from '@/services/masters/product-service'
 import { Product } from '@/types/masters/product'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const productSchema = z.object({
-    productCode: z.string().min(2, "Product code must be at least 2 characters"),
+    productCode: optionalMasterCode(2),
     productName: z.string().min(3, "Product name must be at least 3 characters"),
     productType: z.string().min(1, "Product type is required"),
-    productService: z.string().optional().nullable(),
     fuelCharge: z.boolean(),
     gstReverse: z.boolean(),
     docType: z.string().min(1, "Doc type is required"),
     status: z.string().min(1, "Status is required"),
-    groupType: z.string().min(1, "Group type is required"),
 })
 
 type ProductFormValues = z.infer<typeof productSchema>
@@ -59,12 +58,10 @@ export function ProductForm({ initialData }: ProductFormProps) {
             productCode: initialData?.productCode || "",
             productName: initialData?.productName || "",
             productType: initialData?.productType || "DOMESTIC",
-            productService: initialData?.productService || "",
             fuelCharge: initialData?.fuelCharge ?? true,
             gstReverse: initialData?.gstReverse ?? false,
             docType: initialData?.docType || "DOX",
             status: initialData?.status || "ACTIVE",
-            groupType: initialData?.groupType || "AIR",
         },
     })
 
@@ -74,22 +71,21 @@ export function ProductForm({ initialData }: ProductFormProps) {
                 productCode: initialData.productCode,
                 productName: initialData.productName,
                 productType: initialData.productType,
-                productService: initialData.productService || "",
                 fuelCharge: initialData.fuelCharge,
                 gstReverse: initialData.gstReverse,
                 docType: initialData.docType,
                 status: initialData.status,
-                groupType: initialData.groupType,
             })
         }
     }, [initialData, form])
 
     const mutation = useMutation({
         mutationFn: (data: ProductFormValues) => {
+            const payload = omitEmptyCodeFields(data, ['productCode']) as ProductFormValues
             if (isEdit && initialData) {
-                return productService.updateProduct(initialData.id, data)
+                return productService.updateProduct(initialData.id, payload)
             }
-            return productService.createProduct(data)
+            return productService.createProduct(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] })
@@ -116,10 +112,10 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         control={form.control}
                         name="productCode"
                         render={({ field }) => (
-                            <FloatingFormItem label="Product Code">
+                            <FloatingFormItem label="Product Code (optional)">
                                 <FormControl>
                                     <Input
-                                        placeholder="Enter product code"
+                                        placeholder="Leave blank to auto-generate"
                                         {...field}
                                         disabled={isEdit}
                                         className={FLOATING_INNER_CONTROL}
@@ -163,32 +159,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
                                     <SelectContent>
                                         <SelectItem value="DOMESTIC">Domestic</SelectItem>
                                         <SelectItem value="INTERNATIONAL">International</SelectItem>
-                                        <SelectItem value="IMPORT">Import</SelectItem>
                                         <SelectItem value="LOCAL">Local</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </FloatingFormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="groupType"
-                        render={({ field }) => (
-                            <FloatingFormItem label="Group Type">
-                                <Select
-                                    onValueChange={field.onChange}
-                                    value={field.value || ""}
-                                >
-                                    <FormControl>
-                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select group" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="AIR">Air</SelectItem>
-                                        <SelectItem value="SURFACE">Surface</SelectItem>
-                                        <SelectItem value="TRAIN">Train</SelectItem>
-                                        <SelectItem value="ALL">All</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </FloatingFormItem>
@@ -242,23 +213,6 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         )}
                     />
                 </div>
-
-                <FormField
-                    control={form.control}
-                    name="productService"
-                    render={({ field }) => (
-                        <FloatingFormItem label="Product Service">
-                            <FormControl>
-                                <Input
-                                    placeholder="Enter service name (optional)"
-                                    {...field}
-                                    value={field.value || ""}
-                                    className={FLOATING_INNER_CONTROL}
-                                />
-                            </FormControl>
-                        </FloatingFormItem>
-                    )}
-                />
 
                 <div className="flex gap-6 pt-2">
                     <FormField

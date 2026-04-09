@@ -1,0 +1,40 @@
+info:
+  name: Update Manifest Inscan
+  type: http
+  seq: 20
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/transaction/manifest/inscan/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "items": [
+          {
+            "awbNo": "AWB123456",
+            "pieces": 1,
+            "weight": 5.2,
+            "manifestItemId": 1,
+            "shipmentId": 1
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Update manifest inscan header/items. JWT + manifest_modify or manifest_all.
+
+  Mandatory: (none - all optional for partial update)
+  Optional: bagOrManifestAwbNo, inscanDate, inscanTime, serviceCenter, manifestId, bagNo, items

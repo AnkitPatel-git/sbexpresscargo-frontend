@@ -2,13 +2,11 @@ export interface Product {
     id: number;
     productCode: string;
     productName: string;
-    productType: 'DOMESTIC' | 'INTERNATIONAL' | 'IMPORT' | 'LOCAL' | string;
-    productService: string | null;
+    productType: 'DOMESTIC' | 'INTERNATIONAL' | 'LOCAL' | string;
     fuelCharge: boolean;
     gstReverse: boolean;
     docType: 'DOX' | 'NDOX' | string;
     status: 'ACTIVE' | 'INACTIVE' | string;
-    groupType: 'AIR' | 'SURFACE' | 'TRAIN' | 'ALL' | string;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -21,12 +19,10 @@ export interface ProductFormData {
     productCode: string;
     productName: string;
     productType: string;
-    productService?: string | null;
     fuelCharge: boolean;
     gstReverse: boolean;
     docType: string;
     status: string;
-    groupType: string;
 }
 
 export interface ProductListResponse {

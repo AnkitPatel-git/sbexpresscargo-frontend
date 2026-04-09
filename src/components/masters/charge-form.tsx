@@ -27,13 +27,38 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { chargeService } from '@/services/masters/charge-service'
-import { Charge } from '@/types/masters/charge'
+import { Charge, type ChargeTypeEnums } from '@/types/masters/charge'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
+
+function normalizeChargeTypeFromApi(raw: string | null | undefined): ChargeTypeEnums {
+    if (!raw) return 'FREIGHT'
+    if (raw === 'FUEL_SURCHARGE') return 'FUEL'
+    if (raw === 'DOCUMENTATION') return 'OTHER'
+    const allowed: ChargeTypeEnums[] = ['FREIGHT', 'AIRWAYBILL', 'FUEL', 'OBC', 'FLAT', 'OTHER']
+    return allowed.includes(raw as ChargeTypeEnums) ? (raw as ChargeTypeEnums) : 'FREIGHT'
+}
+
+const CALC_BASES = ['CHARGE_WEIGHT', 'FLAT', 'ACTUAL_WEIGHT', 'FREIGHT', 'SHIPMENT_VALUE'] as const
+type CalculationBaseField = (typeof CALC_BASES)[number]
+
+function normalizeCalculationBaseFromApi(raw: string | null | undefined): CalculationBaseField {
+    if (raw && (CALC_BASES as readonly string[]).includes(raw)) {
+        return raw as CalculationBaseField
+    }
+    return 'CHARGE_WEIGHT'
+}
 
 const chargeSchema = z.object({
-    code: z.string().min(2, "Code must be at least 2 characters"),
+    code: optionalMasterCode(2),
     name: z.string().min(3, "Name must be at least 3 characters"),
-    chargeType: z.enum(['FREIGHT', 'AIRWAYBILL', 'FUEL_SURCHARGE', 'DOCUMENTATION', 'OTHER']),
-    calculationBase: z.enum(['CHARGE_WEIGHT', 'FLAT']),
+    chargeType: z.enum(['FREIGHT', 'AIRWAYBILL', 'FUEL', 'OBC', 'FLAT', 'OTHER']),
+    calculationBase: z.enum([
+        'CHARGE_WEIGHT',
+        'FLAT',
+        'ACTUAL_WEIGHT',
+        'FREIGHT',
+        'SHIPMENT_VALUE',
+    ]),
     chargeRate: z.coerce.number().min(0, "Rate must be at least 0"),
     applyFuel: z.boolean(),
     applyTaxOnFuel: z.boolean(),
@@ -72,8 +97,8 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
         values: initialData ? {
             code: initialData.code,
             name: initialData.name,
-            chargeType: (initialData.chargeType as any) || 'FREIGHT',
-            calculationBase: (initialData.calculationBase as any) || 'CHARGE_WEIGHT',
+            chargeType: normalizeChargeTypeFromApi(initialData.chargeType),
+            calculationBase: normalizeCalculationBaseFromApi(initialData.calculationBase),
             chargeRate: Number(initialData.chargeRate),
             applyFuel: initialData.applyFuel,
             applyTaxOnFuel: initialData.applyTaxOnFuel,
@@ -86,10 +111,14 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: ChargeFormValues) => {
+            const payload = omitEmptyCodeFields(data, ['code']) as ChargeFormValues
             if (isEdit && initialData) {
-                return chargeService.updateCharge(initialData.id, data)
+                return chargeService.updateCharge(initialData.id, {
+                    ...payload,
+                    version: initialData.version ?? 1,
+                })
             }
-            return chargeService.createCharge(data)
+            return chargeService.createCharge(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['charges'] })
@@ -124,9 +153,9 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FloatingFormItem label="Charge Code">
+                            <FloatingFormItem label="Charge Code (optional)">
                                 <FormControl>
-                                    <Input placeholder="e.g. CHG01" {...field} className={FLOATING_INNER_CONTROL} />
+                                    <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
                             </FloatingFormItem>
                         )}
@@ -161,8 +190,9 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                                     <SelectContent>
                                         <SelectItem value="FREIGHT">FREIGHT</SelectItem>
                                         <SelectItem value="AIRWAYBILL">AIRWAYBILL</SelectItem>
-                                        <SelectItem value="FUEL_SURCHARGE">FUEL SURCHARGE</SelectItem>
-                                        <SelectItem value="DOCUMENTATION">DOCUMENTATION</SelectItem>
+                                        <SelectItem value="FUEL">FUEL</SelectItem>
+                                        <SelectItem value="OBC">OBC</SelectItem>
+                                        <SelectItem value="FLAT">FLAT</SelectItem>
                                         <SelectItem value="OTHER">OTHER</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -187,6 +217,9 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                                     <SelectContent>
                                         <SelectItem value="CHARGE_WEIGHT">CHARGE WEIGHT</SelectItem>
                                         <SelectItem value="FLAT">FLAT</SelectItem>
+                                        <SelectItem value="ACTUAL_WEIGHT">ACTUAL WEIGHT</SelectItem>
+                                        <SelectItem value="FREIGHT">FREIGHT</SelectItem>
+                                        <SelectItem value="SHIPMENT_VALUE">SHIPMENT VALUE</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </FloatingFormItem>

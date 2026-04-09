@@ -1,0 +1,97 @@
+info:
+  name: Rate Master - Calculate
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/rate-master/calculate"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "customerId": 1,
+        "serviceType": "EXPRESS",
+        "pickupPincode": "400001",
+        "deliveryPincode": "110001",
+        "weight": 10,
+        "chargeableWeight": 12,
+        "shipmentValue": 5000,
+        "dimensions": {
+          "length": 30,
+          "width": 20,
+          "height": 15
+        },
+        "floor": 2,
+        "bookDate": "2026-04-09"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: zone-matrix-example
+    request:
+      url: "{{baseUrl}}/rate-master/calculate"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "customerId": 1,
+            "serviceType": "EXPRESS",
+            "pickupPincode": "400001",
+            "deliveryPincode": "110001",
+            "weight": 10,
+            "chargeableWeight": 12,
+            "shipmentValue": 5000,
+            "dimensions": { "length": 30, "width": 20, "height": 15 },
+            "floor": 0,
+            "bookDate": "2026-04-09"
+          }
+  - name: distance-matrix-auto-from-pincodes
+    request:
+      url: "{{baseUrl}}/rate-master/calculate"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "customerId": 1,
+            "serviceType": "EXPRESS",
+            "pickupPincode": "400001",
+            "deliveryPincode": "560001",
+            "weight": 30,
+            "chargeableWeight": 45,
+            "shipmentValue": 0,
+            "dimensions": { "length": 40, "width": 30, "height": 25 },
+            "floor": 1,
+            "bookDate": "2026-04-09"
+          }
+
+docs: |-
+  Calculate rate without creating shipment. Zones are derived from pickup/delivery pincodes.
+
+  Full body (CalculateRateDto): customerId, serviceType, pickupPincode, deliveryPincode, weight, chargeableWeight (required).
+  Optional: distanceKm (omit to auto-resolve for **DISTANCE_MATRIX** via Nominatim + OSRM; not used for ZONE_MATRIX / FLAT), shipmentValue, dimensions { length, width, height }, floor, bookDate (ISO date string).
+
+  Returns fromZoneId, toZoneId, baseFreight, charges, totalAmount, breakdown. JWT + master.rate.read.

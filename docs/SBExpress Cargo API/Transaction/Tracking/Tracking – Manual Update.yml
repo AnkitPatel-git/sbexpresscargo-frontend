@@ -1,0 +1,31 @@
+info:
+  name: Tracking – Manual Update
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/tracking/manual"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "awbNo": "AWB123456",
+        "status": "IN_TRANSIT",
+        "remark": "Manual status",
+        "serviceCenterId": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Manual status update via tracking engine. JWT + tracking_modify or tracking_all.

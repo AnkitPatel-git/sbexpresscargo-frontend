@@ -1,0 +1,7 @@
+info:
+  name: Tracking
+  type: folder
+  seq: 8
+
+request:
+  auth: inherit

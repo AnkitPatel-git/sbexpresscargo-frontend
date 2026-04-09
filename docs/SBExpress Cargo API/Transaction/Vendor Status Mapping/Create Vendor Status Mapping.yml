@@ -1,0 +1,31 @@
+info:
+  name: Create Vendor Status Mapping
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/vendor-status-mappings"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "externalStatus": "OUT_FOR_DELIVERY",
+        "normalizedStatus": "OUT_FOR_DELIVERY",
+        "internalStatus": "IN_TRANSIT",
+        "priority": 10,
+        "isTerminal": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

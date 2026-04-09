@@ -1,0 +1,36 @@
+info:
+  name: State Master - Update
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/state-master/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "countryId": 1,
+        "stateCode": "MH",
+        "stateName": "Maharashtra Updated",
+        "gstAlias": "MH",
+        "unionTerritory": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  State Master update by id. JWT + state_master_modify or state_master_all.
+
+  Mandatory: (none - all optional for partial update)
+  Optional: countryId, stateCode, stateName, gstAlias, unionTerritory

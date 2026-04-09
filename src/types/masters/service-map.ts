@@ -5,7 +5,6 @@ export interface ServiceMap {
     id: number;
     vendorId: number;
     serviceType: ServiceTypeEnums;
-    billingVendorId: number;
     minWeight: string | number;
     maxWeight: string | number;
     status: ServiceMapStatus;

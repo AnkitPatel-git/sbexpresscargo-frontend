@@ -65,7 +65,7 @@ export const serviceCenterService = {
 
     async updateServiceCenter(id: number, data: Partial<ServiceCenterFormData>): Promise<ServiceCenterSingleResponse> {
         const response = await apiFetch(`${API_URL}/service-center-master/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

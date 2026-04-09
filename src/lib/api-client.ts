@@ -1,5 +1,4 @@
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 export async function apiClient<T>(
     endpoint: string,
@@ -29,9 +28,9 @@ export async function apiClient<T>(
 
 export const authApi = {
     login: (credentials: any) =>
-        apiClient<any>('/users/login', {
+        apiClient<any>('/utilities/users/login', {
             method: 'POST',
             body: JSON.stringify(credentials),
         }),
-    getProfile: () => apiClient<any>('/users/profile'),
+    getProfile: () => apiClient<any>('/utilities/users/profile'),
 };

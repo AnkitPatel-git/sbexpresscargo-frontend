@@ -1,0 +1,42 @@
+info:
+  name: Consignee Master - Update
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/consignee-master/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "code": "CONS01",
+        "name": "Receiver Company Updated",
+        "contactPerson": "New Contact",
+        "address1": "200 Delivery Lane",
+        "address2": "Floor 2",
+        "pinCodeId": "110001",
+        "areaId": 1,
+        "telephone": "011-12345678",
+        "fax": "011-11112222",
+        "email": "receive@company.com",
+        "mobile": "9876543211",
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Consignee Master update by id. JWT + consignee_master_modify or consignee_master_all.
+
+  Mandatory: (none - all optional for partial update)
+  Optional: destination, code, name, contactPerson, address1, address2, pinCodeId, city, state, industry, tel1, tel2, fax, email, mobile, serviceCenterCode, serviceCenterId, eori, vat

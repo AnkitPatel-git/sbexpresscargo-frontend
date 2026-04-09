@@ -1,0 +1,38 @@
+info:
+  name: Service Map Master - Update
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/service-map-master/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "serviceType": "AIR",
+                "minWeight": 0,
+        "maxWeight": 100,
+        "status": "ACTIVE",
+        "vendorLink": "https://vendor.com/track",
+        "isSinglePiece": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Service Map Master update by id. JWT + service_map_master_modify or service_map_master_all.
+
+  Mandatory: (none - all optional for partial update)
+  Optional: vendorId, serviceType, minWeight, maxWeight, status, vendorLink, isSinglePiece

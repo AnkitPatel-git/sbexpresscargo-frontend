@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Edit, Plus, Trash, Send, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react";
+import { Edit, Plus, Trash, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -62,26 +62,11 @@ export default function CreditNoteListPage() {
     },
   });
 
-  const postMutation = useMutation({
-    mutationFn: ({ id, version }: { id: number, version: number }) => creditNoteService.postCreditNote(id, version),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["credit-notes"] });
-      toast.success("Credit note posted successfully");
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to post credit note");
-    },
-  });
-
   const handleDelete = () => {
     if (deleteId) {
       deleteMutation.mutate(deleteId);
     }
   };
-
-  const handlePost = (id: number, version: number) => {
-      postMutation.mutate({ id, version });
-  }
 
   const total = data?.total ?? 0;
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
@@ -171,9 +156,6 @@ export default function CreditNoteListPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
-                        {note.status === "DRAFT" && (
-                          <PermissionGuard permission="transaction.credit-note.update"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => handlePost(note.id, note.version)}><Send className="h-4 w-4" /></Button></PermissionGuard>
-                        )}
                         <PermissionGuard permission="transaction.credit-note.update"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => router.push(`/transactions/credit-note/${note.id}/edit`)}><Edit className="h-4 w-4" /></Button></PermissionGuard>
                         <PermissionGuard permission="transaction.credit-note.delete"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" onClick={() => setDeleteId(note.id)}><Trash className="h-4 w-4" /></Button></PermissionGuard>
                       </div>

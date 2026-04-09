@@ -1,0 +1,184 @@
+info:
+  name: Onboard User
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/utilities/users"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "username": "john_doe",
+        "email": "john-CUSTOMER@example.com",
+        "password": "SecurePass123",
+        "roleId": 2,
+        "mobile": "+919876543210",
+        "status": "ACTIVE",
+        "profile": {
+          "userGroup": "OPERATION",
+          "userType": "CUSTOMER",
+          "origin": "VASAI",
+          "serviceCenter": "VASAI",
+          "groupName": "OPERATION",
+          "birthDate": "2026-02-03",
+          "joiningDate": "2026-02-03",
+          "applicationType": "portal",
+          "weightType": "Kgs"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/utilities/users"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "username": "john_doe",
+            "email": "john-CUSTOMER@example.com",
+            "password": "SecurePass123",
+            "roleId": 2,
+            "mobile": "+919876543210",
+            "status": "ACTIVE",
+            "profile": {
+              "userGroup": "OPERATION",
+              "userType": "CUSTOMER",
+              "origin": "VASAI",
+              "serviceCenter": "VASAI",
+              "groupName": "OPERATION",
+              "birthDate": "2026-02-03",
+              "joiningDate": "2026-02-03",
+              "applicationType": "portal",
+              "weightType": "Kgs"
+            }
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "1208"
+        - name: etag
+          value: W/"4b8-BDsYGr5dtSL/LMTl7jFXscE7Q8I"
+        - name: date
+          value: Thu, 09 Apr 2026 12:40:16 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "User onboarded successfully",
+            "data": {
+              "id": 3,
+              "username": "john_doe",
+              "email": "john-CUSTOMER@example.com",
+              "passwordHash": "$2b$10$0fpczak4Kmb8FgraFgdPgeuAQIKNKsHOATa9IxlW/BFRAkJv2TPxW",
+              "roleId": 2,
+              "mobile": "+919876543210",
+              "status": "ACTIVE",
+              "role": {
+                "id": 2,
+                "name": "Operations",
+                "identifier": "OPERATIONS",
+                "description": "Operations",
+                "createdAt": "2026-04-09T11:37:32.948Z",
+                "updatedAt": "2026-04-09T11:37:32.948Z",
+                "createdById": null,
+                "updatedById": null,
+                "deletedAt": null,
+                "deletedById": null
+              },
+              "profile": {
+                "id": 2,
+                "userGroup": "OPERATION",
+                "origin": "VASAI",
+                "serviceCenterId": null,
+                "customerId": null,
+                "groupName": "OPERATION",
+                "birthDate": "2026-02-03T00:00:00.000Z",
+                "joiningDate": "2026-02-03T00:00:00.000Z",
+                "applicationType": "portal",
+                "allowChangingDate": false,
+                "addEntryOnManifest": false,
+                "globalManifest": false,
+                "allowChangingAwbNo": false,
+                "mobileAppLens": false,
+                "manifestBranch": false,
+                "weightType": "Kgs",
+                "userId": 3,
+                "createdAt": "2026-04-09T12:40:16.823Z",
+                "updatedAt": "2026-04-09T12:40:16.823Z",
+                "createdById": 1,
+                "updatedById": 1,
+                "deletedAt": null,
+                "deletedById": null
+              },
+              "createdAt": "2026-04-09T12:40:16.823Z",
+              "updatedAt": "2026-04-09T12:40:16.823Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null
+            }
+          }
+
+docs: |-
+  Create user. JWT + permission: user_master_add or user_master_all. roleId: 1=Superuser, 2=Admin, 3=Account, 4=Operations, 5=Sales.
+
+  Mandatory: username, email, password, roleId
+  Optional: mobile, status, profile (userGroup, userType, origin, serviceCenter, groupName, birthDate, joiningDate, applicationType, weightType, allowChangingDate, addEntryOnManifest, globalManifest, allowChangingAwbNo, mobileAppLens, manifestBranch)

@@ -35,9 +35,10 @@ import { localBranchService } from '@/services/masters/local-branch-service'
 import { stateService } from '@/services/masters/state-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { LocalBranch } from '@/types/masters/local-branch'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const localBranchSchema = z.object({
-    branchCode: z.string().min(2, "Branch code must be at least 2 characters"),
+    branchCode: optionalMasterCode(2),
     companyName: z.string().min(3, "Company name must be at least 3 characters"),
     name: z.string().min(3, "Branch name must be at least 3 characters"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
@@ -194,10 +195,12 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
     }, [initialData, form])
 
     const mutation = useMutation({
-        mutationFn: (values: LocalBranchFormValues) =>
-            isEdit
-                ? localBranchService.updateLocalBranch(initialData!.id, values)
-                : localBranchService.createLocalBranch(values),
+        mutationFn: (values: LocalBranchFormValues) => {
+            const payload = omitEmptyCodeFields(values, ['branchCode']) as LocalBranchFormValues
+            return isEdit
+                ? localBranchService.updateLocalBranch(initialData!.id, payload)
+                : localBranchService.createLocalBranch(payload)
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['local-branches'] })
             if (isEdit && initialData) {
@@ -226,9 +229,9 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                     control={form.control}
                                     name="branchCode"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Branch Code">
+                                        <FloatingFormItem label="Branch Code (optional)">
                                             <FormControl>
-                                                <Input {...field} placeholder="e.g. BR001" className={FLOATING_INNER_CONTROL} />
+                                                <Input {...field} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}

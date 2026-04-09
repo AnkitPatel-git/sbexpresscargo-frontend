@@ -1,0 +1,40 @@
+info:
+  name: Pincode - Create
+  type: http
+  seq: 21
+
+http:
+  method: POST
+  url: "{{baseUrl}}/pincode"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "pinCode": "486001",
+        "cityName": "REWA",
+        "countryId": 1,
+        "countryCode": "IN",
+        "stateId": 3,
+        "zoneId": 1,
+        "serviceable": true,
+        "oda": false
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Alias POST /pincode (same as POST /utilities/serviceable-pincodes).
+
+  Full body (CreateServiceablePincodeDto): pinCode, cityName, zoneId, stateId (required for create); countryId OR countryCode; optional serviceable (default true), oda (default false).
+
+  JWT + utility.serviceable_pincode.create.

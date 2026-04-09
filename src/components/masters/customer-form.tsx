@@ -42,9 +42,10 @@ import { FormSection } from "@/components/ui/form-section"
 import { customerService } from '@/services/masters/customer-service'
 import { stateService } from '@/services/masters/state-service'
 import { Customer } from '@/types/masters/customer'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const customerSchema = z.object({
-    code: z.string().min(2, "Code must be at least 2 characters"),
+    code: optionalMasterCode(2),
     name: z.string().min(3, "Name must be at least 3 characters"),
     contactPerson: z.string().min(3, "Contact person is required"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
@@ -119,10 +120,12 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
     }, [initialData, form])
 
     const mutation = useMutation({
-        mutationFn: (values: CustomerFormValues) =>
-            isEdit
-                ? customerService.updateCustomer(initialData!.id, values)
-                : customerService.createCustomer(values),
+        mutationFn: (values: CustomerFormValues) => {
+            const payload = omitEmptyCodeFields(values, ['code']) as CustomerFormValues
+            return isEdit
+                ? customerService.updateCustomer(initialData!.id, payload)
+                : customerService.createCustomer(payload)
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customers'] })
             if (isEdit && initialData) {
@@ -151,9 +154,9 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="code"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Customer Code">
+                                        <FloatingFormItem label="Customer Code (optional)">
                                             <FormControl>
-                                                <Input {...field} placeholder="e.g. CUST01" className={FLOATING_INNER_CONTROL} />
+                                                <Input {...field} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}

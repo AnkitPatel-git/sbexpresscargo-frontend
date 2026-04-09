@@ -35,9 +35,10 @@ import { consigneeService } from '@/services/masters/consignee-service'
 import { stateService } from '@/services/masters/state-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { Consignee } from '@/types/masters/consignee'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const consigneeSchema = z.object({
-    code: z.string().min(2, "Code must be at least 2 characters"),
+    code: optionalMasterCode(2),
     name: z.string().min(3, "Name must be at least 3 characters"),
     destination: z.string().optional(),
     contactPerson: z.string().optional(),
@@ -138,10 +139,12 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
     }, [initialData, form, scData])
 
     const mutation = useMutation({
-        mutationFn: (values: ConsigneeFormValues) =>
-            isEdit
-                ? consigneeService.updateConsignee(initialData!.id, values as any)
-                : consigneeService.createConsignee(values as any),
+        mutationFn: (values: ConsigneeFormValues) => {
+            const payload = omitEmptyCodeFields(values, ['code']) as ConsigneeFormValues
+            return isEdit
+                ? consigneeService.updateConsignee(initialData!.id, payload as any)
+                : consigneeService.createConsignee(payload as any)
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['consignees'] })
             if (isEdit && initialData) {
@@ -170,9 +173,9 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                     control={form.control}
                                     name="code"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Consignee Code">
+                                        <FloatingFormItem label="Consignee Code (optional)">
                                             <FormControl>
-                                                <Input placeholder="CONS01" {...field} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}

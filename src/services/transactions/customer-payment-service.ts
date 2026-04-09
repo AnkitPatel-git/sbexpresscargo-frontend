@@ -1,6 +1,8 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { CustomerPaymentListResponse, CustomerPaymentSingleResponse, CustomerPaymentFormValues } from '@/types/transactions/customer-payment';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
 const getAuthHeaders = (isFormData = false) => {
     const headers: Record<string, string> = {
         'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -12,16 +14,14 @@ const getAuthHeaders = (isFormData = false) => {
 };
 
 class CustomerPaymentService {
-    private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/customer-payment`;
+    private readonly baseUrl = `${API_URL}/transaction/customer-payment`;
 
     async getCustomerPayments(page: number, limit: number, search: string = ''): Promise<CustomerPaymentListResponse> {
+        // Bruno: GET .../customer-payment?page=1&limit=20
         const queryParams = new URLSearchParams({
             page: page.toString(),
             limit: limit.toString(),
-            sortBy: 'date',
-            sortOrder: 'desc',
         });
-
         if (search) {
             queryParams.append('search', search);
         }

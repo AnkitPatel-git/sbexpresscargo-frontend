@@ -1,0 +1,31 @@
+info:
+  name: Update Tracking Summary
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/transaction/tracking-summary/{{trackingSummaryShipmentId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "firstPickupAt": "2026-04-09T10:30:00.000Z",
+        "firstInTransitAt": "2026-04-09T13:30:00.000Z",
+        "firstOfdAt": "2026-04-10T09:00:00.000Z",
+        "deliveredAt": "2026-04-10T14:30:00.000Z",
+        "totalTransitTime": 1700,
+        "totalDelayTime": 20
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

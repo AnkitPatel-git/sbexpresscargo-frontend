@@ -1,0 +1,28 @@
+info:
+  name: Close Manifest
+  type: http
+  seq: 16
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/manifest/1/close"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Close manifest (no further edits). JWT + manifest_modify or manifest_all.

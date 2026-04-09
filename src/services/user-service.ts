@@ -1,5 +1,7 @@
 import { apiClient } from "@/lib/api-client";
 
+const USERS = "/utilities/users";
+
 type ProfilePayload = {
   email?: string;
   username?: string;
@@ -13,18 +15,23 @@ type ProfilePayload = {
 };
 
 export const userService = {
-  getProfile: () => apiClient<any>("/users/profile"),
+  getProfile: () => apiClient<any>(`${USERS}/profile`),
 
   updateSelfProfile: (payload: ProfilePayload) =>
-    apiClient<any>("/users/profile", {
+    apiClient<any>(`${USERS}/profile`, {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
 
   changePassword: (payload: { currentPassword: string; newPassword: string }) =>
-    apiClient<any>("/users/change-password", {
+    apiClient<any>(`${USERS}/change-password`, {
       method: "POST",
       body: JSON.stringify(payload),
+    }),
+
+  logout: () =>
+    apiClient<any>(`${USERS}/logout`, {
+      method: "POST",
     }),
 
   listUsers: (params: {
@@ -40,33 +47,33 @@ export const userService = {
     if (params.search) query.append("search", params.search);
     if (params.status) query.append("status", params.status);
     if (params.roleId) query.append("roleId", String(params.roleId));
-    return apiClient<any>(`/users?${query.toString()}`);
+    return apiClient<any>(`${USERS}?${query.toString()}`);
   },
 
-  listRoles: () => apiClient<any>("/users/roles"),
+  listRoles: () => apiClient<any>(`${USERS}/roles`),
 
   onboardUser: (payload: any) =>
-    apiClient<any>("/users", {
+    apiClient<any>(USERS, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
 
   updateUser: (id: number | string, payload: any) =>
-    apiClient<any>(`/users/${id}`, {
+    apiClient<any>(`${USERS}/${id}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
 
   changeUserStatus: (id: number | string, status: "ACTIVE" | "INACTIVE") =>
-    apiClient<any>(`/users/${id}/status`, {
+    apiClient<any>(`${USERS}/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
 
-  listSessions: () => apiClient<any>("/users/sessions"),
+  listSessions: () => apiClient<any>(`${USERS}/sessions`),
 
   forceLogoff: (sessionId: number | string) =>
-    apiClient<any>(`/users/sessions/${sessionId}/logoff`, {
+    apiClient<any>(`${USERS}/sessions/${sessionId}/logoff`, {
       method: "POST",
     }),
 };

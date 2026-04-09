@@ -1,0 +1,37 @@
+info:
+  name: Create Undelivered Scan
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/undelivered-scan"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "scanDate": "2026-03-20",
+        "scanTime": "10:00",
+        "serviceCenterId": 1,
+        "items": [
+          { "awbNo": "AWB123456" }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Create undelivered scan. JWT + event_scan_add or event_scan_all.
+
+  Mandatory: scanDate, items (each: awbNo)
+  Optional: scanTime, serviceCenter, serviceCenterId

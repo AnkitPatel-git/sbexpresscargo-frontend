@@ -1,0 +1,37 @@
+info:
+  name: Update Undelivered Scan
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/transaction/undelivered-scan/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "scanDate": "2026-03-20",
+        "scanTime": "10:00",
+        "serviceCenterId": 1,
+        "items": [
+          { "awbNo": "AWB123456" }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Update undelivered scan. JWT + event_scan_modify or event_scan_all.
+
+  Mandatory: (none - all optional for partial update)
+  Optional: scanDate, scanTime, serviceCenterId, items

@@ -1,0 +1,44 @@
+info:
+  name: Service Map Master - Export (CSV)
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{baseUrl}}/service-map-master/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/service-map-master/export"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: text/csv
+        - name: content-disposition
+          value: 'attachment; filename="service-map.csv"'
+      body:
+        type: text
+        data: "(empty CSV — no service map records to export)"
+
+docs: |-
+  Export all Service Map Master records as a CSV file download. JWT + service_map_master_list or service_map_master_all.
+
+  Response: text/csv download (Content-Disposition: attachment; filename="service-map.csv")
+  Optional query params: same filters as the List endpoint (search, sortBy, sortOrder, vendorId, etc.)
