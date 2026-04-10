@@ -41,7 +41,7 @@ import {
 import { FormSection } from "@/components/ui/form-section"
 import { customerService } from '@/services/masters/customer-service'
 import { stateService } from '@/services/masters/state-service'
-import { Customer } from '@/types/masters/customer'
+import { Customer, type CustomerFormData } from '@/types/masters/customer'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const customerSchema = z.object({
@@ -49,16 +49,30 @@ const customerSchema = z.object({
     name: z.string().min(3, "Name must be at least 3 characters"),
     contactPerson: z.string().min(3, "Contact person is required"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
-    pinCode: z.string().min(6, "Pin code must be 6 characters"),
-    city: z.string().min(2, "City is required"),
-    state: z.string().min(1, "State is required"),
-    telNo1: z.string().min(10, "Telephone must be at least 10 characters"),
+    address2: z.string().optional(),
+    pinCodeId: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    telephone: z.string().min(10, "Telephone must be at least 10 characters"),
+    faxNo: z.string().optional(),
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
+    billingState: z.string().optional(),
+    serviceCenter: z.string().optional(),
+    startDate: z.string().optional(),
+    origin: z.string().optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']),
     customerType: z.enum(['CUSTOMER', 'VENDOR', 'AGENT']),
     registerType: z.enum(['REGISTERED', 'UNREGISTERED']),
     gstNo: z.string().min(15, "GST Number must be 15 characters"),
+    aadhaarNo: z.string().optional(),
+    dobOnAadhaar: z.string().optional(),
+    passportNo: z.string().optional(),
+    panNo: z.string().optional(),
+    tanNo: z.string().optional(),
+    invoiceFormat: z.string().optional(),
+    signatureFile: z.string().optional(),
+    logoFile: z.string().optional(),
 })
 
 type CustomerFormValues = z.infer<typeof customerSchema>
@@ -85,16 +99,30 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             name: initialData?.name || '',
             contactPerson: initialData?.contactPerson || '',
             address1: initialData?.address1 || '',
-            pinCode: initialData?.pinCode || '',
-            city: initialData?.city || '',
-            state: initialData?.state || '',
-            telNo1: initialData?.telNo1 || '',
+            address2: initialData?.address2 || '',
+            pinCodeId: initialData?.pinCodeId != null ? String(initialData.pinCodeId) : '',
+            city: initialData?.city || initialData?.serviceablePincode?.cityName || '',
+            state: initialData?.state || initialData?.stateMaster?.stateName || '',
+            telephone: initialData?.telephone || '',
+            faxNo: initialData?.faxNo || '',
             email: initialData?.email || '',
             mobile: initialData?.mobile || '',
+            billingState: initialData?.billingState || '',
+            serviceCenter: initialData?.serviceCenter?.name || '',
+            startDate: initialData?.startDate ? initialData.startDate.split('T')[0] : '',
+            origin: initialData?.origin || '',
             status: initialData?.status || 'ACTIVE',
             customerType: initialData?.customerType || 'CUSTOMER',
             registerType: initialData?.registerType || 'REGISTERED',
             gstNo: initialData?.gstNo || '',
+            aadhaarNo: initialData?.aadhaarNo || '',
+            dobOnAadhaar: initialData?.dobOnAadhaar ? initialData.dobOnAadhaar.split('T')[0] : '',
+            passportNo: initialData?.passportNo || '',
+            panNo: initialData?.panNo || '',
+            tanNo: initialData?.tanNo || '',
+            invoiceFormat: initialData?.invoiceFormat || '',
+            signatureFile: initialData?.signatureFile || '',
+            logoFile: initialData?.logoFile || '',
         }
     })
 
@@ -103,18 +131,32 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             form.reset({
                 code: initialData.code,
                 name: initialData.name,
-                contactPerson: initialData.contactPerson,
-                address1: initialData.address1,
-                pinCode: initialData.pinCode,
-                city: initialData.city,
-                state: initialData.state,
-                telNo1: initialData.telNo1,
-                email: initialData.email,
-                mobile: initialData.mobile,
+                contactPerson: initialData.contactPerson || '',
+                address1: initialData.address1 || '',
+                address2: initialData.address2 || '',
+                pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : '',
+                city: initialData.city || initialData.serviceablePincode?.cityName || '',
+                state: initialData.state || initialData.stateMaster?.stateName || '',
+                telephone: initialData.telephone || '',
+                faxNo: initialData.faxNo || '',
+                email: initialData.email || '',
+                mobile: initialData.mobile || '',
+                billingState: initialData.billingState || '',
+                serviceCenter: initialData.serviceCenter?.name || '',
+                startDate: initialData.startDate ? initialData.startDate.split('T')[0] : '',
+                origin: initialData.origin || '',
                 status: initialData.status,
-                customerType: initialData.customerType,
-                registerType: initialData.registerType,
-                gstNo: initialData.gstNo,
+                customerType: initialData.customerType || 'CUSTOMER',
+                registerType: initialData.registerType || 'REGISTERED',
+                gstNo: initialData.gstNo || '',
+                aadhaarNo: initialData.aadhaarNo || '',
+                dobOnAadhaar: initialData.dobOnAadhaar ? initialData.dobOnAadhaar.split('T')[0] : '',
+                passportNo: initialData.passportNo || '',
+                panNo: initialData.panNo || '',
+                tanNo: initialData.tanNo || '',
+                invoiceFormat: initialData.invoiceFormat || '',
+                signatureFile: initialData.signatureFile || '',
+                logoFile: initialData.logoFile || '',
             })
         }
     }, [initialData, form])
@@ -122,9 +164,14 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
     const mutation = useMutation({
         mutationFn: (values: CustomerFormValues) => {
             const payload = omitEmptyCodeFields(values, ['code']) as CustomerFormValues
-            return isEdit
-                ? customerService.updateCustomer(initialData!.id, payload)
-                : customerService.createCustomer(payload)
+            if (isEdit && initialData) {
+                const updateBody: Partial<CustomerFormData> = {
+                    ...payload,
+                    version: initialData.version ?? 1,
+                }
+                return customerService.updateCustomer(initialData.id, updateBody)
+            }
+            return customerService.createCustomer(payload as CustomerFormData)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customers'] })
@@ -213,7 +260,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="telNo1"
+                                    name="telephone"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Telephone">
                                             <FormControl>
@@ -234,6 +281,17 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     )}
                                 />
                             </div>
+                            <FormField
+                                control={form.control}
+                                name="faxNo"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Fax No">
+                                        <FormControl>
+                                            <Input {...field} placeholder="Optional" className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
                     </FormSection>
 
                     {/* Address Information */}
@@ -255,22 +313,33 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                             />
                             <FormField
                                 control={form.control}
-                                name="city"
+                                name="address2"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="City">
+                                    <FloatingFormItem label="Address line 2" itemClassName="md:col-span-2">
                                         <FormControl>
-                                            <Input {...field} placeholder="City" className={FLOATING_INNER_CONTROL} />
+                                            <Input {...field} placeholder="Optional" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
-                                name="pinCode"
+                                name="pinCodeId"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Pin Code">
+                                    <FloatingFormItem label="Pin code (id or code)">
                                         <FormControl>
-                                            <Input {...field} placeholder="Pin Code" className={FLOATING_INNER_CONTROL} />
+                                            <Input {...field} placeholder="486001 or id" className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="city"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="City">
+                                        <FormControl>
+                                            <Input {...field} placeholder="City" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}
@@ -333,6 +402,146 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     </FloatingFormItem>
                                 )}
                             />
+                            <FormField
+                                control={form.control}
+                                name="billingState"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Billing state">
+                                        <FormControl>
+                                            <Input {...field} placeholder="e.g. Maharashtra" className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="origin"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Origin">
+                                        <FormControl>
+                                            <Input {...field} placeholder="e.g. MUMBAI" className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="serviceCenter"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Service center (code or name)">
+                                        <FormControl>
+                                            <Input {...field} placeholder="Bruno: e.g. VASAI" className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="startDate"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Start date">
+                                        <FormControl>
+                                            <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                    </FormSection>
+
+                    {/* IDs & files */}
+                    <FormSection title="Identification" contentClassName="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="aadhaarNo"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Aadhaar">
+                                            <FormControl>
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="dobOnAadhaar"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="DOB on Aadhaar">
+                                            <FormControl>
+                                                <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="passportNo"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Passport">
+                                            <FormControl>
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="panNo"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="PAN">
+                                            <FormControl>
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="tanNo"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="TAN">
+                                            <FormControl>
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="invoiceFormat"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Invoice format">
+                                            <FormControl>
+                                                <Input {...field} placeholder="e.g. standard" className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="signatureFile"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Signature file URL">
+                                            <FormControl>
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="logoFile"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Logo file URL">
+                                            <FormControl>
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                            </div>
                     </FormSection>
 
                     {/* Classification & Status */}

@@ -1,16 +1,33 @@
+/** Consignee Master — Bruno `docs/bruno/Masters/Consignee Master/*`. */
+
+/** Nested pincode on GET-by-id */
+export interface ConsigneeServiceablePincode {
+    id: number;
+    pinCode: string;
+    cityName: string;
+}
+
+/** Bruno list example includes joined `area` */
+export interface ConsigneeAreaRef {
+    id: number;
+    areaName: string;
+}
+
 export interface Consignee {
     id: number;
+    areaId: number | null;
+    area?: ConsigneeAreaRef | null;
     code: string;
     name: string;
     destination: string | null;
     contactPerson: string | null;
     address1: string | null;
     address2: string | null;
-    pinCode: string | null;
-    city: string | null;
-    state: string | null;
-    tel1: string | null;
-    tel2: string | null;
+    pinCodeId: number | null;
+    countryId: number | null;
+    stateId: number | null;
+    telephone: string | null;
+    fax: string | null;
     email: string | null;
     mobile: string | null;
     serviceCenterId: number | null;
@@ -20,30 +37,36 @@ export interface Consignee {
         name: string;
     };
     industry: string | null;
-    fax: string | null;
     eori: string | null;
     vat: string | null;
-    createdAt: string;
-    updatedAt: string;
-    createdById: number | null;
-    updatedById: number | null;
-    deletedAt: string | null;
-    deletedById: number | null;
+    /** List / legacy denormalized fields */
+    city?: string | null;
+    state?: string | null;
+    pinCode?: string | null;
+    serviceablePincode?: ConsigneeServiceablePincode | null;
+    /** Present on full GET / create response; list rows may omit */
+    createdAt?: string;
+    updatedAt?: string;
+    createdById?: number | null;
+    updatedById?: number | null;
+    deletedAt?: string | null;
+    deletedById?: number | null;
 }
 
 export interface ConsigneeFormData {
-    code: string;
+    code?: string;
     name: string;
     destination?: string;
     contactPerson?: string;
     address1?: string;
     address2?: string;
-    pinCode?: string;
+    /** Bruno: string pin or id */
+    pinCodeId?: string | number;
+    areaId?: number;
     city?: string;
     state?: string;
     industry?: string;
-    tel1?: string;
-    tel2?: string;
+    telephone?: string;
     fax?: string;
     email?: string;
     mobile?: string;
@@ -55,7 +78,7 @@ export interface ConsigneeFormData {
 
 export interface ConsigneeListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Consignee[];
     meta: {
         total: number;
@@ -67,6 +90,6 @@ export interface ConsigneeListResponse {
 
 export interface ConsigneeSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Consignee;
 }

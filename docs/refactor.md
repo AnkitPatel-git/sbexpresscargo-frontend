@@ -178,8 +178,8 @@ Work step-by-step and ensure correctness over speed.
 |------|---------|--------|
 | Product, Country, State, Content, Bank, Local branch, Service center, Customer (+ KYC), Consignee, Shipper, Vendor, Courier, Area, Exception, Service map, Charge, Rate, Zone | ✅ under `src/services/masters/*` | Paths follow Bruno (`*-master` or `rate-master` / `rate` for preview & calculate). |
 | Serviceable pincode | ✅ `serviceable-pincode-service` | List query aligned with Bruno: `sortBy=pinCode`, `sortOrder=asc`, `search=` default. Alias routes `GET/POST /pincode` exist in Bruno only; portal uses `/utilities/serviceable-pincodes` (documented as canonical). |
-| **Vehicle Master** | 🆕 | Bruno has `vehicle-master` CRUD; **no** `vehicle-service` / UI yet. |
-| **Vendor Config Master** | 🆕 | Bruno has `vendor-config-master` CRUD; **no** service/UI yet. |
+| **Vehicle Master** | ✅ | `vehicle-service` + list/create/edit UI under `/masters/vehicle`. |
+| **Vendor Config Master** | ✅ | `vendor-config-service` + list/create/edit UI under `/masters/vendor-config`. |
 | Client Rate Master | ❌ | Removed from API (`opencollection.yml`); UI redirects old client-rates routes to Rate Master. |
 
 ### Utilities
@@ -201,14 +201,14 @@ Work step-by-step and ensure correctness over speed.
 
 | Item | Action |
 |------|--------|
-| `src/services/utilities/country-pincode-service.ts` | No matching Bruno folder; **unused** by pages — candidate to **delete** after confirming backend deprecation. |
+| `src/services/utilities/country-pincode-service.ts` | **Deleted** — no matching Bruno folder and unused by any page. |
 
 ### Testing checklist (mandatory per §7)
 
 - [ ] Smoke: login → dashboard sales/operation → one master list → one transaction list → invoice list.  
 - [ ] Serviceable pincode list after query-string alignment.  
 - [ ] Any screen that still sends **extra** query params (e.g. optional `search` on credit notes) — verify backend accepts them.  
-- [ ] Add **Vehicle** and **Vendor config** services + UI when backend confirms stable contracts from Bruno examples.
+- [x] Add **Vehicle** and **Vendor config** services + UI (done — `vehicle-service`, `vendor-config-service`, list/create/edit pages wired in nav).
 
 ### Recent alignment fixes (this repo)
 

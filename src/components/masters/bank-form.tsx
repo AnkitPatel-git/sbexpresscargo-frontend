@@ -29,12 +29,12 @@ import {
 import { FormSection } from "@/components/ui/form-section"
 import { bankService } from '@/services/masters/bank-service'
 import { Bank } from '@/types/masters/bank'
-import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
+/** Bruno Create: mandatory bankCode, bankName, status (ACTIVE|INACTIVE). */
 const bankSchema = z.object({
-    bankCode: optionalMasterCode(2),
+    bankCode: z.string().trim().min(2, "Bank code must be at least 2 characters"),
     bankName: z.string().min(3, "Bank name must be at least 3 characters"),
-    status: z.string().min(1, "Status is required"),
+    status: z.enum(["ACTIVE", "INACTIVE"]),
 })
 
 type BankFormValues = z.infer<typeof bankSchema>
@@ -51,25 +51,29 @@ export function BankForm({ initialData }: BankFormProps) {
     const form = useForm<BankFormValues>({
         resolver: zodResolver(bankSchema) as Resolver<BankFormValues>,
         defaultValues: {
-            bankCode: initialData?.bankCode || '',
+            bankCode: initialData?.bankCode?.trim() || '',
             bankName: initialData?.bankName || '',
-            status: initialData?.status || 'ACTIVE',
+            status: (initialData?.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE') as 'ACTIVE' | 'INACTIVE',
         }
     })
 
     useEffect(() => {
         if (initialData) {
             form.reset({
-                bankCode: initialData.bankCode,
+                bankCode: initialData.bankCode.trim(),
                 bankName: initialData.bankName,
-                status: initialData.status,
+                status: initialData.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
             })
         }
     }, [initialData, form])
 
     const mutation = useMutation({
         mutationFn: (data: BankFormValues) => {
-            const payload = omitEmptyCodeFields(data, ['bankCode']) as BankFormValues
+            const payload = {
+                bankCode: data.bankCode.trim(),
+                bankName: data.bankName,
+                status: data.status,
+            }
             if (isEdit && initialData) {
                 return bankService.updateBank(initialData.id, payload)
             }
@@ -101,9 +105,9 @@ export function BankForm({ initialData }: BankFormProps) {
                                 control={form.control}
                                 name="bankCode"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Bank Code (optional)">
+                                    <FloatingFormItem label={<>Bank Code <span className="text-red-500">*</span></>}>
                                         <FormControl>
-                                            <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
+                                            <Input placeholder="e.g. BANK01" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}
@@ -113,7 +117,7 @@ export function BankForm({ initialData }: BankFormProps) {
                                 control={form.control}
                                 name="bankName"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Bank Name">
+                                    <FloatingFormItem label={<>Bank Name <span className="text-red-500">*</span></>}>
                                         <FormControl>
                                             <Input placeholder="e.g. HDFC Bank, ICICI Bank" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>

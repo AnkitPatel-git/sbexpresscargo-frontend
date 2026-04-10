@@ -3,7 +3,6 @@ export interface Zone {
     version?: number;
     name: string;
     code: string;
-    country: string;
     countryId: number | null;
     zoneType: 'DOMESTIC' | 'VENDOR';
     createdAt: string;
@@ -17,24 +16,35 @@ export interface Zone {
 export interface ZoneFormData {
     name: string;
     code: string;
-    country: string;
+    countryId: number;
     zoneType: 'DOMESTIC' | 'VENDOR';
+}
+
+export interface ZoneImportItem {
+    name: string;
+    code?: string;
+    countryId: number;
+    zoneType?: 'DOMESTIC' | 'VENDOR';
 }
 
 export interface ZoneListResponse {
     success: boolean;
     message?: string;
     data: Zone[];
-    meta: {
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    };
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
 }
 
 export interface ZoneSingleResponse {
     success: boolean;
     message: string;
     data: Zone;
+}
+
+export interface ZoneImportResponse {
+    success: boolean;
+    message: string;
+    data: { created: number; updated: number };
 }

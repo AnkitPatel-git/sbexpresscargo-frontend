@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { productService } from '@/services/masters/product-service'
-import { Product } from '@/types/masters/product'
+import { Product, type ProductFormData } from '@/types/masters/product'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const productSchema = z.object({
@@ -83,9 +83,13 @@ export function ProductForm({ initialData }: ProductFormProps) {
         mutationFn: (data: ProductFormValues) => {
             const payload = omitEmptyCodeFields(data, ['productCode']) as ProductFormValues
             if (isEdit && initialData) {
-                return productService.updateProduct(initialData.id, payload)
+                const updateBody: Partial<ProductFormData> = {
+                    ...payload,
+                    version: initialData.version ?? 1,
+                }
+                return productService.updateProduct(initialData.id, updateBody)
             }
-            return productService.createProduct(payload)
+            return productService.createProduct(payload as ProductFormData)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] })

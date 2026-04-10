@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api-fetch';
-import { ZoneFormData, ZoneListResponse, ZoneSingleResponse } from '@/types/masters/zone';
+import { ZoneFormData, ZoneListResponse, ZoneSingleResponse, ZoneImportItem, ZoneImportResponse } from '@/types/masters/zone';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -10,9 +10,12 @@ export const zoneService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        zoneCode?: string;
+        zoneName?: string;
+        zoneType?: string;
         exportType?: string;
         country?: string;
-        zoneType?: string;
+        countryId?: number;
     }): Promise<ZoneListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -20,11 +23,14 @@ export const zoneService = {
         if (params?.search) queryParams.append('search', params.search);
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        if (params?.zoneCode) queryParams.append('zoneCode', params.zoneCode);
+        if (params?.zoneName) queryParams.append('zoneName', params.zoneName);
+        if (params?.zoneType) queryParams.append('zoneType', params.zoneType);
         if (params?.exportType) queryParams.append('exportType', params.exportType);
         if (params?.country) queryParams.append('country', params.country);
-        if (params?.zoneType) queryParams.append('zoneType', params.zoneType);
+        if (params?.countryId) queryParams.append('countryId', params.countryId.toString());
 
-        const response = await apiFetch(`${API_URL}/rate-master/zones?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/zone-master?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -100,6 +106,41 @@ export const zoneService = {
 
         if (!response.ok) {
             throw new Error('Failed to delete zone');
+        }
+
+        return response.json();
+    },
+
+    async exportZonesCsv(exportType?: string): Promise<Blob> {
+        const queryParams = new URLSearchParams();
+        if (exportType) queryParams.append('exportType', exportType);
+
+        const response = await apiFetch(`${API_URL}/rate-master/zones/export?${queryParams.toString()}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export zones');
+        }
+
+        return response.blob();
+    },
+
+    async importZones(zones: ZoneImportItem[]): Promise<ZoneImportResponse> {
+        const response = await apiFetch(`${API_URL}/rate-master/zones/import`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify({ zones }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to import zones');
         }
 
         return response.json();

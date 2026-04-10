@@ -46,13 +46,24 @@ export default function RateMasterPage() {
     () => ({
       page,
       limit,
-      search: debouncedSearch || undefined,
+      search: debouncedSearch,
       fromDate,
       toDate,
       sortBy: "fromDate" as const,
       sortOrder: "desc" as const,
     }),
     [page, limit, debouncedSearch, fromDate, toDate],
+  );
+
+  const exportParams = useMemo(
+    () => ({
+      search: debouncedSearch,
+      fromDate,
+      toDate,
+      sortBy: "fromDate" as const,
+      sortOrder: "desc" as const,
+    }),
+    [debouncedSearch, fromDate, toDate],
   );
 
   const { data, isLoading } = useQuery({
@@ -74,15 +85,15 @@ export default function RateMasterPage() {
   });
 
   const exportMutation = useMutation({
-    mutationFn: () => rateService.exportRateMastersCsv(),
-    onSuccess: (blob) => {
+    mutationFn: () => rateService.exportRateMasters(exportParams),
+    onSuccess: ({ blob, filename }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `rate-master-export-${format(new Date(), "yyyyMMdd-HHmm")}.csv`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Export started");
+      toast.success("Rate masters exported");
     },
     onError: (error: Error) => {
       toast.error(error.message || "Export failed");

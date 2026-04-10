@@ -28,9 +28,24 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { contentService } from "@/services/masters/content-service"
-import { Content } from "@/types/masters/content"
+import { Content, type ContentVendorRef } from "@/types/masters/content"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
+
+function contentVendorLabel(c: Content): string {
+    const v = c.vendor
+    if (v == null) return "-"
+    if (typeof v === "string") return v || "-"
+    const ref = v as ContentVendorRef
+    return ref.vendorName ?? ref.name ?? ref.code ?? "-"
+}
+
+function contentCountryLabel(c: Content): string {
+    const x = c.country
+    if (x == null) return "-"
+    if (typeof x === "string") return x || "-"
+    return x.name ?? "-"
+}
 
 export default function ContentsPage() {
     const queryClient = useQueryClient()
@@ -45,8 +60,39 @@ export default function ContentsPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["contents", page, debouncedSearch],
-        queryFn: () => contentService.getContents({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            contentService.getContents({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "contentCode",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await contentService.exportContents({
+                search: debouncedSearch,
+                sortBy: "contentCode",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Contents exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export contents")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => contentService.deleteContent(id),
@@ -84,8 +130,8 @@ export default function ContentsPage() {
     const to = Math.min(page * limit, total)
     const filteredRows =
         data?.data.filter((content) => {
-            const vendorName = typeof content.vendor === "string" ? content.vendor : ""
-            const countryName = typeof content.country === "string" ? content.country : ""
+            const vendorName = contentVendorLabel(content)
+            const countryName = contentCountryLabel(content)
             if (colFilters.code && !(content.contentCode || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
             if (colFilters.name && !(content.contentName || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
             if (colFilters.hsn && !(content.hsnCode || "").toLowerCase().includes(colFilters.hsn.toLowerCase())) return false
@@ -101,7 +147,19 @@ export default function ContentsPage() {
                     <PermissionGuard permission="master.content.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary"><FileUp className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.content.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                            title="Export CSV"
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["contents"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -143,8 +201,8 @@ export default function ContentsPage() {
                                     <TableCell className="font-medium text-foreground">{content.contentCode}</TableCell>
                                     <TableCell className="font-medium text-foreground">{content.contentName}</TableCell>
                                     <TableCell className="text-foreground">{content.hsnCode || "-"}</TableCell>
-                                    <TableCell className="text-foreground">{typeof content.vendor === "string" ? content.vendor : "-"}</TableCell>
-                                    <TableCell className="text-foreground">{typeof content.country === "string" ? content.country : "-"}</TableCell>
+                                    <TableCell className="text-foreground">{contentVendorLabel(content)}</TableCell>
+                                    <TableCell className="text-foreground">{contentCountryLabel(content)}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
                                             <PermissionGuard permission="master.content.update">

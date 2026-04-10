@@ -47,6 +47,7 @@ class CustomerPaymentService {
         formData.append('paidDate', data.paidDate);
         formData.append('amount', data.amount);
         formData.append('customerId', data.customerId.toString());
+        formData.append('invoiceNo', data.invoiceNo);
         if (data.remark) formData.append('remark', data.remark);
         if (data.approved !== undefined) formData.append('approved', data.approved.toString());
         if (file) formData.append('file', file);
@@ -69,6 +70,7 @@ class CustomerPaymentService {
         formData.append('paidDate', data.paidDate);
         formData.append('amount', data.amount);
         formData.append('customerId', data.customerId.toString());
+        formData.append('invoiceNo', data.invoiceNo);
         if (data.remark) formData.append('remark', data.remark);
         if (data.approved !== undefined) formData.append('approved', data.approved.toString());
         if (file) formData.append('file', file);

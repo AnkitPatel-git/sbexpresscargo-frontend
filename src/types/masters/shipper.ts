@@ -1,27 +1,34 @@
+/** Shipper Master — Bruno `docs/bruno/Masters/Shipper Master/*`. */
+
+export interface ShipperServiceablePincode {
+    id: number;
+    pinCode: string;
+    cityName: string;
+}
+
 export interface Shipper {
     id: number;
+    areaId: number | null;
     shipperCode: string;
     shipperName: string;
     shipperOrigin: string | null;
     contactPerson: string | null;
     address1: string | null;
     address2: string | null;
-    pinCode: string | null;
-    city: string | null;
-    state: string | null;
-    industry: string | null;
-    telephone1: string | null;
-    telephone2: string | null;
+    pinCodeId: number | null;
+    countryId: number | null;
+    stateId: number | null;
+    zoneId: number | null;
+    telephone: string | null;
     fax: string | null;
     email: string | null;
     mobile: string | null;
+    industry: string | null;
     iecNo: string | null;
     gstNo: string | null;
     aadhaarNo: string | null;
     panNo: string | null;
-    serviceCenterId: number | null;
-    serviceCenter?: string | null; // Bruno shows string "Mumbai SC" in request
-    bankAdCode: string | null;
+    bankId: number | null;
     bankAccount: string | null;
     bankIfsc: string | null;
     firmType: 'GOV' | 'NON_GOV' | null;
@@ -29,6 +36,13 @@ export interface Shipper {
     lutNumber: string | null;
     lutIssueDate: string | null;
     lutTillDate: string | null;
+    /** Bruno optional string on create */
+    serviceCenter?: string | null;
+    /** List / legacy denormalized */
+    city?: string | null;
+    state?: string | null;
+    pinCode?: string | null;
+    serviceablePincode?: ShipperServiceablePincode | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -44,12 +58,12 @@ export interface ShipperFormData {
     contactPerson?: string;
     address1?: string;
     address2?: string;
-    pinCode?: string;
+    pinCodeId?: string | number;
+    areaId?: number;
     city?: string;
     state?: string;
     industry?: string;
-    telephone1?: string;
-    telephone2?: string;
+    telephone?: string;
     fax?: string;
     email?: string;
     mobile?: string;
@@ -58,7 +72,7 @@ export interface ShipperFormData {
     aadhaarNo?: string;
     panNo?: string;
     serviceCenter?: string;
-    bankAdCode?: string;
+    bankId?: number;
     bankAccount?: string;
     bankIfsc?: string;
     firmType?: 'GOV' | 'NON_GOV';
@@ -70,7 +84,7 @@ export interface ShipperFormData {
 
 export interface ShipperListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Shipper[];
     meta: {
         total: number;
@@ -82,6 +96,6 @@ export interface ShipperListResponse {
 
 export interface ShipperSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Shipper;
 }

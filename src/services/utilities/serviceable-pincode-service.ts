@@ -11,15 +11,12 @@ export const serviceablePincodeService = {
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
     }): Promise<ServiceablePincodeListResponse> {
-        // Bruno: Masters → Serviceable Pincode → List - Search
-        // .../utilities/serviceable-pincodes?page=1&limit=20&sortBy=pinCode&sortOrder=asc&search=
-        const queryParams = new URLSearchParams({
-            page: String(params?.page ?? 1),
-            limit: String(params?.limit ?? 20),
-            sortBy: params?.sortBy ?? 'pinCode',
-            sortOrder: params?.sortOrder ?? 'asc',
-            search: params?.search ?? '',
-        });
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'pinCode');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
 
         const response = await apiFetch(`${API_URL}/utilities/serviceable-pincodes?${queryParams.toString()}`, {
             headers: {
@@ -97,5 +94,35 @@ export const serviceablePincodeService = {
         }
 
         return response.json();
+    },
+
+    /** Bruno: `GET /utilities/serviceable-pincodes/export` — CSV; optional list-style query params. */
+    async exportServiceablePincodes(params?: {
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<{ blob: Blob; filename: string }> {
+        const queryParams = new URLSearchParams();
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'pinCode');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+
+        const response = await apiFetch(`${API_URL}/utilities/serviceable-pincodes/export?${queryParams.toString()}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export serviceable pincodes');
+        }
+
+        const cd = response.headers.get('content-disposition');
+        let filename = 'serviceable-pincodes.csv';
+        const match = cd?.match(/filename="?([^";\n]+)"?/i);
+        if (match?.[1]) filename = match[1].trim();
+
+        const blob = await response.blob();
+        return { blob, filename };
     },
 };

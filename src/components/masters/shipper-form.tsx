@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils"
 import { shipperService } from "@/services/masters/shipper-service"
 import { stateService } from "@/services/masters/state-service"
 import { serviceCenterService } from "@/services/masters/service-center-service"
+import { bankService } from "@/services/masters/bank-service"
 import { Shipper } from "@/types/masters/shipper"
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
 
@@ -58,12 +59,12 @@ const shipperSchema = z.object({
     contactPerson: z.string().optional().nullable(),
     address1: z.string().optional().nullable(),
     address2: z.string().optional().nullable(),
-    pinCode: z.string().optional().nullable(),
+    pinCodeId: z.string().optional().nullable(),
+    areaId: z.number().optional().nullable(),
     city: z.string().optional().nullable(),
     state: z.string().optional().nullable(),
     industry: z.string().optional().nullable(),
-    telephone1: z.string().optional().nullable(),
-    telephone2: z.string().optional().nullable(),
+    telephone: z.string().optional().nullable(),
     fax: z.string().optional().nullable(),
     email: z.string().email("Invalid email address").or(z.literal("")).optional().nullable(),
     mobile: z.string().optional().nullable(),
@@ -72,7 +73,7 @@ const shipperSchema = z.object({
     aadhaarNo: z.string().optional().nullable(),
     panNo: z.string().optional().nullable(),
     serviceCenter: z.string().optional().nullable(),
-    bankAdCode: z.string().optional().nullable(),
+    bankId: z.number().optional().nullable(),
     bankAccount: z.string().optional().nullable(),
     bankIfsc: z.string().optional().nullable(),
     firmType: z.enum(["GOV", "NON_GOV"]).optional().nullable(),
@@ -94,6 +95,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
     const isEdit = !!initialData
     const [stateOpen, setStateOpen] = useState(false)
     const [scOpen, setScOpen] = useState(false)
+    const [bankOpen, setBankOpen] = useState(false)
 
     const { data: statesResponse } = useQuery({
         queryKey: ["states-list"],
@@ -105,8 +107,13 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
         queryFn: () => serviceCenterService.getServiceCenters({ limit: 100 }),
     })
 
+    const { data: banksResponse } = useQuery({
+        queryKey: ["banks-list-shipper-form"],
+        queryFn: () => bankService.getBanks({ limit: 100 }),
+    })
+
     const form = useForm<ShipperFormValues>({
-        resolver: zodResolver(shipperSchema),
+        resolver: zodResolver(shipperSchema) as Resolver<ShipperFormValues>,
         defaultValues: {
             shipperCode: "",
             shipperName: "",
@@ -114,12 +121,12 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
             contactPerson: "",
             address1: "",
             address2: "",
-            pinCode: "",
+            pinCodeId: "",
+            areaId: undefined,
             city: "",
             state: "",
             industry: "",
-            telephone1: "",
-            telephone2: "",
+            telephone: "",
             fax: "",
             email: "",
             mobile: "",
@@ -128,7 +135,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
             aadhaarNo: "",
             panNo: "",
             serviceCenter: "",
-            bankAdCode: "",
+            bankId: undefined,
             bankAccount: "",
             bankIfsc: "",
             firmType: "NON_GOV",
@@ -148,12 +155,12 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                 contactPerson: initialData.contactPerson || "",
                 address1: initialData.address1 || "",
                 address2: initialData.address2 || "",
-                pinCode: initialData.pinCode || "",
+                pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : "",
+                areaId: initialData.areaId ?? undefined,
                 city: initialData.city || "",
                 state: initialData.state || "",
                 industry: initialData.industry || "",
-                telephone1: initialData.telephone1 || "",
-                telephone2: initialData.telephone2 || "",
+                telephone: initialData.telephone || "",
                 fax: initialData.fax || "",
                 email: initialData.email || "",
                 mobile: initialData.mobile || "",
@@ -162,7 +169,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                 aadhaarNo: initialData.aadhaarNo || "",
                 panNo: initialData.panNo || "",
                 serviceCenter: initialData.serviceCenter || "",
-                bankAdCode: initialData.bankAdCode || "",
+                bankId: initialData.bankId ?? undefined,
                 bankAccount: initialData.bankAccount || "",
                 bankIfsc: initialData.bankIfsc || "",
                 firmType: initialData.firmType || "NON_GOV",
@@ -172,13 +179,6 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                 lutTillDate: initialData.lutTillDate ? initialData.lutTillDate.split("T")[0] : "",
             })
 
-            // Resolve Service Center Name if missing but Id exists
-            if (!initialData.serviceCenter && initialData.serviceCenterId && scResponse?.data) {
-                const sc = scResponse.data.find(s => s.id === initialData.serviceCenterId)
-                if (sc) {
-                    form.setValue("serviceCenter", sc.name)
-                }
-            }
         }
     }, [initialData, form, scResponse])
 
@@ -320,22 +320,11 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="telephone1"
+                                    name="telephone"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Telephone 1">
+                                        <FloatingFormItem label="Telephone">
                                             <FormControl>
-                                                <Input placeholder="022-XXXXXXX" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="telephone2"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Telephone 2">
-                                            <FormControl>
-                                                <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="022-12345678" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -393,11 +382,31 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="pinCode"
+                                            name="pinCodeId"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Pin Code">
+                                                <FloatingFormItem label="Pin code (id or code)">
                                                     <FormControl>
-                                                        <Input placeholder="Pin" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input placeholder="486001 or id" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="areaId"
+                                            render={({ field }) => (
+                                                <FloatingFormItem label="Area ID (optional)">
+                                                    <FormControl>
+                                                        <Input
+                                                            type="number"
+                                                            placeholder="Area master id"
+                                                            value={field.value === undefined || field.value === null ? "" : field.value}
+                                                            onChange={(e) => {
+                                                                const v = e.target.value
+                                                                field.onChange(v === "" ? undefined : Number(v))
+                                                            }}
+                                                            className={FLOATING_INNER_CONTROL}
+                                                        />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -630,18 +639,69 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                     </FloatingFormItem>
                                 )}
                             />
+                            <FormField
+                                control={form.control}
+                                name="bankId"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Bank">
+                                        <Popover open={bankOpen} onOpenChange={setBankOpen}>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                            FLOATING_INNER_COMBO,
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <span className="truncate text-left">
+                                                            {field.value
+                                                                ? banksResponse?.data?.find((b) => b.id === field.value)?.bankName
+                                                                : "Select bank (optional)..."}
+                                                        </span>
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search bank..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No bank found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            <CommandItem
+                                                                value="none"
+                                                                onSelect={() => {
+                                                                    form.setValue("bankId", undefined)
+                                                                    setBankOpen(false)
+                                                                }}
+                                                            >
+                                                                <Check className={cn("mr-2 h-4 w-4", !field.value ? "opacity-100" : "opacity-0")} />
+                                                                None
+                                                            </CommandItem>
+                                                            {banksResponse?.data?.map((b) => (
+                                                                <CommandItem
+                                                                    key={b.id}
+                                                                    value={b.bankName}
+                                                                    onSelect={() => {
+                                                                        form.setValue("bankId", b.id)
+                                                                        setBankOpen(false)
+                                                                    }}
+                                                                >
+                                                                    <Check className={cn("mr-2 h-4 w-4", field.value === b.id ? "opacity-100" : "opacity-0")} />
+                                                                    {b.bankName}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </FloatingFormItem>
+                                )}
+                            />
                             <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="bankAdCode"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="AD Code">
-                                            <FormControl>
-                                                <Input placeholder="AD123" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
                                 <FormField
                                     control={form.control}
                                     name="bankIfsc"

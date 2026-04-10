@@ -169,10 +169,11 @@ class ManifestService {
         return response.json();
     }
 
-    async removeShipmentFromManifest(manifestId: number, shipmentId: number): Promise<void> {
+    async removeShipmentFromManifest(manifestId: number, shipmentId: number, body: { version: number }): Promise<void> {
         const response = await apiFetch(`${this.baseUrl}/${manifestId}/shipments/${shipmentId}`, {
             method: 'DELETE',
             headers: getAuthHeaders(),
+            body: JSON.stringify(body),
         });
         if (!response.ok) throw new Error('Failed to remove shipment from manifest');
     }

@@ -154,7 +154,6 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
     payload.piecesRows = (payload.piecesRows || []).filter((row) => Number(row.pieces || 0) > 0)
     payload.charges = (payload.charges || []).filter((charge) => Number(charge.chargeId || 0) > 0)
 
-    payload.serviceCenterId = undefined
     payload.fieldExecutiveId = undefined
 
     return payload
@@ -217,7 +216,7 @@ const EMPTY_SHIPPER_BLOCK: NonNullable<ShipmentFormValues['shipper']> = {
     city: '',
     state: '',
     country: '',
-    telephone1: '',
+    telephone: '',
     mobile: '',
     email: '',
     iecNo: '',
@@ -234,7 +233,7 @@ const EMPTY_CONSIGNEE_BLOCK: NonNullable<ShipmentFormValues['consignee']> = {
     city: '',
     state: '',
     country: '',
-    tel1: '',
+    telephone: '',
     mobile: '',
     email: '',
     vat: '',
@@ -248,11 +247,11 @@ function shipperFromMaster(s: Shipper): NonNullable<ShipmentFormValues['shipper'
         contactPerson: strOrEmpty(s.contactPerson),
         address1: strOrEmpty(s.address1),
         address2: strOrEmpty(s.address2),
-        pinCode: strOrEmpty(s.pinCode),
-        city: strOrEmpty(s.city),
+        pinCode: strOrEmpty(s.serviceablePincode?.pinCode ?? s.pinCode),
+        city: strOrEmpty(s.city ?? s.serviceablePincode?.cityName),
         state: strOrEmpty(s.state),
         country: '',
-        telephone1: strOrEmpty(s.telephone1),
+        telephone: strOrEmpty(s.telephone),
         mobile: strOrEmpty(s.mobile),
         email: strOrEmpty(s.email),
         iecNo: strOrEmpty(s.iecNo),
@@ -267,11 +266,11 @@ function consigneeFromMaster(c: Consignee): NonNullable<ShipmentFormValues['cons
         contactPerson: strOrEmpty(c.contactPerson),
         address1: strOrEmpty(c.address1),
         address2: strOrEmpty(c.address2),
-        pinCode: strOrEmpty(c.pinCode),
-        city: strOrEmpty(c.city),
+        pinCode: strOrEmpty(c.serviceablePincode?.pinCode ?? c.pinCode),
+        city: strOrEmpty(c.city ?? c.serviceablePincode?.cityName),
         state: strOrEmpty(c.state),
         country: '',
-        tel1: strOrEmpty(c.tel1),
+        telephone: strOrEmpty(c.telephone),
         mobile: strOrEmpty(c.mobile),
         email: strOrEmpty(c.email),
         vat: strOrEmpty(c.vat),
@@ -401,7 +400,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 version: initialData.version,
                 piecesRows: initialData.piecesRows || [],
                 charges: initialData.charges || [],
-                serviceCenterId: undefined,
                 fieldExecutiveId: undefined,
             })
         }
@@ -952,7 +950,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="shipper.telephone1"
+                                            name="shipper.telephone"
                                             render={({ field }) => (
                                                 <FloatingFormItem label="Telephone">
                                                     <FormControl>
@@ -1129,7 +1127,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="consignee.tel1"
+                                            name="consignee.telephone"
                                             render={({ field }) => (
                                                 <FloatingFormItem label="Telephone">
                                                     <FormControl>

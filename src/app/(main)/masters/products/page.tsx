@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Plus, Edit, Trash2, RefreshCw, FilePlus, FileUp, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -60,8 +60,39 @@ export default function ProductsPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["products", page, debouncedSearch],
-        queryFn: () => productService.getProducts({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            productService.getProducts({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "productCode",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await productService.exportProducts({
+                search: debouncedSearch,
+                sortBy: "productCode",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Products exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export products")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => productService.deleteProduct(id),
@@ -113,6 +144,19 @@ export default function ProductsPage() {
                     <PermissionGuard permission="master.product.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
                             <FilePlus className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
+                    <PermissionGuard permission="master.product.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
                     <Button

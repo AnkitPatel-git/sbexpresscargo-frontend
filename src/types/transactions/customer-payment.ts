@@ -5,6 +5,7 @@ export const customerPaymentFormSchema = z.object({
     paidDate: z.string().min(1, "Paid Date is required"),
     amount: z.string().min(1, "Amount is required"),
     customerId: z.number().min(1, "Customer is required"),
+    invoiceNo: z.string().min(1, "Invoice No is required"),
     remark: z.string().optional(),
     approved: z.boolean().optional(),
 });
@@ -18,6 +19,7 @@ export interface CustomerPayment {
     amount: string;
     remark?: string;
     customerId: number;
+    invoiceNo?: string;
     approved: boolean;
     filePath?: string;
     fileName?: string;

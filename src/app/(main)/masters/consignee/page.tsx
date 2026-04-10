@@ -33,6 +33,15 @@ import { Consignee } from "@/types/masters/consignee"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
+function consigneeCityLabel(c: Consignee): string {
+    return (
+        c.city ||
+        c.serviceablePincode?.cityName ||
+        c.area?.areaName ||
+        "-"
+    )
+}
+
 export default function ConsigneePage() {
     const router = useRouter()
     const queryClient = useQueryClient()
@@ -46,8 +55,39 @@ export default function ConsigneePage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["consignees", page, debouncedSearch],
-        queryFn: () => consigneeService.getConsignees({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            consigneeService.getConsignees({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await consigneeService.exportConsignees({
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Consignees exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export consignees")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => consigneeService.deleteConsignee(id),
@@ -88,7 +128,13 @@ export default function ConsigneePage() {
             if (colFilters.code && !(consignee.code || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
             if (colFilters.name && !(consignee.name || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
             if (colFilters.contact && !(consignee.contactPerson || "").toLowerCase().includes(colFilters.contact.toLowerCase())) return false
-            if (colFilters.city && !(consignee.city || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
+            if (
+                colFilters.city &&
+                !`${consignee.city ?? ""} ${consignee.serviceablePincode?.cityName ?? ""} ${consignee.area?.areaName ?? ""}`
+                    .toLowerCase()
+                    .includes(colFilters.city.toLowerCase())
+            )
+                return false
             return true
         }) ?? []
 
@@ -99,7 +145,19 @@ export default function ConsigneePage() {
                     <PermissionGuard permission="master.consignee.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary"><FileUp className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.consignee.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                            title="Export CSV"
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["consignees"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -139,7 +197,7 @@ export default function ConsigneePage() {
                                     <TableCell className="font-medium text-foreground">{consignee.code}</TableCell>
                                     <TableCell className="font-medium text-foreground">{consignee.name}</TableCell>
                                     <TableCell className="text-foreground">{consignee.contactPerson || "-"}</TableCell>
-                                    <TableCell className="text-foreground">{consignee.city || "-"}</TableCell>
+                                    <TableCell className="text-foreground">{consigneeCityLabel(consignee)}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
                                             <PermissionGuard permission="master.consignee.update">

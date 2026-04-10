@@ -1,3 +1,5 @@
+/** Rate Master — Bruno `docs/bruno/Masters/Rate Master/*` (+ `Rate - Preview` → `POST /rate/preview`). */
+
 /** Aligns with Prisma `RateUpdateType` / Bruno CreateRateMasterDto */
 export type RateUpdateType =
   | "AWB_ENTRY_RATE"

@@ -75,8 +75,39 @@ export default function ServiceMapPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["service-maps", page, debouncedSearch],
-        queryFn: () => serviceMapService.getServiceMaps({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            serviceMapService.getServiceMaps({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "vendor",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await serviceMapService.exportServiceMaps({
+                search: debouncedSearch,
+                sortBy: "vendor",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Service maps exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export service maps")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const getVendorName = (id: number) => {
         return vendorsData?.data?.find((v: any) => v.id === id)?.vendorName || `ID: ${id}`
@@ -137,9 +168,19 @@ export default function ServiceMapPage() {
                             <FilePlus className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
-                        <FileUp className="h-4 w-4" />
-                    </Button>
+                    <PermissionGuard permission="master.service_map.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-maps"], type: "active" })}>
                         <RefreshCw className="h-4 w-4" />
                     </Button>

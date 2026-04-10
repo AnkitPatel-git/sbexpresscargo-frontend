@@ -80,13 +80,13 @@ export default function ZonesPage() {
             deleteMutation.mutate(deleteId)
         }
     }
-    const total = data?.meta?.total ?? 0
+    const total = data?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
     const filteredRows = data?.data.filter((zone) => {
         if (colFilters.code && !(zone.code || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
         if (colFilters.name && !(zone.name || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
-        if (colFilters.country && !(zone.country || "").toLowerCase().includes(colFilters.country.toLowerCase())) return false
+        if (colFilters.country && !(zone.countryId != null ? String(zone.countryId) : "").includes(colFilters.country)) return false
         if (colFilters.type && !(zone.zoneType || "").toLowerCase().includes(colFilters.type.toLowerCase())) return false
         return true
     }) ?? []
@@ -96,7 +96,7 @@ export default function ZonesPage() {
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
                     <PermissionGuard permission="master.area.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary"><FileUp className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const blob = await zoneService.exportZonesCsv(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "zones.csv"; a.click(); URL.revokeObjectURL(url); } catch { toast.error("Failed to export zones"); } }}><FileUp className="h-4 w-4" /></Button>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["zones"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -141,7 +141,7 @@ export default function ZonesPage() {
                                             <TableRow key={zone.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                                 <TableCell className="font-medium text-primary">{zone.code}</TableCell>
                                                 <TableCell className="font-medium">{zone.name}</TableCell>
-                                                <TableCell>{zone.country}</TableCell>
+                                                <TableCell>{zone.countryId ?? "-"}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline" className="capitalize">
                                                         {zone.zoneType.toLowerCase()}
@@ -165,8 +165,8 @@ export default function ZonesPage() {
                     <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage(1)}>«</Button>
                     <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage((p) => Math.max(p - 1, 1))}>‹</Button>
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{page}</span>
-                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.meta?.totalPages || 1)} onClick={() => setPage((p) => p + 1)}>›</Button>
-                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.meta?.totalPages || 1)} onClick={() => setPage(data?.meta?.totalPages ?? 1)}>»</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.totalPages || 1)} onClick={() => setPage((p) => p + 1)}>›</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.totalPages || 1)} onClick={() => setPage(data?.totalPages ?? 1)}>»</Button>
                 </div>
             </div>
 

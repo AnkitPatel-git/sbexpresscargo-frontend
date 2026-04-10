@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 import { customerService } from "@/services/masters/customer-service"
+import { Customer } from "@/types/masters/customer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
@@ -46,8 +47,39 @@ export default function CustomersPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["customers", page, debouncedSearch],
-        queryFn: () => customerService.getCustomers({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            customerService.getCustomers({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await customerService.exportCustomers({
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Customers exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export customers")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => customerService.deleteCustomer(id),
@@ -84,11 +116,17 @@ export default function CustomersPage() {
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
     const filteredRows =
-        data?.data.filter((customer) => {
+        data?.data.filter((customer: Customer) => {
             if (colFilters.code && !customer.code.toLowerCase().includes(colFilters.code.toLowerCase())) return false
             if (colFilters.name && !customer.name.toLowerCase().includes(colFilters.name.toLowerCase())) return false
             if (colFilters.contact && !(customer.contactPerson || "").toLowerCase().includes(colFilters.contact.toLowerCase())) return false
-            if (colFilters.city && !(customer.city || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
+            if (
+                colFilters.city &&
+                !(`${customer.city ?? ""} ${customer.serviceablePincode?.cityName ?? ""}`)
+                    .toLowerCase()
+                    .includes(colFilters.city.toLowerCase())
+            )
+                return false
             if (colFilters.type && !(customer.customerType || "").toLowerCase().includes(colFilters.type.toLowerCase())) return false
             if (colFilters.status && !(customer.status || "").toLowerCase().includes(colFilters.status.toLowerCase())) return false
             return true
@@ -101,7 +139,19 @@ export default function CustomersPage() {
                     <PermissionGuard permission="master.customer.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import"><FileUp className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.customer.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["customers"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -145,7 +195,9 @@ export default function CustomersPage() {
                                     <TableCell className="font-medium text-foreground">{customer.code}</TableCell>
                                     <TableCell className="font-medium text-foreground">{customer.name}</TableCell>
                                     <TableCell className="text-foreground">{customer.contactPerson}</TableCell>
-                                    <TableCell className="text-foreground">{customer.city}</TableCell>
+                                    <TableCell className="text-foreground">
+                                        {customer.city || customer.serviceablePincode?.cityName || "-"}
+                                    </TableCell>
                                     <TableCell><Badge variant="outline">{customer.customerType}</Badge></TableCell>
                                     <TableCell><Badge variant={customer.status === "ACTIVE" ? "success" : "secondary"} className={customer.status === "ACTIVE" ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200"}>{customer.status}</Badge></TableCell>
                                     <TableCell>

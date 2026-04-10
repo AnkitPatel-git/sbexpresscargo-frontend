@@ -1,3 +1,5 @@
+/** Service Map Master — Bruno `docs/bruno/Masters/Service Map Master/*`. */
+
 export type ServiceMapStatus = 'ACTIVE' | 'INACTIVE';
 export type ServiceTypeEnums = 'AIR' | 'SURFACE' | 'EXPRESS';
 
@@ -30,7 +32,7 @@ export interface ServiceMapFormData {
 
 export interface ServiceMapListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: ServiceMap[];
     meta: {
         total: number;
@@ -42,6 +44,6 @@ export interface ServiceMapListResponse {
 
 export interface ServiceMapSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: ServiceMap;
 }

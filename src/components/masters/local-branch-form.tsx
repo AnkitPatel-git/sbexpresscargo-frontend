@@ -34,6 +34,7 @@ import { FormSection } from "@/components/ui/form-section"
 import { localBranchService } from '@/services/masters/local-branch-service'
 import { stateService } from '@/services/masters/state-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
+import { bankService } from '@/services/masters/bank-service'
 import { LocalBranch } from '@/types/masters/local-branch'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
@@ -43,12 +44,11 @@ const localBranchSchema = z.object({
     name: z.string().min(3, "Branch name must be at least 3 characters"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
     address2: z.string().optional().nullable(),
-    pinCode: z.string().min(6, "Pin code must be 6 characters"),
+    pinCodeId: z.string().min(1, "Pin code id or code is required"),
     city: z.string().min(2, "City is required"),
     state: z.string().min(1, "State is required"),
     serviceCenterId: z.number().min(1, "Service Center is required"),
-    telephone1: z.string().min(10, "Telephone must be at least 10 characters"),
-    telephone2: z.string().optional().nullable(),
+    telephone: z.string().min(10, "Telephone must be at least 10 characters"),
     fax: z.string().optional().nullable(),
     website: z.string().optional().nullable(),
     email: z.string().email("Invalid email address"),
@@ -58,7 +58,7 @@ const localBranchSchema = z.object({
     stateCode: z.string().optional().nullable(),
     gstNo: z.string().min(15, "GST No must be 15 characters"),
     serviceRegistrationNo: z.string().optional().nullable(),
-    bankName: z.string().optional().nullable(),
+    bankId: z.number().optional().nullable(),
     accountNo: z.string().optional().nullable(),
     accountName: z.string().optional().nullable(),
     bankAddress: z.string().optional().nullable(),
@@ -92,6 +92,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
     const [scOpen, setScOpen] = useState(false)
     const [stateOpen, setStateOpen] = useState(false)
     const [billingStateOpen, setBillingStateOpen] = useState(false)
+    const [bankOpen, setBankOpen] = useState(false)
 
     const { data: statesData } = useQuery({
         queryKey: ['states-list'],
@@ -103,6 +104,11 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
         queryFn: () => serviceCenterService.getServiceCenters({ limit: 100 }),
     })
 
+    const { data: banksData } = useQuery({
+        queryKey: ['banks-list-local-branch-form'],
+        queryFn: () => bankService.getBanks({ limit: 100 }),
+    })
+
     const form = useForm<LocalBranchFormValues>({
         resolver: zodResolver(localBranchSchema) as Resolver<LocalBranchFormValues>,
         defaultValues: {
@@ -111,12 +117,11 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
             name: initialData?.name || '',
             address1: initialData?.address1 || '',
             address2: initialData?.address2 || '',
-            pinCode: initialData?.pinCode || '',
+            pinCodeId: initialData?.pinCodeId != null ? String(initialData.pinCodeId) : '',
             city: initialData?.city || '',
             state: initialData?.state || '',
             serviceCenterId: initialData?.serviceCenterId || 0,
-            telephone1: initialData?.telephone1 || '',
-            telephone2: initialData?.telephone2 || '',
+            telephone: initialData?.telephone || '',
             fax: initialData?.fax || '',
             website: initialData?.website || '',
             email: initialData?.email || '',
@@ -126,7 +131,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
             stateCode: initialData?.stateCode || '',
             gstNo: initialData?.gstNo || '',
             serviceRegistrationNo: initialData?.serviceRegistrationNo || '',
-            bankName: initialData?.bankName || '',
+            bankId: initialData?.bankId ?? undefined,
             accountNo: initialData?.accountNo || '',
             accountName: initialData?.accountName || '',
             bankAddress: initialData?.bankAddress || '',
@@ -156,12 +161,11 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                 name: initialData.name,
                 address1: initialData.address1,
                 address2: initialData.address2 || '',
-                pinCode: initialData.pinCode,
-                city: initialData.city,
-                state: initialData.state,
+                pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : '',
+                city: initialData.city || '',
+                state: initialData.state || '',
                 serviceCenterId: initialData.serviceCenterId || 0,
-                telephone1: initialData.telephone1,
-                telephone2: initialData.telephone2 || '',
+                telephone: initialData.telephone || '',
                 fax: initialData.fax || '',
                 website: initialData.website || '',
                 email: initialData.email,
@@ -171,7 +175,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                 stateCode: initialData.stateCode || '',
                 gstNo: initialData.gstNo,
                 serviceRegistrationNo: initialData.serviceRegistrationNo || '',
-                bankName: initialData.bankName || '',
+                bankId: initialData.bankId ?? undefined,
                 accountNo: initialData.accountNo || '',
                 accountName: initialData.accountName || '',
                 bankAddress: initialData.bankAddress || '',
@@ -325,22 +329,11 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="telephone1"
+                                    name="telephone"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Telephone 1">
+                                        <FloatingFormItem label="Telephone">
                                             <FormControl>
-                                                <Input {...field} placeholder="Telephone 1" className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="telephone2"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Telephone 2 (Optional)">
-                                            <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="Telephone 2" className={FLOATING_INNER_CONTROL} />
+                                                <Input {...field} value={field.value || ''} placeholder="Telephone" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -409,17 +402,17 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                     </FloatingFormItem>
                                 )}
                             />
-                            <FormField
-                                control={form.control}
-                                name="pinCode"
-                                render={({ field }) => (
-                                    <FloatingFormItem label="Pin Code">
-                                        <FormControl>
-                                            <Input {...field} placeholder="6-digit Pincode" className={FLOATING_INNER_CONTROL} />
-                                        </FormControl>
-                                    </FloatingFormItem>
-                                )}
-                            />
+                                <FormField
+                                    control={form.control}
+                                    name="pinCodeId"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Pin code (id or code)">
+                                            <FormControl>
+                                                <Input {...field} placeholder="486001 or id" className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
                             <FormField
                                 control={form.control}
                                 name="state"
@@ -594,12 +587,63 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                     <FormSection title="Bank Information" contentClassName="space-y-4">
                             <FormField
                                 control={form.control}
-                                name="bankName"
+                                name="bankId"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Bank Name">
-                                        <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Bank Name" className={FLOATING_INNER_CONTROL} />
-                                        </FormControl>
+                                    <FloatingFormItem label="Bank">
+                                        <Popover open={bankOpen} onOpenChange={setBankOpen}>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                            FLOATING_INNER_COMBO,
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        <span className="truncate">
+                                                            {field.value
+                                                                ? banksData?.data?.find((b) => b.id === field.value)?.bankName
+                                                                : "Select bank (optional)..."}
+                                                        </span>
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search bank..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No bank found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            <CommandItem
+                                                                value="none"
+                                                                onSelect={() => {
+                                                                    form.setValue("bankId", undefined)
+                                                                    setBankOpen(false)
+                                                                }}
+                                                            >
+                                                                <Check className={cn("mr-2 h-4 w-4", !field.value ? "opacity-100" : "opacity-0")} />
+                                                                None
+                                                            </CommandItem>
+                                                            {banksData?.data?.map((b) => (
+                                                                <CommandItem
+                                                                    key={b.id}
+                                                                    value={b.bankName}
+                                                                    onSelect={() => {
+                                                                        form.setValue("bankId", b.id)
+                                                                        setBankOpen(false)
+                                                                    }}
+                                                                >
+                                                                    <Check className={cn("mr-2 h-4 w-4", field.value === b.id ? "opacity-100" : "opacity-0")} />
+                                                                    {b.bankName}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                     </FloatingFormItem>
                                 )}
                             />

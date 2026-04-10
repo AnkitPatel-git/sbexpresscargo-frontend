@@ -69,8 +69,39 @@ export default function ServiceCentersPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["service-centers", page, debouncedSearch],
-        queryFn: () => serviceCenterService.getServiceCenters({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            serviceCenterService.getServiceCenters({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await serviceCenterService.exportServiceCenters({
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Service centers exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export service centers")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => serviceCenterService.deleteServiceCenter(id),
@@ -126,9 +157,19 @@ export default function ServiceCentersPage() {
                             <FilePlus className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
-                        <FileUp className="h-4 w-4" />
-                    </Button>
+                    <PermissionGuard permission="master.service_center.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-centers"], type: "active" })}>
                         <RefreshCw className="h-4 w-4" />
                     </Button>

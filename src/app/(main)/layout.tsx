@@ -41,6 +41,7 @@ import {
   Menu,
   ClipboardList,
   Car,
+  Bike,
   Navigation,
   CheckSquare,
   CreditCard,
@@ -93,6 +94,9 @@ const headerNavItems = [
   { href: "/masters/area", label: "Area Master" },
   { href: "/masters/exception", label: "Exception Master" },
   { href: "/masters/charge", label: "Charge Master" },
+  { href: "/masters/vehicle", label: "Vehicle Master" },
+  { href: "/masters/courier", label: "Courier Master" },
+  { href: "/masters/vendor-config", label: "Vendor Config Master" },
   { href: "/transactions/shipment", label: "Shipment" },
   { href: "/transactions/manifest", label: "Manifest" },
   { href: "/transactions/drs", label: "DRS" },
@@ -214,6 +218,12 @@ const MASTER_GROUP_ITEMS = {
       icon: MapIcon,
       permission: "master.service_map.read",
     },
+    {
+      href: "/masters/vendor-config",
+      label: "Vendor Config Master",
+      icon: Settings,
+      permission: "master.vendor_config.read",
+    },
   ],
   operations: [
     {
@@ -233,6 +243,18 @@ const MASTER_GROUP_ITEMS = {
       label: "Charge Master",
       icon: Coins,
       permission: "master.charge.read",
+    },
+    {
+      href: "/masters/vehicle",
+      label: "Vehicle Master",
+      icon: Truck,
+      permission: "master.vehicle.read",
+    },
+    {
+      href: "/masters/courier",
+      label: "Courier Master",
+      icon: Bike,
+      permission: "master.courier.read",
     },
   ],
 } as const;
@@ -257,7 +279,9 @@ const resolveMasterGroupFromPath = (
   if (
     path.startsWith("/masters/area") ||
     path.startsWith("/masters/exception") ||
-    path.startsWith("/masters/charge")
+    path.startsWith("/masters/charge") ||
+    path.startsWith("/masters/vehicle") ||
+    path.startsWith("/masters/courier")
   ) {
     return "operations";
   }

@@ -1,3 +1,5 @@
+/** Serviceable Pincode — Bruno `docs/bruno/Masters/Serviceable Pincode/*` (primary path `/utilities/serviceable-pincodes`). */
+
 export interface ServiceablePincode {
     id: number;
     pinCode: string;
@@ -31,7 +33,7 @@ export interface ServiceablePincodeFormData {
 
 export interface ServiceablePincodeListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: ServiceablePincode[];
     meta: {
         total: number;
@@ -43,6 +45,6 @@ export interface ServiceablePincodeListResponse {
 
 export interface ServiceablePincodeSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: ServiceablePincode;
 }

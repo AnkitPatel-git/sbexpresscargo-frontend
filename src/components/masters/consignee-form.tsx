@@ -44,12 +44,12 @@ const consigneeSchema = z.object({
     contactPerson: z.string().optional(),
     address1: z.string().optional(),
     address2: z.string().optional(),
-    pinCode: z.string().optional(),
+    pinCodeId: z.string().optional(),
+    areaId: z.coerce.number().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     industry: z.string().optional(),
-    tel1: z.string().optional(),
-    tel2: z.string().optional(),
+    telephone: z.string().optional(),
     fax: z.string().optional(),
     email: z.string().email("Invalid email address").or(z.literal("")),
     mobile: z.string().optional(),
@@ -92,12 +92,12 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
             contactPerson: initialData?.contactPerson || '',
             address1: initialData?.address1 || '',
             address2: initialData?.address2 || '',
-            pinCode: initialData?.pinCode || '',
+            pinCodeId: initialData?.pinCodeId != null ? String(initialData.pinCodeId) : '',
+            areaId: initialData?.areaId ?? undefined,
             city: initialData?.city || '',
             state: initialData?.state || '',
             industry: initialData?.industry || '',
-            tel1: initialData?.tel1 || '',
-            tel2: initialData?.tel2 || '',
+            telephone: initialData?.telephone || '',
             fax: initialData?.fax || '',
             email: initialData?.email || '',
             mobile: initialData?.mobile || '',
@@ -121,12 +121,12 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                 contactPerson: initialData.contactPerson || '',
                 address1: initialData.address1 || '',
                 address2: initialData.address2 || '',
-                pinCode: initialData.pinCode || '',
+                pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : '',
+                areaId: initialData.areaId ?? undefined,
                 city: initialData.city || '',
                 state: initialData.state || '',
                 industry: initialData.industry || '',
-                tel1: initialData.tel1 || '',
-                tel2: initialData.tel2 || '',
+                telephone: initialData.telephone || '',
                 fax: initialData.fax || '',
                 email: initialData.email || '',
                 mobile: initialData.mobile || '',
@@ -300,22 +300,32 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="tel1"
+                                    name="telephone"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Telephone 1">
+                                        <FloatingFormItem label="Telephone">
                                             <FormControl>
-                                                <Input placeholder="02212345678" {...field} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="011-12345678" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="tel2"
+                                    name="areaId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Telephone 2">
+                                        <FloatingFormItem label="Area ID (optional)">
                                             <FormControl>
-                                                <Input placeholder="02287654321" {...field} className={FLOATING_INNER_CONTROL} />
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Area master id"
+                                                    {...field}
+                                                    value={field.value === undefined || field.value === 0 ? '' : field.value}
+                                                    onChange={(e) => {
+                                                        const v = e.target.value
+                                                        field.onChange(v === '' ? undefined : Number(v))
+                                                    }}
+                                                    className={FLOATING_INNER_CONTROL}
+                                                />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -441,11 +451,11 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="pinCode"
+                                    name="pinCodeId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Pin Code">
+                                        <FloatingFormItem label="Pin code (id or code)">
                                             <FormControl>
-                                                <Input placeholder="400001" {...field} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="486001 or numeric id" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}

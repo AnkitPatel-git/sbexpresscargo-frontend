@@ -38,7 +38,7 @@ import { FormSection } from "@/components/ui/form-section"
 import { contentService } from '@/services/masters/content-service'
 import { countryService } from '@/services/masters/country-service'
 import { vendorService } from '@/services/masters/vendor-service'
-import { Content } from '@/types/masters/content'
+import { Content, type ContentVendorRef } from '@/types/masters/content'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const contentSchema = z.object({
@@ -112,20 +112,22 @@ export function ContentForm({ initialData }: ContentFormProps) {
 
     useEffect(() => {
         if (initialData) {
-            // Extractor for vendor name if it's an object
-            const vendorName = typeof initialData.vendor === 'object' 
-                ? (initialData.vendor as any)?.vendorName 
-                : initialData.vendor || '';
-            
-            // Extractor for country name if it's an object
-            const countryName = typeof initialData.country === 'object' 
-                ? (initialData.country as any)?.name 
-                : initialData.country || '';
+            const vendorName =
+                typeof initialData.vendor === 'object' && initialData.vendor !== null
+                    ? (initialData.vendor as ContentVendorRef).vendorName ??
+                      (initialData.vendor as ContentVendorRef).name ??
+                      ''
+                    : initialData.vendor || ''
+
+            const countryName =
+                typeof initialData.country === 'object' && initialData.country !== null
+                    ? initialData.country.name
+                    : initialData.country || ''
 
             form.reset({
                 contentCode: initialData.contentCode,
                 contentName: initialData.contentName,
-                hsnCode: initialData.hsnCode,
+                hsnCode: initialData.hsnCode ?? '',
                 vendorId: initialData.vendorId,
                 countryId: initialData.countryId,
                 vendor: vendorName,

@@ -1,7 +1,10 @@
+/** Product Master — Bruno `docs/bruno/Masters/Product Master/*`. */
+
 export interface Product {
     id: number;
     productCode: string;
     productName: string;
+    version: number;
     productType: 'DOMESTIC' | 'INTERNATIONAL' | 'LOCAL' | string;
     fuelCharge: boolean;
     gstReverse: boolean;
@@ -23,6 +26,8 @@ export interface ProductFormData {
     gstReverse: boolean;
     docType: string;
     status: string;
+    /** Required on PATCH (Bruno); omit on POST. */
+    version?: number;
 }
 
 export interface ProductListResponse {
@@ -39,6 +44,6 @@ export interface ProductListResponse {
 
 export interface ProductSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Product;
 }

@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Vendor Master",
+    title: "Courier Master",
 };
 
 export default function CourierMasterLayout({

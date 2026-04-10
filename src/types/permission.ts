@@ -35,8 +35,8 @@ export interface GroupedPermission {
 
 export interface CreatePermissionDto {
     name: string;
-    underMenu: string;
-    description: string;
+    underMenu?: string;
+    description?: string;
 }
 
 export interface UpdatePermissionDto {

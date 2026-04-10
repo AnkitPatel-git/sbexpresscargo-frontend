@@ -1,3 +1,5 @@
+import type { ApiResponse, LoginResponseData, UtilityUser } from "@/types/utilities/user";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 export async function apiClient<T>(
@@ -27,10 +29,10 @@ export async function apiClient<T>(
 }
 
 export const authApi = {
-    login: (credentials: any) =>
-        apiClient<any>('/utilities/users/login', {
+    login: (credentials: { email: string; password: string; platform: string }) =>
+        apiClient<ApiResponse<LoginResponseData>>('/utilities/users/login', {
             method: 'POST',
             body: JSON.stringify(credentials),
         }),
-    getProfile: () => apiClient<any>('/utilities/users/profile'),
+    getProfile: () => apiClient<ApiResponse<UtilityUser>>('/utilities/users/profile'),
 };
