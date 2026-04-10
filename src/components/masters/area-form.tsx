@@ -13,10 +13,8 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import { FloatingFormItem, FLOATING_INNER_COMBO, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item"
 import {
     Popover,
     PopoverContent,
@@ -34,7 +32,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { areaService } from '@/services/masters/area-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
-import { Area } from '@/types/masters/area'
+import { Area, AreaFormData } from '@/types/masters/area'
 
 const areaSchema = z.object({
     areaName: z.string().min(2, "Area name must be at least 2 characters"),
@@ -70,9 +68,12 @@ export function AreaForm({ initialData }: AreaFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: AreaFormValues) => {
-            const payload: any = {
-                ...data,
-                destination: data.destination || undefined
+            const payload: AreaFormData = {
+                areaName: data.areaName,
+                serviceCenterId: data.serviceCenterId,
+            }
+            if (data.destination != null && data.destination !== "") {
+                payload.destination = data.destination
             }
             if (isEdit && initialData) {
                 return areaService.updateArea(initialData.id, payload)
@@ -96,10 +97,10 @@ export function AreaForm({ initialData }: AreaFormProps) {
         mutation.mutate(data)
     }
 
-    const onInvalid = (errors: any) => {
+    const onInvalid = (errors: Record<string, { message?: string }>) => {
         console.error("Form Validation Errors:", errors)
         const errorMessages = Object.entries(errors)
-            .map(([field, error]: [string, any]) => `${field}: ${error.message}`)
+            .map(([field, error]) => `${field}: ${error.message}`)
             .join(", ")
         toast.error(`Validation Error: ${errorMessages || "Please check the form"}`)
     }
@@ -112,13 +113,11 @@ export function AreaForm({ initialData }: AreaFormProps) {
                         control={form.control}
                         name="areaName"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Area Name*</FormLabel>
+                            <FloatingFormItem label={<>Area Name <span className="text-red-500">*</span></>}>
                                 <FormControl>
-                                    <Input placeholder="e.g. Mumbai Central" {...field} />
+                                    <Input placeholder="e.g. Mumbai Central" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -126,8 +125,7 @@ export function AreaForm({ initialData }: AreaFormProps) {
                         control={form.control}
                         name="serviceCenterId"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Service Center*</FormLabel>
+                            <FloatingFormItem label={<>Service Center <span className="text-red-500">*</span></>}>
                                 <Popover open={scOpen} onOpenChange={setScOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -135,7 +133,7 @@ export function AreaForm({ initialData }: AreaFormProps) {
                                                 variant="outline"
                                                 role="combobox"
                                                 className={cn(
-                                                    "w-full justify-between font-normal",
+                                                    FLOATING_INNER_COMBO,
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
@@ -177,8 +175,7 @@ export function AreaForm({ initialData }: AreaFormProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -186,13 +183,11 @@ export function AreaForm({ initialData }: AreaFormProps) {
                         control={form.control}
                         name="destination"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Destination</FormLabel>
+                            <FloatingFormItem label="Destination">
                                 <FormControl>
-                                    <Input placeholder="e.g. Mumbai" {...field} value={field.value ?? ''} />
+                                    <Input placeholder="e.g. Mumbai" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>

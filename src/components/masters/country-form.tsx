@@ -12,10 +12,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -100,13 +102,11 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Country Code</FormLabel>
+                            <FloatingFormItem label="Country Code">
                                 <FormControl>
-                                    <Input placeholder="e.g. IND, USA" {...field} />
+                                    <Input placeholder="e.g. IND, USA" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -114,13 +114,11 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Country Name</FormLabel>
+                            <FloatingFormItem label="Country Name">
                                 <FormControl>
-                                    <Input placeholder="e.g. India, United States" {...field} />
+                                    <Input placeholder="e.g. India, United States" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -130,11 +128,10 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="weightUnit"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Weight Unit</FormLabel>
+                            <FloatingFormItem label="Weight Unit">
                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select unit" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -143,8 +140,7 @@ export function CountryForm({ initialData }: CountryFormProps) {
                                         <SelectItem value="LBS">LBS</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -152,13 +148,11 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="currency"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Currency</FormLabel>
+                            <FloatingFormItem label="Currency">
                                 <FormControl>
-                                    <Input placeholder="e.g. INR, USD" {...field} />
+                                    <Input placeholder="e.g. INR, USD" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -167,13 +161,11 @@ export function CountryForm({ initialData }: CountryFormProps) {
                     control={form.control}
                     name="isdCode"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>ISD Code</FormLabel>
+                        <FloatingFormItem label="ISD Code">
                             <FormControl>
-                                <Input placeholder="e.g. +91, +1" {...field} />
+                                <Input placeholder="e.g. +91, +1" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 

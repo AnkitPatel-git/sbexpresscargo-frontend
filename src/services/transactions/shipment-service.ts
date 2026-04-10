@@ -59,6 +59,9 @@ export const shipmentService = {
     },
 
     updateShipment: async (id: number, data: ShipmentFormValues): Promise<ShipmentSingleResponse> => {
+        if (!data.version) {
+            throw new Error('Shipment version is required for update')
+        }
         const response = await apiFetch(`${API_URL}/transaction/shipment/${id}`, {
             method: 'PUT',
             headers: {
@@ -72,6 +75,18 @@ export const shipmentService = {
             throw new Error(error.message || 'Failed to update shipment');
         }
         return response.json();
+    },
+
+    downloadPiecesTemplate: async (): Promise<Blob> => {
+        const response = await apiFetch(`${API_URL}/transaction/shipment/pieces-template`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+        if (!response.ok) {
+            throw new Error('Failed to download pieces template');
+        }
+        return response.blob();
     },
 
     deleteShipment: async (id: number): Promise<{ success: boolean; message?: string }> => {

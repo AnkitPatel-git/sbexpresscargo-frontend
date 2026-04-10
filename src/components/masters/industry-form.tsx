@@ -12,10 +12,8 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import { FloatingFormItem, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { industryService } from '@/services/masters/industry-service'
@@ -83,13 +81,11 @@ export function IndustryForm({ initialData }: IndustryFormProps) {
                     control={form.control}
                     name="industryCode"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Industry Code</FormLabel>
+                        <FloatingFormItem label="Industry Code">
                             <FormControl>
-                                <Input placeholder="e.g. LOG, MFG" {...field} />
+                                <Input placeholder="e.g. LOG, MFG" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 
@@ -97,13 +93,11 @@ export function IndustryForm({ initialData }: IndustryFormProps) {
                     control={form.control}
                     name="industryName"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Industry Name</FormLabel>
+                        <FloatingFormItem label="Industry Name">
                             <FormControl>
-                                <Input placeholder="e.g. Logistics, Manufacturing" {...field} />
+                                <Input placeholder="e.g. Logistics, Manufacturing" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 

@@ -4,7 +4,7 @@ import { useParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { ZoneForm } from "@/components/masters/zone-form"
 import { zoneService } from "@/services/masters/zone-service"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -54,14 +54,9 @@ export default function EditZonePage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Zone Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ZoneForm key={data.data.id} initialData={data.data} />
-                </CardContent>
-            </Card>
+            <FormSection title="Zone Details">
+                <ZoneForm key={data.data.id} initialData={data.data} />
+            </FormSection>
         </div>
     )
 }

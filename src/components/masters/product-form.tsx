@@ -11,10 +11,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -114,26 +116,31 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         control={form.control}
                         name="productCode"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Product Code</FormLabel>
+                            <FloatingFormItem label="Product Code">
                                 <FormControl>
-                                    <Input placeholder="Enter product code" {...field} disabled={isEdit} />
+                                    <Input
+                                        placeholder="Enter product code"
+                                        {...field}
+                                        disabled={isEdit}
+                                        className={FLOATING_INNER_CONTROL}
+                                    />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="productName"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Product Name</FormLabel>
+                            <FloatingFormItem label="Product Name">
                                 <FormControl>
-                                    <Input placeholder="Enter product name" {...field} />
+                                    <Input
+                                        placeholder="Enter product name"
+                                        {...field}
+                                        className={FLOATING_INNER_CONTROL}
+                                    />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -143,14 +150,13 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         control={form.control}
                         name="productType"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Product Type</FormLabel>
-                                <Select 
-                                    onValueChange={field.onChange} 
+                            <FloatingFormItem label="Product Type">
+                                <Select
+                                    onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select type" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -161,22 +167,20 @@ export function ProductForm({ initialData }: ProductFormProps) {
                                         <SelectItem value="LOCAL">Local</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="groupType"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Group Type</FormLabel>
-                                <Select 
-                                    onValueChange={field.onChange} 
+                            <FloatingFormItem label="Group Type">
+                                <Select
+                                    onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select group" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -187,8 +191,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
                                         <SelectItem value="ALL">All</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -198,14 +201,13 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         control={form.control}
                         name="docType"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Doc Type</FormLabel>
-                                <Select 
-                                    onValueChange={field.onChange} 
+                            <FloatingFormItem label="Doc Type">
+                                <Select
+                                    onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select doc type" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -214,22 +216,20 @@ export function ProductForm({ initialData }: ProductFormProps) {
                                         <SelectItem value="NDOX">NDOX</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="status"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Status</FormLabel>
-                                <Select 
-                                    onValueChange={field.onChange} 
+                            <FloatingFormItem label="Status">
+                                <Select
+                                    onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select status" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -238,8 +238,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
                                         <SelectItem value="INACTIVE">Inactive</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>
@@ -248,13 +247,16 @@ export function ProductForm({ initialData }: ProductFormProps) {
                     control={form.control}
                     name="productService"
                     render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Product Service</FormLabel>
+                        <FloatingFormItem label="Product Service">
                             <FormControl>
-                                <Input placeholder="Enter service name (optional)" {...field} value={field.value || ""} />
+                                <Input
+                                    placeholder="Enter service name (optional)"
+                                    {...field}
+                                    value={field.value || ""}
+                                    className={FLOATING_INNER_CONTROL}
+                                />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        </FloatingFormItem>
                     )}
                 />
 
@@ -263,34 +265,32 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         control={form.control}
                         name="fuelCharge"
                         render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel>Fuel Charge</FormLabel>
+                            <FloatingFormItem label="Fuel Charge">
+                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
                                 </div>
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="gstReverse"
                         render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel>GST Reverse</FormLabel>
+                            <FloatingFormItem label="GST Reverse">
+                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
                                 </div>
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
                 </div>

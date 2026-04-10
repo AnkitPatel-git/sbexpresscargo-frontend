@@ -109,6 +109,8 @@ examples:
                 "id": 2,
                 "awbNo": "AWB123456",
                 "customerId": 1,
+                "shipperId": 12,
+                "consigneeId": 24,
                 "vendorId": 1,
                 "productId": 1,
                 "origin": "MUMBAI",
@@ -126,30 +128,23 @@ examples:
                 "createdById": 1,
                 "updatedById": 1,
                 "deletedAt": null,
-                "deletedById": null
-              },
-              {
-                "id": 1,
-                "awbNo": "M1774333957282E4A4B3",
-                "customerId": 1,
-                "vendorId": 1,
-                "productId": 1,
-                "origin": "MUM",
-                "destination": "DEL",
-                "pieces": 2,
-                "declaredWeight": "1.5",
-                "chargeWeight": null,
-                "paymentType": "CASH",
-                "currentStatus": "CREATED",
-                "version": 1,
-                "codAmount": "500",
-                "isCod": true,
-                "createdAt": "2026-03-24T06:32:37.297Z",
-                "updatedAt": "2026-03-24T06:32:37.449Z",
-                "createdById": 2,
-                "updatedById": null,
-                "deletedAt": null,
-                "deletedById": null
+                "deletedById": null,
+                "customer": { "id": 1, "code": "CLI001", "name": "ABC Client Pvt Ltd" },
+                "shipper": { "id": 12, "shipperCode": "SHP000012", "shipperName": "ABC Exporters" },
+                "consignee": { "id": 24, "code": "CNE000024", "name": "XYZ Imports" },
+                "vendor": { "id": 1, "vendorCode": "V001", "vendorName": "BlueDart" },
+                "product": { "id": 1, "productCode": "DOC", "productName": "Documents" },
+                "piecesRows": [],
+                "charges": [],
+                "statuses": [],
+                "forwardings": [],
+                "proformas": [],
+                "kycDocuments": [],
+                "receipt": null,
+                "vendorMappings": [],
+                "packages": [],
+                "trackingSummary": null,
+                "comments": []
               }
             ],
             "meta": {
@@ -160,4 +155,7 @@ examples:
             }
           }
 
-docs: List/search shipments. JWT + shipment.core.read.
+docs: |-
+  List/search shipments. JWT + shipment.core.read.
+
+  Response now returns full shipment details for each row (relations + child collections), while still paginated.

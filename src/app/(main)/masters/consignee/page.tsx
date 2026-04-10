@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, Loader2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -17,14 +17,6 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -34,7 +26,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 import { consigneeService } from "@/services/masters/consignee-service"
 import { Consignee } from "@/types/masters/consignee"
@@ -48,6 +40,7 @@ export default function ConsigneePage() {
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
+    const [colFilters, setColFilters] = useState({ code: "", name: "", contact: "", city: "" })
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -87,136 +80,92 @@ export default function ConsigneePage() {
         }
     }
 
+    const total = data?.meta?.total ?? 0
+    const from = total === 0 ? 0 : (page - 1) * limit + 1
+    const to = Math.min(page * limit, total)
+    const filteredRows =
+        data?.data.filter((consignee) => {
+            if (colFilters.code && !(consignee.code || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
+            if (colFilters.name && !(consignee.name || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
+            if (colFilters.contact && !(consignee.contactPerson || "").toLowerCase().includes(colFilters.contact.toLowerCase())) return false
+            if (colFilters.city && !(consignee.city || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
+            return true
+        }) ?? []
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Consignee Master</h1>
-                    <p className="text-slate-500">
-                        Manage consignees, their contact details, and account statuses.
-                    </p>
+        <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <PermissionGuard permission="master.consignee.create">
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
+                    </PermissionGuard>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary"><FileUp className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["consignees"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
-                <PermissionGuard permission="master.consignee.create">
-                    <Button onClick={handleCreate} className="bg-slate-900 hover:bg-slate-800">
-                        <Plus className="mr-2 h-4 w-4" /> Create Consignee
-                    </Button>
-                </PermissionGuard>
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Search:</span>
+                    <Input placeholder="Search consignees..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <PermissionGuard permission="master.consignee.create">
+                        <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><Plus className="mr-1 h-4 w-4" />Add Consignee</Button>
+                    </PermissionGuard>
+                </div>
             </div>
-
-            <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                    <CardTitle className="text-slate-800">Consignees</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center py-4">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Search consignees..."
-                                className="pl-8 border-slate-200 focus:ring-slate-400"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
-                                        <TableHead className="w-[120px] font-semibold text-slate-700">Code</TableHead>
-                                        <TableHead className="min-w-[200px] font-semibold text-slate-700">Consignee Name</TableHead>
-                                        <TableHead className="font-semibold text-slate-700">Contact Person</TableHead>
-                                        <TableHead className="font-semibold text-slate-700">City</TableHead>
-                                        <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {isLoading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
-                                                <div className="flex items-center justify-center gap-2 text-slate-500">
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Loading consignees...
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : data?.data && data.data.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center text-slate-500 italic">
-                                                No consignees found.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        data?.data.map((consignee: Consignee) => (
-                                            <TableRow key={consignee.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <TableCell className="font-medium text-blue-600">{consignee.code}</TableCell>
-                                                <TableCell className="font-medium text-slate-800">{consignee.name}</TableCell>
-                                                <TableCell className="text-slate-600">{consignee.contactPerson}</TableCell>
-                                                <TableCell className="text-slate-600">{consignee.city}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900">
-                                                                <span className="sr-only">Open menu</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-40">
-                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="master.consignee.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(consignee.id)}>
-                                                                    <Edit className="mr-2 h-4 w-4" /> Edit
-                                                                </DropdownMenuItem>
-                                                            </PermissionGuard>
-                                                            <PermissionGuard permission="master.consignee.delete">
-                                                                <DropdownMenuItem
-                                                                    className="text-red-600 focus:text-red-600"
-                                                                    onClick={() => handleDeleteRequest(consignee.id)}
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                                </DropdownMenuItem>
-                                                            </PermissionGuard>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-between py-4">
-                        <div className="text-sm text-slate-500">
-                            Showing page {page} of {data?.meta?.totalPages || 1}
-                        </div>
-                        <div className="flex space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-slate-200 text-slate-600 hover:bg-slate-50"
-                                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                                disabled={page === 1}
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-slate-200 text-slate-600 hover:bg-slate-50"
-                                onClick={() => setPage((prev) => prev + 1)}
-                                disabled={!data || page >= (data.meta?.totalPages || 1)}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="overflow-x-auto rounded-md border border-border">
+                <Table className="min-w-[940px] border-0">
+                    <TableHeader>
+                        <TableRow className="border-0 bg-primary hover:bg-primary">
+                            <TableHead className="h-11 font-semibold text-primary-foreground">Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Consignee Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Contact Person <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">City <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
+                        </TableRow>
+                        <TableRow className="border-b border-border bg-card hover:bg-card">
+                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Consignee Name" className="h-8 border-border bg-background text-xs" value={colFilters.name} onChange={(e) => setColFilters((f) => ({ ...f, name: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Contact Person" className="h-8 border-border bg-background text-xs" value={colFilters.contact} onChange={(e) => setColFilters((f) => ({ ...f, contact: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="City" className="h-8 border-border bg-background text-xs" value={colFilters.city} onChange={(e) => setColFilters((f) => ({ ...f, city: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2" />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground"><span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Loading consignees...</span></TableCell></TableRow>
+                        ) : filteredRows.length === 0 ? (
+                            <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No consignees found.</TableCell></TableRow>
+                        ) : (
+                            filteredRows.map((consignee: Consignee, index) => (
+                                <TableRow key={consignee.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
+                                    <TableCell className="font-medium text-foreground">{consignee.code}</TableCell>
+                                    <TableCell className="font-medium text-foreground">{consignee.name}</TableCell>
+                                    <TableCell className="text-foreground">{consignee.contactPerson || "-"}</TableCell>
+                                    <TableCell className="text-foreground">{consignee.city || "-"}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <PermissionGuard permission="master.consignee.update">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => handleEdit(consignee.id)}><Edit className="h-4 w-4" /></Button>
+                                            </PermissionGuard>
+                                            <PermissionGuard permission="master.consignee.delete">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" onClick={() => handleDeleteRequest(consignee.id)}><Trash2 className="h-4 w-4" /></Button>
+                                            </PermissionGuard>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+            <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <p className="text-sm text-muted-foreground">Showing {from} to {to} of {total} entries</p>
+                <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage(1)}>«</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage((p) => Math.max(p - 1, 1))}>‹</Button>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{page}</span>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.meta?.totalPages || 1)} onClick={() => setPage((p) => p + 1)}>›</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.meta?.totalPages || 1)} onClick={() => setPage(data?.meta?.totalPages ?? 1)}>»</Button>
+                </div>
+            </div>
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
@@ -228,10 +177,10 @@ export default function ConsigneePage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="border-slate-200 text-slate-600">Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
                         >
                             Delete
                         </AlertDialogAction>

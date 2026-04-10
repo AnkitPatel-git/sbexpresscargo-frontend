@@ -3,7 +3,7 @@
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { StateForm } from "@/components/masters/state-form"
 
 export default function CreateStatePage() {
@@ -23,14 +23,9 @@ export default function CreateStatePage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>State Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <StateForm />
-                </CardContent>
-            </Card>
+            <FormSection title="State Details">
+                <StateForm />
+            </FormSection>
         </div>
     )
 }

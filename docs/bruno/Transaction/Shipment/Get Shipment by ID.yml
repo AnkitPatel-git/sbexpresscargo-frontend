@@ -165,11 +165,11 @@ examples:
               "proformas": [],
               "kycDocuments": [],
               "receipt": null,
-              "carrierMappings": [
+              "vendorMappings": [
                 {
                   "id": 1,
                   "shipmentId": 1,
-                  "carrierId": 1,
+                  "vendorId": 1,
                   "externalAwb": "BD123456789",
                   "externalOrderId": "ORD-2026-001",
                   "requestPayload": {
@@ -188,11 +188,11 @@ examples:
                   "updatedAt": "2026-03-24T20:36:43.166Z",
                   "deletedAt": null,
                   "deletedById": null,
-                  "carrier": {
+                  "vendor": {
                     "id": 1,
-                    "code": "BLUEDART",
-                    "name": "BLUEDART Cargo (updated)",
-                    "isActive": true
+                    "vendorCode": "BLUEDART",
+                    "vendorName": "BLUEDART Cargo (updated)",
+                    "status": "ACTIVE"
                   }
                 }
               ],
@@ -202,4 +202,4 @@ examples:
             }
           }
 
-docs: Full shipment detail (masters, pieces, charges, statuses, forwarding, carrier mappings, tracking summary, etc.). JWT + shipment.core.read. Same RBAC as list (e.g. customer scope). Set `shipmentId` in collection variables.
+docs: Full shipment detail (masters, pieces, charges, statuses, forwarding, vendor mappings, tracking summary, etc.). JWT + shipment.core.read. Same RBAC as list (e.g. customer scope). Set `shipmentId` in collection variables.

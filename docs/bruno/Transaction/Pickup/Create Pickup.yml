@@ -41,7 +41,7 @@ http:
         "salesExecutiveId": 1,
         "specialInstructions": "Call before delivery",
         "serviceCenter": "VASAI",
-        "carrierId": 1,
+        "vendorId": 1,
         "bookingNo": "BK001",
         "reason": "Scheduled pickup",
         "pickupReady": true,
@@ -98,7 +98,7 @@ examples:
             "salesExecutiveId": 1,
             "specialInstructions": "Call before delivery",
             "serviceCenter": "VASAI",
-            "carrierId": 1,
+            "vendorId": 1,
             "bookingNo": "BK001",
             "reason": "Scheduled pickup",
             "pickupReady": true,
@@ -154,10 +154,10 @@ examples:
         data: |-
           {
             "success": false,
-            "message": "This operation conflicts with related data (invalid reference on \"carrierId\").",
+            "message": "This operation conflicts with related data (invalid reference on \"vendorId\").",
             "data": {
-              "field": "carrierId",
-              "reference": "carrier_id"
+              "field": "vendorId",
+              "reference": "vendor_id"
             }
           }
   - name: "200"
@@ -199,7 +199,7 @@ examples:
             "salesExecutiveId": 1,
             "specialInstructions": "Call before delivery",
             "serviceCenter": "VASAI",
-            "carrierId": 1,
+            "vendorId": 1,
             "bookingNo": "BK001",
             "reason": "Scheduled pickup",
             "pickupReady": true,
@@ -291,7 +291,7 @@ examples:
               "reason": "Scheduled pickup",
               "pickupReady": true,
               "externalPickupId": null,
-              "carrierId": 1,
+              "vendorId": 1,
               "requestPayload": null,
               "responsePayload": null,
               "errorMessage": null,
@@ -313,8 +313,8 @@ docs: |-
 
   Mandatory: idempotencyKey, customerId, serviceCenterId, pickupType (INTERNAL|EXTERNAL)
 
-  Optional (persisted on pickups row): bookingNo, carrierId, fieldExecutiveId, salesExecutiveId, pickupAt, pickupWindowStart, pickupWindowEnd (ISO 8601), origin, mobile, shipperName, contact, address1, address2, zipCode (maps to pin_code), city, state, payOption, consigneeId, consigneeName, consigneeDetails, vehicle, vehicleReq, area, specialInstructions, reason, pickupReady.
+  Optional (persisted on pickups row): bookingNo, vendorId, fieldExecutiveId, salesExecutiveId, pickupAt, pickupWindowStart, pickupWindowEnd (ISO 8601), origin, mobile, shipperName, contact, address1, address2, zipCode (maps to pin_code), city, state, payOption, consigneeId, consigneeName, consigneeDetails, vehicle, vehicleReq, area, specialInstructions, reason, pickupReady.
 
   Optional (request-only, not DB columns): fieldExecutive, salesExecutive, serviceCenter, pickupTime — prefer fieldExecutiveId, salesExecutiveId, serviceCenterId, and pickupAt / window for data that must round-trip.
 
-  carrierId: FK to `carriers` (Carrier Master POST /carrier-master), not Courier Master (/courier-master). Seed creates code DEFAULT (usually id=1).
+  vendorId: FK to `vendors` (Vendor Master `POST /vendor-master` — logistics partner for CARRIER pickups), not Courier Master (`/courier-master`). Seed may create `DEFAULT` vendor (often id=1).

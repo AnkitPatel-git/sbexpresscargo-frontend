@@ -51,7 +51,6 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - `/masters/consignee`: Consignee Master management (Protected & RBAC controlled).
 - `/masters/shipper`: Shipper Master management (Protected & RBAC controlled).
 - `/masters/vendor`: Vendor Master management (Protected & RBAC controlled).
-- `/masters/courier`: Courier Master management (Protected & RBAC controlled).
 - `/masters/area`: Area Master management (Protected & RBAC controlled).
 - `/masters/exception`: Exception Master management (Protected & RBAC controlled).
 - `/masters/service-map`: Service Map Master management (Protected & RBAC controlled).
@@ -80,8 +79,7 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
   - **Client Rate Master**: Custom rate settings for clients based on destination and service.
   - **Consignee Master**: Management of consignee details, addresses, and contacts.
   - **Shipper Master**: Management of shipper details, addresses, and contacts.
-  - **Vendor Master**: Management of external vendors and partners.
-  - **Courier Master**: Tracking and management of courier partners.
+  - **Vendor Master**: Management of external vendors and courier partners.
   - **Area Master**: Regional area and destination mapping.
   - **Exception Master**: Tracking of delivery exceptions and un-delivery reasons.
   - **Service Map Master**: Mapping of vendors to service types and weight limits.
@@ -111,7 +109,7 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - **Layout & Navigation Redesign**: 
   - **Expandable/Collapsible Sidebar**: On desktop screens, the sidebar toggles between an expanded state (full text, nested menus) and a contracted state (icons only, tooltips on hover).
   - **Mobile Drawer (Sheet)**: On mobile viewports, the sidebar is replaced with a responsive off-canvas menu triggered via the header's hamburger icon.
-  - **Navy Theme & Active States**: Features a deep navy background (`#0c1e35`) with bold white/blue active states matching modern dashboard aesthetics.
+  - **Navy Theme & Active States**: Features a deep navy background (`#1c2a48`) with bold white/blue active states matching modern dashboard aesthetics.
   - **Robust Header**: Features an integrated tracking search input and a unified utility/user profile widget section.
   - **Active State Detection**: Uses `usePathname` from `next/navigation` to highlight the current route and map nested structures.
 - **Visual Navigation (Icons)**: 
@@ -146,7 +144,7 @@ SB Express Cargo Frontend is a web application designed for a cargo and courier 
 - **Master Screen Consistency**: 
   - All master listing pages follow a unified pattern for UI and behavior.
   - **Naming Convention**:
-    - **Sidebar Label**: Must include the "Master" suffix (e.g., "Local Branch Master", "Courier Master").
+    - **Sidebar Label**: Must include the "Master" suffix (e.g., "Local Branch Master", "Vendor Master").
     - **Page Title (Metadata)**: Must include the "Master" suffix.
     - **Page Heading (H1)**: Must include the "Master" suffix.
     - **Action Button**: Primary button follows the "Create [Entity]" format (e.g., "Create Consignee") for clarity and conciseness.

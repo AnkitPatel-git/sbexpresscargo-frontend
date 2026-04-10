@@ -3,7 +3,7 @@
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { IndustryForm } from "@/components/masters/industry-form"
 
 export default function CreateIndustryPage() {
@@ -23,14 +23,9 @@ export default function CreateIndustryPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Industry Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <IndustryForm />
-                </CardContent>
-            </Card>
+            <FormSection title="Industry Details">
+                <IndustryForm />
+            </FormSection>
         </div>
     )
 }

@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { StateForm } from "@/components/masters/state-form"
 import { stateService } from "@/services/masters/state-service"
 
@@ -52,14 +52,9 @@ export default function EditStatePage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>State Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <StateForm initialData={stateData.data} />
-                </CardContent>
-            </Card>
+            <FormSection title="State Details">
+                <StateForm initialData={stateData.data} />
+            </FormSection>
         </div>
     )
 }

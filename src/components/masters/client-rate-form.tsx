@@ -13,10 +13,13 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,7 +38,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { clientRateService } from '@/services/masters/client-rate-service'
 import { customerService } from '@/services/masters/customer-service'
 import { productService } from '@/services/masters/product-service'
@@ -169,36 +172,28 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Contract & Agreement Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Contract & Agreement</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Contract & Agreement" contentClassName="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="fromDate"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>From Date</FormLabel>
+                                        <FloatingFormItem label="From Date">
                                             <FormControl>
-                                                <Input type="date" {...field} />
+                                                <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="contractNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Contract No</FormLabel>
+                                        <FloatingFormItem label="Contract No">
                                             <FormControl>
-                                                <Input placeholder="Agreement #" {...field} />
+                                                <Input placeholder="Agreement #" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -206,8 +201,7 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                 control={form.control}
                                 name="customerCode"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">Customer</FormLabel>
+                                    <FloatingFormItem label="Customer" itemClassName="flex flex-col">
                                         <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -215,7 +209,7 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                         variant="outline"
                                                         role="combobox"
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -252,25 +246,18 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Commercials Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Commercials</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Commercials" contentClassName="space-y-4">
                             <FormField
                                 control={form.control}
                                 name="vendorCode"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">Vendor / Carrier</FormLabel>
+                                    <FloatingFormItem label="Vendor / Carrier" itemClassName="flex flex-col">
                                         <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -278,7 +265,7 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                         variant="outline"
                                                         role="combobox"
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -315,44 +302,45 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="rateValue"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Rate Value</FormLabel>
+                                    <FloatingFormItem label="Rate Value">
                                         <FormControl>
                                             <Input
                                                 type="number"
                                                 step="0.01"
                                                 placeholder="0.00"
+                                                className={FLOATING_INNER_CONTROL}
                                                 {...field}
-                                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                                value={field.value === undefined || field.value === null ? "" : field.value}
+                                                onChange={(e) =>
+                                                    field.onChange(
+                                                        e.target.value === "" ? undefined : parseFloat(e.target.value)
+                                                    )
+                                                }
                                             />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Routing & Service Matrix */}
-                    <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Routing & Service Matrix</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FormSection
+                        className="md:col-span-2"
+                        title="Routing & Service Matrix"
+                        contentClassName="grid grid-cols-1 md:grid-cols-3 gap-6"
+                    >
                             <FormField
                                 control={form.control}
                                 name="productCode"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">Product</FormLabel>
+                                    <FloatingFormItem label="Product" itemClassName="flex flex-col">
                                         <Popover open={productOpen} onOpenChange={setProductOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -360,7 +348,7 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                         variant="outline"
                                                         role="combobox"
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -397,19 +385,17 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="service"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Service Mode</FormLabel>
+                                    <FloatingFormItem label="Service Mode">
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                     <SelectValue placeholder="Select mode" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -420,16 +406,14 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                 <SelectItem value="STANDARD">STANDARD</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="zoneCode"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">Zone</FormLabel>
+                                    <FloatingFormItem label="Zone" itemClassName="flex flex-col">
                                         <Popover open={zoneOpen} onOpenChange={setZoneOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -437,7 +421,7 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                         variant="outline"
                                                         role="combobox"
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -474,16 +458,14 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="countryCode"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">Country</FormLabel>
+                                    <FloatingFormItem label="Country" itemClassName="flex flex-col">
                                         <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -491,7 +473,7 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                         variant="outline"
                                                         role="combobox"
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -528,38 +510,32 @@ export function ClientRateForm({ initialData }: ClientRateFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="origin"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Origin City</FormLabel>
+                                    <FloatingFormItem label="Origin City">
                                         <FormControl>
-                                            <Input {...field} placeholder="e.g. Mumbai" />
+                                            <Input {...field} placeholder="e.g. Mumbai" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="destination"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Destination City</FormLabel>
+                                    <FloatingFormItem label="Destination City">
                                         <FormControl>
-                                            <Input {...field} placeholder="e.g. New York" />
+                                            <Input {...field} placeholder="e.g. New York" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">

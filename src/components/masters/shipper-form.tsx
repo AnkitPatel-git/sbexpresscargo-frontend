@@ -14,10 +14,13 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import {
     Select,
@@ -39,7 +42,7 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { cn } from "@/lib/utils"
 
 import { shipperService } from "@/services/masters/shipper-service"
@@ -207,39 +210,38 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Section 1: Basic Information */}
-                    <Card className="shadow-sm border-slate-200">
-                        <CardHeader className="bg-slate-50 border-b p-4">
-                            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</div>
+                    <FormSection
+                        title={
+                            <span className="flex items-center gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-semibold">
+                                    1
+                                </span>
                                 Basic Information
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-4">
+                            </span>
+                        }
+                        contentClassName="space-y-4"
+                    >
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="shipperCode"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Shipper Code*</FormLabel>
+                                        <FloatingFormItem label="Shipper Code*">
                                             <FormControl>
-                                                <Input placeholder="e.g. SHIP01" {...field} value={field.value || ""} />
+                                                <Input placeholder="e.g. SHIP01" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="shipperName"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Shipper Name*</FormLabel>
+                                        <FloatingFormItem label="Shipper Name*">
                                             <FormControl>
-                                                <Input placeholder="e.g. Sender Ltd" {...field} value={field.value || ""} />
+                                                <Input placeholder="e.g. Sender Ltd" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -248,24 +250,21 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                     control={form.control}
                                     name="contactPerson"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Contact Person</FormLabel>
+                                        <FloatingFormItem label="Contact Person">
                                             <FormControl>
-                                                <Input placeholder="e.g. John Doe" {...field} value={field.value || ""} />
+                                                <Input placeholder="e.g. John Doe" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="firmType"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Firm Type</FormLabel>
+                                        <FloatingFormItem label="Firm Type">
                                             <Select onValueChange={field.onChange} value={field.value || ""}>
                                                 <FormControl>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                         <SelectValue placeholder="Select type" />
                                                     </SelectTrigger>
                                                 </FormControl>
@@ -274,48 +273,45 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                                     <SelectItem value="NON_GOV">Non-Government (NON_GOV)</SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Section 2: Contact Details */}
-                    <Card className="shadow-sm border-slate-200">
-                        <CardHeader className="bg-slate-50 border-b p-4">
-                            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</div>
+                    <FormSection
+                        title={
+                            <span className="flex items-center gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-semibold">
+                                    2
+                                </span>
                                 Contact Details
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-4">
+                            </span>
+                        }
+                        contentClassName="space-y-4"
+                    >
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="mobile"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Mobile</FormLabel>
+                                        <FloatingFormItem label="Mobile">
                                             <FormControl>
-                                                <Input placeholder="9876543210" {...field} value={field.value || ""} />
+                                                <Input placeholder="9876543210" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="email"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Email</FormLabel>
+                                        <FloatingFormItem label="Email">
                                             <FormControl>
-                                                <Input placeholder="shipper@example.com" {...field} value={field.value || ""} />
+                                                <Input placeholder="shipper@example.com" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -324,67 +320,61 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                     control={form.control}
                                     name="telephone1"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Telephone 1</FormLabel>
+                                        <FloatingFormItem label="Telephone 1">
                                             <FormControl>
-                                                <Input placeholder="022-XXXXXXX" {...field} value={field.value || ""} />
+                                                <Input placeholder="022-XXXXXXX" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="telephone2"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Telephone 2</FormLabel>
+                                        <FloatingFormItem label="Telephone 2">
                                             <FormControl>
-                                                <Input placeholder="Optional" {...field} value={field.value || ""} />
+                                                <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Section 3: Address & Logistics */}
-                    <Card className="md:col-span-2 shadow-sm border-slate-200">
-                        <CardHeader className="bg-slate-50 border-b p-4">
-                            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</div>
+                    <FormSection
+                        className="md:col-span-2"
+                        title={
+                            <span className="flex items-center gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-semibold">
+                                    3
+                                </span>
                                 Address & Logistics
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-6">
+                            </span>
+                        }
+                    >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <FormField
                                         control={form.control}
                                         name="address1"
                                         render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Address 1</FormLabel>
+                                            <FloatingFormItem label="Address 1">
                                                 <FormControl>
-                                                    <Input placeholder="Street address" {...field} value={field.value || ""} />
+                                                    <Input placeholder="Street address" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
+                                            </FloatingFormItem>
                                         )}
                                     />
                                     <FormField
                                         control={form.control}
                                         name="address2"
                                         render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Address 2</FormLabel>
+                                            <FloatingFormItem label="Address 2">
                                                 <FormControl>
-                                                    <Input placeholder="Bldg, floor, etc." {...field} value={field.value || ""} />
+                                                    <Input placeholder="Bldg, floor, etc." {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
+                                            </FloatingFormItem>
                                         )}
                                     />
                                     <div className="grid grid-cols-2 gap-4">
@@ -392,26 +382,22 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                             control={form.control}
                                             name="city"
                                             render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>City</FormLabel>
+                                                <FloatingFormItem label="City">
                                                     <FormControl>
-                                                        <Input placeholder="City" {...field} value={field.value || ""} />
+                                                        <Input placeholder="City" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
+                                                </FloatingFormItem>
                                             )}
                                         />
                                         <FormField
                                             control={form.control}
                                             name="pinCode"
                                             render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Pin Code</FormLabel>
+                                                <FloatingFormItem label="Pin Code">
                                                     <FormControl>
-                                                        <Input placeholder="Pin" {...field} value={field.value || ""} />
+                                                        <Input placeholder="Pin" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
+                                                </FloatingFormItem>
                                             )}
                                         />
                                     </div>
@@ -421,8 +407,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                         control={form.control}
                                         name="state"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-col">
-                                                <FormLabel>State</FormLabel>
+                                            <FloatingFormItem label="State">
                                                 <Popover open={stateOpen} onOpenChange={setStateOpen}>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
@@ -430,11 +415,13 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                                                 variant="outline"
                                                                 role="combobox"
                                                                 className={cn(
-                                                                    "w-full justify-between font-normal",
+                                                                    FLOATING_INNER_COMBO,
                                                                     !field.value && "text-muted-foreground"
                                                                 )}
                                                             >
-                                                                {field.value || "Select state"}
+                                                                <span className="truncate text-left">
+                                                                    {field.value || "Select state"}
+                                                                </span>
                                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                             </Button>
                                                         </FormControl>
@@ -470,29 +457,25 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                                         </Command>
                                                     </PopoverContent>
                                                 </Popover>
-                                                <FormMessage />
-                                            </FormItem>
+                                            </FloatingFormItem>
                                         )}
                                     />
                                     <FormField
                                         control={form.control}
                                         name="shipperOrigin"
                                         render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Origin City</FormLabel>
+                                            <FloatingFormItem label="Origin City">
                                                 <FormControl>
-                                                    <Input placeholder="e.g. Mumbai" {...field} value={field.value || ""} />
+                                                    <Input placeholder="e.g. Mumbai" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
+                                            </FloatingFormItem>
                                         )}
                                     />
                                     <FormField
                                         control={form.control}
                                         name="serviceCenter"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-col">
-                                                <FormLabel>Service Center</FormLabel>
+                                            <FloatingFormItem label="Service Center">
                                                 <Popover open={scOpen} onOpenChange={setScOpen}>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
@@ -500,11 +483,13 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                                                 variant="outline"
                                                                 role="combobox"
                                                                 className={cn(
-                                                                    "w-full justify-between font-normal",
+                                                                    FLOATING_INNER_COMBO,
                                                                     !field.value && "text-muted-foreground"
                                                                 )}
                                                             >
-                                                                {field.value || "Select service center"}
+                                                                <span className="truncate text-left">
+                                                                    {field.value || "Select service center"}
+                                                                </span>
                                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                             </Button>
                                                         </FormControl>
@@ -540,49 +525,46 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                                         </Command>
                                                     </PopoverContent>
                                                 </Popover>
-                                                <FormMessage />
-                                            </FormItem>
+                                            </FloatingFormItem>
                                         )}
                                     />
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
-                    {/* Section 4: Identification & Statutory */}
-                    <Card className="shadow-sm border-slate-200">
-                        <CardHeader className="bg-slate-50 border-b p-4">
-                            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">4</div>
+                    {/* Section 4: Identification */}
+                    <FormSection
+                        title={
+                            <span className="flex items-center gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-semibold">
+                                    4
+                                </span>
                                 Identification
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-4">
+                            </span>
+                        }
+                        contentClassName="space-y-4"
+                    >
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="iecNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>IEC No</FormLabel>
+                                        <FloatingFormItem label="IEC No">
                                             <FormControl>
-                                                <Input placeholder="IEC123" {...field} value={field.value || ""} />
+                                                <Input placeholder="IEC123" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="gstNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>GST No</FormLabel>
+                                        <FloatingFormItem label="GST No">
                                             <FormControl>
-                                                <Input placeholder="GST123" {...field} value={field.value || ""} />
+                                                <Input placeholder="GST123" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -591,26 +573,22 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                     control={form.control}
                                     name="panNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>PAN No</FormLabel>
+                                        <FloatingFormItem label="PAN No">
                                             <FormControl>
-                                                <Input placeholder="PAN123" {...field} value={field.value || ""} />
+                                                <Input placeholder="PAN123" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="aadhaarNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Aadhaar No</FormLabel>
+                                        <FloatingFormItem label="Aadhaar No">
                                             <FormControl>
-                                                <Input placeholder="12 digit number" {...field} value={field.value || ""} />
+                                                <Input placeholder="12 digit number" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -618,38 +596,36 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                 control={form.control}
                                 name="industry"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Industry</FormLabel>
+                                    <FloatingFormItem label="Industry">
                                         <FormControl>
-                                            <Input placeholder="e.g. Textiles" {...field} value={field.value || ""} />
+                                            <Input placeholder="e.g. Textiles" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Section 5: Bank & LUT Details */}
-                    <Card className="shadow-sm border-slate-200">
-                        <CardHeader className="bg-slate-50 border-b p-4">
-                            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <div className="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">5</div>
+                    <FormSection
+                        title={
+                            <span className="flex items-center gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-semibold">
+                                    5
+                                </span>
                                 Bank & LUT Details
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-4">
+                            </span>
+                        }
+                        contentClassName="space-y-4"
+                    >
                             <FormField
                                 control={form.control}
                                 name="bankAccount"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Account Number</FormLabel>
+                                    <FloatingFormItem label="Account Number">
                                         <FormControl>
-                                            <Input placeholder="Bank Account" {...field} value={field.value || ""} />
+                                            <Input placeholder="Bank Account" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <div className="grid grid-cols-2 gap-4">
@@ -657,26 +633,22 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                     control={form.control}
                                     name="bankAdCode"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>AD Code</FormLabel>
+                                        <FloatingFormItem label="AD Code">
                                             <FormControl>
-                                                <Input placeholder="AD123" {...field} value={field.value || ""} />
+                                                <Input placeholder="AD123" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="bankIfsc"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>IFSC</FormLabel>
+                                        <FloatingFormItem label="IFSC">
                                             <FormControl>
-                                                <Input placeholder="IFSC" {...field} value={field.value || ""} />
+                                                <Input placeholder="IFSC" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -685,31 +657,26 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                     control={form.control}
                                     name="lutIssueDate"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>LUT Issue Date</FormLabel>
+                                        <FloatingFormItem label="LUT Issue Date">
                                             <FormControl>
-                                                <Input type="date" {...field} value={field.value || ""} />
+                                                <Input type="date" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="lutTillDate"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>LUT Valid Till</FormLabel>
+                                        <FloatingFormItem label="LUT Valid Till">
                                             <FormControl>
-                                                <Input type="date" {...field} value={field.value || ""} />
+                                                <Input type="date" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6">
@@ -721,7 +688,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={mutation.isPending} className="bg-slate-900 hover:bg-slate-800 text-white px-8">
+                    <Button type="submit" disabled={mutation.isPending} className="bg-primary hover:bg-primary/90 text-white px-8">
                         {mutation.isPending ? (
                             <div className="flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -1,0 +1,195 @@
+info:
+  name: Upsert Vendor Mapping
+  type: http
+  seq: 9
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/transaction/shipment/1/vendor-mapping"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "version": 2,
+        "vendorId": 1,
+        "externalAwb": "BD123456789",
+        "externalOrderId": "ORD-2026-001",
+        "status": "AWB_ASSIGNED",
+        "requestPayload": {
+          "productCode": "AIR",
+          "origin": "MUM",
+          "destination": "DEL"
+        },
+        "responsePayload": {
+          "waybill": "BD123456789",
+          "labelUrl": "https://example.com/label.pdf"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "200"
+    request:
+      url: "{{baseUrl}}/transaction/shipment/1/vendor-mapping"
+      method: PUT
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "version": 2,
+            "vendorId": 1,
+            "externalAwb": "BD123456789",
+            "externalOrderId": "ORD-2026-001",
+            "status": "AWB_ASSIGNED",
+            "requestPayload": {
+              "productCode": "AIR",
+              "origin": "MUM",
+              "destination": "DEL"
+            },
+            "responsePayload": {
+              "waybill": "BD123456789",
+              "labelUrl": "https://example.com/label.pdf"
+            }
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "973"
+        - name: etag
+          value: W/"3cd-M5+ixcT1yzLzP6jfr9ebJg3B3mg"
+        - name: date
+          value: Tue, 24 Mar 2026 20:36:43 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "shipment": {
+                "id": 1,
+                "awbNo": "M1774333957282E4A4B3",
+                "customerId": 1,
+                "vendorId": 1,
+                "productId": 1,
+                "origin": "MUM",
+                "destination": "DEL",
+                "pieces": 2,
+                "declaredWeight": "1.5",
+                "chargeWeight": null,
+                "paymentType": "CASH",
+                "currentStatus": "CREATED",
+                "version": 3,
+                "codAmount": "500",
+                "isCod": true,
+                "createdAt": "2026-03-24T06:32:37.297Z",
+                "updatedAt": "2026-03-24T20:36:43.152Z",
+                "createdById": 2,
+                "updatedById": 1,
+                "deletedAt": null,
+                "deletedById": null
+              },
+              "mapping": {
+                "id": 1,
+                "shipmentId": 1,
+                "vendorId": 1,
+                "externalAwb": "BD123456789",
+                "externalOrderId": "ORD-2026-001",
+                "requestPayload": {
+                  "origin": "MUM",
+                  "destination": "DEL",
+                  "productCode": "AIR"
+                },
+                "responsePayload": {
+                  "waybill": "BD123456789",
+                  "labelUrl": "https://example.com/label.pdf"
+                },
+                "status": "AWB_ASSIGNED",
+                "retryCount": 0,
+                "errorMessage": null,
+                "createdAt": "2026-03-24T20:36:43.166Z",
+                "updatedAt": "2026-03-24T20:36:43.166Z",
+                "deletedAt": null,
+                "deletedById": null,
+                "vendor": {
+                  "id": 1,
+                  "vendorCode": "BLUEDART",
+                  "vendorName": "BLUEDART Cargo (updated)",
+                  "status": "ACTIVE"
+                }
+              }
+            }
+          }
+
+docs: |-
+  Create or update the **unique** `(shipmentId, vendorId)` mapping (e.g. after booking with Blue Dart). Bumps shipment **version** (optimistic lock) like forwarding.
+
+  **Path:** `:id` — shipment id.
+
+  **Body — all fields**
+
+  | Field | Required | Type | Notes |
+  |-------|----------|------|-------|
+  | version | **yes** | number | Current `Shipment.version` |
+  | vendorId | **yes** | number | `Vendor` id (Vendor Master) |
+  | externalAwb | no | string, max 128 | Partner waybill / consignment no. |
+  | externalOrderId | no | string, max 128 | Partner order / booking id |
+  | requestPayload | no | object | JSON — last booking request snapshot |
+  | responsePayload | no | object | JSON — last booking response snapshot |
+  | status | no | enum | `CREATED` \| `AWB_ASSIGNED` \| `FAILED` \| `RETRYING` \| `SYNCED` (default **CREATED** on insert) |
+  | errorMessage | no | string, max 1000 | Last error text |
+
+  **Partial update:** on existing row, omit fields you do not want to change (except `version` + `vendorId` always required).
+
+  **Blocked** when shipment is `DELIVERED` or `FAILED`.
+
+  JWT + `shipment.core.update`

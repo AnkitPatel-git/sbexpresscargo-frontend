@@ -141,7 +141,7 @@ examples:
                 "reason": "Scheduled pickup",
                 "pickupReady": true,
                 "externalPickupId": null,
-                "carrierId": 1,
+                "vendorId": 1,
                 "requestPayload": null,
                 "responsePayload": null,
                 "errorMessage": null,

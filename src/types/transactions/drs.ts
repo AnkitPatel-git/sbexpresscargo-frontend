@@ -25,9 +25,12 @@ export interface Drs {
     drsNo: string;
     drsDate: string;
     drsTime?: string;
-    courierId?: number;
-    areaId?: number;
     serviceCenterId?: number;
+    serviceCenter?: any;
+    courierId?: number;
+    courier?: any;
+    areaId?: number;
+    area?: any;
     remark?: string;
     status: string;
     createdAt: string;

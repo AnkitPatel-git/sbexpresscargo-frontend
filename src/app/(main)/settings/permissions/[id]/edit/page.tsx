@@ -33,7 +33,7 @@ export default function EditPermissionPage() {
                 <h3 className="text-xl font-semibold">Error loading permission</h3>
                 <p className="text-muted-foreground text-center px-6">The permission rule could not be found or there was an error fetching the data.</p>
                 <Button variant="outline" asChild className="mt-4">
-                    <Link href="/settings/permissions">
+                    <Link href="/utilities/permissions">
                         Back to List
                     </Link>
                 </Button>
@@ -45,7 +45,7 @@ export default function EditPermissionPage() {
         <div className="space-y-6">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild>
-                    <Link href="/settings/permissions">
+                    <Link href="/utilities/permissions">
                         <ArrowLeft className="h-4 w-4" />
                     </Link>
                 </Button>

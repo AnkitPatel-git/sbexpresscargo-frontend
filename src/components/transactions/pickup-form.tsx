@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronsUpDown, Loader2, Calendar as CalendarIcon, Clock, Search } from "lucide-react"
+import { Check, Loader2, Calendar as CalendarIcon, Clock, Search } from "lucide-react"
 import { format } from "date-fns"
 
 import { cn } from "@/lib/utils"
@@ -14,10 +14,13 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -36,7 +39,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
@@ -179,26 +182,21 @@ export function PickupForm({ initialData }: PickupFormProps) {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
                 {/* Section 1: Pickup Details */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Pickup Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                <FormSection title="Pickup Details" contentClassName="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Customer */}
                             <FormField
                                 control={form.control}
                                 name="customerId"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Customer</FormLabel>
+                                    <FloatingFormItem label="Customer">
                                         <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
                                                         variant="outline"
                                                         role="combobox"
-                                                        className={cn("justify-between font-normal", !field.value && "text-muted-foreground")}
+                                                        className={cn(FLOATING_INNER_COMBO, !field.value && "text-muted-foreground")}
                                                     >
                                                         {field.value
                                                             ? customersData?.data?.find(c => c.id === field.value)?.name
@@ -231,8 +229,7 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
@@ -241,12 +238,11 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                 control={form.control}
                                 name="pickupAt"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>PickUp Date</FormLabel>
+                                    <FloatingFormItem label="PickUp Date">
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
-                                                    <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                    <Button variant="outline" className={cn(FLOATING_INNER_COMBO, "pl-3 text-left", !field.value && "text-muted-foreground")}>
                                                         {field.value ? format(new Date(field.value), "dd/MM/yyyy") : <span>Pick a date</span>}
                                                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                     </Button>
@@ -262,138 +258,108 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                                 />
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Origin */}
                             <FormField
                                 control={form.control}
                                 name="origin"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Origin</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Origin" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="Origin">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Origin" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Mobile No */}
                             <FormField
                                 control={form.control}
                                 name="mobile"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Mobile No. <span className="text-red-500">*</span></FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Mobile No" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label={<>Mobile No. <span className="text-red-500">*</span></>}>
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Mobile No" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Shipper Name */}
                             <FormField
                                 control={form.control}
                                 name="shipperName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Shipper Name <span className="text-red-500">*</span></FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Shipper Name" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label={<>Shipper Name <span className="text-red-500">*</span></>}>
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Shipper Name" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Contact */}
                             <FormField
                                 control={form.control}
                                 name="contact"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Contact</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Contact" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="Contact">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Contact" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Address1 */}
                             <FormField
                                 control={form.control}
                                 name="address1"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Address1</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Address Line 1" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="Address1">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Address Line 1" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Address2 */}
                             <FormField
                                 control={form.control}
                                 name="address2"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Address2</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Address Line 2" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="Address2">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Address Line 2" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Zip Code */}
                             <FormField
                                 control={form.control}
                                 name="zipCode"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Zip Code</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Zip Code" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="Zip Code">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Zip Code" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* City */}
                             <FormField
                                 control={form.control}
                                 name="city"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>City</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="City" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="City">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="City" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* State */}
                             <FormField
                                 control={form.control}
                                 name="state"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>State</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="State" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="State">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="State" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Pay Option */}
                             <FormField
                                 control={form.control}
                                 name="payOption"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Pay Option</FormLabel>
+                                    <FloatingFormItem label="Pay Option">
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                     <SelectValue placeholder="Select Pay Option" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -403,8 +369,7 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                                 <SelectItem value="TOPAY">To Pay</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                         </div>
@@ -426,46 +391,36 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                     control={form.control}
                                     name="consigneeName"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Consignee Name</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Consignee Name" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        <FloatingFormItem label="Consignee Name">
+                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Consignee Name" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="consigneeDetails"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Consignee Details</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Extra details" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        <FloatingFormItem label="Consignee Details">
+                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Extra details" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
                         )}
-                    </CardContent>
-                </Card>
+                </FormSection>
 
                 {/* Section 2: Vehicle */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Vehicle</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                <FormSection title="Vehicle" contentClassName="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Vehicle Req */}
                             <FormField
                                 control={form.control}
                                 name="vehicleReq"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Vehicle Req</FormLabel>
+                                    <FloatingFormItem label="Vehicle Req">
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                     <SelectValue placeholder="Select Vehicle" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -476,25 +431,22 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                                 <SelectItem value="TRUCK">Truck</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Area */}
                             <FormField
                                 control={form.control}
                                 name="area"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Area</FormLabel>
+                                    <FloatingFormItem label="Area">
                                         <Popover open={areaOpen} onOpenChange={setAreaOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
                                                         variant="outline"
                                                         role="combobox"
-                                                        className={cn("justify-between font-normal", !field.value && "text-muted-foreground")}
+                                                        className={cn(FLOATING_INNER_COMBO, !field.value && "text-muted-foreground")}
                                                     >
                                                         {field.value || "Select Area"}
                                                         <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -525,25 +477,22 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Field Executive */}
                             <FormField
                                 control={form.control}
                                 name="fieldExecutiveId"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Field Executive</FormLabel>
+                                    <FloatingFormItem label="Field Executive">
                                         <Popover open={fieldExecOpen} onOpenChange={setFieldExecOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
                                                         variant="outline"
                                                         role="combobox"
-                                                        className={cn("justify-between font-normal", !field.value && "text-muted-foreground")}
+                                                        className={cn(FLOATING_INNER_COMBO, !field.value && "text-muted-foreground")}
                                                     >
                                                         {field.value
                                                             ? executives.find(e => e.id === field.value)?.name
@@ -576,25 +525,22 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Sales Executive */}
                             <FormField
                                 control={form.control}
                                 name="salesExecutiveId"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Sales Executive</FormLabel>
+                                    <FloatingFormItem label="Sales Executive">
                                         <Popover open={salesExecOpen} onOpenChange={setSalesExecOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
                                                         variant="outline"
                                                         role="combobox"
-                                                        className={cn("justify-between font-normal", !field.value && "text-muted-foreground")}
+                                                        className={cn(FLOATING_INNER_COMBO, !field.value && "text-muted-foreground")}
                                                     >
                                                         {field.value
                                                             ? executives.find(e => e.id === field.value)?.name
@@ -627,37 +573,31 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Special Instructions */}
                             <FormField
                                 control={form.control}
                                 name="specialInstructions"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Special Instructions</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Instructions" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="Special Instructions">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Instructions" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Service Center */}
                             <FormField
                                 control={form.control}
                                 name="serviceCenterId"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Service Center</FormLabel>
-                                        <Select 
-                                            onValueChange={(val) => field.onChange(parseInt(val))} 
+                                    <FloatingFormItem label="Service Center">
+                                        <Select
+                                            onValueChange={(val) => field.onChange(parseInt(val, 10))}
                                             value={field.value?.toString()}
                                         >
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                     <SelectValue placeholder="Select Center" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -667,63 +607,53 @@ export function PickupForm({ initialData }: PickupFormProps) {
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Reason */}
                             <FormField
                                 control={form.control}
                                 name="reason"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Reason</FormLabel>
-                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Reason" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="Reason">
+                                        <FormControl><Input {...field} value={field.value || ''} placeholder="Reason" className={FLOATING_INNER_CONTROL} /></FormControl>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Pickup Ready */}
                             <FormField
                                 control={form.control}
                                 name="pickupReady"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                        <div className="space-y-0.5">
-                                            <FormLabel>Pickup Ready</FormLabel>
+                                    <FloatingFormItem label="Pickup Ready">
+                                        <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                            <FormControl>
+                                                <Switch
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
                                         </div>
-                                        <FormControl>
-                                            <Switch
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
-                            {/* Pickup Time */}
                             <FormField
                                 control={form.control}
                                 name="pickupTime"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Pickup Time</FormLabel>
-                                        <FormControl>
-                                            <div className="relative">
-                                                <Input type="time" {...field} value={field.value || ''} className="pl-10" />
-                                                <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    <FloatingFormItem label="Pickup Time">
+                                        <div className="relative">
+                                            <FormControl>
+                                                <Input type="time" {...field} value={field.value || ''} className={cn(FLOATING_INNER_CONTROL, "pl-8")} />
+                                            </FormControl>
+                                            <Clock className="pointer-events-none absolute bottom-1.5 left-2 h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                    </FloatingFormItem>
                                 )}
                             />
                         </div>
-                    </CardContent>
-                </Card>
+                </FormSection>
 
                 {/* Submit Buttons */}
                 <div className="flex justify-end gap-3 pt-6 border-t">

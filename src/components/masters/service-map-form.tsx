@@ -13,10 +13,13 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -137,8 +140,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                         control={form.control}
                         name="vendorCode"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Vendor</FormLabel>
+                            <FloatingFormItem label="Vendor" itemClassName="flex flex-col">
                                 <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -146,7 +148,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                                 variant="outline"
                                                 role="combobox"
                                                 className={cn(
-                                                    "w-full justify-between font-normal",
+                                                    FLOATING_INNER_COMBO,
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
@@ -192,8 +194,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -201,15 +202,14 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                         control={form.control}
                         name="serviceType"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Service Type</FormLabel>
-                                <Select 
+                            <FloatingFormItem label="Service Type">
+                                <Select
                                     key={field.value}
-                                    onValueChange={field.onChange} 
+                                    onValueChange={field.onChange}
                                     value={field.value}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select service" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -219,8 +219,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                         <SelectItem value="AIR">AIR</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -228,8 +227,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                         control={form.control}
                         name="billingVendorCode"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Billing Vendor</FormLabel>
+                            <FloatingFormItem label="Billing Vendor" itemClassName="flex flex-col">
                                 <Popover open={billingVendorOpen} onOpenChange={setBillingVendorOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -237,7 +235,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                                 variant="outline"
                                                 role="combobox"
                                                 className={cn(
-                                                    "w-full justify-between font-normal",
+                                                    FLOATING_INNER_COMBO,
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
@@ -283,36 +281,31 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 md:col-span-2">
                         <FormField
                             control={form.control}
                             name="minWeight"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Min Weight (kg)</FormLabel>
+                                <FloatingFormItem label="Min Weight (kg)">
                                     <FormControl>
-                                        <Input type="number" step="0.01" {...field} />
+                                        <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
-                                    <FormMessage />
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                         <FormField
                             control={form.control}
                             name="maxWeight"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Max Weight (kg)</FormLabel>
+                                <FloatingFormItem label="Max Weight (kg)">
                                     <FormControl>
-                                        <Input type="number" step="0.01" {...field} />
+                                        <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
-                                    <FormMessage />
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                     </div>
@@ -321,13 +314,15 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                         control={form.control}
                         name="vendorLink"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Vendor Tracking Link</FormLabel>
+                            <FloatingFormItem label="Vendor Tracking Link">
                                 <FormControl>
-                                    <Input placeholder="https://vendor.com/track" {...field} />
+                                    <Input
+                                        placeholder="https://vendor.com/track"
+                                        {...field}
+                                        className={FLOATING_INNER_CONTROL}
+                                    />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -336,15 +331,14 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                             control={form.control}
                             name="status"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Status</FormLabel>
-                                    <Select 
+                                <FloatingFormItem label="Status">
+                                    <Select
                                         key={field.value}
-                                        onValueChange={field.onChange} 
+                                        onValueChange={field.onChange}
                                         value={field.value}
                                     >
                                         <FormControl>
-                                            <SelectTrigger>
+                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                 <SelectValue placeholder="Select status" />
                                             </SelectTrigger>
                                         </FormControl>
@@ -353,25 +347,23 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                             <SelectItem value="INACTIVE">INACTIVE</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <FormMessage />
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                         <FormField
                             control={form.control}
                             name="isSinglePiece"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 mt-8 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>Single Piece Only</FormLabel>
+                                <FloatingFormItem label="Single Piece Only">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                     </div>

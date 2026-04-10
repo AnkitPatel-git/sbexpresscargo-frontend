@@ -13,10 +13,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,7 +30,7 @@ import {
     CommandList,
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { localBranchService } from '@/services/masters/local-branch-service'
 import { stateService } from '@/services/masters/state-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
@@ -218,36 +220,28 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Branch Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Branch Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Branch Information" contentClassName="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="branchCode"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Branch Code</FormLabel>
+                                        <FloatingFormItem label="Branch Code">
                                             <FormControl>
-                                                <Input {...field} placeholder="e.g. BR001" />
+                                                <Input {...field} placeholder="e.g. BR001" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Branch Name</FormLabel>
+                                        <FloatingFormItem label="Branch Name">
                                             <FormControl>
-                                                <Input {...field} placeholder="e.g. Mumbai Main" />
+                                                <Input {...field} placeholder="e.g. Mumbai Main" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -255,21 +249,18 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                 control={form.control}
                                 name="companyName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Company Name</FormLabel>
+                                    <FloatingFormItem label="Company Name">
                                         <FormControl>
-                                            <Input {...field} placeholder="Company Name" />
+                                            <Input {...field} placeholder="Company Name" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="serviceCenterId"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">Service Center</FormLabel>
+                                    <FloatingFormItem label="Service Center">
                                         <Popover open={scOpen} onOpenChange={setScOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -278,7 +269,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                                         role="combobox"
                                                         aria-expanded={scOpen}
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                         disabled={isScLoading}
@@ -321,44 +312,34 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Contact Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Contact Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Contact Details" contentClassName="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="telephone1"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Telephone 1</FormLabel>
+                                        <FloatingFormItem label="Telephone 1">
                                             <FormControl>
-                                                <Input {...field} placeholder="Telephone 1" />
+                                                <Input {...field} placeholder="Telephone 1" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="telephone2"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Telephone 2 (Optional)</FormLabel>
+                                        <FloatingFormItem label="Telephone 2 (Optional)">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="Telephone 2" />
+                                                <Input {...field} value={field.value || ''} placeholder="Telephone 2" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -366,95 +347,81 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                 control={form.control}
                                 name="email"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email Address</FormLabel>
+                                    <FloatingFormItem label="Email Address">
                                         <FormControl>
-                                            <Input {...field} placeholder="email@example.com" />
+                                            <Input {...field} placeholder="email@example.com" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="website"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Website (Optional)</FormLabel>
+                                    <FloatingFormItem label="Website (Optional)">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="https://..." />
+                                            <Input {...field} value={field.value || ''} placeholder="https://..." className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Address Information */}
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Address Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormSection
+                        className="lg:col-span-2"
+                        title="Address Details"
+                        contentClassName="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
                             <FormField
                                 control={form.control}
                                 name="address1"
                                 render={({ field }) => (
-                                    <FormItem className="md:col-span-2">
-                                        <FormLabel>Building/Street</FormLabel>
+                                    <FloatingFormItem label="Building/Street" itemClassName="md:col-span-2">
                                         <FormControl>
-                                            <Input {...field} placeholder="Building name, Street" />
+                                            <Input {...field} placeholder="Building name, Street" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="address2"
                                 render={({ field }) => (
-                                    <FormItem className="md:col-span-2">
-                                        <FormLabel>Area/Landmark (Optional)</FormLabel>
+                                    <FloatingFormItem label="Area/Landmark (Optional)" itemClassName="md:col-span-2">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Area, Landmark" />
+                                            <Input {...field} value={field.value || ''} placeholder="Area, Landmark" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="city"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>City</FormLabel>
+                                    <FloatingFormItem label="City">
                                         <FormControl>
-                                            <Input {...field} placeholder="City" />
+                                            <Input {...field} placeholder="City" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="pinCode"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Pin Code</FormLabel>
+                                    <FloatingFormItem label="Pin Code">
                                         <FormControl>
-                                            <Input {...field} placeholder="6-digit Pincode" />
+                                            <Input {...field} placeholder="6-digit Pincode" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="state"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">State</FormLabel>
+                                    <FloatingFormItem label="State">
                                         <Popover open={stateOpen} onOpenChange={setStateOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -463,13 +430,15 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                                         role="combobox"
                                                         aria-expanded={stateOpen}
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
-                                                        {field.value
-                                                            ? statesData?.data?.find((state: any) => state.stateName === field.value)?.stateName
-                                                            : "Select state..."}
+                                                        <span className="truncate">
+                                                            {field.value
+                                                                ? statesData?.data?.find((state: any) => state.stateName === field.value)?.stateName
+                                                                : "Select state..."}
+                                                        </span>
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </FormControl>
@@ -503,44 +472,34 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Billing & Tax Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Billing & Tax Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Billing & Tax Details" contentClassName="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="gstNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>GST Number</FormLabel>
+                                        <FloatingFormItem label="GST Number">
                                             <FormControl>
-                                                <Input {...field} placeholder="15-digit GSTIN" />
+                                                <Input {...field} placeholder="15-digit GSTIN" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="panNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>PAN Number</FormLabel>
+                                        <FloatingFormItem label="PAN Number">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="PAN No" />
+                                                <Input {...field} value={field.value || ''} placeholder="PAN No" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -549,26 +508,22 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                     control={form.control}
                                     name="serviceTaxNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Service Tax No</FormLabel>
+                                        <FloatingFormItem label="Service Tax No">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="Service Tax No" />
+                                                <Input {...field} value={field.value || ''} placeholder="Service Tax No" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="stateCode"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>State Code</FormLabel>
+                                        <FloatingFormItem label="State Code">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="e.g. 27" />
+                                                <Input {...field} value={field.value || ''} placeholder="e.g. 27" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -576,8 +531,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                 control={form.control}
                                 name="billingState"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">Billing State</FormLabel>
+                                    <FloatingFormItem label="Billing State">
                                         <Popover open={billingStateOpen} onOpenChange={setBillingStateOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -586,7 +540,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                                         role="combobox"
                                                         aria-expanded={billingStateOpen}
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -628,30 +582,22 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Bank Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Bank Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Bank Information" contentClassName="space-y-4">
                             <FormField
                                 control={form.control}
                                 name="bankName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Bank Name</FormLabel>
+                                    <FloatingFormItem label="Bank Name">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="Bank Name" />
+                                            <Input {...field} value={field.value || ''} placeholder="Bank Name" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <div className="grid grid-cols-2 gap-4">
@@ -659,26 +605,22 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                     control={form.control}
                                     name="accountNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Account Number</FormLabel>
+                                        <FloatingFormItem label="Account Number">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="Account Number" />
+                                                <Input {...field} value={field.value || ''} placeholder="Account Number" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="accountName"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Account Name</FormLabel>
+                                        <FloatingFormItem label="Account Name">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="Account Name" />
+                                                <Input {...field} value={field.value || ''} placeholder="Account Name" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -687,77 +629,66 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                     control={form.control}
                                     name="ifsc"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>IFSC Code</FormLabel>
+                                        <FloatingFormItem label="IFSC Code">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="IFSC Code" />
+                                                <Input {...field} value={field.value || ''} placeholder="IFSC Code" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="micr"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>MICR Code</FormLabel>
+                                        <FloatingFormItem label="MICR Code">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="MICR Code" />
+                                                <Input {...field} value={field.value || ''} placeholder="MICR Code" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Invoice & Series Management */}
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Invoice & Series Management</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FormSection
+                        className="lg:col-span-2"
+                        title="Invoice & Series Management"
+                        contentClassName="grid grid-cols-1 md:grid-cols-3 gap-6"
+                    >
                             <div className="space-y-4 border-r pr-6 last:border-0 last:pr-0">
                                 <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Standard Invoice</h4>
                                 <FormField
                                     control={form.control}
                                     name="invoicePrefix"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Prefix</FormLabel>
+                                        <FloatingFormItem label="Prefix">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="INV-" />
+                                                <Input {...field} value={field.value || ''} placeholder="INV-" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="lastInvoiceNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Last Number</FormLabel>
+                                        <FloatingFormItem label="Last Number">
                                             <FormControl>
-                                                <Input type="number" {...field} value={field.value || 0} />
+                                                <Input type="number" {...field} value={field.value || 0} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="invoiceSuffix"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Suffix</FormLabel>
+                                        <FloatingFormItem label="Suffix">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="-24" />
+                                                <Input {...field} value={field.value || ''} placeholder="-24" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -768,39 +699,33 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                     control={form.control}
                                     name="debitNotePrefix"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Prefix</FormLabel>
+                                        <FloatingFormItem label="Prefix">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="DN-" />
+                                                <Input {...field} value={field.value || ''} placeholder="DN-" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="debitNoteLastInvoiceNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Last Number</FormLabel>
+                                        <FloatingFormItem label="Last Number">
                                             <FormControl>
-                                                <Input type="number" {...field} value={field.value || 0} />
+                                                <Input type="number" {...field} value={field.value || 0} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="debitNoteSuffix"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Suffix</FormLabel>
+                                        <FloatingFormItem label="Suffix">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="-24" />
+                                                <Input {...field} value={field.value || ''} placeholder="-24" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -811,44 +736,37 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                     control={form.control}
                                     name="creditNotePrefix"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Prefix</FormLabel>
+                                        <FloatingFormItem label="Prefix">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="CN-" />
+                                                <Input {...field} value={field.value || ''} placeholder="CN-" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="creditNoteLastInvoiceNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Last Number</FormLabel>
+                                        <FloatingFormItem label="Last Number">
                                             <FormControl>
-                                                <Input type="number" {...field} value={field.value || 0} />
+                                                <Input type="number" {...field} value={field.value || 0} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="creditNoteSuffix"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Suffix</FormLabel>
+                                        <FloatingFormItem label="Suffix">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="-24" />
+                                                <Input {...field} value={field.value || ''} placeholder="-24" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">

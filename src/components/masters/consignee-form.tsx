@@ -13,10 +13,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,7 +30,7 @@ import {
     CommandList,
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { consigneeService } from '@/services/masters/consignee-service'
 import { stateService } from '@/services/masters/state-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
@@ -162,36 +164,28 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Basic Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Basic Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Basic Details" contentClassName="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="code"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Consignee Code</FormLabel>
+                                        <FloatingFormItem label="Consignee Code">
                                             <FormControl>
-                                                <Input placeholder="CONS01" {...field} />
+                                                <Input placeholder="CONS01" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Consignee Name</FormLabel>
+                                        <FloatingFormItem label="Consignee Name">
                                             <FormControl>
-                                                <Input placeholder="Receiver Name" {...field} />
+                                                <Input placeholder="Receiver Name" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -200,26 +194,22 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                     control={form.control}
                                     name="contactPerson"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Contact Person</FormLabel>
+                                        <FloatingFormItem label="Contact Person">
                                             <FormControl>
-                                                <Input placeholder="John Doe" {...field} />
+                                                <Input placeholder="John Doe" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="industry"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Industry</FormLabel>
+                                        <FloatingFormItem label="Industry">
                                             <FormControl>
-                                                <Input placeholder="e.g. Retail" {...field} />
+                                                <Input placeholder="e.g. Retail" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -227,8 +217,7 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                 control={form.control}
                                 name="serviceCenterId"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel className="mb-1">Service Center</FormLabel>
+                                    <FloatingFormItem label="Service Center">
                                         <Popover open={scOpen} onOpenChange={setScOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -236,13 +225,15 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                                         variant="outline"
                                                         role="combobox"
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
-                                                        {field.value
-                                                            ? scData?.data?.find(sc => sc.id === field.value)?.name
-                                                            : "Select service center..."}
+                                                        <span className="truncate text-left">
+                                                            {field.value
+                                                                ? scData?.data?.find(sc => sc.id === field.value)?.name
+                                                                : "Select service center..."}
+                                                        </span>
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </FormControl>
@@ -272,44 +263,34 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Contact Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Contact Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection title="Contact Information" contentClassName="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="mobile"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Mobile No</FormLabel>
+                                        <FloatingFormItem label="Mobile No">
                                             <FormControl>
-                                                <Input placeholder="9876543210" {...field} />
+                                                <Input placeholder="9876543210" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="email"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Email Address</FormLabel>
+                                        <FloatingFormItem label="Email Address">
                                             <FormControl>
-                                                <Input placeholder="receiver@example.com" {...field} />
+                                                <Input placeholder="receiver@example.com" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -318,26 +299,22 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                     control={form.control}
                                     name="tel1"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Telephone 1</FormLabel>
+                                        <FloatingFormItem label="Telephone 1">
                                             <FormControl>
-                                                <Input placeholder="02212345678" {...field} />
+                                                <Input placeholder="02212345678" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="tel2"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Telephone 2</FormLabel>
+                                        <FloatingFormItem label="Telephone 2">
                                             <FormControl>
-                                                <Input placeholder="02287654321" {...field} />
+                                                <Input placeholder="02287654321" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -346,63 +323,54 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                     control={form.control}
                                     name="eori"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>EORI</FormLabel>
+                                        <FloatingFormItem label="EORI">
                                             <FormControl>
-                                                <Input placeholder="EORI Code" {...field} />
+                                                <Input placeholder="EORI Code" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="vat"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>VAT</FormLabel>
+                                        <FloatingFormItem label="VAT">
                                             <FormControl>
-                                                <Input placeholder="VAT Number" {...field} />
+                                                <Input placeholder="VAT Number" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
 
                     {/* Address & Location */}
-                    <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Address & Location</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <FormSection
+                        className="md:col-span-2"
+                        title="Address & Location"
+                        contentClassName="space-y-4"
+                    >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="address1"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Address Line 1</FormLabel>
+                                        <FloatingFormItem label="Address Line 1">
                                             <FormControl>
-                                                <Input placeholder="Full street address" {...field} />
+                                                <Input placeholder="Full street address" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="address2"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Address Line 2 (Optional)</FormLabel>
+                                        <FloatingFormItem label="Address Line 2 (Optional)">
                                             <FormControl>
-                                                <Input placeholder="Floor, Landmark, etc." {...field} />
+                                                <Input placeholder="Floor, Landmark, etc." {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -411,21 +379,18 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                     control={form.control}
                                     name="city"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>City</FormLabel>
+                                        <FloatingFormItem label="City">
                                             <FormControl>
-                                                <Input placeholder="Mumbai" {...field} />
+                                                <Input placeholder="Mumbai" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="state"
                                     render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel className="mb-1">State</FormLabel>
+                                        <FloatingFormItem label="State">
                                             <Popover open={stateOpen} onOpenChange={setStateOpen}>
                                                 <PopoverTrigger asChild>
                                                     <FormControl>
@@ -433,11 +398,13 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                                             variant="outline"
                                                             role="combobox"
                                                             className={cn(
-                                                                "w-full justify-between font-normal",
+                                                                FLOATING_INNER_COMBO,
                                                                 !field.value && "text-muted-foreground"
                                                             )}
                                                         >
-                                                            {field.value || "Select state..."}
+                                                            <span className="truncate text-left">
+                                                                {field.value || "Select state..."}
+                                                            </span>
                                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                         </Button>
                                                     </FormControl>
@@ -466,39 +433,33 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                                     </Command>
                                                 </PopoverContent>
                                             </Popover>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="pinCode"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Pin Code</FormLabel>
+                                        <FloatingFormItem label="Pin Code">
                                             <FormControl>
-                                                <Input placeholder="400001" {...field} />
+                                                <Input placeholder="400001" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="destination"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Destination</FormLabel>
+                                        <FloatingFormItem label="Destination">
                                             <FormControl>
-                                                <Input placeholder="e.g. London" {...field} />
+                                                <Input placeholder="e.g. London" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
+                    </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">

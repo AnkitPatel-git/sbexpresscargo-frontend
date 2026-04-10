@@ -1,0 +1,54 @@
+info:
+  name: Tracking – Vendor Webhook (Single)
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/tracking/webhook"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "awbNo": "AWB123456",
+        "vendorId": 1,
+        "externalStatus": "OUT_FOR_DELIVERY",
+        "eventId": "evt-unique-001",
+        "sequence": 4,
+        "location": "DELHI",
+        "remarks": "Out for delivery",
+        "eventTime": "2026-03-18T10:00:00.000Z",
+        "rawData": {
+          "scanCode": "OFD",
+          "hub": "DEL-01"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  **Public** (no JWT). Protect in production (mTLS, HMAC, IP allowlist).
+
+  **Body — fields**
+
+  | Field | Required | Notes |
+  |-------|----------|--------|
+  | awbNo | **yes** | Your internal AWB (must exist on `shipments`) |
+  | vendorId | **yes** | Must match `Vendor` row (logistics partner — BlueDart, DTDC, etc.) |
+  | externalStatus | **yes** | Raw string from partner; must exist in **VendorStatusMapping** for this `vendorId` |
+  | eventId | no | Idempotency key; omitted → hash of payload |
+  | sequence | no | Monotonic ordering vs other events |
+  | location | no | Free text |
+  | remarks | no | Free text |
+  | eventTime | no | ISO 8601; used for ordering vs latest status |
+  | rawData | no | Any JSON stored on `VendorTrackingLog` |
+
+  **Related:** `PUT /transaction/shipment/:id/vendor-mapping` stores partner waybill; this endpoint drives **status** via mappings + internal state machine.

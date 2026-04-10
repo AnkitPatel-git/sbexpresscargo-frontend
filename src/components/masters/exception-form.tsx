@@ -10,10 +10,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -97,13 +99,11 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Exception Code</FormLabel>
+                            <FloatingFormItem label="Exception Code">
                                 <FormControl>
-                                    <Input placeholder="e.g. EXC01" {...field} />
+                                    <Input placeholder="e.g. EXC01" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -111,13 +111,11 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Exception Name</FormLabel>
+                            <FloatingFormItem label="Exception Name">
                                 <FormControl>
-                                    <Input placeholder="e.g. Address Not Found" {...field} />
+                                    <Input placeholder="e.g. Address Not Found" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -125,11 +123,10 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                         control={form.control}
                         name="type"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Exception Type</FormLabel>
+                            <FloatingFormItem label="Exception Type">
                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                             <SelectValue placeholder="Select type" />
                                         </SelectTrigger>
                                     </FormControl>
@@ -138,8 +135,7 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                                         <SelectItem value="DELIVERED">DELIVERED</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FloatingFormItem>
                         )}
                     />
 
@@ -148,17 +144,16 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                             control={form.control}
                             name="inscan"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>Inscan</FormLabel>
+                                <FloatingFormItem label="Inscan">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={(v) => field.onChange(Boolean(v))}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
 
@@ -166,17 +161,16 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                             control={form.control}
                             name="showOnMobileApps"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>Show on Mobile Apps</FormLabel>
+                                <FloatingFormItem label="Show on Mobile Apps">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={(v) => field.onChange(Boolean(v))}
+                                            />
+                                        </FormControl>
                                     </div>
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
                     </div>

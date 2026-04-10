@@ -54,6 +54,8 @@ docs:
     **Dashboard** (`/dashboard/*`): Operation summary, sales summary (with daily series), and sales-by-service-center reports; requires `dashboard.core.read`. See folder **Dashboard**.
 
     Collection variables: `{{mobileAwbNo}}`, `{{mobileManifestId}}`, `{{mobileDrsId}}`, `{{mobileNotificationId}}`, `{{mobileAttendanceId}}` for mobile path params. Portal detail routes: `{{shipmentId}}`, `{{pickupId}}`, `{{drsId}}`.
+
+    **Logistics vendors** (BlueDart, DTDC, etc.) use **Vendor Master** (`/vendor-master`), shipment **vendor-mapping**, tracking **vendor webhooks** (`vendorId` in body), and pickup **`vendorId`** — the separate Carrier Master API was removed in favor of a single vendor model.
   type: text/markdown
 bundled: false
 extensions:

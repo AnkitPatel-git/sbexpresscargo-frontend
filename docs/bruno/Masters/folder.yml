@@ -7,5 +7,5 @@ request:
   auth: inherit
 
 docs:
-  content: "All master APIs (Product, Country, State, Industry, Flight, Content, Bank, Local Branch, Service Center, Customer, Client Rate, Consignee, Shipper, Vendor, Courier, Area, Exception, Service Map, Charge). List endpoints return paginated response (data, total, page, limit, totalPages) and support query params: page, limit, sortBy, sortOrder, search. Requires JWT and appropriate master permissions."
+  content: "All master APIs (Product, Country, State, Industry, Flight, Content, Bank, Local Branch, Service Center, Customer, Client Rate, Consignee, Shipper, Vendor — logistics partners (BlueDart, DTDC, etc.; API config on Vendor), Courier, Area, Exception, Service Map, Charge). List endpoints return paginated response (data, total, page, limit, totalPages) and support query params: page, limit, sortBy, sortOrder, search. Requires JWT and appropriate master permissions."
   type: text/markdown

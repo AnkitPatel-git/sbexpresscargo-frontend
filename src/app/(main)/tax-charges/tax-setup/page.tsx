@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
@@ -17,14 +17,6 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -34,7 +26,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 import { taxSetupService } from "@/services/tax-charges/tax-setup-service"
 import { TaxSetup } from "@/types/tax-charges/tax-setup"
@@ -42,12 +34,25 @@ import { TaxSetupDrawer } from "@/components/tax-charges/tax-setup-drawer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
+function SortArrows() {
+    return (
+        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
+            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
+            <ChevronDown className="h-2.5 w-2.5" />
+        </span>
+    )
+}
+
 export default function TaxSetupPage() {
     const queryClient = useQueryClient()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
+    const [colFilters, setColFilters] = useState({
+        customer: "",
+        product: "",
+    })
 
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [selectedTaxSetup, setSelectedTaxSetup] = useState<TaxSetup | null>(null)
@@ -91,138 +96,122 @@ export default function TaxSetupPage() {
         }
     }
 
+    const total = data?.meta?.total ?? 0
+    const from = total === 0 ? 0 : (page - 1) * limit + 1
+    const to = Math.min(page * limit, total)
+    const filteredRows =
+        data?.data.filter((taxSetup) => {
+            if (colFilters.customer && !taxSetup.customer.toLowerCase().includes(colFilters.customer.toLowerCase())) return false
+            if (colFilters.product && !taxSetup.product.toLowerCase().includes(colFilters.product.toLowerCase())) return false
+            return true
+        }) ?? []
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Tax Setup</h1>
-                    <p className="text-muted-foreground">
-                        Manage Tax Setup rules and IGST/CGST/SGST percentages.
-                    </p>
+        <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <PermissionGuard permission="master.tax_charges.create">
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
+                            <FilePlus className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
+                        <FileUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary"
+                        title="Refresh"
+                        onClick={() => queryClient.refetchQueries({ queryKey: ["tax-setups"], type: "active" })}
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                 </div>
-                {/* Adjust permissions below if needed. Currently assuming tax_setup_add/modify/delete logic matches existing masters. */}
                 <PermissionGuard permission="master.tax_charges.create">
-                    <Button onClick={handleCreate}>
-                        <Plus className="mr-2 h-4 w-4" /> Create Tax Setup
+                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Tax Setup">
+                        <Plus className="mr-1 h-4 w-4" /> Add Tax Setup
                     </Button>
                 </PermissionGuard>
             </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Tax Setups</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center py-4">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search tax setups..."
-                                className="pl-8"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="rounded-md border overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-gray-50">
-                                        <TableHead>Customer</TableHead>
-                                        <TableHead>Product</TableHead>
-                                        <TableHead>From Date</TableHead>
-                                        <TableHead>To Date</TableHead>
-                                        <TableHead>IGST %</TableHead>
-                                        <TableHead>CGST %</TableHead>
-                                        <TableHead>SGST %</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {isLoading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={8} className="h-24 text-center">
-                                                Loading tax setups...
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : data?.data && data.data.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                                                No tax setups found.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        data?.data.map((taxSetup: TaxSetup) => (
-                                            <TableRow key={taxSetup.id} className="hover:bg-gray-50/50">
-                                                <TableCell className="font-medium text-blue-600">
-                                                    {taxSetup.customer}
-                                                </TableCell>
-                                                <TableCell>{taxSetup.product}</TableCell>
-                                                <TableCell>{format(new Date(taxSetup.fromDate), "dd-MM-yyyy")}</TableCell>
-                                                <TableCell>{format(new Date(taxSetup.toDate), "dd-MM-yyyy")}</TableCell>
-                                                <TableCell>{taxSetup.igst}</TableCell>
-                                                <TableCell>{taxSetup.cgst}</TableCell>
-                                                <TableCell>{taxSetup.sgst}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">Open menu</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuSeparator />
-                                                            <PermissionGuard permission="master.tax_charges.update">
-                                                                <DropdownMenuItem onClick={() => handleEdit(taxSetup)}>
-                                                                    <Edit className="mr-2 h-4 w-4" /> Edit
-                                                                </DropdownMenuItem>
-                                                            </PermissionGuard>
-                                                            <PermissionGuard permission="master.tax_charges.delete">
-                                                                <DropdownMenuItem
-                                                                    className="text-red-600"
-                                                                    onClick={() => handleDeleteRequest(taxSetup.id)}
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                                </DropdownMenuItem>
-                                                            </PermissionGuard>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-end space-x-2 py-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                            disabled={page === 1}
-                        >
-                            Previous
-                        </Button>
-                        <div className="text-sm font-medium">
-                            Page {page} of {data?.totalPages || 1}
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!data || page >= data.totalPages}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Search:</span>
+                <Input placeholder="Search tax setups..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <div className="overflow-x-auto rounded-md border border-border">
+                <Table className="min-w-[980px] border-0">
+                    <TableHeader>
+                        <TableRow className="border-0 bg-primary hover:bg-primary">
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Customer <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Product <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">From Date <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">To Date <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">IGST % <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">CGST % <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">SGST % <SortArrows /></span></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
+                        </TableRow>
+                        <TableRow className="border-b border-border bg-card hover:bg-card">
+                            <TableHead className="p-2"><Input placeholder="Customer" className="h-8 border-border bg-background text-xs" value={colFilters.customer} onChange={(e) => setColFilters((f) => ({ ...f, customer: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Product" className="h-8 border-border bg-background text-xs" value={colFilters.product} onChange={(e) => setColFilters((f) => ({ ...f, product: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="From Date" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="To Date" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="IGST" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="CGST" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="SGST" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2" />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">Loading tax setups...</TableCell>
+                            </TableRow>
+                        ) : filteredRows.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">No tax setups found.</TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredRows.map((taxSetup: TaxSetup, index) => (
+                                <TableRow key={taxSetup.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
+                                    <TableCell className="font-medium text-foreground">{taxSetup.customer}</TableCell>
+                                    <TableCell className="text-foreground">{taxSetup.product}</TableCell>
+                                    <TableCell className="text-foreground">{format(new Date(taxSetup.fromDate), "dd-MM-yyyy")}</TableCell>
+                                    <TableCell className="text-foreground">{format(new Date(taxSetup.toDate), "dd-MM-yyyy")}</TableCell>
+                                    <TableCell className="text-foreground">{taxSetup.igst}</TableCell>
+                                    <TableCell className="text-foreground">{taxSetup.cgst}</TableCell>
+                                    <TableCell className="text-foreground">{taxSetup.sgst}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <PermissionGuard permission="master.tax_charges.update">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" title="Edit" onClick={() => handleEdit(taxSetup)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                            <PermissionGuard permission="master.tax_charges.delete">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" title="Delete" onClick={() => handleDeleteRequest(taxSetup.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+            <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <p className="text-sm text-muted-foreground">Showing {from} to {to} of {total} entries</p>
+                <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage(1)} title="First">«</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage((p) => Math.max(p - 1, 1))} title="Previous">‹</Button>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{page}</span>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.totalPages || 1)} onClick={() => setPage((p) => p + 1)} title="Next">›</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.totalPages || 1)} onClick={() => setPage(data?.totalPages ?? 1)} title="Last">»</Button>
+                </div>
+            </div>
 
             <TaxSetupDrawer
                 open={drawerOpen}

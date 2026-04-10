@@ -6,17 +6,19 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Loader2, Plus, Trash2, Search } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
   FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
+import {
+  FloatingFormItem,
+  FLOATING_INNER_COMBO,
+  FLOATING_INNER_CONTROL,
+} from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
 import { undeliveredScanFormSchema, UndeliveredScanFormValues, UndeliveredScan } from "@/types/transactions/undelivered-scan";
 import { undeliveredScanService } from "@/services/transactions/undelivered-scan-service";
@@ -31,7 +33,7 @@ export function UndeliveredScanForm({ initialData }: UndeliveredScanFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
-  
+
   const { data: serviceCentersResponse } = useQuery({
     queryKey: ["service-centers-master"],
     queryFn: () => serviceCenterService.getServiceCenters({ limit: 100 }),
@@ -46,8 +48,8 @@ export function UndeliveredScanForm({ initialData }: UndeliveredScanFormProps) {
     resolver: zodResolver(undeliveredScanFormSchema),
     defaultValues: {
       scanDate: initialData?.scanAt ? initialData.scanAt.split("T")[0] : new Date().toISOString().split("T")[0],
-      scanTime: (initialData?.scanAt && !isNaN(new Date(initialData.scanAt).getTime())) 
-        ? format(new Date(initialData.scanAt), "HH:mm") 
+      scanTime: (initialData?.scanAt && !isNaN(new Date(initialData.scanAt).getTime()))
+        ? format(new Date(initialData.scanAt), "HH:mm")
         : "10:00",
       serviceCenterId: initialData?.serviceCenterId || undefined,
       items: initialData?.items?.map(item => ({
@@ -95,13 +97,11 @@ export function UndeliveredScanForm({ initialData }: UndeliveredScanFormProps) {
             control={form.control}
             name="scanDate"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Scan Date <span className="text-red-500">*</span></FormLabel>
+              <FloatingFormItem label={<>Scan Date <span className="text-red-500">*</span></>}>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -109,13 +109,11 @@ export function UndeliveredScanForm({ initialData }: UndeliveredScanFormProps) {
             control={form.control}
             name="scanTime"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Scan Time</FormLabel>
+              <FloatingFormItem label="Scan Time">
                 <FormControl>
-                  <Input type="time" {...field} />
+                  <Input type="time" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
 
@@ -123,8 +121,7 @@ export function UndeliveredScanForm({ initialData }: UndeliveredScanFormProps) {
             control={form.control}
             name="serviceCenterId"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Service Center</FormLabel>
+              <FloatingFormItem label="Service Center">
                 <FormControl>
                   <Combobox
                     options={serviceCenterOptions}
@@ -132,10 +129,10 @@ export function UndeliveredScanForm({ initialData }: UndeliveredScanFormProps) {
                     onChange={field.onChange}
                     placeholder="Select Service Center"
                     searchPlaceholder="Search by name or code..."
+                    className={FLOATING_INNER_COMBO}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
+              </FloatingFormItem>
             )}
           />
         </div>
@@ -161,13 +158,11 @@ export function UndeliveredScanForm({ initialData }: UndeliveredScanFormProps) {
                   control={form.control}
                   name={`items.${index}.awbNo`}
                   render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>AWB No</FormLabel>
+                    <FloatingFormItem label="AWB No" itemClassName="flex-1">
                       <FormControl>
-                        <Input placeholder="Scan or type AWB No" {...field} />
+                        <Input placeholder="Scan or type AWB No" {...field} className={FLOATING_INNER_CONTROL} />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                    </FloatingFormItem>
                   )}
                 />
 
@@ -186,7 +181,7 @@ export function UndeliveredScanForm({ initialData }: UndeliveredScanFormProps) {
             ))}
             {fields.length === 0 && (
               <div className="text-center py-4 text-gray-500 border rounded-md border-dashed">
-                No items added. Click "Add Scan" to begin.
+                No items added. Click &quot;Add Scan&quot; to begin.
               </div>
             )}
           </div>

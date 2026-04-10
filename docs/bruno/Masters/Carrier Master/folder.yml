@@ -1,7 +1,0 @@
-info:
-  name: Carrier Master
-  type: folder
-  seq: 16
-
-request:
-  auth: inherit

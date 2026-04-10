@@ -25,4 +25,4 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-docs: Retry failed carrier logs. JWT + tracking_modify or tracking_all.
+docs: Retry failed vendor tracking logs. JWT + tracking_modify or tracking_all.

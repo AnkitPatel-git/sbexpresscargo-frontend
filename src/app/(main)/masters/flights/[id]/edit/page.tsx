@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { FlightForm } from "@/components/masters/flight-form"
 import { flightService } from "@/services/masters/flight-service"
 
@@ -52,14 +52,9 @@ export default function EditFlightPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Flight Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <FlightForm initialData={flightData.data} />
-                </CardContent>
-            </Card>
+            <FormSection title="Flight Details">
+                <FlightForm initialData={flightData.data} />
+            </FormSection>
         </div>
     )
 }

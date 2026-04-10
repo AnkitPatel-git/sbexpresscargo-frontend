@@ -108,7 +108,7 @@ examples:
               "reason": "Confirmed by customer",
               "pickupReady": true,
               "externalPickupId": null,
-              "carrierId": 1,
+              "vendorId": 1,
               "requestPayload": null,
               "responsePayload": null,
               "errorMessage": null,
@@ -132,11 +132,11 @@ examples:
                 "code": "HQ",
                 "name": "Headquarters"
               },
-              "carrier": {
+              "vendor": {
                 "id": 1,
-                "code": "BLUEDART",
-                "name": "BLUEDART Cargo (updated)",
-                "isActive": true
+                "vendorCode": "BLUEDART",
+                "vendorName": "BLUEDART Cargo (updated)",
+                "status": "ACTIVE"
               },
               "fieldExecutive": {
                 "id": 2,
@@ -164,4 +164,4 @@ examples:
             }
           }
 
-docs: Pickup with customer, service center, carrier, executives, and recent execution logs. JWT + shipment.pickup.read. Same RBAC as list. Set `pickupId` in collection variables.
+docs: Pickup with customer, service center, vendor (logistics partner), executives, and recent execution logs. JWT + shipment.pickup.read. Same RBAC as list. Set `pickupId` in collection variables.

@@ -172,7 +172,7 @@ examples:
                 "updatedById": null,
                 "deletedAt": null,
                 "deletedById": null,
-                "carrierId": null
+                "vendorId": null
               },
               "country": {
                 "id": 1,

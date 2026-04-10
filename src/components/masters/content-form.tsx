@@ -26,13 +26,15 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { contentService } from '@/services/masters/content-service'
 import { countryService } from '@/services/masters/country-service'
 import { vendorService } from '@/services/masters/vendor-service'
@@ -170,8 +172,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
     }
 
     return (
-        <Card>
-            <CardContent className="pt-6">
+        <FormSection title="Content Details" contentClassName="pt-6">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -179,13 +180,11 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                 control={form.control}
                                 name="contentCode"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Content Code</FormLabel>
+                                    <FloatingFormItem label="Content Code">
                                         <FormControl>
-                                            <Input placeholder="e.g. CONT01" {...field} />
+                                            <Input placeholder="e.g. CONT01" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
@@ -193,13 +192,11 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                 control={form.control}
                                 name="contentName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Content Name</FormLabel>
+                                    <FloatingFormItem label="Content Name">
                                         <FormControl>
-                                            <Input placeholder="e.g. Electronics" {...field} />
+                                            <Input placeholder="e.g. Electronics" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                         </div>
@@ -209,26 +206,22 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                 control={form.control}
                                 name="hsnCode"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>HSN Code</FormLabel>
+                                    <FloatingFormItem label="HSN Code">
                                         <FormControl>
-                                            <Input placeholder="e.g. 8517" {...field} />
+                                            <Input placeholder="e.g. 8517" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
                                 name="additionalField"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Additional Field</FormLabel>
+                                    <FloatingFormItem label="Additional Field">
                                         <FormControl>
-                                            <Input placeholder="Optional additional info" {...field} />
+                                            <Input placeholder="Optional additional info" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                         </div>
@@ -238,8 +231,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                 control={form.control}
                                 name="vendor"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Vendor</FormLabel>
+                                    <FloatingFormItem label="Vendor">
                                         <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -247,7 +239,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                                         variant="outline"
                                                         role="combobox"
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                         disabled={vendorsQuery.isLoading}
@@ -295,8 +287,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
@@ -304,8 +295,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                 control={form.control}
                                 name="country"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Country</FormLabel>
+                                    <FloatingFormItem label="Country">
                                         <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -313,7 +303,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                                         variant="outline"
                                                         role="combobox"
                                                         className={cn(
-                                                            "w-full justify-between font-normal",
+                                                            FLOATING_INNER_COMBO,
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                         disabled={countriesQuery.isLoading}
@@ -361,8 +351,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                         </div>
@@ -374,26 +363,22 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                     control={form.control}
                                     name="notificationNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Notification No</FormLabel>
+                                        <FloatingFormItem label="Notification No">
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="srNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Sr No</FormLabel>
+                                        <FloatingFormItem label="Sr No">
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -402,26 +387,22 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                     control={form.control}
                                     name="notificationSubType"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Sub Type</FormLabel>
+                                        <FloatingFormItem label="Sub Type">
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="notificationSubType1"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Sub Type 1</FormLabel>
+                                        <FloatingFormItem label="Sub Type 1">
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -429,13 +410,11 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                 control={form.control}
                                 name="clearanceCethNo"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Clearance CETH No</FormLabel>
+                                    <FloatingFormItem label="Clearance CETH No">
                                         <FormControl>
-                                            <Input {...field} />
+                                            <Input {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                         </div>
@@ -447,26 +426,22 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                     control={form.control}
                                     name="igstNotification"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>IGST Notification</FormLabel>
+                                        <FloatingFormItem label="IGST Notification">
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="igstSrNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>IGST Sr No</FormLabel>
+                                        <FloatingFormItem label="IGST Sr No">
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -475,26 +450,22 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                     control={form.control}
                                     name="igstcNotification"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>IGSTC Notification</FormLabel>
+                                        <FloatingFormItem label="IGSTC Notification">
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                                 <FormField
                                     control={form.control}
                                     name="igstcSrNo"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>IGSTC Sr No</FormLabel>
+                                        <FloatingFormItem label="IGSTC Sr No">
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                        </FloatingFormItem>
                                     )}
                                 />
                             </div>
@@ -514,7 +485,6 @@ export function ContentForm({ initialData }: ContentFormProps) {
                         </div>
                     </form>
                 </Form>
-            </CardContent>
-        </Card>
+        </FormSection>
     )
 }

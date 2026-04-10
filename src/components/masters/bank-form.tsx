@@ -11,10 +11,12 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form"
+import {
+    FloatingFormItem,
+    FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+} from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +26,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
+import { FormSection } from "@/components/ui/form-section"
 import { bankService } from '@/services/masters/bank-service'
 import { Bank } from '@/types/masters/bank'
 
@@ -89,8 +91,7 @@ export function BankForm({ initialData }: BankFormProps) {
     }
 
     return (
-        <Card>
-            <CardContent className="pt-6">
+        <FormSection title="Bank Details" contentClassName="pt-6">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -98,13 +99,11 @@ export function BankForm({ initialData }: BankFormProps) {
                                 control={form.control}
                                 name="bankCode"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Bank Code</FormLabel>
+                                    <FloatingFormItem label="Bank Code">
                                         <FormControl>
-                                            <Input placeholder="e.g. HDFC, ICICI" {...field} />
+                                            <Input placeholder="e.g. HDFC, ICICI" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
 
@@ -112,13 +111,11 @@ export function BankForm({ initialData }: BankFormProps) {
                                 control={form.control}
                                 name="bankName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Bank Name</FormLabel>
+                                    <FloatingFormItem label="Bank Name">
                                         <FormControl>
-                                            <Input placeholder="e.g. HDFC Bank, ICICI Bank" {...field} />
+                                            <Input placeholder="e.g. HDFC Bank, ICICI Bank" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                                    </FloatingFormItem>
                                 )}
                             />
                         </div>
@@ -127,11 +124,10 @@ export function BankForm({ initialData }: BankFormProps) {
                             control={form.control}
                             name="status"
                             render={({ field }) => (
-                                <FormItem className="max-w-[200px]">
-                                    <FormLabel>Status</FormLabel>
+                                <FloatingFormItem label="Status" itemClassName="max-w-[200px]">
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
-                                            <SelectTrigger>
+                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                 <SelectValue placeholder="Select status" />
                                             </SelectTrigger>
                                         </FormControl>
@@ -140,8 +136,7 @@ export function BankForm({ initialData }: BankFormProps) {
                                             <SelectItem value="INACTIVE">Inactive</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <FormMessage />
-                                </FormItem>
+                                </FloatingFormItem>
                             )}
                         />
 
@@ -159,7 +154,6 @@ export function BankForm({ initialData }: BankFormProps) {
                         </div>
                     </form>
                 </Form>
-            </CardContent>
-        </Card>
+        </FormSection>
     )
 }

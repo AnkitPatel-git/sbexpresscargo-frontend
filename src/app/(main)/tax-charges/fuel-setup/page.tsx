@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
@@ -18,14 +18,6 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -35,12 +27,21 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 import { fuelSetupService } from "@/services/tax-charges/fuel-setup-service"
 import { FuelSetup } from "@/types/tax-charges/fuel-setup"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
+
+function SortArrows() {
+    return (
+        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
+            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
+            <ChevronDown className="h-2.5 w-2.5" />
+        </span>
+    )
+}
 
 export default function FuelSetupPage() {
     const router = useRouter()
@@ -49,6 +50,13 @@ export default function FuelSetupPage() {
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
+    const [colFilters, setColFilters] = useState({
+        customer: "",
+        vendor: "",
+        product: "",
+        service: "",
+        destination: "",
+    })
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -88,150 +96,133 @@ export default function FuelSetupPage() {
         }
     }
 
+    const total = data?.meta?.total ?? 0
+    const from = total === 0 ? 0 : (page - 1) * limit + 1
+    const to = Math.min(page * limit, total)
+    const filteredRows =
+        data?.data.filter((fuelSetup) => {
+            if (colFilters.customer && !fuelSetup.customer.toLowerCase().includes(colFilters.customer.toLowerCase())) return false
+            if (colFilters.vendor && !fuelSetup.vendor.toLowerCase().includes(colFilters.vendor.toLowerCase())) return false
+            if (colFilters.product && !fuelSetup.product.toLowerCase().includes(colFilters.product.toLowerCase())) return false
+            if (colFilters.service && !fuelSetup.service.toLowerCase().includes(colFilters.service.toLowerCase())) return false
+            if (colFilters.destination && !fuelSetup.destination.toLowerCase().includes(colFilters.destination.toLowerCase())) return false
+            return true
+        }) ?? []
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Fuel Setup</h1>
-                    <p className="text-muted-foreground">
-                        Manage Fuel Setup rules for customers, vendors, and services.
-                    </p>
+        <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <PermissionGuard permission="master.tax_charges.create">
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
+                            <FilePlus className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
+                        <FileUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary"
+                        title="Refresh"
+                        onClick={() => queryClient.refetchQueries({ queryKey: ["fuel-setups"], type: "active" })}
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                 </div>
                 <PermissionGuard permission="master.tax_charges.create">
-                    <Button onClick={handleCreate}>
-                        <Plus className="mr-2 h-4 w-4" /> Create Fuel Setup
+                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Fuel Setup">
+                        <Plus className="mr-1 h-4 w-4" /> Add Fuel Setup
                     </Button>
                 </PermissionGuard>
             </div>
-
-            <Card className="border-none shadow-sm overflow-hidden">
-                <CardHeader className="px-6 py-4 border-b">
-                    <CardTitle className="text-xl font-semibold">Fuel Setups</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="flex items-center p-4">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search fuel setups..."
-                                className="pl-8 bg-gray-50/50 border-gray-200"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-gray-50/50 hover:bg-transparent">
-                                    <TableHead className="font-semibold text-gray-700">Customer</TableHead>
-                                    <TableHead className="font-semibold text-gray-700">Vendor</TableHead>
-                                    <TableHead className="font-semibold text-gray-700">Product</TableHead>
-                                    <TableHead className="font-semibold text-gray-700">Service</TableHead>
-                                    <TableHead className="font-semibold text-gray-700">Destination</TableHead>
-                                    <TableHead className="font-semibold text-gray-700">From Date</TableHead>
-                                    <TableHead className="font-semibold text-gray-700">To Date</TableHead>
-                                    <TableHead className="font-semibold text-gray-700">Percentage</TableHead>
-                                    <TableHead className="text-right font-semibold text-gray-700 pr-6">Actions</TableHead>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Search:</span>
+                <Input
+                    placeholder="Search fuel setups..."
+                    className="h-9 w-44 bg-background sm:w-52"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+            </div>
+            <div className="overflow-x-auto rounded-md border border-border">
+                <Table className="min-w-[1200px] border-0">
+                    <TableHeader>
+                        <TableRow className="border-0 bg-primary hover:bg-primary">
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Customer <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Vendor <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Product <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Service <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Destination <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">From Date <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">To Date <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Percentage <SortArrows /></span></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
+                        </TableRow>
+                        <TableRow className="border-b border-border bg-card hover:bg-card">
+                            <TableHead className="p-2"><Input placeholder="Customer" className="h-8 border-border bg-background text-xs" value={colFilters.customer} onChange={(e) => setColFilters((f) => ({ ...f, customer: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Vendor" className="h-8 border-border bg-background text-xs" value={colFilters.vendor} onChange={(e) => setColFilters((f) => ({ ...f, vendor: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Product" className="h-8 border-border bg-background text-xs" value={colFilters.product} onChange={(e) => setColFilters((f) => ({ ...f, product: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Service" className="h-8 border-border bg-background text-xs" value={colFilters.service} onChange={(e) => setColFilters((f) => ({ ...f, service: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Destination" className="h-8 border-border bg-background text-xs" value={colFilters.destination} onChange={(e) => setColFilters((f) => ({ ...f, destination: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="From Date" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="To Date" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Percentage" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2" />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">Loading fuel setups...</TableCell>
+                            </TableRow>
+                        ) : filteredRows.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">No fuel setups found.</TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredRows.map((fuelSetup: FuelSetup, index) => (
+                                <TableRow key={fuelSetup.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
+                                    <TableCell className="font-medium text-foreground">{fuelSetup.customer}</TableCell>
+                                    <TableCell className="text-foreground">{fuelSetup.vendor}</TableCell>
+                                    <TableCell className="text-foreground">{fuelSetup.product}</TableCell>
+                                    <TableCell className="text-foreground">{fuelSetup.service}</TableCell>
+                                    <TableCell className="text-foreground">{fuelSetup.destination}</TableCell>
+                                    <TableCell className="text-foreground">{format(new Date(fuelSetup.fromDate), "dd-MM-yyyy")}</TableCell>
+                                    <TableCell className="text-foreground">{format(new Date(fuelSetup.toDate), "dd-MM-yyyy")}</TableCell>
+                                    <TableCell className="font-semibold text-foreground">{fuelSetup.percentage}%</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <PermissionGuard permission="master.tax_charges.update">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" title="Edit" onClick={() => handleEdit(fuelSetup.id)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                            <PermissionGuard permission="master.tax_charges.delete">
+                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" title="Delete" onClick={() => handleDeleteRequest(fuelSetup.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGuard>
+                                        </div>
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {isLoading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={9} className="h-24 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                                                Loading fuel setups...
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ) : data?.data && data.data.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                                            No fuel setups found.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    data?.data.map((fuelSetup: FuelSetup) => (
-                                        <TableRow key={fuelSetup.id} className="hover:bg-gray-50/30 transition-colors">
-                                            <TableCell className="font-medium text-primary">
-                                                {fuelSetup.customer}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-gray-600">{fuelSetup.vendor}</TableCell>
-                                            <TableCell className="text-gray-600 font-medium">{fuelSetup.product}</TableCell>
-                                            <TableCell>
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                                                    {fuelSetup.service}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="font-medium text-gray-600">{fuelSetup.destination}</TableCell>
-                                            <TableCell className="text-gray-500">{format(new Date(fuelSetup.fromDate), "dd-MM-yyyy")}</TableCell>
-                                            <TableCell className="text-gray-500">{format(new Date(fuelSetup.toDate), "dd-MM-yyyy")}</TableCell>
-                                            <TableCell className="font-bold text-gray-900 group-hover:text-primary transition-colors">
-                                                {fuelSetup.percentage}%
-                                            </TableCell>
-                                            <TableCell className="text-right pr-6">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full">
-                                                            <span className="sr-only">Open menu</span>
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-[160px]">
-                                                        <DropdownMenuLabel className="text-xs text-gray-400 font-normal">Actions</DropdownMenuLabel>
-                                                        <DropdownMenuSeparator />
-                                                        <PermissionGuard permission="master.tax_charges.update">
-                                                            <DropdownMenuItem onClick={() => handleEdit(fuelSetup.id)}>
-                                                                <Edit className="mr-2 h-4 w-4" /> Edit
-                                                            </DropdownMenuItem>
-                                                        </PermissionGuard>
-                                                        <PermissionGuard permission="master.tax_charges.delete">
-                                                            <DropdownMenuItem
-                                                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                                                                onClick={() => handleDeleteRequest(fuelSetup.id)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                            </DropdownMenuItem>
-                                                        </PermissionGuard>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-
-                    <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50/50">
-                        <div className="text-sm text-muted-foreground">
-                            Showing page <span className="font-bold text-gray-900">{page}</span> of <span className="font-bold text-gray-900">{data?.meta?.totalPages || 1}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                                disabled={page === 1}
-                                className="h-8 px-4"
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((prev) => prev + 1)}
-                                disabled={!data || page >= (data?.meta?.totalPages || 0)}
-                                className="h-8 px-4"
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+            <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <p className="text-sm text-muted-foreground">Showing {from} to {to} of {total} entries</p>
+                <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage(1)} title="First">«</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage((p) => Math.max(p - 1, 1))} title="Previous">‹</Button>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{page}</span>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data?.meta?.totalPages || 1)} onClick={() => setPage((p) => p + 1)} title="Next">›</Button>
+                    <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data?.meta?.totalPages || 1)} onClick={() => setPage(data?.meta?.totalPages ?? 1)} title="Last">»</Button>
+                </div>
+            </div>
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
