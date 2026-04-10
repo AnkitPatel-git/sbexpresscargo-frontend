@@ -28,9 +28,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { exceptionService } from '@/services/masters/exception-service'
 import { ExceptionMaster } from '@/types/masters/exception'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const exceptionSchema = z.object({
-    code: z.string().min(2, "Code must be at least 2 characters"),
+    code: optionalMasterCode(2),
     name: z.string().min(3, "Name must be at least 3 characters"),
     type: z.enum(['UNDELIVERED', 'DELIVERED'] as const),
     inscan: z.boolean().default(true),
@@ -61,10 +62,11 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: ExceptionFormValues) => {
+            const payload = omitEmptyCodeFields(data, ['code']) as ExceptionFormValues
             if (isEdit && initialData) {
-                return exceptionService.updateException(initialData.id, data)
+                return exceptionService.updateException(initialData.id, payload)
             }
-            return exceptionService.createException(data)
+            return exceptionService.createException(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exceptions'] })
@@ -99,9 +101,9 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FloatingFormItem label="Exception Code">
+                            <FloatingFormItem label="Exception Code (optional)">
                                 <FormControl>
-                                    <Input placeholder="e.g. EXC01" {...field} className={FLOATING_INNER_CONTROL} />
+                                    <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
                             </FloatingFormItem>
                         )}

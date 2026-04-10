@@ -1,0 +1,7 @@
+info:
+  name: Vendor Tracking Logs
+  type: folder
+  seq: 12
+
+request:
+  auth: inherit

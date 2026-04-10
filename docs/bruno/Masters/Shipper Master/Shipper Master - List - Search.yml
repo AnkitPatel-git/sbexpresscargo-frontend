@@ -34,7 +34,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/shipper-master?page=1&limit=20&sortBy=shipperCode&sortOrder=asc&search="
       method: GET
@@ -87,14 +87,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "933"
+          value: "700"
         - name: etag
-          value: W/"3a5-oyZzogovJKT6CiluYzv18iM0nlI"
+          value: W/"2bc-KbMbKjqZJpz/lp6x/inFGq5TVFk"
         - name: date
-          value: Tue, 24 Mar 2026 12:43:50 GMT
+          value: Thu, 09 Apr 2026 13:39:07 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -107,40 +109,37 @@ examples:
             "data": [
               {
                 "id": 1,
-                "shipperOrigin": "Mumbai",
-                "shipperCode": "SHIP01",
-                "shipperName": "Sender Company",
-                "contactPerson": "Sender Contact",
-                "address1": "300 Shipment St",
-                "address2": "Floor 2",
-                "pinCode": "400003",
-                "city": "Mumbai",
-                "state": "Maharashtra",
-                "industry": "Logistics",
-                "telephone1": "022-55556666",
-                "telephone2": "022-66667777",
-                "fax": "022-77778888",
-                "email": "sender@company.com",
-                "mobile": "9876543212",
-                "iecNo": "IEC123",
-                "gstNo": "27AABCU9603R1ZM",
-                "aadhaarNo": "123456789012",
+                "areaId": null,
+                "shipperCode": "CUST01",
+                "shipperName": "Acme Corp",
+                "contactPerson": "John Doe",
+                "address1": "100 Business Park",
+                "address2": "Floor 3",
+                "pinCodeId": 3,
+                "countryId": 1,
+                "stateId": 3,
+                "zoneId": null,
+                "telephone": "022-12345678",
+                "fax": null,
+                "email": "john@acme.com",
+                "mobile": "9876543210",
+                "aadhaarNo": null,
                 "panNo": "AABCU9603R",
-                "serviceCenterId": null,
-                "bankAdCode": "BANK01",
-                "bankAccount": "1234567890",
-                "bankIfsc": "SBIN0001234",
-                "firmType": "GOV",
-                "nfei": "NFEI123",
-                "lutNumber": "LUT123",
-                "lutIssueDate": "2026-01-01T00:00:00.000Z",
-                "lutTillDate": "2027-01-01T00:00:00.000Z",
-                "createdAt": "2026-03-24T12:43:41.583Z",
-                "updatedAt": "2026-03-24T12:43:41.583Z",
+                "bankId": null,
+                "bankAccount": null,
+                "bankIfsc": null,
+                "firmType": null,
+                "nfei": null,
+                "lutNumber": null,
+                "lutIssueDate": null,
+                "lutTillDate": null,
+                "createdAt": "2026-04-09T13:35:04.710Z",
+                "updatedAt": "2026-04-09T13:35:04.710Z",
                 "createdById": 1,
                 "updatedById": null,
                 "deletedAt": null,
-                "deletedById": null
+                "deletedById": null,
+                "area": null
               }
             ],
             "meta": {

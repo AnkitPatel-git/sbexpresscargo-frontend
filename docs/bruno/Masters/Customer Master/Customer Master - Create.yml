@@ -20,17 +20,15 @@ http:
         "contactPerson": "John Doe",
         "address1": "100 Business Park",
         "address2": "Floor 3",
-        "pinCode": "400001",
-        "city": "Mumbai",
-        "state": "Maharashtra",
-        "telNo1": "022-12345678",
-        "telNo2": "022-87654321",
+        "pinCodeId": "486001",
+        "telephone": "022-12345678",
         "email": "john@acme.com",
         "mobile": "9876543210",
         "faxNo": "022-11112222",
         "billingState": "Maharashtra",
         "serviceCenter": "VASAI",
         "startDate": "2026-01-01",
+        "serviceStartDate": "2026-01-01",
         "status": "ACTIVE",
         "origin": "MUMBAI",
         "gstNo": "27AABCU9603R1ZM",
@@ -43,7 +41,8 @@ http:
         "customerType": "CUSTOMER",
         "registerType": "REGISTERED",
         "signatureFile": "https://example.com/sig.png",
-        "logoFile": "https://example.com/logo.png"
+        "logoFile": "https://example.com/logo.png",
+        "createDefaultShipper": true
       }
   auth: inherit
 
@@ -54,7 +53,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "400"
+  - name: example
     request:
       url: "{{baseUrl}}/customer-master"
       method: POST
@@ -72,110 +71,15 @@ examples:
             "contactPerson": "John Doe",
             "address1": "100 Business Park",
             "address2": "Floor 3",
-            "pinCode": "400001",
-            "city": "Mumbai",
-            "state": "Maharashtra",
-            "telNo1": "022-12345678",
-            "telNo2": "022-87654321",
+            "pinCodeId": "486001",
+            "telephone": "022-12345678",
             "email": "john@acme.com",
             "mobile": "9876543210",
             "faxNo": "022-11112222",
             "billingState": "Maharashtra",
             "serviceCenter": "VASAI",
             "startDate": "2026-01-01",
-            "status": "Active",
-            "origin": "MUMBAI",
-            "gstNo": "27AABCU9603R1ZM",
-            "aadhaarNo": "123456789012",
-            "dobOnAadhaar": "1990-01-15",
-            "passportNo": "P1234567",
-            "panNo": "AABCU9603R",
-            "tanNo": "TAN123",
-            "invoiceFormat": "standard",
-            "customerType": "Customer",
-            "registerType": "Registered",
-            "signatureFile": "https://example.com/sig.png",
-            "logoFile": "https://example.com/logo.png"
-          }
-    response:
-      status: 400
-      statusText: Bad Request
-      headers:
-        - name: content-security-policy
-          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
-        - name: cross-origin-opener-policy
-          value: same-origin
-        - name: cross-origin-resource-policy
-          value: same-origin
-        - name: origin-agent-cluster
-          value: ?1
-        - name: referrer-policy
-          value: no-referrer
-        - name: strict-transport-security
-          value: max-age=31536000; includeSubDomains
-        - name: x-content-type-options
-          value: nosniff
-        - name: x-dns-prefetch-control
-          value: off
-        - name: x-download-options
-          value: noopen
-        - name: x-frame-options
-          value: SAMEORIGIN
-        - name: x-permitted-cross-domain-policies
-          value: none
-        - name: x-xss-protection
-          value: "0"
-        - name: vary
-          value: Origin
-        - name: content-type
-          value: application/json; charset=utf-8
-        - name: content-length
-          value: "250"
-        - name: etag
-          value: W/"fa-Jv1rXWw9Kvf4ZDGxSFX8UVsEFjA"
-        - name: date
-          value: Tue, 24 Mar 2026 12:38:44 GMT
-        - name: connection
-          value: keep-alive
-        - name: keep-alive
-          value: timeout=5
-      body:
-        type: json
-        data: |-
-          {
-            "success": false,
-            "message": "status must be one of the following values: ACTIVE, INACTIVE, customerType must be one of the following values: CUSTOMER, VENDOR, BOTH, registerType must be one of the following values: REGISTERED, UNREGISTERED",
-            "data": {}
-          }
-  - name: "200"
-    request:
-      url: "{{baseUrl}}/customer-master"
-      method: POST
-      headers:
-        - name: Content-Type
-          value: application/json
-        - name: Authorization
-          value: Bearer {{accessToken}}
-      body:
-        type: json
-        data: |-
-          {
-            "code": "CUST01",
-            "name": "Acme Corp",
-            "contactPerson": "John Doe",
-            "address1": "100 Business Park",
-            "address2": "Floor 3",
-            "pinCode": "400001",
-            "city": "Mumbai",
-            "state": "Maharashtra",
-            "telNo1": "022-12345678",
-            "telNo2": "022-87654321",
-            "email": "john@acme.com",
-            "mobile": "9876543210",
-            "faxNo": "022-11112222",
-            "billingState": "Maharashtra",
-            "serviceCenter": "VASAI",
-            "startDate": "2026-01-01",
+            "serviceStartDate": "2026-01-01",
             "status": "ACTIVE",
             "origin": "MUMBAI",
             "gstNo": "27AABCU9603R1ZM",
@@ -188,7 +92,8 @@ examples:
             "customerType": "CUSTOMER",
             "registerType": "REGISTERED",
             "signatureFile": "https://example.com/sig.png",
-            "logoFile": "https://example.com/logo.png"
+            "logoFile": "https://example.com/logo.png",
+            "createDefaultShipper": true
           }
     response:
       status: 201
@@ -220,14 +125,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "910"
+          value: "872"
         - name: etag
-          value: W/"38e-zHdn2CvmT3hWLCbzKOyZ/qLLd7U"
+          value: W/"368-A1u0mj3yATdJYcQtvAX3bSAB3H8"
         - name: date
-          value: Tue, 24 Mar 2026 12:39:34 GMT
+          value: Thu, 09 Apr 2026 13:35:04 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -238,18 +145,17 @@ examples:
           {
             "success": true,
             "data": {
-              "id": 2,
+              "id": 1,
               "code": "CUST01",
               "name": "Acme Corp",
               "version": 1,
               "contactPerson": "John Doe",
               "address1": "100 Business Park",
               "address2": "Floor 3",
-              "pinCode": "400001",
-              "city": "Mumbai",
-              "state": "Maharashtra",
-              "telNo1": "022-12345678",
-              "telNo2": "022-87654321",
+              "pinCodeId": 3,
+              "countryId": 1,
+              "stateId": 3,
+              "telephone": "022-12345678",
               "mobile": "9876543210",
               "faxNo": "022-11112222",
               "billingState": "Maharashtra",
@@ -268,8 +174,8 @@ examples:
               "registerType": "REGISTERED",
               "signatureFile": "https://example.com/sig.png",
               "logoFile": "https://example.com/logo.png",
-              "createdAt": "2026-03-24T12:39:34.088Z",
-              "updatedAt": "2026-03-24T12:39:34.088Z",
+              "createdAt": "2026-04-09T13:35:04.656Z",
+              "updatedAt": "2026-04-09T13:35:04.656Z",
               "createdById": 1,
               "updatedById": null,
               "deletedAt": null,
@@ -280,5 +186,5 @@ examples:
 docs: |-
   Customer Master create. JWT + customer_master_add or customer_master_all.
 
-  Mandatory: code, name
-  Optional: contactPerson, address1, address2, pinCode, city, state, telNo1, telNo2, email, mobile, faxNo, billingState, serviceCenter, startDate, status (Active|Inactive), origin, gstNo, aadhaarNo, dobOnAadhaar, passportNo, panNo, tanNo, invoiceFormat, customerType (Customer|Vendor|Both), registerType (Registered|Unregistered), signatureFile, logoFile
+  Mandatory: name
+  Optional: code (if omitted, backend assigns next `CUST` + numeric suffix, e.g. `CUST000001`), contactPerson, address1, address2, pinCodeId, city, state, telNo1, telNo2, email, mobile, faxNo, billingState, serviceCenter, startDate, status (Active|Inactive), origin, gstNo, aadhaarNo, dobOnAadhaar, passportNo, panNo, tanNo, invoiceFormat, customerType (Customer|Vendor|Both), registerType (Registered|Unregistered), signatureFile, logoFile

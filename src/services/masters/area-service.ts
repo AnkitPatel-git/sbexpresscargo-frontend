@@ -14,9 +14,9 @@ export const areaService = {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
-        if (params?.search) queryParams.append('search', params.search);
-        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'areaName');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
 
         const response = await apiFetch(`${API_URL}/area-master?${queryParams.toString()}`, {
             headers: {

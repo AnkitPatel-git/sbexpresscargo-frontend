@@ -1,0 +1,20 @@
+info:
+  name: Rate Master - List
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/rate-master?page=1&limit=20&sortBy=fromDate&sortOrder=desc&fromDate=2026-03-01&toDate=2026-03-31"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: "List rate masters. Filters: updateType, fromDate, toDate, serviceCenter, origin, customer, product, vendor, destination, paymentType, zeroContract. JWT + master.rate.read."

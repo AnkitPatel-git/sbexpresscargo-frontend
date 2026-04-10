@@ -7,5 +7,10 @@ request:
   auth: inherit
 
 docs:
-  content: "Serviceable pincodes and other utilities. List/Search: all roles with permission; CRUD: Admin/Superuser."
+  content: |-
+    Umbrella for the **utility** domain in code (`UtilityModule`): **Users** (`/utilities/users/*`), **Roles** (`/utilities/roles/*`), **Permissions** (`/utilities/permissions/*`), and **Audit Logs** (`/utilities/audit-logs/*`).
+
+    Subfolders group Bruno requests only; paths mirror the backend. Login: `POST /utilities/users/login`.
+
+    **Serviceable Pincode** is implemented under the master module; collection requests are under **Masters → Serviceable Pincode** (`/utilities/serviceable-pincodes` and `/pincode`).
   type: text/markdown

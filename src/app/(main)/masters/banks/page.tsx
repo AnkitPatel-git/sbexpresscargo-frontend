@@ -46,8 +46,39 @@ export default function BanksPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["banks", page, debouncedSearch],
-        queryFn: () => bankService.getBanks({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            bankService.getBanks({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "bankCode",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await bankService.exportBanks({
+                search: debouncedSearch,
+                sortBy: "bankCode",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Banks exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export banks")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => bankService.deleteBank(id),
@@ -96,7 +127,19 @@ export default function BanksPage() {
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
                     <PermissionGuard permission="master.bank.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary"><FileUp className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.bank.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                            title="Export CSV"
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["banks"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

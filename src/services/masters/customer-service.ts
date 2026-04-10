@@ -14,9 +14,9 @@ export const customerService = {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
-        if (params?.search) queryParams.append('search', params.search);
-        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'code');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
 
         const response = await apiFetch(`${API_URL}/customer-master?${queryParams.toString()}`, {
             headers: {
@@ -65,7 +65,7 @@ export const customerService = {
 
     async updateCustomer(id: number, data: Partial<CustomerFormData>): Promise<CustomerSingleResponse> {
         const response = await apiFetch(`${API_URL}/customer-master/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -95,5 +95,112 @@ export const customerService = {
         }
 
         return response.json();
+    },
+
+    async getKycCustomers(params?: { page?: number; limit?: number; search?: string }) {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        queryParams.append('search', params?.search ?? '');
+        const response = await apiFetch(`${API_URL}/customer-master/kyc/customers?${queryParams.toString()}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch KYC customers');
+        return response.json();
+    },
+
+    async getCustomerKycDocuments(customerId: number) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch KYC documents');
+        return response.json();
+    },
+
+    async addCustomerKycDocument(
+        customerId: number,
+        body: {
+            docType: string;
+            documentNumber?: string;
+            fileUrl?: string;
+            expiryDate?: string;
+            verified?: boolean;
+        },
+    ) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add KYC document');
+        }
+        return response.json();
+    },
+
+    async updateCustomerKycDocument(
+        customerId: number,
+        docId: number | string,
+        body: Partial<{ docType: string; documentNumber: string; fileUrl: string; expiryDate: string; verified: boolean }>,
+    ) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents/${docId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update KYC document');
+        }
+        return response.json();
+    },
+
+    async deleteCustomerKycDocument(customerId: number, docId: number | string) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents/${docId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete KYC document');
+        }
+        return response.json();
+    },
+
+    /** Bruno: `GET /customer-master/export` — CSV; optional list-style query params. */
+    async exportCustomers(params?: {
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<{ blob: Blob; filename: string }> {
+        const queryParams = new URLSearchParams();
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'code');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+
+        const response = await apiFetch(`${API_URL}/customer-master/export?${queryParams.toString()}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export customers');
+        }
+
+        const cd = response.headers.get('content-disposition');
+        let filename = 'customers.csv';
+        const match = cd?.match(/filename="?([^";\n]+)"?/i);
+        if (match?.[1]) filename = match[1].trim();
+
+        const blob = await response.blob();
+        return { blob, filename };
     },
 };

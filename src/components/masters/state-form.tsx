@@ -29,14 +29,11 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { stateService } from '@/services/masters/state-service'
-import { zoneService } from '@/services/masters/zone-service'
+import { countryService } from '@/services/masters/country-service'
 import { State, StateFormData } from '@/types/masters/state'
-
 const stateSchema = z.object({
-    stateCode: z.string().min(2, "State code must be at least 2 characters"),
+    countryId: z.number().min(1, "Country is required"),
     stateName: z.string().min(3, "State name must be at least 3 characters"),
-    productType: z.string().min(1, "Product type is required"),
-    zoneId: z.number().min(1, "Zone is required"),
     gstAlias: z.string().min(2, "GST Alias is required"),
     unionTerritory: z.boolean(),
 })
@@ -50,18 +47,16 @@ export function StateForm({ initialData }: StateFormProps) {
     const queryClient = useQueryClient()
     const isEdit = !!initialData
 
-    const { data: zonesData } = useQuery({
-        queryKey: ['zones-list'],
-        queryFn: () => zoneService.getZones({ limit: 100 }),
+    const { data: countriesData } = useQuery({
+        queryKey: ['countries-list'],
+        queryFn: () => countryService.getCountries({ limit: 100 }),
     })
 
     const form = useForm<StateFormData>({
         resolver: zodResolver(stateSchema) as Resolver<StateFormData>,
         defaultValues: {
-            stateCode: initialData?.stateCode || '',
+            countryId: initialData?.countryId || 0,
             stateName: initialData?.stateName || '',
-            productType: initialData?.productType || 'DOMESTIC',
-            zoneId: initialData?.zoneId || 0,
             gstAlias: initialData?.gstAlias || '',
             unionTerritory: initialData?.unionTerritory || false,
         }
@@ -70,10 +65,8 @@ export function StateForm({ initialData }: StateFormProps) {
     useEffect(() => {
         if (initialData) {
             form.reset({
-                stateCode: initialData.stateCode,
+                countryId: initialData.countryId,
                 stateName: initialData.stateName,
-                productType: initialData.productType,
-                zoneId: initialData.zoneId,
                 gstAlias: initialData.gstAlias,
                 unionTerritory: initialData.unionTerritory,
             })
@@ -110,18 +103,6 @@ export function StateForm({ initialData }: StateFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
-                        name="stateCode"
-                        render={({ field }) => (
-                            <FloatingFormItem label="State Code">
-                                <FormControl>
-                                    <Input placeholder="e.g. DL, MH" {...field} className={FLOATING_INNER_CONTROL} />
-                                </FormControl>
-                            </FloatingFormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
                         name="gstAlias"
                         render={({ field }) => (
                             <FloatingFormItem label="GST Alias">
@@ -145,54 +126,31 @@ export function StateForm({ initialData }: StateFormProps) {
                     )}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="productType"
-                        render={({ field }) => (
-                            <FloatingFormItem label="Product Type">
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select type" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="DOMESTIC">Domestic</SelectItem>
-                                        <SelectItem value="INTERNATIONAL">International</SelectItem>
-                                        <SelectItem value="LOCAL">Local</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </FloatingFormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="zoneId"
-                        render={({ field }) => (
-                            <FloatingFormItem label="Zone">
-                                <Select
-                                    onValueChange={(val) => field.onChange(parseInt(val))}
-                                    value={field.value ? field.value.toString() : ""}
-                                >
-                                    <FormControl>
-                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select zone" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {zonesData?.data?.map((zone) => (
-                                            <SelectItem key={zone.id} value={zone.id.toString()}>
-                                                {zone.name} ({zone.code})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </FloatingFormItem>
-                        )}
-                    />
-                </div>
+                <FormField
+                    control={form.control}
+                    name="countryId"
+                    render={({ field }) => (
+                        <FloatingFormItem label="Country*">
+                            <Select
+                                onValueChange={(val) => field.onChange(parseInt(val))}
+                                value={field.value ? field.value.toString() : ""}
+                            >
+                                <FormControl>
+                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                        <SelectValue placeholder="Select country" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {countriesData?.data?.map((country) => (
+                                        <SelectItem key={country.id} value={country.id.toString()}>
+                                            {country.name} ({country.code})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FloatingFormItem>
+                    )}
+                />
 
                 <FormField
                     control={form.control}

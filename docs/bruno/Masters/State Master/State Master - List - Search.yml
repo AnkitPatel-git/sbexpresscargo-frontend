@@ -34,7 +34,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/state-master?page=1&limit=20&sortBy=stateCode&sortOrder=asc&search="
       method: GET
@@ -87,14 +87,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "604"
+          value: "333"
         - name: etag
-          value: W/"25c-l2ARMBdrhSv0lskngKQVXQ8wQVk"
+          value: W/"14d-GlhGBA4VyogyqD8t6tqCoWehgio"
         - name: date
-          value: Tue, 24 Mar 2026 12:17:09 GMT
+          value: Thu, 09 Apr 2026 13:13:06 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -106,33 +108,18 @@ examples:
             "success": true,
             "data": [
               {
-                "id": 1,
+                "id": 2,
                 "stateCode": "MH",
                 "stateName": "Maharashtra",
-                "productType": "LOCAL",
-                "zoneId": 1,
+                "countryId": 1,
                 "gstAlias": "MH",
                 "unionTerritory": false,
-                "createdAt": "2026-03-24T12:16:59.098Z",
-                "updatedAt": "2026-03-24T12:16:59.098Z",
+                "createdAt": "2026-04-09T12:58:55.559Z",
+                "updatedAt": "2026-04-09T12:58:55.559Z",
                 "createdById": 1,
                 "updatedById": null,
                 "deletedAt": null,
-                "deletedById": null,
-                "zone": {
-                  "id": 1,
-                  "name": "Domestic Zone 1",
-                  "code": "DOM1",
-                  "version": 1,
-                  "countryId": null,
-                  "zoneType": "DOMESTIC",
-                  "createdAt": "2026-03-24T12:10:30.907Z",
-                  "updatedAt": "2026-03-24T12:10:44.099Z",
-                  "createdById": 1,
-                  "updatedById": 1,
-                  "deletedAt": null,
-                  "deletedById": null
-                }
+                "deletedById": null
               }
             ],
             "meta": {

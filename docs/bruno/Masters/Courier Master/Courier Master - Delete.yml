@@ -16,5 +16,3 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
-
-docs: Courier Master soft-delete by id. JWT + courier_master_delete or courier_master_all.

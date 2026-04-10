@@ -1,7 +1,7 @@
 info:
   name: Service Center Master
   type: folder
-  seq: 9
+  seq: 7
 
 request:
   auth: inherit

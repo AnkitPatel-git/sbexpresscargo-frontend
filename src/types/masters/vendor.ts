@@ -1,20 +1,30 @@
 export interface Vendor {
     id: number;
-    vendorName: string;
     vendorCode: string;
+    vendorName: string;
     contactPerson: string;
     address1: string;
     address2: string | null;
-    pinCode: string;
-    city: string;
-    state: string;
-    telephone1: string;
-    telephone2: string | null;
+    pinCodeId: number | null;
+    countryId: number | null;
+    stateId: number | null;
+    zoneId: number | null;
+    telephone: string;
+    fax: string | null;
     email: string;
     mobile: string;
     website: string | null;
     gstNo: string | null;
+    mode: string | null;
+    fuelHead: string | null;
+    currency: string | null;
+    origin: string | null;
+    vendorZip: string | null;
     status: 'ACTIVE' | 'INACTIVE';
+    global: boolean;
+    gstType: string | null;
+    volumetricRound: number | null;
+    version?: number;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -24,21 +34,28 @@ export interface Vendor {
 }
 
 export interface VendorFormData {
+    vendorCode?: string;
     vendorName: string;
-    vendorCode: string;
     contactPerson: string;
     address1: string;
     address2?: string;
-    pinCode: string;
-    city: string;
-    state: string;
-    telephone1: string;
-    telephone2?: string;
+    /** Bruno create accepts pin code string or numeric id string */
+    pinCodeId?: string | number;
+    telephone: string;
+    fax?: string;
     email: string;
     mobile: string;
     website?: string;
     gstNo?: string;
+    mode?: string;
+    fuelHead?: string;
+    currency?: string;
+    origin?: string;
+    vendorZip?: string;
     status: 'ACTIVE' | 'INACTIVE';
+    global?: boolean;
+    gstType?: string;
+    volumetricRound?: number;
 }
 
 export interface VendorListResponse {

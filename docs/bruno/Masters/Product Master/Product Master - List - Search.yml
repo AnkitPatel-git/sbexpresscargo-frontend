@@ -34,7 +34,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/product-master?page=1&limit=20&sortBy=productCode&sortOrder=asc&search="
       method: GET
@@ -87,14 +87,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "810"
+          value: "401"
         - name: etag
-          value: W/"32a-k75uo4enURcbKLm8Eo7oWCgZ5Z8"
+          value: W/"191-B9h0mqHh7EfDyCPwEIJgaFCyzt0"
         - name: date
-          value: Tue, 24 Mar 2026 12:03:52 GMT
+          value: Thu, 09 Apr 2026 13:17:35 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -107,37 +109,16 @@ examples:
             "data": [
               {
                 "id": 1,
-                "productCode": "AIR_STD",
-                "productName": "Air Standard",
-                "version": 1,
-                "productType": "DOMESTIC",
-                "productService": null,
-                "fuelCharge": false,
-                "gstReverse": false,
-                "docType": "NDOX",
-                "status": "ACTIVE",
-                "groupType": "AIR",
-                "createdAt": "2026-03-19T08:24:50.242Z",
-                "updatedAt": "2026-03-21T06:22:04.897Z",
-                "createdById": null,
-                "updatedById": null,
-                "deletedAt": null,
-                "deletedById": null
-              },
-              {
-                "id": 2,
-                "productCode": "PROD01",
+                "productCode": "PROD03",
                 "productName": "Express Product",
                 "version": 1,
                 "productType": "DOMESTIC",
-                "productService": "Express",
                 "fuelCharge": false,
                 "gstReverse": false,
                 "docType": "DOX",
                 "status": "ACTIVE",
-                "groupType": "AIR",
-                "createdAt": "2026-03-20T09:47:51.300Z",
-                "updatedAt": "2026-03-20T09:47:51.300Z",
+                "createdAt": "2026-04-09T13:17:30.398Z",
+                "updatedAt": "2026-04-09T13:17:30.398Z",
                 "createdById": 1,
                 "updatedById": null,
                 "deletedAt": null,
@@ -147,7 +128,7 @@ examples:
             "meta": {
               "page": 1,
               "limit": 20,
-              "total": 2,
+              "total": 1,
               "totalPages": 1
             }
           }

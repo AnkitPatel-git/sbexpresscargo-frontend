@@ -1,8 +1,11 @@
+export type BankStatus = 'ACTIVE' | 'INACTIVE';
+
+/** Bank Master — Bruno `docs/bruno/Masters/Bank Master/*`. */
 export interface Bank {
     id: number;
     bankCode: string;
     bankName: string;
-    status: 'ACTIVE' | 'INACTIVE' | string;
+    status: BankStatus;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -14,7 +17,7 @@ export interface Bank {
 export interface BankFormData {
     bankCode: string;
     bankName: string;
-    status: string;
+    status: BankStatus;
 }
 
 export interface BankListResponse {
@@ -31,6 +34,6 @@ export interface BankListResponse {
 
 export interface BankSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Bank;
 }

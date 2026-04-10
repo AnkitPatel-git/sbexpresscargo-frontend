@@ -17,26 +17,6 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-examples:
-  - name: "200"
-    request:
-      url: "{{baseUrl}}/transaction/shipment/pieces-template"
-      method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{accessToken}}
-    response:
-      status: 200
-      statusText: OK
-      headers:
-        - name: content-type
-          value: text/csv; charset=utf-8
-      body:
-        type: text
-        data: |-
-          childAwbNo,actualWeightPerPc,pieces,length,width,height,division,volumetricWeight,chargeWeight
-          AWB123456-1,0.5,1,10,10,10,5000,0.2,0.5
-
 docs: |-
   Download CSV template for shipment piece rows.
 

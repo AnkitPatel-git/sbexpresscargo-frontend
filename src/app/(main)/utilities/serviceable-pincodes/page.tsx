@@ -59,8 +59,39 @@ export default function ServiceablePincodesPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["serviceable-pincodes", page, debouncedSearch],
-        queryFn: () => serviceablePincodeService.getServiceablePincodes({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            serviceablePincodeService.getServiceablePincodes({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "pinCode",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await serviceablePincodeService.exportServiceablePincodes({
+                search: debouncedSearch,
+                sortBy: "pinCode",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Serviceable pincodes exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export serviceable pincodes")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => serviceablePincodeService.deleteServiceablePincode(id),
@@ -113,9 +144,19 @@ export default function ServiceablePincodesPage() {
                             <FilePlus className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
-                        <FileUp className="h-4 w-4" />
-                    </Button>
+                    <PermissionGuard permission="master.area.create">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["serviceable-pincodes"], type: "active" })}>
                         <RefreshCw className="h-4 w-4" />
                     </Button>

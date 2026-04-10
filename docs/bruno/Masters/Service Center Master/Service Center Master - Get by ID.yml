@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/service-center-master/1"
+  url: "{{baseUrl}}/service-center-master/3"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
@@ -18,9 +18,9 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
-      url: "{{baseUrl}}/service-center-master/1"
+      url: "{{baseUrl}}/service-center-master/3"
       method: GET
       headers:
         - name: Authorization
@@ -55,14 +55,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "472"
+          value: "542"
         - name: etag
-          value: W/"1d8-hIAbeSMrd0Lj9PLezLMczeNR3iA"
+          value: W/"21e-zm5jlA+fZArXXiB7KMvrKEpmXZU"
         - name: date
-          value: Tue, 24 Mar 2026 12:30:25 GMT
+          value: Thu, 09 Apr 2026 14:12:51 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -73,28 +75,26 @@ examples:
           {
             "success": true,
             "data": {
-              "id": 1,
-              "code": "HQ",
-              "name": "Headquarters",
-              "subName": null,
-              "address1": null,
-              "address2": null,
-              "address3": null,
-              "address4": null,
-              "destination": null,
-              "state": null,
-              "telephone": null,
-              "email": null,
+              "id": 3,
+              "code": "SC001",
+              "name": "Mumbai Service Center",
+              "subName": "Mumbai SC",
+              "address1": "456 Service Rd",
+              "address2": "Floor 1",
+              "telephone": "022-11112222",
+              "email": "sc@sbexpress.com",
               "icnNo": null,
               "stNo": null,
-              "pinCode": null,
-              "companyLogo": null,
-              "signatoryLogo": null,
+              "pinCodeId": 3,
+              "countryId": 1,
+              "stateId": 3,
+              "companyLogo": "https://example.com/logo.png",
+              "signatoryLogo": "https://example.com/sign.png",
               "version": 1,
               "localBranchId": null,
-              "createdAt": "2026-03-19T08:24:50.232Z",
-              "updatedAt": "2026-03-21T06:22:04.889Z",
-              "createdById": null,
+              "createdAt": "2026-04-09T14:06:21.902Z",
+              "updatedAt": "2026-04-09T14:06:21.955Z",
+              "createdById": 1,
               "updatedById": null,
               "deletedAt": null,
               "deletedById": null

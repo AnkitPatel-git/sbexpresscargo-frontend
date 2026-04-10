@@ -17,4 +17,4 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-docs: mobile.lookup.read — active only (inActive=false)
+docs: mobile.lookup.read

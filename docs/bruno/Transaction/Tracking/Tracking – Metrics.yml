@@ -17,4 +17,31 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/transaction/tracking/metrics"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: application/json; charset=utf-8
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "totalEvents": 0,
+              "failedEvents": 0,
+              "ignoredEvents": 0,
+              "duplicateEvents": 0
+            }
+          }
+
 docs: Tracking engine metrics. JWT + tracking_view or tracking_all.

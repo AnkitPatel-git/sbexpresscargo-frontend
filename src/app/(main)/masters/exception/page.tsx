@@ -47,8 +47,39 @@ export default function ExceptionPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["exceptions", page, debouncedSearch],
-        queryFn: () => exceptionService.getExceptions({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            exceptionService.getExceptions({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await exceptionService.exportExceptions({
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Exceptions exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export exceptions")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => exceptionService.deleteException(id),
@@ -99,7 +130,19 @@ export default function ExceptionPage() {
                     <PermissionGuard permission="master.exception.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import"><FileUp className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.exception.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["exceptions"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

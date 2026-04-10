@@ -1,0 +1,32 @@
+info:
+  name: Create Tracking Summary
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/tracking-summary"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "shipmentId": 1,
+        "firstPickupAt": "2026-04-09T10:00:00.000Z",
+        "firstInTransitAt": "2026-04-09T13:00:00.000Z",
+        "firstOfdAt": "2026-04-10T08:00:00.000Z",
+        "deliveredAt": "2026-04-10T14:00:00.000Z",
+        "totalTransitTime": 1680,
+        "totalDelayTime": 30
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

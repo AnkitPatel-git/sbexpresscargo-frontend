@@ -17,4 +17,27 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-docs: Dead-letter vendor tracking logs. JWT + tracking_view or tracking_all.
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/transaction/tracking/dead-letters?limit=100"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: application/json; charset=utf-8
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Dead-letter logs retrieved successfully",
+            "data": []
+          }
+
+docs: Dead-letter vendor tracking logs — unprocessable vendor webhook payloads. JWT + tracking_view or tracking_all.

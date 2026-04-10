@@ -49,6 +49,8 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
@@ -56,7 +58,7 @@ examples:
         - name: etag
           value: W/"5a-lbKakX29uGYhzAayW8U3zYhobLY"
         - name: date
-          value: Sat, 21 Mar 2026 05:56:19 GMT
+          value: Thu, 09 Apr 2026 11:50:30 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive

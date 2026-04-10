@@ -1,8 +1,25 @@
-export type ChargeCalculationBase = 'CHARGE_WEIGHT' | 'FLAT';
-export type ChargeTypeEnums = 'FREIGHT' | 'AIRWAYBILL' | 'FUEL_SURCHARGE' | 'DOCUMENTATION' | 'OTHER';
+/** Charge Master — Bruno `docs/bruno/Masters/Charge Master/*`. */
+
+export type ChargeCalculationBase =
+    | 'CHARGE_WEIGHT'
+    | 'FLAT'
+    | 'ACTUAL_WEIGHT'
+    | 'FREIGHT'
+    | 'SHIPMENT_VALUE';
+
+/** Prisma `ChargeType` */
+export type ChargeTypeEnums =
+    | 'AIRWAYBILL'
+    | 'FREIGHT'
+    | 'FUEL'
+    | 'OBC'
+    | 'FLAT'
+    | 'OTHER';
 
 export interface Charge {
     id: number;
+    /** Optimistic locking — Bruno update requires `version`. */
+    version?: number;
     code: string;
     name: string;
     chargeType: ChargeTypeEnums | string | null;
@@ -22,8 +39,9 @@ export interface Charge {
     deletedById: number | null;
 }
 
+/** Create body — Bruno: `code` optional (backend may assign CHG+n). */
 export interface ChargeFormData {
-    code: string;
+    code?: string;
     name: string;
     chargeType?: ChargeTypeEnums | string;
     calculationBase: ChargeCalculationBase;
@@ -36,9 +54,10 @@ export interface ChargeFormData {
     multipleCharges: boolean;
 }
 
+/** Bruno list/search — includes `meta`. */
 export interface ChargeListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Charge[];
     meta: {
         total: number;
@@ -50,6 +69,13 @@ export interface ChargeListResponse {
 
 export interface ChargeSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Charge;
+}
+
+/** Bruno `GET /charge-master/by-product/:productId` — array only, no pagination meta. */
+export interface ChargeByProductResponse {
+    success: boolean;
+    message?: string;
+    data: Charge[];
 }

@@ -4,10 +4,10 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/form"
 import {
     FloatingFormItem,
-    FLOATING_INNER_COMBO,
     FLOATING_INNER_CONTROL,
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
@@ -29,42 +28,35 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
 import { FormSection } from "@/components/ui/form-section"
-import { cn } from "@/lib/utils"
+import { Checkbox } from "@/components/ui/checkbox"
 
 import { vendorService } from "@/services/masters/vendor-service"
-import { stateService } from "@/services/masters/state-service"
 import { Vendor } from "@/types/masters/vendor"
+import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
 
 const vendorSchema = z.object({
-    vendorCode: z.string().min(2, "Code must be at least 2 characters"),
+    vendorCode: optionalMasterCode(2),
     vendorName: z.string().min(3, "Name must be at least 3 characters"),
     contactPerson: z.string().min(3, "Contact person is required"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
     address2: z.string().optional(),
-    pinCode: z.string().min(6, "Pin code must be 6 characters"),
-    city: z.string().min(2, "City is required"),
-    state: z.string().min(1, "State is required"),
-    telephone1: z.string().min(10, "Telephone must be at least 10 characters"),
-    telephone2: z.string().optional(),
+    pinCodeId: z.string().optional().or(z.literal("")),
+    telephone: z.string().min(10, "Telephone must be at least 10 characters"),
+    fax: z.string().optional().or(z.literal("")),
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),
     gstNo: z.string().optional(),
+    mode: z.string().optional().or(z.literal("")),
+    fuelHead: z.string().optional().or(z.literal("")),
+    currency: z.string().optional().or(z.literal("")),
+    origin: z.string().optional().or(z.literal("")),
+    vendorZip: z.string().optional().or(z.literal("")),
     status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+    global: z.boolean().default(false),
+    gstType: z.string().optional().or(z.literal("")),
+    volumetricRound: z.coerce.number().optional(),
 })
 
 type VendorFormValues = z.infer<typeof vendorSchema>
@@ -77,12 +69,6 @@ export function VendorForm({ initialData }: VendorFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
-    const [stateOpen, setStateOpen] = useState(false)
-
-    const { data: statesResponse } = useQuery({
-        queryKey: ["states-list"],
-        queryFn: () => stateService.getStates({ limit: 100 }),
-    })
 
     const form = useForm<VendorFormValues>({
         resolver: zodResolver(vendorSchema) as any,
@@ -92,16 +78,22 @@ export function VendorForm({ initialData }: VendorFormProps) {
             contactPerson: "",
             address1: "",
             address2: "",
-            pinCode: "",
-            city: "",
-            state: "",
-            telephone1: "",
-            telephone2: "",
+            pinCodeId: "",
+            telephone: "",
+            fax: "",
             email: "",
             mobile: "",
             website: "",
             gstNo: "",
+            mode: "",
+            fuelHead: "",
+            currency: "",
+            origin: "",
+            vendorZip: "",
             status: "ACTIVE",
+            global: false,
+            gstType: "",
+            volumetricRound: undefined,
         },
     })
 
@@ -113,26 +105,33 @@ export function VendorForm({ initialData }: VendorFormProps) {
                 contactPerson: initialData.contactPerson,
                 address1: initialData.address1,
                 address2: initialData.address2 || "",
-                pinCode: initialData.pinCode,
-                city: initialData.city,
-                state: initialData.state,
-                telephone1: initialData.telephone1,
-                telephone2: initialData.telephone2 || "",
+                pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : "",
+                telephone: initialData.telephone,
+                fax: initialData.fax || "",
                 email: initialData.email,
                 mobile: initialData.mobile,
                 website: initialData.website || "",
                 gstNo: initialData.gstNo || "",
+                mode: initialData.mode || "",
+                fuelHead: initialData.fuelHead || "",
+                currency: initialData.currency || "",
+                origin: initialData.origin || "",
+                vendorZip: initialData.vendorZip || "",
                 status: initialData.status,
+                global: initialData.global ?? false,
+                gstType: initialData.gstType || "",
+                volumetricRound: initialData.volumetricRound ?? undefined,
             })
         }
     }, [initialData, form])
 
     const mutation = useMutation({
         mutationFn: (data: VendorFormValues) => {
+            const payload = omitEmptyCodeFields(data, ["vendorCode"]) as VendorFormValues
             if (isEdit && initialData) {
-                return vendorService.updateVendor(initialData.id, data as any)
+                return vendorService.updateVendor(initialData.id, { ...payload, version: initialData.version ?? 1 } as any)
             }
-            return vendorService.createVendor(data as any)
+            return vendorService.createVendor(payload as any)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["vendors"] })
@@ -172,9 +171,9 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control as any}
                                     name="vendorCode"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Vendor Code*">
+                                        <FloatingFormItem label="Vendor Code (optional)">
                                             <FormControl>
-                                                <Input placeholder="e.g. V001" {...field} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="Blank = auto-generate" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -185,7 +184,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     render={({ field }) => (
                                         <FloatingFormItem label="Vendor Name*">
                                             <FormControl>
-                                                <Input placeholder="e.g. Express Vendor" {...field} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="e.g. Bluedart" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -262,9 +261,9 @@ export function VendorForm({ initialData }: VendorFormProps) {
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control as any}
-                                    name="telephone1"
+                                    name="telephone"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Telephone 1*">
+                                        <FloatingFormItem label="Telephone*">
                                             <FormControl>
                                                 <Input placeholder="Office number" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -273,9 +272,9 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 />
                                 <FormField
                                     control={form.control as any}
-                                    name="telephone2"
+                                    name="fax"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Telephone 2">
+                                        <FloatingFormItem label="Fax">
                                             <FormControl>
                                                 <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -296,9 +295,8 @@ export function VendorForm({ initialData }: VendorFormProps) {
                             />
                     </FormSection>
 
-                    {/* Section 3: Address Details */}
+                    {/* Section 3: Address & Statutory */}
                     <FormSection
-                        className="md:col-span-2"
                         title={
                             <span className="flex items-center gap-2">
                                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-semibold">
@@ -307,125 +305,167 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 Address & Statutory
                             </span>
                         }
+                        contentClassName="space-y-4"
                     >
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <FormField
-                                        control={form.control as any}
-                                        name="address1"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Address Line 1*">
-                                                <FormControl>
-                                                    <Input placeholder="Street address" {...field} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control as any}
-                                        name="address2"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Address Line 2">
-                                                <FormControl>
-                                                    <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormField
-                                            control={form.control as any}
-                                            name="city"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="City*">
-                                                    <FormControl>
-                                                        <Input placeholder="City" {...field} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control as any}
-                                            name="pinCode"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Pin Code*">
-                                                    <FormControl>
-                                                        <Input placeholder="6 digits" {...field} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <FormField
-                                        control={form.control as any}
-                                        name="state"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="State*" itemClassName="flex flex-col">
-                                                <Popover open={stateOpen} onOpenChange={setStateOpen}>
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button
-                                                                variant="outline"
-                                                                role="combobox"
-                                                                className={cn(
-                                                                    FLOATING_INNER_COMBO,
-                                                                    !field.value && "text-muted-foreground"
-                                                                )}
-                                                            >
-                                                                <span className="truncate">{field.value || "Select state"}</span>
-                                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                                        <Command>
-                                                            <CommandInput placeholder="Search state..." />
-                                                            <CommandList>
-                                                                <CommandEmpty>No state found.</CommandEmpty>
-                                                                <CommandGroup>
-                                                                    {statesResponse?.data?.map((state) => (
-                                                                        <CommandItem
-                                                                            value={state.stateName}
-                                                                            key={state.id}
-                                                                            onSelect={() => {
-                                                                                form.setValue("state", state.stateName)
-                                                                                setStateOpen(false)
-                                                                            }}
-                                                                        >
-                                                                            <Check
-                                                                                className={cn(
-                                                                                    "mr-2 h-4 w-4",
-                                                                                    state.stateName === field.value
-                                                                                        ? "opacity-100"
-                                                                                        : "opacity-0"
-                                                                                )}
-                                                                            />
-                                                                            {state.stateName}
-                                                                        </CommandItem>
-                                                                    ))}
-                                                                </CommandGroup>
-                                                            </CommandList>
-                                                        </Command>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control as any}
-                                        name="gstNo"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="GST Number">
-                                                <FormControl>
-                                                    <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                </div>
+                            <FormField
+                                control={form.control as any}
+                                name="address1"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Address Line 1*">
+                                        <FormControl>
+                                            <Input placeholder="Street address" {...field} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control as any}
+                                name="address2"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Address Line 2">
+                                        <FormControl>
+                                            <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control as any}
+                                    name="pinCodeId"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Pin Code ID">
+                                            <FormControl>
+                                                <Input placeholder="e.g. 486001" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control as any}
+                                    name="vendorZip"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Vendor Zip">
+                                            <FormControl>
+                                                <Input placeholder="e.g. 400004" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
                             </div>
+                            <FormField
+                                control={form.control as any}
+                                name="gstNo"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="GST Number">
+                                        <FormControl>
+                                            <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                    </FormSection>
+
+                    {/* Section 4: Vendor Config */}
+                    <FormSection
+                        title={
+                            <span className="flex items-center gap-2">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-semibold">
+                                    4
+                                </span>
+                                Vendor Settings
+                            </span>
+                        }
+                        contentClassName="space-y-4"
+                    >
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control as any}
+                                    name="mode"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Mode">
+                                            <FormControl>
+                                                <Input placeholder="e.g. AIR" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control as any}
+                                    name="fuelHead"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Fuel Head">
+                                            <FormControl>
+                                                <Input placeholder="e.g. ADVANCED" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control as any}
+                                    name="currency"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Currency">
+                                            <FormControl>
+                                                <Input placeholder="e.g. INR" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control as any}
+                                    name="origin"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Origin">
+                                            <FormControl>
+                                                <Input placeholder="e.g. MUMBAI" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control as any}
+                                    name="gstType"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="GST Type">
+                                            <FormControl>
+                                                <Input placeholder="e.g. FORWARD" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control as any}
+                                    name="volumetricRound"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Volumetric Round">
+                                            <FormControl>
+                                                <Input type="number" placeholder="e.g. 5000" {...field} value={field.value ?? ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                            </div>
+                            <FormField
+                                control={form.control as any}
+                                name="global"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Global">
+                                        <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={(v) => field.onChange(Boolean(v))}
+                                                />
+                                            </FormControl>
+                                        </div>
+                                    </FloatingFormItem>
+                                )}
+                            />
                     </FormSection>
                 </div>
 

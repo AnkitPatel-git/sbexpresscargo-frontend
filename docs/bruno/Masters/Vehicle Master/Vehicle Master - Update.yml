@@ -1,0 +1,32 @@
+info:
+  name: Vehicle Master - Update
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/vehicle-master/{{vehicleId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "vehicleNo": "MH01AB1234",
+        "vehicleType": "LARGE",
+        "ownerName": "Updated Owner",
+        "driverName": "Updated Driver",
+        "driverUserId": 1,
+        "capacityKg": 2600,
+        "status": "ACTIVE"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

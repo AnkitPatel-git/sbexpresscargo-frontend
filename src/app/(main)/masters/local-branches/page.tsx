@@ -69,8 +69,39 @@ export default function LocalBranchesPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["local-branches", page, debouncedSearch],
-        queryFn: () => localBranchService.getLocalBranches({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            localBranchService.getLocalBranches({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "branchCode",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await localBranchService.exportLocalBranches({
+                search: debouncedSearch,
+                sortBy: "branchCode",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Local branches exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export local branches")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => localBranchService.deleteLocalBranch(id),
@@ -112,7 +143,7 @@ export default function LocalBranchesPage() {
             if (colFilters.branchName && !(branch.name || "").toLowerCase().includes(colFilters.branchName.toLowerCase())) return false
             if (colFilters.city && !(branch.city || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
             if (colFilters.state && !(branch.state || "").toLowerCase().includes(colFilters.state.toLowerCase())) return false
-            if (colFilters.telephone && !(branch.telephone1 || "").toLowerCase().includes(colFilters.telephone.toLowerCase())) return false
+            if (colFilters.telephone && !(branch.telephone || "").toLowerCase().includes(colFilters.telephone.toLowerCase())) return false
             if (colFilters.gstNo && !(branch.gstNo || "").toLowerCase().includes(colFilters.gstNo.toLowerCase())) return false
             return true
         }) ?? []
@@ -126,9 +157,19 @@ export default function LocalBranchesPage() {
                             <FilePlus className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
-                        <FileUp className="h-4 w-4" />
-                    </Button>
+                    <PermissionGuard permission="master.local_branch.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["local-branches"], type: "active" })}>
                         <RefreshCw className="h-4 w-4" />
                     </Button>
@@ -181,7 +222,7 @@ export default function LocalBranchesPage() {
                                     <TableCell className="font-medium text-foreground">{branch.name}</TableCell>
                                     <TableCell className="text-foreground">{branch.city}</TableCell>
                                     <TableCell className="text-foreground">{branch.state}</TableCell>
-                                    <TableCell className="text-foreground">{branch.telephone1}</TableCell>
+                                    <TableCell className="text-foreground">{branch.telephone || "-"}</TableCell>
                                     <TableCell className="text-foreground">{branch.gstNo}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">

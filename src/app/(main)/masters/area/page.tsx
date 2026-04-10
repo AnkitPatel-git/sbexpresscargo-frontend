@@ -30,6 +30,12 @@ import { cn } from "@/lib/utils"
 
 import { areaService } from "@/services/masters/area-service"
 import { Area } from "@/types/masters/area"
+
+function areaPinDisplay(area: Area): string {
+    const p = area.serviceablePincode ?? area.pinCode
+    if (p) return `${p.pinCode} - ${p.pinCodeName}`
+    return area.pinCodeId != null ? String(area.pinCodeId) : "—"
+}
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
 
@@ -40,13 +46,20 @@ export default function AreaPage() {
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({ areaName: "", serviceCenter: "", destination: "" })
+    const [colFilters, setColFilters] = useState({ areaName: "", pinCode: "" })
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
         queryKey: ["areas", page, debouncedSearch],
-        queryFn: () => areaService.getAreas({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            areaService.getAreas({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "areaName",
+                sortOrder: "asc",
+            }),
     })
 
     const deleteMutation = useMutation({
@@ -85,10 +98,9 @@ export default function AreaPage() {
     const to = Math.min(page * limit, total)
     const filteredRows =
         data?.data.filter((area) => {
-            const serviceCenterName = typeof area.serviceCenter === "object" ? area.serviceCenter.name : area.serviceCenter || area.serviceCenterId
+            const pinDisplay = areaPinDisplay(area)
             if (colFilters.areaName && !area.areaName.toLowerCase().includes(colFilters.areaName.toLowerCase())) return false
-            if (colFilters.serviceCenter && !String(serviceCenterName).toLowerCase().includes(colFilters.serviceCenter.toLowerCase())) return false
-            if (colFilters.destination && !(area.destination || "").toLowerCase().includes(colFilters.destination.toLowerCase())) return false
+            if (colFilters.pinCode && !pinDisplay.toLowerCase().includes(colFilters.pinCode.toLowerCase())) return false
             return true
         }) ?? []
 
@@ -115,28 +127,25 @@ export default function AreaPage() {
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground">Area Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Service Center <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Destination <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Pin Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                         <TableRow className="border-b border-border bg-card hover:bg-card">
                             <TableHead className="p-2"><Input placeholder="Area Name" className="h-8 border-border bg-background text-xs" value={colFilters.areaName} onChange={(e) => setColFilters((f) => ({ ...f, areaName: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Service Center" className="h-8 border-border bg-background text-xs" value={colFilters.serviceCenter} onChange={(e) => setColFilters((f) => ({ ...f, serviceCenter: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Destination" className="h-8 border-border bg-background text-xs" value={colFilters.destination} onChange={(e) => setColFilters((f) => ({ ...f, destination: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Pin Code" className="h-8 border-border bg-background text-xs" value={colFilters.pinCode} onChange={(e) => setColFilters((f) => ({ ...f, pinCode: e.target.value }))} /></TableHead>
                             <TableHead className="p-2" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">Loading areas...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">Loading areas...</TableCell></TableRow>
                         ) : filteredRows.length === 0 ? (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No areas found.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No areas found.</TableCell></TableRow>
                         ) : (
                             filteredRows.map((area: Area, index) => (
                                 <TableRow key={area.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{area.areaName}</TableCell>
-                                    <TableCell className="text-foreground">{typeof area.serviceCenter === "object" ? area.serviceCenter.name : area.serviceCenter || area.serviceCenterId}</TableCell>
-                                    <TableCell className="text-foreground">{area.destination}</TableCell>
+                                    <TableCell className="text-foreground">{areaPinDisplay(area)}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
                                             <PermissionGuard permission="master.area.update">

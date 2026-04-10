@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -31,12 +31,14 @@ import { countryService } from '@/services/masters/country-service'
 import { Country, CountryFormData } from '@/types/masters/country'
 
 const countrySchema = z.object({
-    code: z.string().min(2, "Country code must be at least 2 characters"),
+    code: z.string().trim().min(2, "Country code must be at least 2 characters"),
     name: z.string().min(3, "Country name must be at least 3 characters"),
     weightUnit: z.string().min(1, "Weight unit is required"),
-    currency: z.string().min(1, "Currency is required"),
-    isdCode: z.string().min(1, "ISD Code is required"),
+    currency: z.string().optional(),
+    isdCode: z.string().optional(),
 })
+
+type CountryFormValues = z.infer<typeof countrySchema>
 
 interface CountryFormProps {
     initialData?: Country | null
@@ -47,35 +49,42 @@ export function CountryForm({ initialData }: CountryFormProps) {
     const queryClient = useQueryClient()
     const isEdit = !!initialData
 
-    const form = useForm<CountryFormData>({
-        resolver: zodResolver(countrySchema),
+    const form = useForm<CountryFormValues>({
+        resolver: zodResolver(countrySchema) as Resolver<CountryFormValues>,
         defaultValues: {
-            code: initialData?.code || '',
+            code: initialData?.code?.trim() || '',
             name: initialData?.name || '',
             weightUnit: initialData?.weightUnit || 'KGS',
-            currency: initialData?.currency || '',
-            isdCode: initialData?.isdCode || '',
+            currency: initialData?.currency ?? '',
+            isdCode: initialData?.isdCode ?? '',
         }
     })
 
     useEffect(() => {
         if (initialData) {
             form.reset({
-                code: initialData.code,
+                code: initialData.code.trim(),
                 name: initialData.name,
                 weightUnit: initialData.weightUnit,
-                currency: initialData.currency,
-                isdCode: initialData.isdCode,
+                currency: initialData.currency ?? '',
+                isdCode: initialData.isdCode ?? '',
             })
         }
     }, [initialData, form])
 
     const mutation = useMutation({
-        mutationFn: (data: CountryFormData) => {
-            if (isEdit && initialData) {
-                return countryService.updateCountry(initialData.id, data)
+        mutationFn: (data: CountryFormValues) => {
+            const payload: CountryFormData = {
+                code: data.code.trim(),
+                name: data.name,
+                weightUnit: data.weightUnit,
+                ...(data.currency?.trim() ? { currency: data.currency.trim() } : {}),
+                ...(data.isdCode?.trim() ? { isdCode: data.isdCode.trim() } : {}),
             }
-            return countryService.createCountry(data)
+            if (isEdit && initialData) {
+                return countryService.updateCountry(initialData.id, payload)
+            }
+            return countryService.createCountry(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['countries'] })
@@ -90,7 +99,7 @@ export function CountryForm({ initialData }: CountryFormProps) {
         }
     })
 
-    function onSubmit(data: CountryFormData) {
+    function onSubmit(data: CountryFormValues) {
         mutation.mutate(data)
     }
 
@@ -102,9 +111,9 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FloatingFormItem label="Country Code">
+                            <FloatingFormItem label={<>Country Code <span className="text-red-500">*</span></>}>
                                 <FormControl>
-                                    <Input placeholder="e.g. IND, USA" {...field} className={FLOATING_INNER_CONTROL} />
+                                    <Input placeholder="e.g. IN" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
                             </FloatingFormItem>
                         )}
@@ -114,7 +123,7 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                            <FloatingFormItem label="Country Name">
+                            <FloatingFormItem label={<>Country Name <span className="text-red-500">*</span></>}>
                                 <FormControl>
                                     <Input placeholder="e.g. India, United States" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
@@ -128,7 +137,7 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="weightUnit"
                         render={({ field }) => (
-                            <FloatingFormItem label="Weight Unit">
+                            <FloatingFormItem label={<>Weight Unit <span className="text-red-500">*</span></>}>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -148,7 +157,7 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         control={form.control}
                         name="currency"
                         render={({ field }) => (
-                            <FloatingFormItem label="Currency">
+                            <FloatingFormItem label="Currency (optional)">
                                 <FormControl>
                                     <Input placeholder="e.g. INR, USD" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
@@ -161,7 +170,7 @@ export function CountryForm({ initialData }: CountryFormProps) {
                     control={form.control}
                     name="isdCode"
                     render={({ field }) => (
-                        <FloatingFormItem label="ISD Code">
+                        <FloatingFormItem label="ISD Code (optional)">
                             <FormControl>
                                 <Input placeholder="e.g. +91, +1" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>

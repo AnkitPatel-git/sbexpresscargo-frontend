@@ -17,6 +17,10 @@ http:
       {
         "drsNo": "DRS-001",
         "drsAt": "2026-03-20T10:00:00.000Z",
+        "courierId": 1,
+        "areaId": 1,
+        "serviceCenterId": 1,
+        "remark": "Out for delivery",
         "awbNos": ["AWB001"]
       }
   auth: inherit

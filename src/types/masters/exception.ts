@@ -1,3 +1,5 @@
+/** Exception Master — Bruno `docs/bruno/Masters/Exception Master/*`. */
+
 export type ExceptionType = 'UNDELIVERED' | 'DELIVERED';
 
 export interface ExceptionMaster {
@@ -25,7 +27,7 @@ export interface ExceptionFormData {
 
 export interface ExceptionListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: ExceptionMaster[];
     meta: {
         total: number;
@@ -37,6 +39,6 @@ export interface ExceptionListResponse {
 
 export interface ExceptionSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: ExceptionMaster;
 }

@@ -1,13 +1,15 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { OperationSummary, SalesSummary, ServiceCenterSalesSummary } from '@/types/dashboard';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
 const getAuthHeaders = () => ({
     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
     'Content-Type': 'application/json'
 });
 
 class DashboardService {
-    private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/dashboard`;
+    private readonly baseUrl = `${API_URL}/dashboard`;
 
     async getOperationSummary(params: { fromDate: string; toDate: string; serviceCenterId?: number }): Promise<{ success: boolean; data: OperationSummary }> {
         const queryParams = new URLSearchParams({

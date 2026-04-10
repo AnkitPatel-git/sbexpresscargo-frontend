@@ -24,6 +24,7 @@ export const manifestFormSchema = z.object({
     manifestDate: z.string().min(1, "Manifest Date is required"),
     manifestTime: z.string().optional(),
     location: z.string().optional(),
+    serviceCenter: z.string().optional(),
     serviceCenterId: z.number().optional(),
     connectStation: z.string().optional(),
     vendorId: z.number().optional(),
@@ -48,6 +49,7 @@ export interface Manifest {
     status: string;
     version: number;
     location?: string;
+    serviceCenter?: string;
     serviceCenterId?: number;
     connectStation?: string;
     vendorId?: number;

@@ -59,10 +59,8 @@ export default function StatesPage() {
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
     const [colFilters, setColFilters] = useState({
-        code: "",
         stateName: "",
-        productType: "",
-        zone: "",
+        country: "",
         gstAlias: "",
     })
 
@@ -109,10 +107,12 @@ export default function StatesPage() {
     const to = Math.min(page * limit, total)
     const filteredRows =
         data?.data.filter((state: State) => {
-            if (colFilters.code && !state.stateCode.toLowerCase().includes(colFilters.code.toLowerCase())) return false
             if (colFilters.stateName && !state.stateName.toLowerCase().includes(colFilters.stateName.toLowerCase())) return false
-            if (colFilters.productType && !state.productType.toLowerCase().includes(colFilters.productType.toLowerCase())) return false
-            if (colFilters.zone && !(state.zone?.name || "").toLowerCase().includes(colFilters.zone.toLowerCase())) return false
+            if (
+                colFilters.country &&
+                !(state.country?.name || "").toLowerCase().includes(colFilters.country.toLowerCase())
+            )
+                return false
             if (colFilters.gstAlias && !(state.gstAlias || "").toLowerCase().includes(colFilters.gstAlias.toLowerCase())) return false
             return true
         }) ?? []
@@ -144,22 +144,18 @@ export default function StatesPage() {
                 <Input placeholder="Search states..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[1100px] border-0">
+                <Table className="min-w-[860px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Code <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State Name <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Product Type <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Zone <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Country <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">GST Alias <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">UT <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                         <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="State Name" className="h-8 border-border bg-background text-xs" value={colFilters.stateName} onChange={(e) => setColFilters((f) => ({ ...f, stateName: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Product Type" className="h-8 border-border bg-background text-xs" value={colFilters.productType} onChange={(e) => setColFilters((f) => ({ ...f, productType: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Zone" className="h-8 border-border bg-background text-xs" value={colFilters.zone} onChange={(e) => setColFilters((f) => ({ ...f, zone: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Country" className="h-8 border-border bg-background text-xs" value={colFilters.country} onChange={(e) => setColFilters((f) => ({ ...f, country: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="GST Alias" className="h-8 border-border bg-background text-xs" value={colFilters.gstAlias} onChange={(e) => setColFilters((f) => ({ ...f, gstAlias: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="UT" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2" />
@@ -168,19 +164,17 @@ export default function StatesPage() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading states...</TableCell>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Loading states...</TableCell>
                             </TableRow>
                         ) : filteredRows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No states found.</TableCell>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No states found.</TableCell>
                             </TableRow>
                         ) : (
                             filteredRows.map((state: State, index) => (
                                 <TableRow key={state.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
-                                    <TableCell className="font-medium text-foreground">{state.stateCode}</TableCell>
                                     <TableCell className="font-medium text-foreground">{state.stateName}</TableCell>
-                                    <TableCell className="text-foreground uppercase">{state.productType}</TableCell>
-                                    <TableCell className="text-foreground">{state.zone?.name || "-"}</TableCell>
+                                    <TableCell className="text-foreground">{state.country?.name || "-"}</TableCell>
                                     <TableCell className="text-foreground">{state.gstAlias || "-"}</TableCell>
                                     <TableCell className="text-center">
                                         {state.unionTerritory ? (

@@ -14,9 +14,9 @@ export const productService = {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
-        if (params?.search) queryParams.append('search', params.search);
-        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'productCode');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
 
         const response = await apiFetch(`${API_URL}/product-master?${queryParams.toString()}`, {
             headers: {
@@ -65,7 +65,7 @@ export const productService = {
 
     async updateProduct(id: number, data: Partial<ProductFormData>): Promise<ProductSingleResponse> {
         const response = await apiFetch(`${API_URL}/product-master/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -95,5 +95,35 @@ export const productService = {
         }
 
         return response.json();
+    },
+
+    /** Bruno: `GET /product-master/export` — CSV; optional list-style query params. */
+    async exportProducts(params?: {
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<{ blob: Blob; filename: string }> {
+        const queryParams = new URLSearchParams();
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'productCode');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+
+        const response = await apiFetch(`${API_URL}/product-master/export?${queryParams.toString()}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export products');
+        }
+
+        const cd = response.headers.get('content-disposition');
+        let filename = 'products.csv';
+        const match = cd?.match(/filename="?([^";\n]+)"?/i);
+        if (match?.[1]) filename = match[1].trim();
+
+        const blob = await response.blob();
+        return { blob, filename };
     },
 };

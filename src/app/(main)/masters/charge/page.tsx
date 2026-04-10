@@ -47,8 +47,39 @@ export default function ChargePage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["charges", page, debouncedSearch],
-        queryFn: () => chargeService.getCharges({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            chargeService.getCharges({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "sequence",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await chargeService.exportCharges({
+                search: debouncedSearch,
+                sortBy: "sequence",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Charges exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export charges")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => chargeService.deleteCharge(id),
@@ -101,7 +132,19 @@ export default function ChargePage() {
                     <PermissionGuard permission="master.charge.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary"><FileUp className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.charge.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                            title="Export CSV"
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["charges"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

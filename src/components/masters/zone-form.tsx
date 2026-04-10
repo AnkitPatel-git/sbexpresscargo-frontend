@@ -45,11 +45,12 @@ import { Button } from "@/components/ui/button"
 import { zoneService } from '@/services/masters/zone-service'
 import { countryService } from '@/services/masters/country-service'
 import { Zone, ZoneFormData } from '@/types/masters/zone'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const zoneSchema = z.object({
     name: z.string().min(1, 'Name is required'),
-    code: z.string().min(1, 'Code is required'),
-    country: z.string().min(1, 'Country is required'),
+    code: optionalMasterCode(1),
+    countryId: z.number().min(1, 'Country is required'),
     zoneType: z.enum(['DOMESTIC', 'VENDOR']),
 });
 
@@ -73,7 +74,7 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
         defaultValues: {
             name: initialData?.name || '',
             code: initialData?.code || '',
-            country: initialData?.country || '',
+            countryId: initialData?.countryId || 0,
             zoneType: initialData?.zoneType || 'DOMESTIC',
         },
     });
@@ -83,7 +84,7 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
             form.reset({
                 name: initialData.name,
                 code: initialData.code,
-                country: initialData.country,
+                countryId: initialData.countryId || 0,
                 zoneType: initialData.zoneType,
             });
         }
@@ -91,10 +92,14 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: ZoneFormData) => {
+            const payload = omitEmptyCodeFields(data, ['code']) as ZoneFormData
             if (isEdit && initialData) {
-                return zoneService.updateZone(initialData.id, data)
+                return zoneService.updateZone(initialData.id, {
+                    ...payload,
+                    version: initialData.version ?? 1,
+                })
             }
-            return zoneService.createZone(data)
+            return zoneService.createZone(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['zones'] })
@@ -132,9 +137,9 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         control={form.control}
                         name="code"
                         render={({ field }) => (
-                            <FloatingFormItem label="Zone Code">
+                            <FloatingFormItem label="Zone Code (optional)">
                                 <FormControl>
-                                    <Input placeholder="Enter zone code" {...field} disabled={isEdit} className={FLOATING_INNER_CONTROL} />
+                                    <Input placeholder={isEdit ? '' : 'Blank = auto-generate'} {...field} disabled={isEdit} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
                             </FloatingFormItem>
                         )}
@@ -144,56 +149,26 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
-                        name="country"
+                        name="countryId"
                         render={({ field }) => (
-                            <FloatingFormItem label="Country" itemClassName="flex flex-col">
-                                <Popover open={countryOpen} onOpenChange={setCountryOpen}>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                className={cn(
-                                                    FLOATING_INNER_COMBO,
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                {field.value || "Select country"}
-                                                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search country..." />
-                                            <CommandList>
-                                                <CommandEmpty>No country found.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {countriesData?.data?.map((country) => (
-                                                        <CommandItem
-                                                            value={country.name}
-                                                            key={country.id}
-                                                            onSelect={() => {
-                                                                form.setValue("country", country.name)
-                                                                setCountryOpen(false)
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    country.name === field.value
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {country.name} ({country.code})
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
+                            <FloatingFormItem label="Country*">
+                                <Select
+                                    onValueChange={(val) => field.onChange(parseInt(val))}
+                                    value={field.value ? field.value.toString() : ""}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                            <SelectValue placeholder="Select country" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {countriesData?.data?.map((country) => (
+                                            <SelectItem key={country.id} value={country.id.toString()}>
+                                                {country.name} ({country.code})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </FloatingFormItem>
                         )}
                     />

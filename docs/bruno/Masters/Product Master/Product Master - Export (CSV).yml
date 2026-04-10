@@ -1,0 +1,44 @@
+info:
+  name: Product Master - Export (CSV)
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{baseUrl}}/product-master/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/product-master/export"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: text/csv
+        - name: content-disposition
+          value: 'attachment; filename="products.csv"'
+      body:
+        type: text
+        data: "(empty CSV — no product records to export)"
+
+docs: |-
+  Export all Product Master records as a CSV file download. JWT + product_master_list or product_master_all.
+
+  Response: text/csv download (Content-Disposition: attachment; filename="products.csv")
+  Optional query params: same filters as the List endpoint (search, sortBy, sortOrder, etc.)

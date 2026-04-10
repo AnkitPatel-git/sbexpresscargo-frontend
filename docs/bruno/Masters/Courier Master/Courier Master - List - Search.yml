@@ -1,7 +1,7 @@
 info:
-  name: Courier Master - List / Search
+  name: Courier Master - List - Search
   type: http
-  seq: 1
+  seq: 2
 
 http:
   method: GET
@@ -9,22 +9,6 @@ http:
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
-  params:
-    - name: page
-      value: "1"
-      type: query
-    - name: limit
-      value: "20"
-      type: query
-    - name: sortBy
-      value: code
-      type: query
-    - name: sortOrder
-      value: asc
-      type: query
-    - name: search
-      value: ""
-      type: query
   auth: inherit
 
 settings:
@@ -34,29 +18,13 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/courier-master?page=1&limit=20&sortBy=code&sortOrder=asc&search="
       method: GET
       headers:
         - name: Authorization
           value: Bearer {{accessToken}}
-      params:
-        - name: page
-          value: "1"
-          type: query
-        - name: limit
-          value: "20"
-          type: query
-        - name: sortBy
-          value: code
-          type: query
-        - name: sortOrder
-          value: asc
-          type: query
-        - name: search
-          value: ""
-          type: query
     response:
       status: 200
       statusText: OK
@@ -87,14 +55,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "355"
+          value: "432"
         - name: etag
-          value: W/"163-9Xrj9umGcFPP9ReBPsYbMQpwz7U"
+          value: W/"1b0-5ca0cp3bGuoZ/QCEz8bK6tjLdnQ"
         - name: date
-          value: Tue, 24 Mar 2026 12:54:04 GMT
+          value: Thu, 09 Apr 2026 14:38:38 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -106,21 +76,24 @@ examples:
             "success": true,
             "data": [
               {
-                "id": 1,
-                "code": "COUR01",
-                "name": "Courier Agent One",
-                "mobile": "9876543214",
+                "id": 2,
+                "code": "CR001",
+                "userId": 2,
                 "inActive": false,
-                "pickupCharge": "50",
-                "deliveryCharge": "75",
-                "serviceCenterId": 1,
-                "destination": "Mumbai",
-                "originCode": "MUM",
-                "tldBatchNo": "TLD001",
-                "serviceCenter": {
-                  "id": 1,
-                  "code": "HQ",
-                  "name": "Headquarters"
+                "pickupCharge": "25",
+                "deliveryCharge": "40",
+                "serviceCenterId": 3,
+                "createdAt": "2026-04-09T14:38:26.512Z",
+                "updatedAt": "2026-04-09T14:38:26.512Z",
+                "createdById": 1,
+                "updatedById": null,
+                "deletedAt": null,
+                "deletedById": null,
+                "user": {
+                  "id": 2,
+                  "username": "mobile_field",
+                  "mobile": null,
+                  "email": "mobile.field@system.com"
                 }
               }
             ],
@@ -131,5 +104,3 @@ examples:
               "totalPages": 1
             }
           }
-
-docs: "List couriers. Pagination/sort/search. Response: data, total, page, limit, totalPages. JWT + courier_master_list or courier_master_search or courier_master_all."

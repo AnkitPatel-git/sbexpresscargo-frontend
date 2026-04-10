@@ -1,9 +1,21 @@
+/** Joined pincode when API includes `serviceablePincode` / legacy `pinCode` (see Bruno list/get). */
+export interface AreaPincodeSummary {
+    id: number;
+    pinCode: string;
+    pinCodeName: string;
+}
+
+/**
+ * Area Master — Bruno `docs/bruno/Masters/Area Master/*`.
+ * Base response: id, areaName, pinCodeId, audit fields.
+ */
 export interface Area {
     id: number;
     areaName: string;
-    serviceCenterId: number | null;
-    serviceCenter?: string | { name: string; code: string }; // For display in table
-    destination: string | null;
+    pinCodeId: number | null;
+    serviceablePincode?: AreaPincodeSummary | null;
+    /** Some API builds nest under `pinCode` instead */
+    pinCode?: AreaPincodeSummary | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -12,15 +24,15 @@ export interface Area {
     deletedById: number | null;
 }
 
+/** Bruno create/update body: mandatory `areaName`; `pinCodeId` number. */
 export interface AreaFormData {
     areaName: string;
-    serviceCenterId: number;
-    destination?: string;
+    pinCodeId: number;
 }
 
 export interface AreaListResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Area[];
     meta: {
         total: number;

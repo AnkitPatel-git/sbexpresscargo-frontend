@@ -1,0 +1,20 @@
+info:
+  name: Serviceable Pincodes - Delete
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/utilities/serviceable-pincodes/2"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Soft-delete a serviceable pincode. Domain ownership is under Master module; endpoint path remains `/utilities/serviceable-pincodes` for backward compatibility. JWT + serviceable_pincode_delete or serviceable_pincode_all.

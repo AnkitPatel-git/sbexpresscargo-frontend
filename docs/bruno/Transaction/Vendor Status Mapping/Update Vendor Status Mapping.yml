@@ -1,0 +1,31 @@
+info:
+  name: Update Vendor Status Mapping
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/transaction/vendor-status-mappings/{{vendorStatusMappingId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "externalStatus": "DELIVERED",
+        "normalizedStatus": "DELIVERED",
+        "internalStatus": "DELIVERED",
+        "priority": 100,
+        "isTerminal": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -18,7 +18,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/local-branch-master/1"
       method: GET
@@ -55,14 +55,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "1191"
+          value: "1086"
         - name: etag
-          value: W/"4a7-zKRXG6dvXUKTiTou2hSD2Sqa6h4"
+          value: W/"43e-a8Zw/d5W1eJN6zp2fJeOGTPiRhE"
         - name: date
-          value: Tue, 24 Mar 2026 12:34:52 GMT
+          value: Thu, 09 Apr 2026 14:28:39 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -74,29 +76,26 @@ examples:
             "success": true,
             "data": {
               "id": 1,
-              "branchCode": "BR001",
+              "branchCode": "BR002",
               "companyName": "SB Express",
               "name": "Mumbai Branch",
               "address1": "123 Main St",
               "address2": "Floor 2",
-              "pinCode": "400001",
-              "city": "Mumbai",
-              "state": "Maharashtra",
-              "serviceCenterId": 2,
-              "telephone1": "022-12345678",
-              "telephone2": "022-87654321",
+              "pinCodeId": 3,
+              "countryId": 1,
+              "stateId": 3,
+              "serviceCenterId": 3,
+              "telephone": "022-12345678",
               "fax": "022-11112222",
               "website": "https://sbexpress.com",
               "email": "mumbai@sbexpress.com",
               "panNo": "AABCU9603R",
               "serviceTaxNo": "ST123",
-              "billingState": "Maharashtra",
-              "stateCode": "MH",
               "gstNo": "27AABCU9603R1ZM",
               "serviceRegistrationNo": "SR001",
               "companyLogo": "https://example.com/logo.png",
               "signatoryLogo": "https://example.com/sign.png",
-              "bankName": "State Bank",
+              "bankId": 1,
               "accountNo": "1234567890",
               "accountName": "SB Express",
               "bankAddress": "Mumbai",
@@ -115,8 +114,8 @@ examples:
               "creditNoteLastInvoiceNo": 5,
               "creditNoteSuffix": "D",
               "rcpLastNo": 20,
-              "createdAt": "2026-03-24T12:34:01.223Z",
-              "updatedAt": "2026-03-24T12:34:01.223Z",
+              "createdAt": "2026-04-09T14:28:06.832Z",
+              "updatedAt": "2026-04-09T14:28:06.832Z",
               "createdById": 1,
               "updatedById": null,
               "deletedAt": null,

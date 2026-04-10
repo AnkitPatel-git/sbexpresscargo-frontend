@@ -1,0 +1,37 @@
+info:
+  name: Audit Logs - List - Search
+  type: http
+  seq: 20
+
+http:
+  method: GET
+  url: "{{baseUrl}}/utilities/audit-logs?page=1&limit=20&entityType=&entityId=&action=&performedById="
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  params:
+    - name: page
+      value: "1"
+      type: query
+    - name: limit
+      value: "20"
+      type: query
+    - name: entityType
+      value: ""
+      type: query
+    - name: entityId
+      value: ""
+      type: query
+    - name: action
+      value: ""
+      type: query
+    - name: performedById
+      value: ""
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

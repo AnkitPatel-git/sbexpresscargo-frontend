@@ -1,99 +1,72 @@
-import { apiFetch } from '@/lib/api-fetch';
-import { MisroutedScanListResponse, MisroutedScanSingleResponse, MisroutedScanFormValues } from '@/types/transactions/misrouted-scan';
+import { apiFetch } from "@/lib/api-fetch";
 
-const getAuthHeaders = (isFormData = false) => {
-    const headers: Record<string, string> = {
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-    };
-    if (!isFormData) {
-        headers['Content-Type'] = 'application/json';
-    }
-    return headers;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const BASE = `${API_URL}/transaction/misrouted-scan`;
+
+const headers = (json = true) => {
+  const h: Record<string, string> = {
+    Authorization: `Bearer ${localStorage.getItem("accessToken") ?? ""}`,
+  };
+  if (json) h["Content-Type"] = "application/json";
+  return h;
 };
 
-class MisroutedScanService {
-    private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/misrouted-scan`;
+/** Bruno: Transaction → Misrouted Scan. */
+export const misroutedScanService = {
+  async list(page = 1, limit = 20) {
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const response = await apiFetch(`${BASE}?${q}`, { headers: headers() });
+    if (!response.ok) throw new Error("Failed to list misrouted scans");
+    return response.json();
+  },
 
-    async getMisroutedScans(page: number, limit: number, search: string = ''): Promise<MisroutedScanListResponse> {
-        const queryParams = new URLSearchParams({
-            page: page.toString(),
-            limit: limit.toString(),
-            sortBy: 'scanAt',
-            sortOrder: 'desc',
-        });
+  async getById(id: number | string) {
+    const response = await apiFetch(`${BASE}/${id}`, { headers: headers() });
+    if (!response.ok) throw new Error("Failed to fetch misrouted scan");
+    return response.json();
+  },
 
-        if (search) {
-            queryParams.append('search', search);
-        }
-
-        const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`, { headers: getAuthHeaders() });
-        if (!response.ok) {
-            throw new Error('Failed to fetch misrouted scans');
-        }
-        return response.json();
+  async create(body: unknown) {
+    const response = await apiFetch(BASE, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error((err as { message?: string }).message || "Failed to create misrouted scan");
     }
+    return response.json();
+  },
 
-    async getMisroutedScanById(id: number): Promise<MisroutedScanSingleResponse> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`, { headers: getAuthHeaders() });
-        if (!response.ok) {
-            throw new Error('Failed to fetch misrouted scan');
-        }
-        return response.json();
+  async update(id: number | string, body: unknown) {
+    const response = await apiFetch(`${BASE}/${id}`, {
+      method: "PUT",
+      headers: headers(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error((err as { message?: string }).message || "Failed to update misrouted scan");
     }
+    return response.json();
+  },
 
-    async createMisroutedScan(data: MisroutedScanFormValues): Promise<MisroutedScanSingleResponse> {
-        const response = await apiFetch(this.baseUrl, {
-            method: 'POST',
-            headers: getAuthHeaders(false),
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to create misrouted scan');
-        }
-        return response.json();
+  async delete(id: number | string) {
+    const response = await apiFetch(`${BASE}/${id}`, {
+      method: "DELETE",
+      headers: headers(false),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error((err as { message?: string }).message || "Failed to delete misrouted scan");
     }
+    return response.json().catch(() => ({}));
+  },
 
-    async updateMisroutedScan(id: number, data: Partial<MisroutedScanFormValues>): Promise<MisroutedScanSingleResponse> {
-        // Strip ids from items as the API prohibits then in the update payload
-        const updatedData = {
-            ...data,
-            items: data.items?.map(({ id, ...item }) => item)
-        };
-        const response = await apiFetch(`${this.baseUrl}/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(false),
-            body: JSON.stringify(updatedData),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to update misrouted scan');
-        }
-        return response.json();
-    }
-
-    async deleteMisroutedScan(id: number): Promise<void> {
-        const response = await apiFetch(`${this.baseUrl}/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(false),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to delete misrouted scan');
-        }
-    }
-
-    async exportMisroutedScansCsv(search: string = ''): Promise<Blob> {
-        const queryParams = new URLSearchParams();
-        if (search) {
-            queryParams.append('search', search);
-        }
-
-        const response = await apiFetch(`${this.baseUrl}/export/csv?${queryParams.toString()}`, { 
-            headers: getAuthHeaders() 
-        });
-        if (!response.ok) {
-            throw new Error('Failed to export misrouted scans');
-        }
-        return response.blob();
-    }
-}
-
-export const misroutedScanService = new MisroutedScanService();
+  async exportCsv(): Promise<Blob> {
+    const response = await apiFetch(`${BASE}/export`, { headers: headers(false) });
+    if (!response.ok) throw new Error("Failed to export misrouted scans");
+    return response.blob();
+  },
+};

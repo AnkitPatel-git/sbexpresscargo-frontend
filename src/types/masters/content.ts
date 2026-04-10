@@ -1,12 +1,39 @@
+/** Content Master — Bruno `docs/bruno/Masters/Content Master/*`. */
+
+/** Nested country on list/get (Bruno examples). */
+export interface ContentCountryRef {
+    id: number;
+    code?: string;
+    name: string;
+    weightUnit?: string;
+    currency?: string;
+    isdCode?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdById?: number | null;
+    updatedById?: number | null;
+    deletedAt?: string | null;
+    deletedById?: number | null;
+}
+
+/** Nested vendor when API includes it (shape may vary). */
+export interface ContentVendorRef {
+    id: number;
+    vendorName?: string;
+    name?: string;
+    code?: string;
+}
+
 export interface Content {
     id: number;
     contentCode: string;
     contentName: string;
-    hsnCode: string;
+    hsnCode?: string | null;
     vendorId: number | null;
     countryId: number | null;
-    vendor?: string | null;
-    country?: string | null;
+    /** Denormalized string or joined object from API */
+    vendor?: string | ContentVendorRef | null;
+    country?: string | ContentCountryRef | null;
     additionalField?: string | null;
     clearanceCethNo?: string | null;
     notificationSubType?: string | null;
@@ -25,14 +52,13 @@ export interface Content {
     deletedById: number | null;
 }
 
+/** Create/update body — Bruno: `contentCode` optional (backend may assign `CNT` + suffix). */
 export interface ContentFormData {
-    contentCode: string;
+    contentCode?: string;
     contentName: string;
-    hsnCode: string;
+    hsnCode?: string;
     vendorId?: number | null;
     countryId?: number | null;
-    vendor?: string;
-    country?: string;
     additionalField?: string;
     clearanceCethNo?: string;
     notificationSubType?: string;
@@ -59,6 +85,6 @@ export interface ContentListResponse {
 
 export interface ContentSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Content;
 }

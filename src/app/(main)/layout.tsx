@@ -13,7 +13,6 @@ import {
   ChevronDown,
   ChevronRight,
   Layers,
-  Plane,
   Map as MapIcon,
   Globe,
   Landmark,
@@ -24,12 +23,11 @@ import {
   MapPin,
   UserRound,
   Percent,
-  Truck,
   AlertTriangle,
+  Truck,
   Coins,
   Wrench,
   Calculator,
-  Droplet,
   Home,
   Search,
   Maximize,
@@ -43,12 +41,19 @@ import {
   Menu,
   ClipboardList,
   Car,
+  Bike,
   Navigation,
   CheckSquare,
   CreditCard,
   Receipt,
-  Map,
   RefreshCw,
+  Banknote,
+  FileStack,
+  ScanSearch,
+  PackageSearch,
+  Link2,
+  Activity,
+  Radio,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { PermissionGuard } from "@/components/auth/permission-guard";
@@ -76,22 +81,22 @@ const headerNavItems = [
   { href: "/masters/zones", label: "Zone" },
   { href: "/masters/countries", label: "Country" },
   { href: "/masters/states", label: "State Master" },
-  { href: "/masters/industries", label: "Industry Master" },
-  { href: "/masters/flights", label: "Flight Master" },
   { href: "/masters/contents", label: "Content Master" },
   { href: "/masters/banks", label: "Bank Master" },
   { href: "/masters/local-branches", label: "Local Branch Master" },
   { href: "/masters/service-centers", label: "Service Center Master" },
   { href: "/masters/customers", label: "Customer Master" },
-  { href: "/masters/client-rates", label: "Client Rate Master" },
+  { href: "/masters/rates", label: "Rate Master" },
   { href: "/masters/consignee", label: "Consignee Master" },
   { href: "/masters/shipper", label: "Shipper Master" },
   { href: "/masters/vendor", label: "Vendor Master" },
+  { href: "/masters/service-map", label: "Service Map Master" },
   { href: "/masters/area", label: "Area Master" },
   { href: "/masters/exception", label: "Exception Master" },
-  { href: "/masters/service-map", label: "Service Map Master" },
   { href: "/masters/charge", label: "Charge Master" },
-  { href: "/transactions/pickup", label: "Pickup" },
+  { href: "/masters/vehicle", label: "Vehicle Master" },
+  { href: "/masters/courier", label: "Courier Master" },
+  { href: "/masters/vendor-config", label: "Vendor Config Master" },
   { href: "/transactions/shipment", label: "Shipment" },
   { href: "/transactions/manifest", label: "Manifest" },
   { href: "/transactions/drs", label: "DRS" },
@@ -99,8 +104,15 @@ const headerNavItems = [
   { href: "/transactions/pod", label: "POD" },
   { href: "/transactions/customer-payment", label: "Customer Payment" },
   { href: "/transactions/credit-note", label: "Credit Note" },
-  { href: "/transactions/undelivered-scan", label: "Undelivered Scan" },
-  { href: "/transactions/misrouted-scan", label: "Misrouted Scan" },
+  { href: "/transactions/receipt", label: "Receipts" },
+  { href: "/transactions/manifest-operations", label: "Manifest operations" },
+  { href: "/transactions/misrouted-scan", label: "Misrouted scan" },
+  { href: "/transactions/undelivered-scan", label: "Undelivered scan" },
+  { href: "/transactions/vendor-status-mappings", label: "Vendor status mappings" },
+  { href: "/transactions/vendor-tracking-logs", label: "Vendor tracking logs" },
+  { href: "/transactions/tracking-summaries", label: "Tracking summaries" },
+  { href: "/transactions/drs-operations", label: "DRS operations" },
+  { href: "/transactions/tracking-webhooks", label: "Tracking webhooks" },
   { href: "/document/invoice-generation", label: "Invoice Generation" },
   { href: "/document/invoice-print", label: "Invoice Print" },
   { href: "/document/invoice-finalise", label: "Invoice Finalise" },
@@ -111,7 +123,9 @@ const headerNavItems = [
   { href: "/utilities/users/logged-in-users", label: "LoggedIn Users" },
   { href: "/utilities/serviceable-pincodes", label: "Serviceable Pincode" },
   { href: "/utilities/permissions", label: "Permissions" },
-  { href: "/tax-charges/fuel-setup", label: "Fuel Setup" },
+  { href: "/utilities/api-health", label: "API health" },
+  { href: "/utilities/roles", label: "Roles" },
+  { href: "/utilities/audit-logs", label: "Audit logs" },
 ];
 
 const MASTER_GROUP_ITEMS = {
@@ -139,18 +153,6 @@ const MASTER_GROUP_ITEMS = {
       label: "State Master",
       icon: Landmark,
       permission: "master.state.read",
-    },
-    {
-      href: "/masters/industries",
-      label: "Industry Master",
-      icon: Building2,
-      permission: "master.industry.read",
-    },
-    {
-      href: "/masters/flights",
-      label: "Flight Master",
-      icon: Plane,
-      permission: "master.flight.read",
     },
     {
       href: "/masters/contents",
@@ -185,10 +187,10 @@ const MASTER_GROUP_ITEMS = {
       permission: "master.customer.read",
     },
     {
-      href: "/masters/client-rates",
-      label: "Client Rate Master",
+      href: "/masters/rates",
+      label: "Rate Master",
       icon: Percent,
-      permission: "master.client_rate.read",
+      permission: "master.rate.read",
     },
     {
       href: "/masters/consignee",
@@ -210,6 +212,18 @@ const MASTER_GROUP_ITEMS = {
       icon: Building2,
       permission: "master.vendor.read",
     },
+    {
+      href: "/masters/service-map",
+      label: "Service Map Master",
+      icon: MapIcon,
+      permission: "master.service_map.read",
+    },
+    {
+      href: "/masters/vendor-config",
+      label: "Vendor Config Master",
+      icon: Settings,
+      permission: "master.vendor_config.read",
+    },
   ],
   operations: [
     {
@@ -225,16 +239,22 @@ const MASTER_GROUP_ITEMS = {
       permission: "master.exception.read",
     },
     {
-      href: "/masters/service-map",
-      label: "Service Map Master",
-      icon: MapIcon,
-      permission: "master.service_map.read",
-    },
-    {
       href: "/masters/charge",
       label: "Charge Master",
       icon: Coins,
       permission: "master.charge.read",
+    },
+    {
+      href: "/masters/vehicle",
+      label: "Vehicle Master",
+      icon: Truck,
+      permission: "master.vehicle.read",
+    },
+    {
+      href: "/masters/courier",
+      label: "Courier Master",
+      icon: Bike,
+      permission: "master.courier.read",
     },
   ],
 } as const;
@@ -244,6 +264,7 @@ const resolveMasterGroupFromPath = (
 ): "sales" | "customer" | "vendor" | "operations" => {
   if (
     path.startsWith("/masters/customers") ||
+    path.startsWith("/masters/rates") ||
     path.startsWith("/masters/client-rates") ||
     path.startsWith("/masters/consignee") ||
     path.startsWith("/masters/shipper")
@@ -251,15 +272,16 @@ const resolveMasterGroupFromPath = (
     return "customer";
   }
 
-  if (path.startsWith("/masters/vendor")) {
+  if (path.startsWith("/masters/vendor") || path.startsWith("/masters/service-map")) {
     return "vendor";
   }
 
   if (
     path.startsWith("/masters/area") ||
     path.startsWith("/masters/exception") ||
-    path.startsWith("/masters/service-map") ||
-    path.startsWith("/masters/charge")
+    path.startsWith("/masters/charge") ||
+    path.startsWith("/masters/vehicle") ||
+    path.startsWith("/masters/courier")
   ) {
     return "operations";
   }
@@ -467,7 +489,6 @@ const SidebarContent = ({
   const isReportsActive = pathname.startsWith("/report");
   const isMastersActive = pathname.startsWith("/masters");
   const isUtilitiesActive = pathname.startsWith("/utilities");
-  const isFuelSetupActive = pathname.startsWith("/tax-charges/fuel-setup");
   const isTransactionsActive = pathname.startsWith("/transactions");
 
   const navItemClasses = (
@@ -741,8 +762,8 @@ const SidebarContent = ({
             <div className="max-h-[70vh] overflow-y-auto">
               <div className="mt-1 flex flex-col gap-1">
                 <button
+                  type="button"
                   onClick={() => toggleMasterSubmenu("sales")}
-                  onMouseEnter={() => openMasterSubmenu("sales")}
                   className="flex items-center justify-between w-full rounded-md px-4 py-2 text-[15px] text-slate-700 transition-colors hover:text-primary hover:bg-slate-100"
                 >
                   <span>Sales</span>
@@ -763,7 +784,6 @@ const SidebarContent = ({
                 <button
                   type="button"
                   onClick={() => toggleMasterSubmenu("customer")}
-                  onMouseEnter={() => openMasterSubmenu("customer")}
                   className="flex items-center justify-between w-full rounded-md px-4 py-2 text-[15px] text-slate-700 transition-colors hover:text-primary hover:bg-slate-100"
                 >
                   <span>Customer</span>
@@ -784,7 +804,6 @@ const SidebarContent = ({
                 <button
                   type="button"
                   onClick={() => toggleMasterSubmenu("vendor")}
-                  onMouseEnter={() => openMasterSubmenu("vendor")}
                   className="flex items-center justify-between w-full rounded-md px-4 py-2 text-[15px] text-slate-700 transition-colors hover:text-primary hover:bg-slate-100"
                 >
                   <span>Vendor</span>
@@ -805,7 +824,6 @@ const SidebarContent = ({
                 <button
                   type="button"
                   onClick={() => toggleMasterSubmenu("operations")}
-                  onMouseEnter={() => openMasterSubmenu("operations")}
                   className="flex items-center justify-between w-full rounded-md px-4 py-2 text-[15px] text-slate-700 transition-colors hover:text-primary hover:bg-slate-100"
                 >
                   <span>Operations</span>
@@ -881,16 +899,6 @@ const SidebarContent = ({
 
         {isTransactionsOpen && !isCollapsed && (
           <div className="mt-1 flex flex-col gap-0.5 rounded-md bg-white p-1 shadow-sm">
-            <PermissionGuard permission="shipment.pickup.read">
-              <LinkItem
-                href="/transactions/pickup"
-                subItem
-                active={isActive("/transactions/pickup")}
-                icon={Truck}
-              >
-                Pickup
-              </LinkItem>
-            </PermissionGuard>
             <PermissionGuard permission="transaction.shipment.read">
               <LinkItem
                 href="/transactions/shipment"
@@ -961,24 +969,94 @@ const SidebarContent = ({
                 Credit Note
               </LinkItem>
             </PermissionGuard>
-            <PermissionGuard permission="transaction.undelivered-scan.read">
+            <PermissionGuard permission="transaction.shipment.read">
               <LinkItem
-                href="/transactions/undelivered-scan"
+                href="/transactions/receipt"
                 subItem
-                active={isActive("/transactions/undelivered-scan")}
-                icon={AlertTriangle}
+                active={isActive("/transactions/receipt")}
+                icon={Banknote}
               >
-                Undelivered Scan
+                Receipts
               </LinkItem>
             </PermissionGuard>
-            <PermissionGuard permission="transaction.misrouted-scan.read">
+            <PermissionGuard permission="transaction.manifest.read">
+              <LinkItem
+                href="/transactions/manifest-operations"
+                subItem
+                active={isActive("/transactions/manifest-operations")}
+                icon={FileStack}
+              >
+                Manifest operations
+              </LinkItem>
+            </PermissionGuard>
+            <PermissionGuard permission="transaction.shipment.read">
               <LinkItem
                 href="/transactions/misrouted-scan"
                 subItem
                 active={isActive("/transactions/misrouted-scan")}
-                icon={Map}
+                icon={ScanSearch}
               >
-                Misrouted Scan
+                Misrouted scan
+              </LinkItem>
+            </PermissionGuard>
+            <PermissionGuard permission="transaction.shipment.read">
+              <LinkItem
+                href="/transactions/undelivered-scan"
+                subItem
+                active={isActive("/transactions/undelivered-scan")}
+                icon={PackageSearch}
+              >
+                Undelivered scan
+              </LinkItem>
+            </PermissionGuard>
+            <PermissionGuard permission="transaction.vendor_status_mapping.read">
+              <LinkItem
+                href="/transactions/vendor-status-mappings"
+                subItem
+                active={isActive("/transactions/vendor-status-mappings")}
+                icon={Link2}
+              >
+                Vendor status mappings
+              </LinkItem>
+            </PermissionGuard>
+            <PermissionGuard permission="transaction.vendor_tracking_log.read">
+              <LinkItem
+                href="/transactions/vendor-tracking-logs"
+                subItem
+                active={isActive("/transactions/vendor-tracking-logs")}
+                icon={Activity}
+              >
+                Vendor tracking logs
+              </LinkItem>
+            </PermissionGuard>
+            <PermissionGuard permission="transaction.tracking_summary.read">
+              <LinkItem
+                href="/transactions/tracking-summaries"
+                subItem
+                active={isActive("/transactions/tracking-summaries")}
+                icon={BarChart3}
+              >
+                Tracking summaries
+              </LinkItem>
+            </PermissionGuard>
+            <PermissionGuard permission="transaction.drs.read">
+              <LinkItem
+                href="/transactions/drs-operations"
+                subItem
+                active={isActive("/transactions/drs-operations")}
+                icon={Car}
+              >
+                DRS operations
+              </LinkItem>
+            </PermissionGuard>
+            <PermissionGuard permission="transaction.tracking.read">
+              <LinkItem
+                href="/transactions/tracking-webhooks"
+                subItem
+                active={isActive("/transactions/tracking-webhooks")}
+                icon={Radio}
+              >
+                Tracking webhooks
               </LinkItem>
             </PermissionGuard>
           </div>
@@ -994,18 +1072,6 @@ const SidebarContent = ({
             </div>
             <div className="max-h-[70vh] overflow-y-auto">
               <div className="mt-1 flex flex-col gap-1">
-                <PermissionGuard permission="shipment.pickup.read">
-                  <LinkItem
-                    href="/transactions/pickup"
-                    subItem
-                    active={isActive("/transactions/pickup")}
-                    icon={Truck}
-                    showTextOverride
-                    inFlyout
-                  >
-                    Pickup
-                  </LinkItem>
-                </PermissionGuard>
                 <PermissionGuard permission="transaction.shipment.read">
                   <LinkItem
                     href="/transactions/shipment"
@@ -1090,28 +1156,112 @@ const SidebarContent = ({
                     Credit Note
                   </LinkItem>
                 </PermissionGuard>
-                <PermissionGuard permission="transaction.undelivered-scan.read">
+                <PermissionGuard permission="transaction.shipment.read">
                   <LinkItem
-                    href="/transactions/undelivered-scan"
+                    href="/transactions/receipt"
                     subItem
-                    active={isActive("/transactions/undelivered-scan")}
-                    icon={AlertTriangle}
+                    active={isActive("/transactions/receipt")}
+                    icon={Banknote}
                     showTextOverride
                     inFlyout
                   >
-                    Undelivered Scan
+                    Receipts
                   </LinkItem>
                 </PermissionGuard>
-                <PermissionGuard permission="transaction.misrouted-scan.read">
+                <PermissionGuard permission="transaction.manifest.read">
+                  <LinkItem
+                    href="/transactions/manifest-operations"
+                    subItem
+                    active={isActive("/transactions/manifest-operations")}
+                    icon={FileStack}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Manifest operations
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="transaction.shipment.read">
                   <LinkItem
                     href="/transactions/misrouted-scan"
                     subItem
                     active={isActive("/transactions/misrouted-scan")}
-                    icon={Map}
+                    icon={ScanSearch}
                     showTextOverride
                     inFlyout
                   >
-                    Misrouted Scan
+                    Misrouted scan
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="transaction.shipment.read">
+                  <LinkItem
+                    href="/transactions/undelivered-scan"
+                    subItem
+                    active={isActive("/transactions/undelivered-scan")}
+                    icon={PackageSearch}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Undelivered scan
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="transaction.vendor_status_mapping.read">
+                  <LinkItem
+                    href="/transactions/vendor-status-mappings"
+                    subItem
+                    active={isActive("/transactions/vendor-status-mappings")}
+                    icon={Link2}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Vendor status mappings
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="transaction.vendor_tracking_log.read">
+                  <LinkItem
+                    href="/transactions/vendor-tracking-logs"
+                    subItem
+                    active={isActive("/transactions/vendor-tracking-logs")}
+                    icon={Activity}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Vendor tracking logs
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="transaction.tracking_summary.read">
+                  <LinkItem
+                    href="/transactions/tracking-summaries"
+                    subItem
+                    active={isActive("/transactions/tracking-summaries")}
+                    icon={BarChart3}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Tracking summaries
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="transaction.drs.read">
+                  <LinkItem
+                    href="/transactions/drs-operations"
+                    subItem
+                    active={isActive("/transactions/drs-operations")}
+                    icon={Car}
+                    showTextOverride
+                    inFlyout
+                  >
+                    DRS operations
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="transaction.tracking.read">
+                  <LinkItem
+                    href="/transactions/tracking-webhooks"
+                    subItem
+                    active={isActive("/transactions/tracking-webhooks")}
+                    icon={Radio}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Tracking webhooks
                   </LinkItem>
                 </PermissionGuard>
               </div>
@@ -1340,7 +1490,7 @@ const SidebarContent = ({
             toggleSection("utilities");
           }}
           className={groupButtonClasses(
-            isUtilitiesActive || isFuelSetupActive,
+            isUtilitiesActive,
             isUtilitiesOpen,
           )}
         >
@@ -1423,15 +1573,37 @@ const SidebarContent = ({
                 Permissions
               </Link>
             </PermissionGuard>
-            <PermissionGuard permission="master.tax_charges.read">
+            <PermissionGuard>
               <Link
-                href="/tax-charges/fuel-setup"
+                href="/utilities/api-health"
                 className={utilityMenuItemClasses(
-                  isActive("/tax-charges/fuel-setup"),
+                  isActive("/utilities/api-health"),
                 )}
                 onClick={onItemClick}
               >
-                Fuel Setup
+                API health
+              </Link>
+            </PermissionGuard>
+            <PermissionGuard permission="settings.permissions.read">
+              <Link
+                href="/utilities/roles"
+                className={utilityMenuItemClasses(
+                  isActive("/utilities/roles"),
+                )}
+                onClick={onItemClick}
+              >
+                Roles
+              </Link>
+            </PermissionGuard>
+            <PermissionGuard permission="settings.permissions.read">
+              <Link
+                href="/utilities/audit-logs"
+                className={utilityMenuItemClasses(
+                  isActive("/utilities/audit-logs"),
+                )}
+                onClick={onItemClick}
+              >
+                Audit logs
               </Link>
             </PermissionGuard>
           </div>
@@ -1512,15 +1684,37 @@ const SidebarContent = ({
                     Permissions
                   </Link>
                 </PermissionGuard>
-                <PermissionGuard permission="master.tax_charges.read">
+                <PermissionGuard>
                   <Link
-                    href="/tax-charges/fuel-setup"
+                    href="/utilities/api-health"
                     className={utilityMenuItemClasses(
-                      isActive("/tax-charges/fuel-setup"),
+                      isActive("/utilities/api-health"),
                     )}
                     onClick={onItemClick}
                   >
-                    Fuel Setup
+                    API health
+                  </Link>
+                </PermissionGuard>
+                <PermissionGuard permission="settings.permissions.read">
+                  <Link
+                    href="/utilities/roles"
+                    className={utilityMenuItemClasses(
+                      isActive("/utilities/roles"),
+                    )}
+                    onClick={onItemClick}
+                  >
+                    Roles
+                  </Link>
+                </PermissionGuard>
+                <PermissionGuard permission="settings.permissions.read">
+                  <Link
+                    href="/utilities/audit-logs"
+                    className={utilityMenuItemClasses(
+                      isActive("/utilities/audit-logs"),
+                    )}
+                    onClick={onItemClick}
+                  >
+                    Audit logs
                   </Link>
                 </PermissionGuard>
               </div>
@@ -1801,7 +1995,7 @@ export default function DashboardLayout({
                 {
                   icon: Calculator,
                   label: "Rates",
-                  href: "/masters/client-rates",
+                  href: "/masters/rates",
                 },
                 {
                   icon: Wallet,
@@ -1926,7 +2120,7 @@ export default function DashboardLayout({
             <span className="font-semibold tracking-wide text-primary/80">
               SBtechnoworld On Cloud
             </span>
-            <span>
+            <span suppressHydrationWarning>
               © {new Date().getFullYear()} SBtechnoworld. All rights reserved.
             </span>
           </footer>

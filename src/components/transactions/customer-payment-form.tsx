@@ -57,6 +57,7 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
       paidDate: initialData?.paidDate ? initialData.paidDate.split("T")[0] : new Date().toISOString().split("T")[0],
       amount: initialData?.amount || "",
       customerId: initialData?.customerId || undefined,
+      invoiceNo: initialData?.invoiceNo || "",
       remark: initialData?.remark || "",
       approved: initialData?.approved || false,
     },
@@ -128,6 +129,18 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
               <FloatingFormItem label={<>Date <span className="text-red-500">*</span></>}>
                 <FormControl>
                   <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
+                </FormControl>
+              </FloatingFormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="invoiceNo"
+            render={({ field }) => (
+              <FloatingFormItem label={<>Invoice No <span className="text-red-500">*</span></>}>
+                <FormControl>
+                  <Input placeholder="INV-0001" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
               </FloatingFormItem>
             )}

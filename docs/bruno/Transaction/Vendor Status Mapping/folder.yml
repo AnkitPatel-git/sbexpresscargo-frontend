@@ -1,0 +1,7 @@
+info:
+  name: Vendor Status Mapping
+  type: folder
+  seq: 11
+
+request:
+  auth: inherit

@@ -1,3 +1,5 @@
+/** Service Center Master — Bruno `docs/bruno/Masters/Service Center Master/*`. */
+
 export interface ServiceCenter {
     id: number;
     code: string;
@@ -13,9 +15,35 @@ export interface ServiceCenter {
     email: string | null;
     icnNo: string | null;
     stNo: string | null;
-    pinCode: string | null;
+    pinCodeId: number | null;
+    countryId: number | null;
+    stateId: number | null;
     companyLogo: string | null;
     signatoryLogo: string | null;
+    /** Present when API returns full record (Bruno create / docs) */
+    gstNo?: string | null;
+    gstTelephone?: string | null;
+    panNo?: string | null;
+    terms?: string[] | null;
+    bankId?: number | null;
+    accountNo?: string | null;
+    accountName?: string | null;
+    bankAddress?: string | null;
+    ifsc?: string | null;
+    micr?: string | null;
+    lastInvoicePrefix?: string | null;
+    lastInvoiceNo?: number | null;
+    lastInvoiceSuffix?: string | null;
+    freeFormPrefix?: string | null;
+    lastFreeFormInvoiceNo?: number | null;
+    freeFormSuffix?: string | null;
+    debitNotePrefix?: string | null;
+    debitNoteLastInvoiceNo?: number | null;
+    debitNoteSuffix?: string | null;
+    creditNotePrefix?: string | null;
+    creditNoteLastInvoiceNo?: number | null;
+    creditNoteSuffix?: string | null;
+    rcpLastNo?: number | null;
     version: number;
     localBranchId: number | null;
     createdAt: string;
@@ -26,6 +54,7 @@ export interface ServiceCenter {
     deletedById: number | null;
 }
 
+/** Bruno create/update: pinCodeId as string pin or id; bankId as string in examples */
 export interface ServiceCenterFormData {
     code: string;
     name: string;
@@ -38,11 +67,35 @@ export interface ServiceCenterFormData {
     state?: string | null;
     telephone?: string | null;
     email?: string | null;
+    gstNo?: string | null;
+    gstTelephone?: string | null;
+    panNo?: string | null;
     icnNo?: string | null;
     stNo?: string | null;
-    pinCode?: string | null;
+    pinCodeId?: string | number | null;
     companyLogo?: string | null;
     signatoryLogo?: string | null;
+    terms?: string[] | null;
+    bankId?: string | number | null;
+    accountNo?: string | null;
+    accountName?: string | null;
+    bankAddress?: string | null;
+    ifsc?: string | null;
+    micr?: string | null;
+    lastInvoicePrefix?: string | null;
+    lastInvoiceNo?: number | null;
+    lastInvoiceSuffix?: string | null;
+    freeFormPrefix?: string | null;
+    lastFreeFormInvoiceNo?: number | null;
+    freeFormSuffix?: string | null;
+    debitNotePrefix?: string | null;
+    debitNoteLastInvoiceNo?: number | null;
+    debitNoteSuffix?: string | null;
+    creditNotePrefix?: string | null;
+    creditNoteLastInvoiceNo?: number | null;
+    creditNoteSuffix?: string | null;
+    rcpLastNo?: number | null;
+    version?: number;
 }
 
 export interface ServiceCenterListResponse {
@@ -59,6 +112,6 @@ export interface ServiceCenterListResponse {
 
 export interface ServiceCenterSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: ServiceCenter;
 }

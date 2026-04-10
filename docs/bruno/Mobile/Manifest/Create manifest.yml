@@ -16,8 +16,13 @@ http:
     data: |-
       {
         "manifestNo": "MNF-001",
+        "masterAwbNo": "MAWB-001",
         "manifestDate": "2026-03-20",
-        "awbNos": ["AWB001"]
+        "location": "MUMBAI",
+        "serviceCenterId": 1,
+        "connectStation": "DELHI",
+        "vendorId": 1,
+        "productId": 1
       }
   auth: inherit
 

@@ -1,0 +1,100 @@
+info:
+  name: Service Center Master - Export (CSV)
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{baseUrl}}/service-center-master/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/service-center-master/export"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: text/csv
+        - name: content-disposition
+          value: attachment; filename="service-centers.csv"
+      body:
+        type: text
+        data: (empty CSV — no service center records to export)
+  - name: example (1)
+    request:
+      url: "{{baseUrl}}/service-center-master/export"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: content-type
+          value: text/csv
+        - name: content-disposition
+          value: attachment; filename="service-centers.csv"
+        - name: date
+          value: Thu, 09 Apr 2026 14:06:45 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+        - name: transfer-encoding
+          value: chunked
+      body:
+        type: text
+        data: |
+          code,name,subName
+          SC001,Mumbai Service Center,Mumbai SC
+
+docs: |-
+  Export all Service Center Master records as a CSV file download. JWT + service_center_master_list or service_center_master_all.
+
+  Response: text/csv download (Content-Disposition: attachment; filename="service-centers.csv")
+  Optional query params: same filters as the List endpoint (search, sortBy, sortOrder, etc.)

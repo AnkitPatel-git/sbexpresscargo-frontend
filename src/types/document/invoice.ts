@@ -41,3 +41,28 @@ export interface InvoiceGenerationPayload {
   customerId?: number;
   showAwb?: boolean;
 }
+
+/** POST /document/invoice/send-email (Bruno: Send Invoice Email) */
+export interface InvoiceSendEmailPayload {
+  fromDate?: string;
+  toDate?: string;
+  serviceCenterId?: number;
+  productType?: string;
+  invoiceFormat?: string;
+  customerId?: number;
+  invoiceStatus?: string;
+  year?: string;
+  invoiceMessage?: string;
+  pendingEmailOnly?: boolean;
+  senderSmtp?: string;
+  smtpPort?: number;
+  senderUserId?: string;
+  password?: string;
+  senderEmailId?: string;
+  additionalCc?: string;
+  invalidEmailFallbackTo?: string;
+  sendInvoiceEmail?: boolean;
+  sendInvoiceAckEmail?: boolean;
+  ssl?: boolean;
+  emailDocument?: string;
+}

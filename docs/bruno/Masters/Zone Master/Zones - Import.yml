@@ -1,0 +1,65 @@
+info:
+  name: Zones - Import
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/rate-master/zones/import"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "zones": [
+          { "name": "Domestic Zone 1", "code": "DOM1", "countryId": 1, "zoneType": "DOMESTIC" },
+          { "name": "Vendor Zone 1", "code": "VEN1", "countryId": 1, "zoneType": "VENDOR" }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/rate-master/zones/import"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "zones": [
+              { "name": "Domestic Zone 1", "code": "DOM1", "countryId": 1, "zoneType": "DOMESTIC" },
+              { "name": "Vendor Zone 1", "code": "VEN1", "countryId": 1, "zoneType": "VENDOR" }
+            ]
+          }
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Zones import completed",
+            "data": { "created": 2, "updated": 0 }
+          }
+
+docs: |-
+  Import zones (upsert by code). JWT + master.zone.create.
+
+  Each item: **`name` and `countryId` required** (same as create). `code` optional for new rows (backend assigns `ZON` + numeric suffix when creating). Existing rows are matched by `code` when present; updates apply `name`, `zoneType`, and `countryId` when sent.

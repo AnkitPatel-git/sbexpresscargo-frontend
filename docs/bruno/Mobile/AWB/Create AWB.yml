@@ -16,12 +16,10 @@ http:
     data: |-
       {
         "productId": 1,
-        "customerId": 1,
-        "paymentType": "CASH",
-        "origin": "MUM",
-        "destination": "DEL",
-        "declaredWeight": 1.5,
-        "pieces": 1
+        "pieces": 1,
+        "isCod": false,
+        "codAmount": 0,
+        "vendorId": 1
       }
   auth: inherit
 
@@ -31,4 +29,4 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-docs: mobile.awb.create — minimal body; extend per MobileAwbCreateDto
+docs: mobile.awb.create — full body per MobileAwbCreateDto

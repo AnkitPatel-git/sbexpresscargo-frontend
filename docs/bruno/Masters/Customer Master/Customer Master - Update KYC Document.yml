@@ -1,0 +1,36 @@
+info:
+  name: Customer Master - Update KYC Document
+  type: http
+  seq: 10
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/customer-master/{{customerId}}/kyc-documents/{{docId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "documentType": "AADHAAR",
+        "documentNumber": "123456789012",
+        "fileUrl": "https://example.com/kyc/aadhaar-updated.pdf",
+        "expiryDate": "2031-01-01",
+        "verified": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Update a KYC document for a specific customer (full replace). Also accepts PATCH for partial update. JWT + customer_master_modify or customer_master_all.
+
+  Path params: customerId (number), docId (number)
+  Optional fields: documentType, documentNumber, fileUrl, expiryDate, verified

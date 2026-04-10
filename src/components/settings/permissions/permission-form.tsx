@@ -20,25 +20,27 @@ import { permissionService } from "@/services/permission-service"
 import { Permission, CreatePermissionDto } from "@/types/permission"
 
 const formSchema = z.object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    underMenu: z.string().min(2, "Menu/Module must be at least 2 characters"),
-    description: z.string().min(5, "Description must be at least 5 characters"),
+    name: z.string().trim().min(2, "Name must be at least 2 characters"),
+    underMenu: z.string().trim().max(64, "Menu/Module must be 64 characters or fewer").optional(),
+    description: z.string().trim().optional(),
 })
 
 interface PermissionFormProps {
     initialData?: Permission | null
 }
 
+type PermissionFormValues = z.infer<typeof formSchema>
+
 export function PermissionForm({ initialData }: PermissionFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
 
-    const form = useForm<CreatePermissionDto>({
+    const form = useForm<PermissionFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: "",
-            underMenu: "Masters",
+            underMenu: "",
             description: "",
         },
         values: initialData ? {
@@ -63,13 +65,19 @@ export function PermissionForm({ initialData }: PermissionFormProps) {
             toast.success(isEdit ? "Permission updated successfully" : "Permission created successfully")
             router.push("/utilities/permissions")
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             toast.error(error.message || "Something went wrong")
         }
     })
 
-    function onSubmit(values: CreatePermissionDto) {
-        mutation.mutate(values)
+    function onSubmit(values: PermissionFormValues) {
+        const payload: CreatePermissionDto = {
+            name: values.name.trim(),
+            ...(values.underMenu ? { underMenu: values.underMenu } : {}),
+            ...(values.description ? { description: values.description } : {}),
+        }
+
+        mutation.mutate(payload)
     }
 
     return (

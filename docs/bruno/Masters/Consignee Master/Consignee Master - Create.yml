@@ -15,25 +15,17 @@ http:
     type: json
     data: |-
       {
-        "destination": "Delhi",
         "code": "CONS01",
         "name": "Receiver Company",
         "contactPerson": "Reception",
         "address1": "200 Delivery Lane",
         "address2": "Floor 1",
-        "pinCode": "110001",
-        "city": "Delhi",
-        "state": "Delhi",
-        "industry": "Logistics",
-        "tel1": "011-12345678",
-        "tel2": "011-87654321",
+        "pinCodeId": "486001",
+        "areaId": 3,
+        "telephone": "011-12345678",
         "fax": "011-11112222",
         "email": "receive@company.com",
-        "mobile": "9876543211",
-        "serviceCenterCode": "HQ",
-        "serviceCenterId": 1,
-        "eori": "EORI123",
-        "vat": "VAT123"
+        "mobile": "9876543211"
       }
   auth: inherit
 
@@ -44,7 +36,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "400"
+  - name: example
     request:
       url: "{{baseUrl}}/consignee-master"
       method: POST
@@ -57,108 +49,17 @@ examples:
         type: json
         data: |-
           {
-            "destination": "Delhi",
             "code": "CONS01",
             "name": "Receiver Company",
             "contactPerson": "Reception",
             "address1": "200 Delivery Lane",
             "address2": "Floor 1",
-            "pinCode": "110001",
-            "city": "Delhi",
-            "state": "Delhi",
-            "industry": "Logistics",
-            "tel1": "011-12345678",
-            "tel2": "011-87654321",
+            "pinCodeId": "486001",
+            "areaId": 3,
+            "telephone": "011-12345678",
             "fax": "011-11112222",
             "email": "receive@company.com",
-            "mobile": "9876543211",
-            "serviceCenterCode": "Headquarters",
-            "serviceCenterId": 1,
-            "eori": "EORI123",
-            "vat": "VAT123"
-          }
-    response:
-      status: 400
-      statusText: Bad Request
-      headers:
-        - name: content-security-policy
-          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
-        - name: cross-origin-opener-policy
-          value: same-origin
-        - name: cross-origin-resource-policy
-          value: same-origin
-        - name: origin-agent-cluster
-          value: ?1
-        - name: referrer-policy
-          value: no-referrer
-        - name: strict-transport-security
-          value: max-age=31536000; includeSubDomains
-        - name: x-content-type-options
-          value: nosniff
-        - name: x-dns-prefetch-control
-          value: off
-        - name: x-download-options
-          value: noopen
-        - name: x-frame-options
-          value: SAMEORIGIN
-        - name: x-permitted-cross-domain-policies
-          value: none
-        - name: x-xss-protection
-          value: "0"
-        - name: vary
-          value: Origin
-        - name: content-type
-          value: application/json; charset=utf-8
-        - name: content-length
-          value: "78"
-        - name: etag
-          value: W/"4e-mSLAyrQVWkoHA/sjHUUi+6M1nMg"
-        - name: date
-          value: Tue, 24 Mar 2026 12:42:19 GMT
-        - name: connection
-          value: keep-alive
-        - name: keep-alive
-          value: timeout=5
-      body:
-        type: json
-        data: |-
-          {
-            "success": false,
-            "message": "Service center not found: Headquarters",
-            "data": {}
-          }
-  - name: "200"
-    request:
-      url: "{{baseUrl}}/consignee-master"
-      method: POST
-      headers:
-        - name: Content-Type
-          value: application/json
-        - name: Authorization
-          value: Bearer {{accessToken}}
-      body:
-        type: json
-        data: |-
-          {
-            "destination": "Delhi",
-            "code": "CONS01",
-            "name": "Receiver Company",
-            "contactPerson": "Reception",
-            "address1": "200 Delivery Lane",
-            "address2": "Floor 1",
-            "pinCode": "110001",
-            "city": "Delhi",
-            "state": "Delhi",
-            "industry": "Logistics",
-            "tel1": "011-12345678",
-            "tel2": "011-87654321",
-            "fax": "011-11112222",
-            "email": "receive@company.com",
-            "mobile": "9876543211",
-            "serviceCenterCode": "HQ",
-            "serviceCenterId": 1,
-            "eori": "EORI123",
-            "vat": "VAT123"
+            "mobile": "9876543211"
           }
     response:
       status: 201
@@ -190,14 +91,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "567"
+          value: "454"
         - name: etag
-          value: W/"237-dsjXB1FafzmLCDQW5RjVGVms0k4"
+          value: W/"1c6-WvaNT/TqVFalN1BChML3/OQ6G4g"
         - name: date
-          value: Tue, 24 Mar 2026 12:42:46 GMT
+          value: Thu, 09 Apr 2026 14:39:51 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -209,26 +112,21 @@ examples:
             "success": true,
             "data": {
               "id": 1,
-              "destination": "Delhi",
+              "areaId": 3,
               "code": "CONS01",
               "name": "Receiver Company",
               "contactPerson": "Reception",
               "address1": "200 Delivery Lane",
               "address2": "Floor 1",
-              "pinCode": "110001",
-              "city": "Delhi",
-              "state": "Delhi",
-              "industry": "Logistics",
-              "tel1": "011-12345678",
-              "tel2": "011-87654321",
+              "pinCodeId": 3,
+              "countryId": 1,
+              "stateId": 3,
+              "telephone": "011-12345678",
               "fax": "011-11112222",
               "email": "receive@company.com",
               "mobile": "9876543211",
-              "serviceCenterId": 1,
-              "eori": "EORI123",
-              "vat": "VAT123",
-              "createdAt": "2026-03-24T12:42:46.346Z",
-              "updatedAt": "2026-03-24T12:42:46.346Z",
+              "createdAt": "2026-04-09T14:39:51.336Z",
+              "updatedAt": "2026-04-09T14:39:51.336Z",
               "createdById": 1,
               "updatedById": null,
               "deletedAt": null,
@@ -239,5 +137,5 @@ examples:
 docs: |-
   Consignee Master create. JWT + consignee_master_add or consignee_master_all.
 
-  Mandatory: code, name
-  Optional: destination, contactPerson, address1, address2, pinCode, city, state, industry, tel1, tel2, fax, email, mobile, serviceCenterCode, serviceCenterId, eori, vat
+  Mandatory: name
+  Optional: code (if omitted, backend assigns next `CNE` + numeric suffix), destination, contactPerson, address1, address2, pinCodeId, city, state, industry, tel1, tel2, fax, email, mobile, serviceCenterCode, serviceCenterId, eori, vat

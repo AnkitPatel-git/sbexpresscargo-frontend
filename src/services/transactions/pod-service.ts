@@ -1,6 +1,8 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { PodViewResponse } from '@/types/transactions/pod';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
 const getAuthHeaders = (isFormData = false) => {
     const headers: Record<string, string> = {
         'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -12,7 +14,7 @@ const getAuthHeaders = (isFormData = false) => {
 };
 
 class PodService {
-    private readonly baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/transaction/pod`;
+    private readonly baseUrl = `${API_URL}/transaction/pod`;
 
     async viewPod(awbNos: string[]): Promise<PodViewResponse> {
         // Changed to getAuthHeaders(false) because we are sending JSON, not FormData

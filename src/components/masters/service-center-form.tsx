@@ -33,10 +33,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { FormSection } from "@/components/ui/form-section"
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { stateService } from '@/services/masters/state-service'
-import { ServiceCenter } from '@/types/masters/service-center'
+import { ServiceCenter, type ServiceCenterFormData } from '@/types/masters/service-center'
+import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const serviceCenterSchema = z.object({
-    code: z.string().min(2, "Code must be at least 2 characters"),
+    code: optionalMasterCode(2),
     name: z.string().min(3, "Name must be at least 3 characters"),
     subName: z.string().nullable().optional(),
     address1: z.string().nullable().optional(),
@@ -47,11 +48,34 @@ const serviceCenterSchema = z.object({
     state: z.string().nullable().optional(),
     telephone: z.string().nullable().optional(),
     email: z.string().email("Invalid email address").or(z.literal("")).nullable().optional(),
+    gstNo: z.string().nullable().optional(),
+    gstTelephone: z.string().nullable().optional(),
+    panNo: z.string().nullable().optional(),
     icnNo: z.string().nullable().optional(),
     stNo: z.string().nullable().optional(),
-    pinCode: z.string().nullable().optional(),
+    pinCodeId: z.string().nullable().optional(),
     companyLogo: z.string().nullable().optional(),
     signatoryLogo: z.string().nullable().optional(),
+    terms: z.array(z.string()).optional(),
+    bankId: z.string().nullable().optional(),
+    accountNo: z.string().nullable().optional(),
+    accountName: z.string().nullable().optional(),
+    bankAddress: z.string().nullable().optional(),
+    ifsc: z.string().nullable().optional(),
+    micr: z.string().nullable().optional(),
+    lastInvoicePrefix: z.string().nullable().optional(),
+    lastInvoiceNo: z.coerce.number().nullable().optional(),
+    lastInvoiceSuffix: z.string().nullable().optional(),
+    freeFormPrefix: z.string().nullable().optional(),
+    lastFreeFormInvoiceNo: z.coerce.number().nullable().optional(),
+    freeFormSuffix: z.string().nullable().optional(),
+    debitNotePrefix: z.string().nullable().optional(),
+    debitNoteLastInvoiceNo: z.coerce.number().nullable().optional(),
+    debitNoteSuffix: z.string().nullable().optional(),
+    creditNotePrefix: z.string().nullable().optional(),
+    creditNoteLastInvoiceNo: z.coerce.number().nullable().optional(),
+    creditNoteSuffix: z.string().nullable().optional(),
+    rcpLastNo: z.coerce.number().nullable().optional(),
 })
 
 type ServiceCenterFormValues = z.infer<typeof serviceCenterSchema>
@@ -85,11 +109,34 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
             state: initialData?.state || '',
             telephone: initialData?.telephone || '',
             email: initialData?.email || '',
+            gstNo: initialData?.gstNo || '',
+            gstTelephone: initialData?.gstTelephone || '',
+            panNo: initialData?.panNo || '',
             icnNo: initialData?.icnNo || '',
             stNo: initialData?.stNo || '',
-            pinCode: initialData?.pinCode || '',
+            pinCodeId: initialData?.pinCodeId != null ? String(initialData.pinCodeId) : '',
             companyLogo: initialData?.companyLogo || '',
             signatoryLogo: initialData?.signatoryLogo || '',
+            terms: initialData?.terms ?? [],
+            bankId: initialData?.bankId != null ? String(initialData.bankId) : '',
+            accountNo: initialData?.accountNo || '',
+            accountName: initialData?.accountName || '',
+            bankAddress: initialData?.bankAddress || '',
+            ifsc: initialData?.ifsc || '',
+            micr: initialData?.micr || '',
+            lastInvoicePrefix: initialData?.lastInvoicePrefix || '',
+            lastInvoiceNo: initialData?.lastInvoiceNo ?? undefined,
+            lastInvoiceSuffix: initialData?.lastInvoiceSuffix || '',
+            freeFormPrefix: initialData?.freeFormPrefix || '',
+            lastFreeFormInvoiceNo: initialData?.lastFreeFormInvoiceNo ?? undefined,
+            freeFormSuffix: initialData?.freeFormSuffix || '',
+            debitNotePrefix: initialData?.debitNotePrefix || '',
+            debitNoteLastInvoiceNo: initialData?.debitNoteLastInvoiceNo ?? undefined,
+            debitNoteSuffix: initialData?.debitNoteSuffix || '',
+            creditNotePrefix: initialData?.creditNotePrefix || '',
+            creditNoteLastInvoiceNo: initialData?.creditNoteLastInvoiceNo ?? undefined,
+            creditNoteSuffix: initialData?.creditNoteSuffix || '',
+            rcpLastNo: initialData?.rcpLastNo ?? undefined,
         }
     })
 
@@ -107,20 +154,50 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                 state: initialData.state || '',
                 telephone: initialData.telephone || '',
                 email: initialData.email || '',
+                gstNo: initialData.gstNo || '',
+                gstTelephone: initialData.gstTelephone || '',
+                panNo: initialData.panNo || '',
                 icnNo: initialData.icnNo || '',
                 stNo: initialData.stNo || '',
-                pinCode: initialData.pinCode || '',
+                pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : '',
                 companyLogo: initialData.companyLogo || '',
                 signatoryLogo: initialData.signatoryLogo || '',
+                terms: initialData.terms ?? [],
+                bankId: initialData.bankId != null ? String(initialData.bankId) : '',
+                accountNo: initialData.accountNo || '',
+                accountName: initialData.accountName || '',
+                bankAddress: initialData.bankAddress || '',
+                ifsc: initialData.ifsc || '',
+                micr: initialData.micr || '',
+                lastInvoicePrefix: initialData.lastInvoicePrefix || '',
+                lastInvoiceNo: initialData.lastInvoiceNo ?? undefined,
+                lastInvoiceSuffix: initialData.lastInvoiceSuffix || '',
+                freeFormPrefix: initialData.freeFormPrefix || '',
+                lastFreeFormInvoiceNo: initialData.lastFreeFormInvoiceNo ?? undefined,
+                freeFormSuffix: initialData.freeFormSuffix || '',
+                debitNotePrefix: initialData.debitNotePrefix || '',
+                debitNoteLastInvoiceNo: initialData.debitNoteLastInvoiceNo ?? undefined,
+                debitNoteSuffix: initialData.debitNoteSuffix || '',
+                creditNotePrefix: initialData.creditNotePrefix || '',
+                creditNoteLastInvoiceNo: initialData.creditNoteLastInvoiceNo ?? undefined,
+                creditNoteSuffix: initialData.creditNoteSuffix || '',
+                rcpLastNo: initialData.rcpLastNo ?? undefined,
             })
         }
     }, [initialData, form])
 
     const mutation = useMutation({
-        mutationFn: (values: ServiceCenterFormValues) =>
-            isEdit
-                ? serviceCenterService.updateServiceCenter(initialData!.id, values)
-                : serviceCenterService.createServiceCenter(values),
+        mutationFn: (values: ServiceCenterFormValues) => {
+            const payload = omitEmptyCodeFields(values, ['code']) as ServiceCenterFormValues
+            if (isEdit && initialData) {
+                const updateBody: Partial<ServiceCenterFormData> = {
+                    ...payload,
+                    version: initialData.version ?? 1,
+                }
+                return serviceCenterService.updateServiceCenter(initialData.id, updateBody)
+            }
+            return serviceCenterService.createServiceCenter(payload as ServiceCenterFormData)
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['service-centers'] })
             if (isEdit && initialData) {
@@ -148,9 +225,9 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                 control={form.control}
                                 name="code"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Service Center Code">
+                                    <FloatingFormItem label="Service Center Code (optional)">
                                         <FormControl>
-                                            <Input {...field} value={field.value || ''} placeholder="e.g. SC001" className={FLOATING_INNER_CONTROL} />
+                                            <Input {...field} value={field.value || ''} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}
@@ -204,6 +281,39 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                 )}
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="gstNo"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="GST No">
+                                            <FormControl>
+                                                <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="gstTelephone"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="GST telephone">
+                                            <FormControl>
+                                                <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="panNo"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="PAN">
+                                            <FormControl>
+                                                <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
                                 <FormField
                                     control={form.control}
                                     name="icnNo"
@@ -293,11 +403,11 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="pinCode"
+                                    name="pinCodeId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Pin Code">
+                                        <FloatingFormItem label="Pin code (id or code)">
                                             <FormControl>
-                                                <Input {...field} value={field.value || ''} placeholder="Pin Code" className={FLOATING_INNER_CONTROL} />
+                                                <Input {...field} value={field.value || ''} placeholder="486001 or id" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -358,6 +468,223 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                    </FormSection>
+
+                    {/* Bank & invoicing (Bruno create optional) */}
+                    <FormSection
+                        className="md:col-span-2"
+                        title="Bank & invoicing"
+                        contentClassName="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
+                            <FormField
+                                control={form.control}
+                                name="bankId"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Bank ID">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} placeholder="Numeric bank id" className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="accountNo"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Account no.">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="accountName"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Account name">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="bankAddress"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Bank address">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="ifsc"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="IFSC">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="micr"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="MICR">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="lastInvoicePrefix"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Last invoice prefix">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="lastInvoiceNo"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Last invoice no.">
+                                        <FormControl>
+                                            <Input type="number" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="lastInvoiceSuffix"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Last invoice suffix">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="freeFormPrefix"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Free form prefix">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="lastFreeFormInvoiceNo"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Last free-form invoice no.">
+                                        <FormControl>
+                                            <Input type="number" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="freeFormSuffix"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Free form suffix">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="debitNotePrefix"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Debit note prefix">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="debitNoteLastInvoiceNo"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Debit note last no.">
+                                        <FormControl>
+                                            <Input type="number" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="debitNoteSuffix"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Debit note suffix">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="creditNotePrefix"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Credit note prefix">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="creditNoteLastInvoiceNo"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Credit note last no.">
+                                        <FormControl>
+                                            <Input type="number" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="creditNoteSuffix"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Credit note suffix">
+                                        <FormControl>
+                                            <Input {...field} value={field.value || ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="rcpLastNo"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="RCP last no.">
+                                        <FormControl>
+                                            <Input type="number" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
+                                        </FormControl>
                                     </FloatingFormItem>
                                 )}
                             />

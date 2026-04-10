@@ -1,11 +1,7 @@
-import { Zone } from "@/types/masters/zone";
-
 export interface State {
     id: number;
-    stateCode: string;
+    countryId: number;
     stateName: string;
-    productType: string;
-    zoneId: number;
     gstAlias: string;
     unionTerritory: boolean;
     createdAt: string;
@@ -14,14 +10,12 @@ export interface State {
     updatedById: number | null;
     deletedAt: string | null;
     deletedById: number | null;
-    zone?: Zone;
+    country?: { id: number; code: string; name: string } | null;
 }
 
 export interface StateFormData {
-    stateCode: string;
+    countryId: number;
     stateName: string;
-    productType: string;
-    zoneId: number;
     gstAlias: string;
     unionTerritory: boolean;
 }

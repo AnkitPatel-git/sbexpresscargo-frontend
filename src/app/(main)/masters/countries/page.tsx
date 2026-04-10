@@ -46,8 +46,39 @@ export default function CountriesPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ["countries", page, debouncedSearch],
-        queryFn: () => countryService.getCountries({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            countryService.getCountries({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await countryService.exportCountries({
+                search: debouncedSearch,
+                sortBy: "code",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Countries exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export countries")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => countryService.deleteCountry(id),
@@ -100,7 +131,19 @@ export default function CountriesPage() {
                     <PermissionGuard permission="master.country.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import"><FileUp className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.country.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["countries"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -142,8 +185,8 @@ export default function CountriesPage() {
                                     <TableCell className="font-medium uppercase text-foreground">{country.code}</TableCell>
                                     <TableCell className="font-medium text-foreground">{country.name}</TableCell>
                                     <TableCell className="uppercase text-foreground">{country.weightUnit}</TableCell>
-                                    <TableCell className="text-foreground">{country.currency}</TableCell>
-                                    <TableCell className="text-foreground">{country.isdCode}</TableCell>
+                                    <TableCell className="text-foreground">{country.currency || "-"}</TableCell>
+                                    <TableCell className="text-foreground">{country.isdCode || "-"}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
                                             <PermissionGuard permission="master.country.update">

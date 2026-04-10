@@ -4,7 +4,7 @@ info:
   seq: 4
 
 http:
-  method: PUT
+  method: PATCH
   url: "{{baseUrl}}/service-center-master/2"
   headers:
     - name: Content-Type
@@ -15,16 +15,7 @@ http:
     type: json
     data: |-
       {
-        "code": "SC001",
-        "name": "Mumbai Service Center Updated",
-        "subName": "Mumbai SC",
-        "address1": "456 Service Rd",
-        "destination": "Mumbai",
-        "state": "Maharashtra",
-        "telephone": "022-33334444",
-        "email": "sc@sbexpress.com",
-        "gstNo": "27AABCU9603R1ZM",
-        "pinCode": "400002"
+        "version": 1,
       }
   auth: inherit
 
@@ -34,109 +25,8 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-examples:
-  - name: "200"
-    request:
-      url: "{{baseUrl}}/service-center-master/2"
-      method: PUT
-      headers:
-        - name: Content-Type
-          value: application/json
-        - name: Authorization
-          value: Bearer {{accessToken}}
-      body:
-        type: json
-        data: |-
-          {
-            "code": "SC001",
-            "name": "Mumbai Service Center Updated",
-            "subName": "Mumbai SC",
-            "address1": "456 Service Rd",
-            "destination": "Mumbai",
-            "state": "Maharashtra",
-            "telephone": "022-33334444",
-            "email": "sc@sbexpress.com",
-            "gstNo": "27AABCU9603R1ZM",
-            "pinCode": "400002"
-          }
-    response:
-      status: 200
-      statusText: OK
-      headers:
-        - name: content-security-policy
-          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
-        - name: cross-origin-opener-policy
-          value: same-origin
-        - name: cross-origin-resource-policy
-          value: same-origin
-        - name: origin-agent-cluster
-          value: ?1
-        - name: referrer-policy
-          value: no-referrer
-        - name: strict-transport-security
-          value: max-age=31536000; includeSubDomains
-        - name: x-content-type-options
-          value: nosniff
-        - name: x-dns-prefetch-control
-          value: off
-        - name: x-download-options
-          value: noopen
-        - name: x-frame-options
-          value: SAMEORIGIN
-        - name: x-permitted-cross-domain-policies
-          value: none
-        - name: x-xss-protection
-          value: "0"
-        - name: vary
-          value: Origin
-        - name: content-type
-          value: application/json; charset=utf-8
-        - name: content-length
-          value: "609"
-        - name: etag
-          value: W/"261-WPwDO1GuDqSpQLDsNLoe7fnDeHE"
-        - name: date
-          value: Tue, 24 Mar 2026 12:38:13 GMT
-        - name: connection
-          value: keep-alive
-        - name: keep-alive
-          value: timeout=5
-      body:
-        type: json
-        data: |-
-          {
-            "success": true,
-            "data": {
-              "id": 2,
-              "code": "SC001",
-              "name": "Mumbai Service Center Updated",
-              "subName": "Mumbai SC",
-              "address1": "456 Service Rd",
-              "address2": "Floor 1",
-              "address3": "Wing A",
-              "address4": "Block B",
-              "destination": "Mumbai",
-              "state": "Maharashtra",
-              "telephone": "022-33334444",
-              "email": "sc@sbexpress.com",
-              "icnNo": null,
-              "stNo": null,
-              "pinCode": "400002",
-              "companyLogo": "https://example.com/logo.png",
-              "signatoryLogo": "https://example.com/sign.png",
-              "version": 1,
-              "localBranchId": 1,
-              "createdAt": "2026-03-24T12:29:52.889Z",
-              "updatedAt": "2026-03-24T12:38:13.105Z",
-              "createdById": 1,
-              "updatedById": 1,
-              "deletedAt": null,
-              "deletedById": null
-            }
-          }
-
 docs: |-
   Service Center Master update by id. JWT + service_center_master_modify or service_center_master_all.
 
-  Mandatory: (none - all optional for partial update)
-  Optional: code, name, subName, address1, address2, address3, address4, destination, state, telephone, email, gstNo, gstTelephone, panNo, icnNo, stNo, pinCode, companyLogo, signatoryLogo, terms, bankName, accountNo, accountName, bankAddress, ifsc, micr, lastInvoicePrefix, lastInvoiceNo, lastInvoiceSuffix, freeFormPrefix, lastFreeFormInvoiceNo, freeFormSuffix, debitNotePrefix, debitNoteLastInvoiceNo, debitNoteSuffix, creditNotePrefix, creditNoteLastInvoiceNo, creditNoteSuffix, rcpLastNo
+  Mandatory: version
+  Optional: code, name, subName, address1, address2, address3, address4, state, telephone, email, gstNo, gstTelephone, panNo, icnNo, stNo, pinCodeId, companyLogo, signatoryLogo, terms, bankId, accountNo, accountName, bankAddress, ifsc, micr, lastInvoicePrefix, lastInvoiceNo, lastInvoiceSuffix, freeFormPrefix, lastFreeFormInvoiceNo, freeFormSuffix, debitNotePrefix, debitNoteLastInvoiceNo, debitNoteSuffix, creditNotePrefix, creditNoteLastInvoiceNo, creditNoteSuffix, rcpLastNo

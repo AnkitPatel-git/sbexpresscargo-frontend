@@ -1,0 +1,29 @@
+info:
+  name: Create Role
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/utilities/roles"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Operations Manager",
+        "identifier": "operations_manager",
+        "description": "Role for operations managers",
+        "permissionIds": [1, 2, 3]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,6 +1,6 @@
 "use client"
 
-import { ChangeEvent, useEffect, useRef } from 'react'
+import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { useForm, useFieldArray, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -52,6 +52,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
@@ -74,11 +75,28 @@ import { vendorService } from '@/services/masters/vendor-service'
 import { serviceMapService } from '@/services/masters/service-map-service'
 import { chargeService } from '@/services/masters/charge-service'
 import { shipmentSchema, ShipmentFormValues, Shipment } from '@/types/transactions/shipment'
+import { omitEmptyCodeFields } from '@/lib/master-code-schema'
 import type { Shipper } from '@/types/masters/shipper'
 import type { Consignee } from '@/types/masters/consignee'
 
 interface ShipmentFormProps {
     initialData?: Shipment | null
+}
+
+type ForwardingRow = {
+    deliveryAwb: string
+    forwardingAwb: string
+    deliveryVendorId: number
+    deliveryServiceMapId: number
+    totalAmount: number
+}
+
+type KycRow = {
+    id: string
+    type: string
+    entryType: string
+    entryDate: string
+    file: File | null
 }
 
 const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValues => {
@@ -113,20 +131,29 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
 
     if (payload.shipperId) {
         payload.shipper = undefined
-    } else if (!payload.shipper?.shipperName && !payload.shipper?.mobile && !payload.shipper?.shipperCode) {
-        payload.shipper = undefined
+    } else if (payload.shipper) {
+        const s = omitEmptyCodeFields({ ...payload.shipper }, ['shipperCode']) as NonNullable<ShipmentFormValues['shipper']>
+        if (!s.shipperName?.trim() && !s.mobile?.trim() && !s.shipperCode?.trim()) {
+            payload.shipper = undefined
+        } else {
+            payload.shipper = s
+        }
     }
 
     if (payload.consigneeId) {
         payload.consignee = undefined
-    } else if (!payload.consignee?.name && !payload.consignee?.mobile && !payload.consignee?.code) {
-        payload.consignee = undefined
+    } else if (payload.consignee) {
+        const c = omitEmptyCodeFields({ ...payload.consignee }, ['code']) as NonNullable<ShipmentFormValues['consignee']>
+        if (!c.name?.trim() && !c.mobile?.trim() && !c.code?.trim()) {
+            payload.consignee = undefined
+        } else {
+            payload.consignee = c
+        }
     }
 
     payload.piecesRows = (payload.piecesRows || []).filter((row) => Number(row.pieces || 0) > 0)
     payload.charges = (payload.charges || []).filter((charge) => Number(charge.chargeId || 0) > 0)
 
-    payload.serviceCenterId = undefined
     payload.fieldExecutiveId = undefined
 
     return payload
@@ -189,7 +216,7 @@ const EMPTY_SHIPPER_BLOCK: NonNullable<ShipmentFormValues['shipper']> = {
     city: '',
     state: '',
     country: '',
-    telephone1: '',
+    telephone: '',
     mobile: '',
     email: '',
     iecNo: '',
@@ -206,7 +233,7 @@ const EMPTY_CONSIGNEE_BLOCK: NonNullable<ShipmentFormValues['consignee']> = {
     city: '',
     state: '',
     country: '',
-    tel1: '',
+    telephone: '',
     mobile: '',
     email: '',
     vat: '',
@@ -220,11 +247,11 @@ function shipperFromMaster(s: Shipper): NonNullable<ShipmentFormValues['shipper'
         contactPerson: strOrEmpty(s.contactPerson),
         address1: strOrEmpty(s.address1),
         address2: strOrEmpty(s.address2),
-        pinCode: strOrEmpty(s.pinCode),
-        city: strOrEmpty(s.city),
+        pinCode: strOrEmpty(s.serviceablePincode?.pinCode ?? s.pinCode),
+        city: strOrEmpty(s.city ?? s.serviceablePincode?.cityName),
         state: strOrEmpty(s.state),
         country: '',
-        telephone1: strOrEmpty(s.telephone1),
+        telephone: strOrEmpty(s.telephone),
         mobile: strOrEmpty(s.mobile),
         email: strOrEmpty(s.email),
         iecNo: strOrEmpty(s.iecNo),
@@ -239,11 +266,11 @@ function consigneeFromMaster(c: Consignee): NonNullable<ShipmentFormValues['cons
         contactPerson: strOrEmpty(c.contactPerson),
         address1: strOrEmpty(c.address1),
         address2: strOrEmpty(c.address2),
-        pinCode: strOrEmpty(c.pinCode),
-        city: strOrEmpty(c.city),
+        pinCode: strOrEmpty(c.serviceablePincode?.pinCode ?? c.pinCode),
+        city: strOrEmpty(c.city ?? c.serviceablePincode?.cityName),
         state: strOrEmpty(c.state),
         country: '',
-        tel1: strOrEmpty(c.tel1),
+        telephone: strOrEmpty(c.telephone),
         mobile: strOrEmpty(c.mobile),
         email: strOrEmpty(c.email),
         vat: strOrEmpty(c.vat),
@@ -254,6 +281,25 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
+    const [activeTab, setActiveTab] = useState("awb")
+    const [savedShipment, setSavedShipment] = useState<{ id: number; version?: number } | null>(
+        initialData ? { id: initialData.id, version: initialData.version } : null
+    )
+    const [isAwbStepComplete, setIsAwbStepComplete] = useState(Boolean(initialData))
+    const [isForwardingStepComplete, setIsForwardingStepComplete] = useState(Boolean(initialData?.forwardings?.length))
+    const [forwardingForm, setForwardingForm] = useState<ForwardingRow>(() => {
+        const existing = initialData?.forwardings?.[0]
+        return {
+            deliveryAwb: existing?.deliveryAwb || "",
+            forwardingAwb: existing?.forwardingAwb || "",
+            deliveryVendorId: existing?.deliveryVendorId || existing?.deliveryVendor?.id || 0,
+            deliveryServiceMapId: existing?.deliveryServiceMapId || 0,
+            totalAmount: Number(existing?.totalAmount || 0),
+        }
+    })
+    const [kycRows, setKycRows] = useState<KycRow[]>([
+        { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd"), file: null },
+    ])
 
     // Lookup Data
     const { data: customersData } = useQuery({
@@ -354,7 +400,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 version: initialData.version,
                 piecesRows: initialData.piecesRows || [],
                 charges: initialData.charges || [],
-                serviceCenterId: undefined,
                 fieldExecutiveId: undefined,
             })
         }
@@ -460,7 +505,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (chargeWeight > 0 && Math.abs((form.getValues('chargeWeight') || 0) - chargeWeight) > 0.001) {
             form.setValue('chargeWeight', parseFloat(chargeWeight.toFixed(2)), { shouldValidate: true });
         }
-    }, [JSON.stringify(watchedPiecesRows), form]);
+    }, [watchedPiecesRows, form]);
 
     // 2. Charges Row Total and Grand Totals
     const watchedCharges = form.watch('charges')
@@ -506,25 +551,87 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (Math.abs((form.getValues('totalAmount') || 0) - grandTotalAmount) > 0.01) {
             form.setValue('totalAmount', parseFloat(grandTotalAmount.toFixed(2)), { shouldValidate: true });
         }
-    }, [JSON.stringify(watchedCharges), form]);
+    }, [watchedCharges, form]);
 
     // --- End Calculations ---
 
-    const mutation = useMutation({
+    const awbMutation = useMutation({
         mutationFn: (values: ShipmentFormValues) => {
             const payload = normalizeShipmentPayload(values)
-            return isEdit
-                ? shipmentService.updateShipment(initialData!.id, payload)
+            const targetId = savedShipment?.id || initialData?.id
+            return targetId
+                ? shipmentService.updateShipment(targetId, { ...payload, version: payload.version || savedShipment?.version || initialData?.version })
                 : shipmentService.createShipment(payload)
+        },
+        onSuccess: (response) => {
+            const shipment = response?.data
+            const shipmentId = shipment?.id || savedShipment?.id || initialData?.id
+            const version = shipment?.version || savedShipment?.version || initialData?.version
+            if (shipmentId) {
+                setSavedShipment({ id: shipmentId, version })
+                setIsAwbStepComplete(true)
+                setActiveTab('forwarding')
+            }
+            toast.success(`Shipment ${isEdit || savedShipment ? 'updated' : 'created'} successfully`)
+        },
+        onError: (error: unknown) => {
+            toast.error(getErrorMessage(error, `Failed to ${isEdit || savedShipment ? 'update' : 'create'} shipment`))
+        }
+    })
+
+    const forwardingMutation = useMutation({
+        mutationFn: async () => {
+            if (!savedShipment?.id || !savedShipment.version) {
+                throw new Error('Please create shipment first')
+            }
+            return shipmentService.upsertForwarding(savedShipment.id, {
+                version: Number(savedShipment.version),
+                deliveryAwb: forwardingForm.deliveryAwb || undefined,
+                forwardingAwb: forwardingForm.forwardingAwb || undefined,
+                deliveryVendorId: forwardingForm.deliveryVendorId || undefined,
+                deliveryServiceMapId: forwardingForm.deliveryServiceMapId || undefined,
+                totalAmount: forwardingForm.totalAmount > 0 ? forwardingForm.totalAmount : undefined,
+            })
+        },
+        onSuccess: (response) => {
+            const nextVersion = response?.data?.shipment?.version || savedShipment?.version
+            if (savedShipment?.id) {
+                setSavedShipment({ id: savedShipment.id, version: nextVersion })
+            }
+            setIsForwardingStepComplete(true)
+            setActiveTab('kyc')
+            toast.success('Forwarding saved')
+        },
+        onError: (error: unknown) => {
+            toast.error(getErrorMessage(error, 'Failed to save forwarding'))
+        },
+    })
+
+    const kycMutation = useMutation({
+        mutationFn: async () => {
+            if (!savedShipment?.id) {
+                throw new Error('Please create shipment first')
+            }
+            const uploads = kycRows.filter((row) => row.file)
+            for (const row of uploads) {
+                if (row.file) {
+                    await shipmentService.uploadKyc(savedShipment.id, {
+                        type: row.type,
+                        entryType: row.entryType,
+                        entryDate: row.entryDate || undefined,
+                        file: row.file,
+                    })
+                }
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['shipments'] })
-            toast.success(`Shipment ${isEdit ? 'updated' : 'created'} successfully`)
+            toast.success('Shipment process completed')
             router.push('/transactions/shipment')
         },
         onError: (error: unknown) => {
-            toast.error(getErrorMessage(error, `Failed to ${isEdit ? 'update' : 'create'} shipment`))
-        }
+            toast.error(getErrorMessage(error, 'Failed to upload KYC'))
+        },
     })
 
     const templateMutation = useMutation({
@@ -560,16 +667,90 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
     }
 
-    const onSubmit = (values: ShipmentFormValues) => {
-        const payload: ShipmentFormValues = isEdit
-            ? { ...values, version: values.version || initialData?.version }
-            : values
-        mutation.mutate(payload)
+    const updateForwardingForm = (patch: Partial<ForwardingRow>) => {
+        setForwardingForm((prev) => ({ ...prev, ...patch }))
+    }
+
+    const forwardingServiceOptions = (serviceMapsData?.data || [])
+        .filter((sm) => sm.vendorId === forwardingForm.deliveryVendorId)
+        .map((sm) => ({
+            label: `${sm.serviceType} (${sm.id})`,
+            value: sm.id,
+        }))
+
+    const addKycRow = () => {
+        setKycRows((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd"), file: null },
+        ])
+    }
+
+    const removeKycRow = (id: string) => {
+        setKycRows((prev) => prev.filter((row) => row.id !== id))
+    }
+
+    const updateKycRow = (id: string, patch: Partial<KycRow>) => {
+        setKycRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+    }
+
+    const handleAwbNext = async () => {
+        const valid = await form.trigger([
+            'bookDate',
+            'customerId',
+            'productId',
+            'pieces',
+            'actualWeight',
+            'paymentType',
+        ])
+        if (!valid) {
+            toast.error('Please fill required AWB details first')
+            return
+        }
+        const values = form.getValues()
+        awbMutation.mutate(values)
+    }
+
+    const handleForwardingNext = async () => {
+        if (!forwardingForm.deliveryVendorId || !forwardingForm.deliveryServiceMapId) {
+            toast.error('Please select forwarding vendor and service')
+            return
+        }
+        forwardingMutation.mutate()
+    }
+
+    const handleTabChange = (nextTab: string) => {
+        if (nextTab === 'awb') {
+            setActiveTab('awb')
+            return
+        }
+        if (nextTab === 'forwarding') {
+            if (!isAwbStepComplete) {
+                toast.error('Complete AWB step first')
+                return
+            }
+            setActiveTab('forwarding')
+            return
+        }
+        if (nextTab === 'kyc') {
+            if (!isAwbStepComplete || !isForwardingStepComplete) {
+                toast.error('Complete Forwarding step first')
+                return
+            }
+            setActiveTab('kyc')
+        }
     }
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-20">
+            <form className="space-y-4 pb-20">
+                <Tabs value={activeTab} onValueChange={handleTabChange}>
+                    <TabsList className="rounded-md border border-border/60 bg-muted/50 p-1">
+                        <TabsTrigger value="awb" className="rounded-md px-4 py-1.5 text-xs">AWB</TabsTrigger>
+                        <TabsTrigger value="forwarding" className="rounded-md px-4 py-1.5 text-xs" disabled={!isAwbStepComplete}>Forwarding</TabsTrigger>
+                        <TabsTrigger value="kyc" className="rounded-md px-4 py-1.5 text-xs" disabled={!isAwbStepComplete || !isForwardingStepComplete}>KYC Upload</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="awb" className="space-y-4">
                 <div className="rounded-md border border-border bg-card p-3">
                     <div className="space-y-3">
                         <FormSection title="Booking & Client" contentClassName="space-y-3 px-3 pb-3 pt-6">
@@ -683,9 +864,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="shipper.shipperCode"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Code">
+                                                <FloatingFormItem label="Shipper code (optional)">
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -769,7 +950,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="shipper.telephone1"
+                                            name="shipper.telephone"
                                             render={({ field }) => (
                                                 <FloatingFormItem label="Telephone">
                                                     <FormControl>
@@ -860,9 +1041,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="consignee.code"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Code">
+                                                <FloatingFormItem label="Consignee code (optional)">
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -946,7 +1127,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="consignee.tel1"
+                                            name="consignee.telephone"
                                             render={({ field }) => (
                                                 <FloatingFormItem label="Telephone">
                                                     <FormControl>
@@ -1014,45 +1195,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         value={field.value}
                                                         onChange={field.onChange}
                                                         placeholder="Select product"
-                                                        className={FLOATING_INNER_COMBO}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="vendorId"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label={<>Vendor <span className="text-red-500">*</span></>}>
-                                                <FormControl>
-                                                    <Combobox
-                                                        options={vendorsData?.data?.map((v) => ({ label: v.vendorName, value: v.id })) || []}
-                                                        value={field.value}
-                                                        onChange={field.onChange}
-                                                        placeholder="Select vendor"
-                                                        className={FLOATING_INNER_COMBO}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="serviceMapId"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label={<>Service <span className="text-red-500">*</span></>}>
-                                                <FormControl>
-                                                    <Combobox
-                                                        options={
-                                                            serviceMapsData?.data?.map((sm) => ({
-                                                                label: `${sm.serviceType} (${sm.id})`,
-                                                                value: sm.id,
-                                                            })) || []
-                                                        }
-                                                        value={field.value}
-                                                        onChange={field.onChange}
-                                                        placeholder="Select service"
                                                         className={FLOATING_INNER_COMBO}
                                                     />
                                                 </FormControl>
@@ -1435,6 +1577,140 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             )}
                         />
                 </FormSection>
+                    </TabsContent>
+
+                    <TabsContent value="forwarding">
+                        <OutlinedFormSection label="Forwarding Details" labelTone="navy">
+                            <div className="grid grid-cols-1 gap-3 pt-2 md:grid-cols-2">
+                                <FloatingFormItem label="Delivery AWB">
+                                    <Input
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={forwardingForm.deliveryAwb}
+                                        onChange={(e) => updateForwardingForm({ deliveryAwb: e.target.value })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Forwarding AWB">
+                                    <Input
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={forwardingForm.forwardingAwb}
+                                        onChange={(e) => updateForwardingForm({ forwardingAwb: e.target.value })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label={<>Vendor <span className="text-red-500">*</span></>}>
+                                    <Combobox
+                                        options={vendorsData?.data?.map((v) => ({ label: v.vendorName, value: v.id })) || []}
+                                        value={forwardingForm.deliveryVendorId}
+                                        onChange={(val) =>
+                                            updateForwardingForm({
+                                                deliveryVendorId: Number(val) || 0,
+                                                deliveryServiceMapId: 0,
+                                            })
+                                        }
+                                        placeholder="Select vendor"
+                                        className={FLOATING_INNER_COMBO}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label={<>Service <span className="text-red-500">*</span></>}>
+                                    <Combobox
+                                        options={forwardingServiceOptions}
+                                        value={forwardingForm.deliveryServiceMapId}
+                                        onChange={(val) => updateForwardingForm({ deliveryServiceMapId: Number(val) || 0 })}
+                                        placeholder={forwardingForm.deliveryVendorId > 0 ? "Select service" : "Select vendor first"}
+                                        className={FLOATING_INNER_COMBO}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Total Amount">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={forwardingForm.totalAmount || 0}
+                                        onChange={(e) => updateForwardingForm({ totalAmount: Number(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                            </div>
+                            <p className="pt-2 text-xs text-muted-foreground">Forwarding details are saved after shipment save/update.</p>
+                        </OutlinedFormSection>
+                    </TabsContent>
+
+                    <TabsContent value="kyc">
+                        <OutlinedFormSection label="KYC Upload" labelTone="navy">
+                            <div className="flex justify-end border-b border-border/70 pb-3">
+                                <Button type="button" variant="outline" size="sm" onClick={addKycRow}>
+                                    <Plus className="mr-2 h-4 w-4" /> Add KYC Row
+                                </Button>
+                            </div>
+                            <div className="overflow-hidden rounded-md border border-border/70 bg-muted/20">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-b-0 bg-primary hover:bg-primary">
+                                            <TableHead className="text-primary-foreground first:rounded-tl-md">Type</TableHead>
+                                            <TableHead className="text-primary-foreground">Entry Type</TableHead>
+                                            <TableHead className="text-primary-foreground">Entry Date</TableHead>
+                                            <TableHead className="text-primary-foreground">File</TableHead>
+                                            <TableHead className="w-[50px] text-primary-foreground last:rounded-tr-md" />
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {kycRows.map((row) => (
+                                            <TableRow key={row.id}>
+                                                <TableCell className="w-[220px]">
+                                                    <Combobox
+                                                        options={[
+                                                            { label: "Aadhaar", value: "AADHAAR" },
+                                                            { label: "PAN", value: "PAN" },
+                                                            { label: "GST", value: "GST" },
+                                                            { label: "Invoice", value: "INVOICE" },
+                                                            { label: "Other", value: "OTHER" },
+                                                        ]}
+                                                        value={row.type}
+                                                        onChange={(val) => updateKycRow(row.id, { type: String(val || "AADHAAR") })}
+                                                        placeholder="Select type"
+                                                        className="h-8"
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="w-[200px]">
+                                                    <Combobox
+                                                        options={[
+                                                            { label: "ID Proof", value: "ID_PROOF" },
+                                                            { label: "Address Proof", value: "ADDRESS_PROOF" },
+                                                            { label: "Invoice", value: "INVOICE" },
+                                                            { label: "Other", value: "OTHER" },
+                                                        ]}
+                                                        value={row.entryType}
+                                                        onChange={(val) => updateKycRow(row.id, { entryType: String(val || "ID_PROOF") })}
+                                                        placeholder="Select entry type"
+                                                        className="h-8"
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="w-[180px]">
+                                                    <Input
+                                                        type="date"
+                                                        value={row.entryDate}
+                                                        className="h-8"
+                                                        onChange={(e) => updateKycRow(row.id, { entryDate: e.target.value })}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input
+                                                        type="file"
+                                                        className="h-8 cursor-pointer"
+                                                        onChange={(e) => updateKycRow(row.id, { file: e.target.files?.[0] || null })}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button type="button" variant="ghost" size="sm" onClick={() => removeKycRow(row.id)}>
+                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <p className="pt-2 text-xs text-muted-foreground">KYC files are uploaded after shipment save/update using AWB number.</p>
+                        </OutlinedFormSection>
+                    </TabsContent>
+                </Tabs>
 
                 {/* Submit Buttons */}
                 <div className="sticky bottom-0 z-20 flex justify-end gap-3 border-t bg-white pb-4 pt-4">
@@ -1442,18 +1718,43 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                         type="button"
                         variant="outline"
                         onClick={() => router.push('/transactions/shipment')}
-                        disabled={mutation.isPending}
+                        disabled={awbMutation.isPending || forwardingMutation.isPending || kycMutation.isPending}
                     >
                         Cancel
                     </Button>
-                    <Button
-                        type="submit"
-                        disabled={mutation.isPending}
-                        className={!isEdit ? "bg-green-600 hover:bg-green-700 text-white" : undefined}
-                    >
-                        {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isEdit ? 'Update Shipment' : 'Create Shipment'}
-                    </Button>
+                    {activeTab === 'forwarding' && (
+                        <Button type="button" variant="outline" onClick={() => setActiveTab('awb')}>
+                            Previous
+                        </Button>
+                    )}
+                    {activeTab === 'kyc' && (
+                        <Button type="button" variant="outline" onClick={() => setActiveTab('forwarding')}>
+                            Previous
+                        </Button>
+                    )}
+                    {activeTab === 'awb' && (
+                        <Button
+                            type="button"
+                            onClick={handleAwbNext}
+                            disabled={awbMutation.isPending}
+                            className="bg-green-600 text-white hover:bg-green-700"
+                        >
+                            {awbMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isAwbStepComplete ? 'Save AWB & Next' : 'Create AWB & Next'}
+                        </Button>
+                    )}
+                    {activeTab === 'forwarding' && (
+                        <Button type="button" onClick={handleForwardingNext} disabled={forwardingMutation.isPending}>
+                            {forwardingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Forwarding & Next
+                        </Button>
+                    )}
+                    {activeTab === 'kyc' && (
+                        <Button type="button" onClick={() => kycMutation.mutate()} disabled={kycMutation.isPending}>
+                            {kycMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Finish
+                        </Button>
+                    )}
                 </div>
             </form>
         </Form>

@@ -15,10 +15,9 @@ http:
     type: json
     data: |-
       {
-        "vendorCode": "VEND01",
+        "vendorId": 1,
         "serviceType": "AIR",
-        "billingVendorCode": "VEND01",
-        "minWeight": 0,
+                "minWeight": 0,
         "maxWeight": 50,
         "status": "ACTIVE",
         "vendorLink": "https://vendor.com/track",
@@ -33,7 +32,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/service-map-master"
       method: POST
@@ -46,10 +45,9 @@ examples:
         type: json
         data: |-
           {
-            "vendorCode": "VEND01",
+            "vendorId": 1,
             "serviceType": "AIR",
-            "billingVendorCode": "VEND01",
-            "minWeight": 0,
+                    "minWeight": 0,
             "maxWeight": 50,
             "status": "ACTIVE",
             "vendorLink": "https://vendor.com/track",
@@ -85,14 +83,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "347"
+          value: "327"
         - name: etag
-          value: W/"15b-DkJys6eNasWF0ytVJC1UtZw2vpc"
+          value: W/"147-YG+FgsovNCw4tfzxxfEWh4SH8s0"
         - name: date
-          value: Tue, 24 Mar 2026 13:01:44 GMT
+          value: Thu, 09 Apr 2026 14:40:55 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -105,15 +105,14 @@ examples:
             "data": {
               "id": 1,
               "vendorId": 1,
-              "billingVendorId": 1,
               "serviceType": "AIR",
               "minWeight": "0",
               "maxWeight": "50",
               "status": "ACTIVE",
               "vendorLink": "https://vendor.com/track",
               "isSinglePiece": false,
-              "createdAt": "2026-03-24T13:01:44.568Z",
-              "updatedAt": "2026-03-24T13:01:44.568Z",
+              "createdAt": "2026-04-09T14:40:55.646Z",
+              "updatedAt": "2026-04-09T14:40:55.646Z",
               "createdById": 1,
               "updatedById": null,
               "deletedAt": null,
@@ -125,4 +124,4 @@ docs: |-
   Service Map Master create. JWT + service_map_master_add or service_map_master_all.
 
   Mandatory: (none - all optional)
-  Optional: vendorCode, serviceType (AIR|SURFACE), billingVendorCode, minWeight, maxWeight, status (ACTIVE|INACTIVE), vendorLink, isSinglePiece
+  Optional: vendorId, serviceType (AIR|SURFACE), minWeight, maxWeight, status (ACTIVE|INACTIVE), vendorLink, isSinglePiece

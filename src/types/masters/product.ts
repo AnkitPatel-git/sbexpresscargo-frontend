@@ -1,14 +1,15 @@
+/** Product Master — Bruno `docs/bruno/Masters/Product Master/*`. */
+
 export interface Product {
     id: number;
     productCode: string;
     productName: string;
-    productType: 'DOMESTIC' | 'INTERNATIONAL' | 'IMPORT' | 'LOCAL' | string;
-    productService: string | null;
+    version: number;
+    productType: 'DOMESTIC' | 'INTERNATIONAL' | 'LOCAL' | string;
     fuelCharge: boolean;
     gstReverse: boolean;
     docType: 'DOX' | 'NDOX' | string;
     status: 'ACTIVE' | 'INACTIVE' | string;
-    groupType: 'AIR' | 'SURFACE' | 'TRAIN' | 'ALL' | string;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -21,12 +22,12 @@ export interface ProductFormData {
     productCode: string;
     productName: string;
     productType: string;
-    productService?: string | null;
     fuelCharge: boolean;
     gstReverse: boolean;
     docType: string;
     status: string;
-    groupType: string;
+    /** Required on PATCH (Bruno); omit on POST. */
+    version?: number;
 }
 
 export interface ProductListResponse {
@@ -43,6 +44,6 @@ export interface ProductListResponse {
 
 export interface ProductSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: Product;
 }

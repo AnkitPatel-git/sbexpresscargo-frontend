@@ -31,13 +31,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { areaService } from '@/services/masters/area-service'
-import { serviceCenterService } from '@/services/masters/service-center-service'
+import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
 import { Area, AreaFormData } from '@/types/masters/area'
 
 const areaSchema = z.object({
     areaName: z.string().min(2, "Area name must be at least 2 characters"),
-    serviceCenterId: z.number().min(1, "Service center is required"),
-    destination: z.string().optional().nullable().or(z.literal('')),
+    pinCodeId: z.number().min(1, "Pin code is required"),
 })
 
 type AreaFormValues = z.infer<typeof areaSchema>
@@ -50,19 +49,18 @@ export function AreaForm({ initialData }: AreaFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
-    const [scOpen, setScOpen] = useState(false)
+    const [pinOpen, setPinOpen] = useState(false)
 
-    const { data: scData } = useQuery({
-        queryKey: ['service-centers-list'],
-        queryFn: () => serviceCenterService.getServiceCenters({ limit: 100 }),
+    const { data: pincodeData } = useQuery({
+        queryKey: ['pincodes-list'],
+        queryFn: () => serviceablePincodeService.getServiceablePincodes({ limit: 100 }),
     })
 
     const form = useForm<AreaFormValues>({
         resolver: zodResolver(areaSchema) as Resolver<AreaFormValues>,
         defaultValues: {
             areaName: initialData?.areaName || '',
-            serviceCenterId: initialData?.serviceCenterId || 0,
-            destination: initialData?.destination || '',
+            pinCodeId: initialData?.pinCodeId || 0,
         }
     })
 
@@ -70,10 +68,7 @@ export function AreaForm({ initialData }: AreaFormProps) {
         mutationFn: (data: AreaFormValues) => {
             const payload: AreaFormData = {
                 areaName: data.areaName,
-                serviceCenterId: data.serviceCenterId,
-            }
-            if (data.destination != null && data.destination !== "") {
-                payload.destination = data.destination
+                pinCodeId: data.pinCodeId,
             }
             if (isEdit && initialData) {
                 return areaService.updateArea(initialData.id, payload)
@@ -123,10 +118,10 @@ export function AreaForm({ initialData }: AreaFormProps) {
 
                     <FormField
                         control={form.control}
-                        name="serviceCenterId"
+                        name="pinCodeId"
                         render={({ field }) => (
-                            <FloatingFormItem label={<>Service Center <span className="text-red-500">*</span></>}>
-                                <Popover open={scOpen} onOpenChange={setScOpen}>
+                            <FloatingFormItem label={<>Pin Code <span className="text-red-500">*</span></>}>
+                                <Popover open={pinOpen} onOpenChange={setPinOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
                                             <Button
@@ -138,36 +133,39 @@ export function AreaForm({ initialData }: AreaFormProps) {
                                                 )}
                                             >
                                                 {field.value
-                                                    ? scData?.data?.find((sc) => sc.id === field.value)?.name
-                                                    : "Select service center"}
+                                                    ? (() => {
+                                                        const pin = pincodeData?.data?.find((p) => p.id === field.value)
+                                                        return pin ? `${pin.pinCode} - ${pin.pinCodeName}` : "Select pin code"
+                                                    })()
+                                                    : "Select pin code"}
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </FormControl>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                                         <Command>
-                                            <CommandInput placeholder="Search service center..." />
+                                            <CommandInput placeholder="Search pin code..." />
                                             <CommandList>
-                                                <CommandEmpty>No service center found.</CommandEmpty>
+                                                <CommandEmpty>No pin code found.</CommandEmpty>
                                                 <CommandGroup>
-                                                    {scData?.data?.map((sc) => (
+                                                    {pincodeData?.data?.map((pin) => (
                                                         <CommandItem
-                                                            value={sc.name}
-                                                            key={sc.id}
+                                                            value={`${pin.pinCode} ${pin.pinCodeName}`}
+                                                            key={pin.id}
                                                             onSelect={() => {
-                                                                form.setValue("serviceCenterId", sc.id)
-                                                                setScOpen(false)
+                                                                form.setValue("pinCodeId", pin.id)
+                                                                setPinOpen(false)
                                                             }}
                                                         >
                                                             <Check
                                                                 className={cn(
                                                                     "mr-2 h-4 w-4",
-                                                                    sc.id === field.value
+                                                                    pin.id === field.value
                                                                         ? "opacity-100"
                                                                         : "opacity-0"
                                                                 )}
                                                             />
-                                                            {sc.name} ({sc.code})
+                                                            {pin.pinCode} - {pin.pinCodeName}
                                                         </CommandItem>
                                                     ))}
                                                 </CommandGroup>
@@ -175,18 +173,6 @@ export function AreaForm({ initialData }: AreaFormProps) {
                                         </Command>
                                     </PopoverContent>
                                 </Popover>
-                            </FloatingFormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="destination"
-                        render={({ field }) => (
-                            <FloatingFormItem label="Destination">
-                                <FormControl>
-                                    <Input placeholder="e.g. Mumbai" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
-                                </FormControl>
                             </FloatingFormItem>
                         )}
                     />

@@ -15,9 +15,13 @@ http:
     type: json
     data: |-
       {
-        "manifestNo": "INS-001",
-        "manifestDate": "2026-03-20",
-        "awbNos": ["AWB001"]
+        "inscanAt": "2026-03-20T10:00:00.000Z",
+        "serviceCenterId": 1,
+          {
+            "awbNo": "AWB001",
+            "pieces": 1
+          }
+        ]
       }
   auth: inherit
 

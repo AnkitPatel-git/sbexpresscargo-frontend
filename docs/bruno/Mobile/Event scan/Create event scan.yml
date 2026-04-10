@@ -17,6 +17,7 @@ http:
       {
         "eventType": "undelivered_received",
         "scanAt": "2026-03-20T10:00:00.000Z",
+        "serviceCenterId": 1,
         "awbNos": ["AWB001"]
       }
   auth: inherit

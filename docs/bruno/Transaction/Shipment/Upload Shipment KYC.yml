@@ -1,0 +1,40 @@
+info:
+  name: Upload Shipment KYC
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{baseUrl}}/transaction/shipment/{{shipmentId}}/kyc"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: multipartForm
+    form:
+      - name: type
+        value: AADHAAR
+      - name: entryType
+        value: ID_PROOF
+      - name: entryDate
+        value: "2026-04-08"
+      - name: file
+        value: ""
+        type: file
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  Upload one KYC document for a shipment. JWT + shipment.core.update.
+
+  Mandatory: multipart `file`, `type`.
+  Optional: `entryType`, `entryDate` (ISO date string).
+
+  Notes:
+  - One shipment can have multiple KYC documents (invoice photo, Aadhaar, PAN, etc.).
+  - Max file size: 10 MB.

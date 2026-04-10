@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next:*)",
+      "Bash(find /Users/ankitkumarpatel/workSpace/sbexpresscargo-frontend/docs/bruno/Transaction -name \"*.bru\" -exec echo \"=== {} ===\" \\\\; -exec cat {} \\\\;)",
+      "Bash(git add:*)"
+    ]
+  }
+}

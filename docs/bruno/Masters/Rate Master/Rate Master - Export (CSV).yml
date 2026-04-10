@@ -1,0 +1,40 @@
+info:
+  name: Rate Master - Export (CSV)
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{baseUrl}}/rate-master/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/rate-master/export"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: text/csv
+        - name: content-disposition
+          value: 'attachment; filename="rate-masters.csv"'
+      body:
+        type: text
+        data: "(empty CSV — no rate master records to export)"
+
+docs: Export rate masters as CSV. JWT + master.rate.read.

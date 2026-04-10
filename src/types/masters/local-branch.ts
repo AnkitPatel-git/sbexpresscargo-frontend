@@ -1,3 +1,5 @@
+/** Local Branch Master — Bruno `docs/bruno/Masters/Local Branch Master/*`. */
+
 export interface LocalBranch {
     id: number;
     branchCode: string;
@@ -5,9 +7,9 @@ export interface LocalBranch {
     name: string;
     address1: string;
     address2: string | null;
-    pinCode: string;
-    city: string;
-    state: string;
+    pinCodeId: number | null;
+    countryId: number | null;
+    stateId: number | null;
     serviceCenterCode?: string;
     serviceCenterId?: number;
     serviceCenter?: {
@@ -15,8 +17,7 @@ export interface LocalBranch {
         code: string;
         name: string;
     };
-    telephone1: string;
-    telephone2: string | null;
+    telephone: string | null;
     fax?: string | null;
     website?: string | null;
     email: string;
@@ -29,7 +30,7 @@ export interface LocalBranch {
     companyLogo?: string | null;
     signatoryLogo?: string | null;
     terms?: string[];
-    bankName?: string;
+    bankId: number | null;
     accountNo?: string;
     accountName?: string;
     bankAddress?: string;
@@ -49,6 +50,9 @@ export interface LocalBranch {
     creditNoteSuffix?: string;
     rcpLastNo?: number;
     status?: 'ACTIVE' | 'INACTIVE' | string;
+    /** Optional denormalized from joins / legacy list */
+    city?: string;
+    state?: string;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -63,13 +67,12 @@ export interface LocalBranchFormData {
     name: string;
     address1: string;
     address2?: string | null | undefined;
-    pinCode: string;
-    city: string;
-    state: string;
+    pinCodeId?: string | number;
+    city?: string;
+    state?: string;
     serviceCenterId: number;
     serviceCenterCode?: string | null | undefined;
-    telephone1: string;
-    telephone2?: string | null | undefined;
+    telephone: string;
     fax?: string | null | undefined;
     website?: string | null | undefined;
     email: string;
@@ -82,7 +85,7 @@ export interface LocalBranchFormData {
     companyLogo?: string | null | undefined;
     signatoryLogo?: string | null | undefined;
     terms?: string[] | null | undefined;
-    bankName?: string | null | undefined;
+    bankId?: number | null | undefined;
     accountNo?: string | null | undefined;
     accountName?: string | null | undefined;
     bankAddress?: string | null | undefined;
@@ -117,6 +120,6 @@ export interface LocalBranchListResponse {
 
 export interface LocalBranchSingleResponse {
     success: boolean;
-    message: string;
+    message?: string;
     data: LocalBranch;
 }

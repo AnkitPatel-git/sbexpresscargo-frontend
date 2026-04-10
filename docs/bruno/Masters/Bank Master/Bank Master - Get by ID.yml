@@ -18,7 +18,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/bank-master/1"
       method: GET
@@ -55,14 +55,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
           value: "243"
         - name: etag
-          value: W/"f3-EHWbeGFMu2DjLfkow1fBYATEmmg"
+          value: W/"f3-/CLAoDcqVp/G6hmwXzfV7hlYXuc"
         - name: date
-          value: Tue, 24 Mar 2026 12:27:52 GMT
+          value: Thu, 09 Apr 2026 13:15:37 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -77,8 +79,8 @@ examples:
               "bankCode": "BANK01",
               "bankName": "State Bank",
               "status": "ACTIVE",
-              "createdAt": "2026-03-24T12:27:26.727Z",
-              "updatedAt": "2026-03-24T12:27:26.727Z",
+              "createdAt": "2026-04-09T13:15:22.910Z",
+              "updatedAt": "2026-04-09T13:15:22.910Z",
               "createdById": 1,
               "updatedById": null,
               "deletedAt": null,

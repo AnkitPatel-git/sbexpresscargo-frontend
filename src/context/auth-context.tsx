@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react"
 import Cookies from "js-cookie"
 import { useRouter } from "next/navigation"
+import { userService } from "@/services/user-service"
 
 interface User {
     id: number
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const logout = () => {
+        void userService.logout().catch(() => undefined)
         setToken(null)
         setUser(null)
         Cookies.remove("accessToken")

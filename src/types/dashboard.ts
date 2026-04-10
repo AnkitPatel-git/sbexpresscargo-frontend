@@ -58,6 +58,8 @@ export interface SalesSummary {
             fromDate: string;
             toDate: string;
             serviceCenterId?: number | null;
+            serviceCenterCode?: string | null;
+            serviceCenterName?: string | null;
         };
         totals: {
             totalSales: number;

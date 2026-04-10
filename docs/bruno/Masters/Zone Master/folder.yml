@@ -1,0 +1,11 @@
+info:
+  name: Zone Master
+  type: folder
+  seq: 19
+
+request:
+  auth: inherit
+
+docs:
+  content: "Zone APIs: **list** `GET /zone-master` (alias: `GET /rate-master/zones`); other CRUD + import/export on `/rate-master/zones`. Create and import require `countryId` (active country FK)."
+  type: text/markdown

@@ -65,7 +65,7 @@ export const vendorService = {
 
     async updateVendor(id: number, data: Partial<VendorFormData>): Promise<VendorSingleResponse> {
         const response = await apiFetch(`${API_URL}/vendor-master/${id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -79,6 +79,20 @@ export const vendorService = {
         }
 
         return response.json();
+    },
+
+    async exportVendorsCsv(): Promise<Blob> {
+        const response = await apiFetch(`${API_URL}/vendor-master/export`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export vendors');
+        }
+
+        return response.blob();
     },
 
     async deleteVendor(id: number): Promise<{ success: boolean; message: string }> {

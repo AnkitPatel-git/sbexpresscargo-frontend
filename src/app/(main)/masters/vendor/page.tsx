@@ -41,7 +41,7 @@ export default function VendorPage() {
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({ code: "", name: "", city: "", status: "" })
+    const [colFilters, setColFilters] = useState({ code: "", name: "", origin: "", status: "" })
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -88,7 +88,7 @@ export default function VendorPage() {
         data?.data.filter((vendor) => {
             if (colFilters.code && !(vendor.vendorCode || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
             if (colFilters.name && !(vendor.vendorName || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
-            if (colFilters.city && !(vendor.city || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
+            if (colFilters.origin && !(vendor.origin || "").toLowerCase().includes(colFilters.origin.toLowerCase())) return false
             if (colFilters.status && !(vendor.status || "").toLowerCase().includes(colFilters.status.toLowerCase())) return false
             return true
         }) ?? []
@@ -98,7 +98,7 @@ export default function VendorPage() {
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
                     <PermissionGuard permission="master.vendor.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary"><FileUp className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const blob = await vendorService.exportVendorsCsv(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "vendors.csv"; a.click(); URL.revokeObjectURL(url); } catch { toast.error("Failed to export vendors"); } }}><FileUp className="h-4 w-4" /></Button>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["vendors"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -114,7 +114,7 @@ export default function VendorPage() {
                             <TableHead className="h-11 font-semibold text-primary-foreground">Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Vendor Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Contact Person <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">City <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Origin <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground text-center">Status <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
@@ -122,7 +122,7 @@ export default function VendorPage() {
                             <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Vendor Name" className="h-8 border-border bg-background text-xs" value={colFilters.name} onChange={(e) => setColFilters((f) => ({ ...f, name: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Contact Person" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="City" className="h-8 border-border bg-background text-xs" value={colFilters.city} onChange={(e) => setColFilters((f) => ({ ...f, city: e.target.value }))} /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Origin" className="h-8 border-border bg-background text-xs" value={colFilters.origin} onChange={(e) => setColFilters((f) => ({ ...f, origin: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Status" className="h-8 border-border bg-background text-xs" value={colFilters.status} onChange={(e) => setColFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
                             <TableHead className="p-2" />
                         </TableRow>
@@ -138,7 +138,7 @@ export default function VendorPage() {
                                     <TableCell className="font-medium text-foreground">{vendor.vendorCode}</TableCell>
                                     <TableCell className="font-medium text-foreground">{vendor.vendorName}</TableCell>
                                     <TableCell className="text-foreground">{vendor.contactPerson}</TableCell>
-                                    <TableCell className="text-foreground">{vendor.city}</TableCell>
+                                    <TableCell className="text-foreground">{vendor.origin || "-"}</TableCell>
                                     <TableCell className="text-center"><Badge variant={vendor.status === "ACTIVE" ? "success" : "secondary"}>{vendor.status === "ACTIVE" ? "Active" : "Inactive"}</Badge></TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">

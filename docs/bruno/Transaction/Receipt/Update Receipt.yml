@@ -1,0 +1,38 @@
+info:
+  name: Update Receipt
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/transaction/receipt/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "shipmentId": 1,
+        "amount": 1200,
+        "totalRcp": 800,
+        "balance": 400,
+        "lines": [
+          {
+            "receiptNo": "RCPT-001-REV",
+            "receiptDate": "2026-04-10",
+            "amount": 800,
+            "receiptType": "CASH",
+            "referenceNo": "CASH-01"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

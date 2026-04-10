@@ -1,11 +1,11 @@
 info:
   name: Masters
   type: folder
-  seq: 7
+  seq: 6
 
 request:
   auth: inherit
 
 docs:
-  content: "All master APIs (Product, Country, State, Industry, Flight, Content, Bank, Local Branch, Service Center, Customer, Client Rate, Consignee, Shipper, Vendor — logistics partners (BlueDart, DTDC, etc.; API config on Vendor), Courier, Area, Exception, Service Map, Charge). List endpoints return paginated response (data, total, page, limit, totalPages) and support query params: page, limit, sortBy, sortOrder, search. Requires JWT and appropriate master permissions."
+  content: "All master APIs (Product, Country, State, Content, Bank, Local Branch, Service Center, Customer, Consignee, Shipper, Vendor - logistics partners (BlueDart, DTDC, etc.; API config on Vendor), Courier, Area, Exception, Service Map, Charge, Rate Master, Zone Master, Serviceable Pincode). Serviceable Pincode is grouped under `Masters/Serviceable Pincode` (HTTP paths remain `/utilities/serviceable-pincodes` and `/pincode` where applicable). Rate domain is organized under `Masters/Rate Master` and `Masters/Zone Master` to mirror backend modules. List endpoints return paginated response (data, total, page, limit, totalPages) and support query params: page, limit, sortBy, sortOrder, search. Requires JWT and appropriate master permissions."
   type: text/markdown

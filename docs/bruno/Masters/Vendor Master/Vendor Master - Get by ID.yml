@@ -18,7 +18,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/vendor-master/1"
       method: GET
@@ -55,14 +55,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "714"
+          value: "697"
         - name: etag
-          value: W/"2ca-Qhy5ivKISkcbx/S+sR0idAijj4Q"
+          value: W/"2b9-rgd3E/P1DcRJ/i3zmY4RfUULFQc"
         - name: date
-          value: Tue, 24 Mar 2026 12:45:01 GMT
+          value: Thu, 09 Apr 2026 14:15:46 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -74,37 +76,37 @@ examples:
             "success": true,
             "data": {
               "id": 1,
-              "vendorCode": "VEND01",
-              "vendorName": "Logistics Partner Ltd",
+              "vendorCode": "VEND05",
+              "vendorName": "Bluedart",
               "version": 1,
               "contactPerson": "Vendor Contact",
               "address1": "400 Vendor Ave",
-              "address2": null,
-              "pinCode": "400004",
-              "city": "Mumbai",
-              "state": "Maharashtra",
-              "telephone1": "022-77778888",
-              "telephone2": null,
-              "fax": null,
+              "address2": "Floor 1",
+              "pinCodeId": 3,
+              "countryId": 1,
+              "stateId": 3,
+              "zoneId": null,
+              "telephone": "022-77778888",
+              "fax": "022-99990000",
               "email": "vendor@partner.com",
               "mobile": "9876543213",
               "website": "https://vendor.com",
               "gstNo": "27AABCU9603R1ZM",
-              "mode": null,
-              "fuelHead": null,
-              "currency": null,
-              "origin": null,
-              "vendorZip": null,
+              "mode": "AIR",
+              "fuelHead": "ADVANCED",
+              "currency": "INR",
+              "origin": "MUMBAI",
+              "vendorZip": "400004",
               "status": "ACTIVE",
-              "global": false,
-              "gstType": null,
-              "volumetricRound": null,
-              "createdAt": "2026-03-20T09:56:34.526Z",
-              "updatedAt": "2026-03-20T09:56:34.526Z",
+              "global": true,
+              "gstType": "FORWARD",
+              "volumetricRound": 5000,
+              "createdAt": "2026-04-09T14:13:49.229Z",
+              "updatedAt": "2026-04-09T14:13:49.229Z",
               "createdById": 1,
               "updatedById": null,
               "deletedAt": null,
-              "deletedById": null,
+              "deletedById": null
             }
           }
 

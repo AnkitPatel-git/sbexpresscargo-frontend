@@ -14,9 +14,9 @@ export const exceptionService = {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
-        if (params?.search) queryParams.append('search', params.search);
-        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'code');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
 
         const response = await apiFetch(`${API_URL}/exception-master?${queryParams.toString()}`, {
             headers: {
@@ -95,5 +95,35 @@ export const exceptionService = {
         }
 
         return response.json();
+    },
+
+    /** Bruno: `GET /exception-master/export` — CSV; optional list-style query params. */
+    async exportExceptions(params?: {
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<{ blob: Blob; filename: string }> {
+        const queryParams = new URLSearchParams();
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'code');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+
+        const response = await apiFetch(`${API_URL}/exception-master/export?${queryParams.toString()}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to export exceptions');
+        }
+
+        const cd = response.headers.get('content-disposition');
+        let filename = 'exceptions.csv';
+        const match = cd?.match(/filename="?([^";\n]+)"?/i);
+        if (match?.[1]) filename = match[1].trim();
+
+        const blob = await response.blob();
+        return { blob, filename };
     },
 };

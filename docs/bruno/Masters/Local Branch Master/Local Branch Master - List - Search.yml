@@ -34,7 +34,7 @@ settings:
   maxRedirects: 5
 
 examples:
-  - name: "200"
+  - name: example
     request:
       url: "{{baseUrl}}/local-branch-master?page=1&limit=20&sortBy=branchCode&sortOrder=asc&search="
       method: GET
@@ -87,14 +87,16 @@ examples:
           value: "0"
         - name: vary
           value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
         - name: content-type
           value: application/json; charset=utf-8
         - name: content-length
-          value: "288"
+          value: "250"
         - name: etag
-          value: W/"120-V8A5WVDuJlYSaPj7q7IKQ61re50"
+          value: W/"fa-0O2w2+J6XoThpPWouRYGz5YDB/o"
         - name: date
-          value: Tue, 24 Mar 2026 12:34:42 GMT
+          value: Thu, 09 Apr 2026 14:28:17 GMT
         - name: connection
           value: keep-alive
         - name: keep-alive
@@ -107,14 +109,12 @@ examples:
             "data": [
               {
                 "id": 1,
-                "branchCode": "BR001",
+                "branchCode": "BR002",
                 "companyName": "SB Express",
                 "name": "Mumbai Branch",
-                "city": "Mumbai",
-                "state": "Maharashtra",
-                "serviceCenterId": 2,
+                "serviceCenterId": 3,
                 "serviceCenter": {
-                  "id": 2,
+                  "id": 3,
                   "code": "SC001",
                   "name": "Mumbai Service Center"
                 }

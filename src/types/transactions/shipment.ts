@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { optionalMasterCode } from '@/lib/master-code-schema';
 
 export const pieceRowSchema = z.object({
     childAwbNo: z.string().optional(),
@@ -30,7 +31,7 @@ export const shipmentChargeSchema = z.object({
 
 export const shipmentSchema = z.object({
     version: z.number().int().positive().optional(),
-    awbNo: z.string().min(1, "AWB No is required"),
+    awbNo: z.string().optional(),
     bookDate: z.string().min(1, "Book Date is required"),
     bookTime: z.string().optional(),
     referenceNo: z.string().optional(),
@@ -39,7 +40,7 @@ export const shipmentSchema = z.object({
     shipperId: z.number().optional(),
     consigneeId: z.number().optional(),
     shipper: z.object({
-        shipperCode: z.string().optional(),
+        shipperCode: optionalMasterCode(2).optional(),
         shipperName: z.string().optional(),
         shipperOrigin: z.string().optional(),
         contactPerson: z.string().optional(),
@@ -52,8 +53,7 @@ export const shipmentSchema = z.object({
         documentType: z.string().optional(),
         documentNo: z.string().optional(),
         industry: z.string().optional(),
-        telephone1: z.string().optional(),
-        telephone2: z.string().optional(),
+        telephone: z.string().optional(),
         fax: z.string().optional(),
         mobile: z.string().optional(),
         email: z.string().optional(),
@@ -62,7 +62,6 @@ export const shipmentSchema = z.object({
         aadhaarNo: z.string().optional(),
         panNo: z.string().optional(),
         serviceCenter: z.string().optional(),
-        bankAdCode: z.string().optional(),
         bankAccount: z.string().optional(),
         bankIfsc: z.string().optional(),
         firmType: z.enum(["GOV", "NON_GOV"]).optional(),
@@ -72,7 +71,7 @@ export const shipmentSchema = z.object({
         lutTillDate: z.string().optional(),
     }).optional(),
     consignee: z.object({
-        code: z.string().optional(),
+        code: optionalMasterCode(2).optional(),
         name: z.string().optional(),
         destination: z.string().optional(),
         contactPerson: z.string().optional(),
@@ -85,8 +84,7 @@ export const shipmentSchema = z.object({
         documentType: z.string().optional(),
         documentNo: z.string().optional(),
         industry: z.string().optional(),
-        tel1: z.string().optional(),
-        tel2: z.string().optional(),
+        telephone: z.string().optional(),
         fax: z.string().optional(),
         mobile: z.string().optional(),
         email: z.string().optional(),
@@ -100,6 +98,7 @@ export const shipmentSchema = z.object({
     destination: z.string().optional(),
     destinationCode: z.string().optional(),
     productId: z.number().optional(),
+    serviceType: z.string().optional(),
     vendorId: z.number().optional(),
     serviceMapId: z.number().optional(),
     shipmentValue: z.number().optional(),
@@ -128,7 +127,6 @@ export const shipmentSchema = z.object({
     totalAmount: z.number().optional(),
     oda: z.boolean().default(false),
     medicalCharges: z.number().optional(),
-    serviceCenterId: z.number().optional(),
     manifestNo: z.string().optional(),
     manifestDate: z.string().optional(),
     invoiceNo: z.string().optional(),
@@ -168,6 +166,7 @@ export interface Shipment {
     destination?: string;
     destinationCode?: string;
     productId: number;
+    serviceType?: string;
     vendorId?: number;
     serviceMapId?: number;
     shipmentValue?: number;
@@ -244,12 +243,16 @@ export interface Shipment {
     };
     forwardings?: Array<{
         id?: number;
+        deliveryAwb?: string;
+        forwardingAwb?: string;
         deliveryVendor?: {
             id: number;
             vendorName?: string;
             name?: string;
         };
         deliveryVendorId?: number;
+        deliveryServiceMapId?: number;
+        totalAmount?: string | number | null;
     }>;
 }
 

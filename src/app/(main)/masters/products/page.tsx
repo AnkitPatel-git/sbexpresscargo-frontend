@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Plus, Edit, Trash2, RefreshCw, FilePlus, FileUp, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -54,15 +54,45 @@ export default function ProductsPage() {
         code: "",
         name: "",
         type: "",
-        service: "",
     })
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
     const { data, isLoading } = useQuery({
         queryKey: ["products", page, debouncedSearch],
-        queryFn: () => productService.getProducts({ page, limit, search: debouncedSearch }),
+        queryFn: () =>
+            productService.getProducts({
+                page,
+                limit,
+                search: debouncedSearch,
+                sortBy: "productCode",
+                sortOrder: "asc",
+            }),
     })
+
+    const [exporting, setExporting] = useState(false)
+
+    async function handleExportCsv() {
+        setExporting(true)
+        try {
+            const { blob, filename } = await productService.exportProducts({
+                search: debouncedSearch,
+                sortBy: "productCode",
+                sortOrder: "asc",
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Products exported")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to export products")
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => productService.deleteProduct(id),
@@ -104,7 +134,6 @@ export default function ProductsPage() {
             if (colFilters.code && !product.productCode.toLowerCase().includes(colFilters.code.toLowerCase())) return false
             if (colFilters.name && !product.productName.toLowerCase().includes(colFilters.name.toLowerCase())) return false
             if (colFilters.type && !product.productType.toLowerCase().includes(colFilters.type.toLowerCase())) return false
-            if (colFilters.service && !(product.productService ?? "").toLowerCase().includes(colFilters.service.toLowerCase())) return false
             return true
         }) ?? []
 
@@ -117,9 +146,19 @@ export default function ProductsPage() {
                             <FilePlus className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
-                        <FileUp className="h-4 w-4" />
-                    </Button>
+                    <PermissionGuard permission="master.product.read">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Export CSV"
+                            disabled={exporting}
+                            onClick={() => void handleExportCsv()}
+                        >
+                            <FileUp className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                     <Button
                         type="button"
                         variant="ghost"
@@ -171,12 +210,6 @@ export default function ProductsPage() {
                                     <SortArrows />
                                 </span>
                             </TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">
-                                <span className="inline-flex items-center">
-                                    Product Service
-                                    <SortArrows />
-                                </span>
-                            </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                         <TableRow className="border-b border-border bg-card hover:bg-card">
@@ -204,27 +237,19 @@ export default function ProductsPage() {
                                     onChange={(e) => setColFilters((f) => ({ ...f, type: e.target.value }))}
                                 />
                             </TableHead>
-                            <TableHead className="p-2">
-                                <Input
-                                    placeholder="Product Service"
-                                    className="h-8 border-border bg-background text-xs"
-                                    value={colFilters.service}
-                                    onChange={(e) => setColFilters((f) => ({ ...f, service: e.target.value }))}
-                                />
-                            </TableHead>
                             <TableHead className="p-2" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                     Loading products...
                                 </TableCell>
                             </TableRow>
                         ) : filteredRows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                     No products found.
                                 </TableCell>
                             </TableRow>
@@ -239,7 +264,6 @@ export default function ProductsPage() {
                                         <div className="break-words font-medium">{product.productName}</div>
                                     </TableCell>
                                     <TableCell className="uppercase text-foreground">{product.productType}</TableCell>
-                                    <TableCell className="text-foreground">{product.productService ?? "—"}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
                                             <PermissionGuard permission="master.product.update">
