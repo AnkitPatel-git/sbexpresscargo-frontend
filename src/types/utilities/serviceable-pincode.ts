@@ -1,32 +1,47 @@
-/** Serviceable Pincode — Bruno `docs/bruno/Masters/Serviceable Pincode/*` (primary path `/utilities/serviceable-pincodes`). */
+/** Serviceable Pincode — Bruno `docs/bruno/master/serviceable-pincode/*` (path `/utilities/serviceable-pincodes`). */
+
+export interface ServiceablePincodeZone {
+    id: number;
+    code: string;
+    name: string;
+}
 
 export interface ServiceablePincode {
     id: number;
+    countryId: number;
+    stateId: number;
     pinCode: string;
-    pinCodeName: string;
-    serviceCenterId: number | null;
-    serviceCenter: {
+    cityName: string;
+    areaName: string;
+    serviceable: boolean;
+    oda: boolean;
+    zoneIds?: number[];
+    country?: {
         id: number;
         code: string;
         name: string;
     } | null;
-    destination: string;
-    serviceable: boolean;
-    oda: boolean;
-    createdAt: string;
-    updatedAt: string;
-    createdById: number | null;
-    updatedById: number | null;
-    deletedAt: string | null;
-    deletedById: number | null;
+    state?: {
+        id: number;
+        stateName: string;
+    } | null;
+    zones?: ServiceablePincodeZone[];
+    createdAt?: string;
+    updatedAt?: string;
+    createdById?: number | null;
+    updatedById?: number | null;
+    deletedAt?: string | null;
+    deletedById?: number | null;
 }
 
 export interface ServiceablePincodeFormData {
+    countryId: number;
+    countryCode: string;
+    stateId: number;
+    zoneIds: number[];
     pinCode: string;
-    pinCodeName: string;
-    serviceCenterId: number;
-    serviceCenterCode: string;
-    destination: string;
+    cityName: string;
+    areaName: string;
     serviceable: boolean;
     oda: boolean;
 }

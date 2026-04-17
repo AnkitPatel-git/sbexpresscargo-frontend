@@ -1,6 +1,6 @@
 "use client"
 
-import { useForm, Resolver } from 'react-hook-form'
+import { useForm, Resolver, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -63,7 +63,6 @@ const chargeSchema = z.object({
     applyFuel: z.boolean(),
     applyTaxOnFuel: z.boolean(),
     applyTax: z.boolean(),
-    hsnCode: z.string().optional().or(z.literal('')),
     sequence: z.coerce.number().min(1, "Sequence must be at least 1"),
     multipleCharges: z.boolean(),
 })
@@ -90,7 +89,6 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
             applyFuel: true,
             applyTaxOnFuel: true,
             applyTax: true,
-            hsnCode: '',
             sequence: 1,
             multipleCharges: false,
         },
@@ -103,7 +101,6 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
             applyFuel: initialData.applyFuel,
             applyTaxOnFuel: initialData.applyTaxOnFuel,
             applyTax: initialData.applyTax,
-            hsnCode: initialData.hsnCode || '',
             sequence: initialData.sequence,
             multipleCharges: initialData.multipleCharges,
         } : undefined
@@ -137,10 +134,10 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
         mutation.mutate(data)
     }
 
-    const onInvalid = (errors: any) => {
+    const onInvalid = (errors: FieldErrors<ChargeFormValues>) => {
         console.error("Form Validation Errors:", errors)
         const errorMessages = Object.entries(errors)
-            .map(([field, error]: [string, any]) => `${field}: ${error.message}`)
+            .map(([field, error]) => `${field}: ${error?.message ?? "Invalid value"}`)
             .join(", ")
         toast.error(`Validation Error: ${errorMessages || "Please check the form"}`)
     }
@@ -261,19 +258,6 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                             </FloatingFormItem>
                         )}
                     />
-
-                    <FormField
-                        control={form.control}
-                        name="hsnCode"
-                        render={({ field }) => (
-                            <FloatingFormItem label="HSN Code">
-                                <FormControl>
-                                    <Input placeholder="996511" {...field} className={FLOATING_INNER_CONTROL} />
-                                </FormControl>
-                            </FloatingFormItem>
-                        )}
-                    />
-
                     <div className="grid grid-cols-2 gap-4 pt-2">
                         <FormField
                             control={form.control}
@@ -283,8 +267,8 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                                     <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                         <FormControl>
                                             <Checkbox
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
+                                                checked={field.value ?? false}
+                                                onCheckedChange={(value) => field.onChange(Boolean(value))}
                                             />
                                         </FormControl>
                                     </div>
@@ -299,8 +283,8 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                                     <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                         <FormControl>
                                             <Checkbox
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
+                                                checked={field.value ?? false}
+                                                onCheckedChange={(value) => field.onChange(Boolean(value))}
                                             />
                                         </FormControl>
                                     </div>
@@ -318,8 +302,8 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                                     <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                         <FormControl>
                                             <Checkbox
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
+                                                checked={field.value ?? false}
+                                                onCheckedChange={(value) => field.onChange(Boolean(value))}
                                             />
                                         </FormControl>
                                     </div>
@@ -334,8 +318,8 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                                     <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                         <FormControl>
                                             <Checkbox
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
+                                                checked={field.value ?? false}
+                                                onCheckedChange={(value) => field.onChange(Boolean(value))}
                                             />
                                         </FormControl>
                                     </div>

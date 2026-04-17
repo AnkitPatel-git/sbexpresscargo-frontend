@@ -1,0 +1,53 @@
+info:
+  name: GET /api/charge-master/export
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/charge-master/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: code
+      value: string
+      type: query
+    - name: name
+      value: string
+      type: query
+    - name: calculationBase
+      value: string
+      type: query
+    - name: applyFuel
+      value: "true"
+      type: query
+    - name: applyTaxOnFuel
+      value: "true"
+      type: query
+    - name: applyTax
+      value: "true"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

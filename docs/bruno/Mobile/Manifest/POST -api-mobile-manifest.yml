@@ -1,0 +1,37 @@
+info:
+  name: POST /api/mobile/manifest
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/mobile/manifest"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "manifestNo": "string",
+        "masterAwbNo": "string",
+        "manifestDate": "string",
+        "location": "string",
+        "connectStation": "string",
+        "vendorId": 0,
+        "productId": 0,
+        "serviceCenterId": 0,
+        "awbNos": [
+          "string"
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

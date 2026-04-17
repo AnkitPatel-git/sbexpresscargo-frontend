@@ -1,11 +1,7 @@
 info:
-  name: Mobile
+  name: mobile
   type: folder
-  seq: 9
+  seq: 4
 
 request:
   auth: inherit
-
-docs:
-  content: 'Mobile field APIs. Token: login with `platform: "mobile"`. Requires `mobileAppLens` on user profile. Permission identifiers: mobile.*'
-  type: text/markdown

@@ -1,0 +1,53 @@
+info:
+  name: GET /api/utilities/audit-logs
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/utilities/audit-logs"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: entityType
+      value: string
+      type: query
+    - name: entityId
+      value: "0"
+      type: query
+    - name: action
+      value: string
+      type: query
+    - name: performedById
+      value: "0"
+      type: query
+    - name: fromDate
+      value: string
+      type: query
+    - name: toDate
+      value: string
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

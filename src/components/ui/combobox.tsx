@@ -22,10 +22,13 @@ import {
 interface ComboboxProps {
   options: { label: string; value: string | number }[]
   value?: string | number
-  onChange: (value: any) => void
+  onChange: (value: string | number) => void
   placeholder?: string
   searchPlaceholder?: string
   emptyMessage?: string
+  searchValue?: string
+  onSearchValueChange?: (value: string) => void
+  isSearching?: boolean
   className?: string
   disabled?: boolean
 }
@@ -37,12 +40,17 @@ export function Combobox({
   placeholder = "Select option...",
   searchPlaceholder = "Search...",
   emptyMessage = "No option found.",
+  searchValue,
+  onSearchValueChange,
+  isSearching = false,
   className,
   disabled = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
+  const [localSearchValue, setLocalSearchValue] = React.useState("")
 
   const selectedOption = options.find((option) => option.value === value)
+  const currentSearchValue = searchValue ?? localSearchValue
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -51,10 +59,14 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between font-normal", !value && "text-muted-foreground", className)}
+          className={cn(
+            "flex w-full min-w-0 justify-between overflow-hidden font-normal",
+            !value && "text-muted-foreground",
+            className
+          )}
           disabled={disabled}
         >
-          <span className="truncate">
+          <span className="min-w-0 flex-1 truncate text-left">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -62,16 +74,28 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={currentSearchValue}
+            onValueChange={(nextValue) => {
+              if (onSearchValueChange) {
+                onSearchValueChange(nextValue)
+                return
+              }
+              setLocalSearchValue(nextValue)
+            }}
+          />
           <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandEmpty>{isSearching ? "Searching..." : emptyMessage}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
-                <CommandItem
+                  <CommandItem
                   key={option.value}
                   value={option.label}
                   onSelect={() => {
                     onChange(option.value === value ? "" : option.value)
+                    if (onSearchValueChange) onSearchValueChange("")
+                    else setLocalSearchValue("")
                     setOpen(false)
                   }}
                 >

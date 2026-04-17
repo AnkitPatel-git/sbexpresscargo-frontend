@@ -1,0 +1,122 @@
+info:
+  name: PATCH /api/transaction/shipment/:id
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/transaction/shipment/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "awbNo": "AWB100001",
+        "ewaybillNumber": "Sample Value",
+        "bookDate": "2026-04-13T10:00:00.000Z",
+        "bookTime": "Sample Value",
+        "referenceNo": "Sample Value",
+        "customerId": 1,
+        "clientId": 1,
+        "shipperId": 1,
+        "consigneeId": 1,
+        "shipper": {
+          "shipperCode": "CODE001",
+          "shipperName": "Sample Name",
+          "contactPerson": "Sample Value",
+          "address1": "Sample address line",
+          "address2": "Sample address line",
+          "pinCodeId": 1,
+          "telephone": "9876543210",
+          "mobile": "9876543210",
+          "email": "ops@example.com"
+        },
+        "consignee": {
+          "code": "CODE001",
+          "name": "Sample Name",
+          "contactPerson": "Sample Value",
+          "address1": "Sample address line",
+          "address2": "Sample address line",
+          "pinCodeId": 1,
+          "telephone": "9876543210",
+          "mobile": "9876543210",
+          "email": "ops@example.com"
+        },
+        "productId": 1,
+        "shipmentTotalValue": 1,
+        "reversePickup": false,
+        "appointmentDelivery": true,
+        "floorDelivery": false,
+        "km": 1,
+        "commercial": true,
+        "paymentType": "PREPAID",
+        "instruction": "Sample Value",
+        "fieldExecutiveId": 1,
+        "oda": true,
+        "serviceCenterId": 1,
+        "podUserId": 1,
+        "isCod": true,
+        "codAmount": 10,
+        "piecesRows": [
+          {
+            "actualWeight": 10000,
+            "pieces": 1,
+            "length": 10,
+            "width": 10,
+            "height": 10,
+            "volumetricWeight": 10000,
+            "chargeWeight": 10000,
+            "items": [
+              {
+                "contentId": 1,
+                "quantity": 2,
+                "totalValue": 1200.5,
+                "invoiceDate": "2026-04-14",
+                "invoiceNumber": "INV-1001"
+              },
+              {
+                "contentId": 2,
+                "measureValue": 50,
+                "measureUnit": "METER",
+                "totalValue": 300,
+                "invoiceDate": "2026-04-14",
+                "invoiceNumber": "INV-1002"
+              }
+            ]
+          }
+        ],
+        "charges": [
+          {
+            "chargeId": 1,
+            "description": "Sample Value",
+            "rate": 10,
+            "amount": 10,
+            "fuelApply": true,
+            "fuelAmount": 10,
+            "taxApply": true,
+            "taxOnFuel": true,
+            "igst": 1,
+            "cgst": 1,
+            "sgst": 1,
+            "total": 1,
+            "chargeType": "FIXED"
+          }
+        ],
+        "version": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

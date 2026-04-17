@@ -1,0 +1,26 @@
+info:
+  name: DELETE /api/customer-master/:customerId/kyc-documents/:docId
+  type: http
+  seq: 2
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/customer-master/{{customerId}}/kyc-documents/{{docId}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: customerId
+      value: "1"
+      type: path
+    - name: docId
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

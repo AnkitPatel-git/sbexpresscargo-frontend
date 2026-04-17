@@ -1,0 +1,35 @@
+info:
+  name: PUT /api/utilities/users/profile
+  type: http
+  seq: 12
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/utilities/users/profile"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "username": "string",
+        "email": "string",
+        "mobile": "string",
+        "profile": {
+          "userGroup": "string",
+          "origin": "string",
+          "groupName": "string",
+          "birthDate": "string"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

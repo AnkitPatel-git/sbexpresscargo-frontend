@@ -28,7 +28,6 @@ export interface Charge {
     applyFuel: boolean;
     applyTaxOnFuel: boolean;
     applyTax: boolean;
-    hsnCode: string | null;
     sequence: number;
     multipleCharges: boolean;
     createdAt: string;
@@ -49,7 +48,6 @@ export interface ChargeFormData {
     applyFuel: boolean;
     applyTaxOnFuel: boolean;
     applyTax: boolean;
-    hsnCode?: string;
     sequence: number;
     multipleCharges: boolean;
 }

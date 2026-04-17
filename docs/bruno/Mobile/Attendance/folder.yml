@@ -1,11 +1,7 @@
 info:
-  name: Attendance
+  name: attendance
   type: folder
-  seq: 11
+  seq: 1
 
 request:
   auth: inherit
-
-docs:
-  content: "Geotagged photo check-in/out (IST calendar date + open-window checkout). Permissions: mobile.attendance.read | create | update. **Force checkout** uses `POST /mobile/attendance-admin/...` with a **portal** token (`platform: portal`) and `mobile.attendance.admin` — no MobilePlatformGuard."
-  type: text/markdown

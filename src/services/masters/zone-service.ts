@@ -30,7 +30,7 @@ export const zoneService = {
         if (params?.country) queryParams.append('country', params.country);
         if (params?.countryId) queryParams.append('countryId', params.countryId.toString());
 
-        const response = await apiFetch(`${API_URL}/zone-master?${queryParams.toString()}`, {
+        const response = await apiFetch(`${API_URL}/rate-master/zones?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },

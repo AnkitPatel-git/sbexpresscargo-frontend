@@ -1,0 +1,51 @@
+info:
+  name: PATCH /api/vendor-master/:id
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/vendor-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "vendorCode": "CODE001",
+        "vendorName": "Sample Name",
+        "contactPerson": "Sample Value",
+        "address1": "Sample address line",
+        "address2": "Sample address line",
+        "pinCodeId": 1,
+        "bankId": 1,
+        "bankAccount": "1234567890123456",
+        "bankIfsc": "HDFC0000123",
+        "telephone": "9876543210",
+        "email": "ops@example.com",
+        "mobile": "9876543210",
+        "website": "Sample Value",
+        "gstNo": "27ABCDE1234F1Z5",
+        "currency": "Sample Value",
+        "origin": "Sample Value",
+        "vendorZip": "Sample Value",
+        "status": "ACTIVE",
+        "global": true,
+        "volumetricRound": 1,
+        "version": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

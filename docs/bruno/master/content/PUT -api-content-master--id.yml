@@ -1,0 +1,36 @@
+info:
+  name: PUT /api/content-master/:id
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/content-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "contentCode": "CODE001",
+        "contentName": "Sample Name",
+        "hsnCode": "CODE001",
+        "countryId": 1,
+        "additionalField": "Sample Value",
+        "clearanceCethNo": "Sample Value"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

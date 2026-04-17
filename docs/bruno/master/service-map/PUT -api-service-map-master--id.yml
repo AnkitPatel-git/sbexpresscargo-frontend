@@ -1,0 +1,37 @@
+info:
+  name: PUT /api/service-map-master/:id
+  type: http
+  seq: 7
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/service-map-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "serviceType": "EXPRESS",
+        "minWeight": 10,
+        "maxWeight": 10,
+        "status": "ACTIVE",
+        "vendorLink": "Sample Value",
+        "isSinglePiece": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

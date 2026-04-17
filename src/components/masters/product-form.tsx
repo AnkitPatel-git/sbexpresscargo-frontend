@@ -26,7 +26,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { productService } from '@/services/masters/product-service'
 import { Product, type ProductFormData } from '@/types/masters/product'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
@@ -35,9 +34,6 @@ const productSchema = z.object({
     productCode: optionalMasterCode(2),
     productName: z.string().min(3, "Product name must be at least 3 characters"),
     productType: z.string().min(1, "Product type is required"),
-    fuelCharge: z.boolean(),
-    gstReverse: z.boolean(),
-    docType: z.string().min(1, "Doc type is required"),
     status: z.string().min(1, "Status is required"),
 })
 
@@ -58,9 +54,6 @@ export function ProductForm({ initialData }: ProductFormProps) {
             productCode: initialData?.productCode || "",
             productName: initialData?.productName || "",
             productType: initialData?.productType || "DOMESTIC",
-            fuelCharge: initialData?.fuelCharge ?? true,
-            gstReverse: initialData?.gstReverse ?? false,
-            docType: initialData?.docType || "DOX",
             status: initialData?.status || "ACTIVE",
         },
     })
@@ -71,9 +64,6 @@ export function ProductForm({ initialData }: ProductFormProps) {
                 productCode: initialData.productCode,
                 productName: initialData.productName,
                 productType: initialData.productType,
-                fuelCharge: initialData.fuelCharge,
-                gstReverse: initialData.gstReverse,
-                docType: initialData.docType,
                 status: initialData.status,
             })
         }
@@ -174,28 +164,6 @@ export function ProductForm({ initialData }: ProductFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
-                        name="docType"
-                        render={({ field }) => (
-                            <FloatingFormItem label="Doc Type">
-                                <Select
-                                    onValueChange={field.onChange}
-                                    value={field.value || ""}
-                                >
-                                    <FormControl>
-                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select doc type" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="DOX">DOX</SelectItem>
-                                        <SelectItem value="NDOX">NDOX</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </FloatingFormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
                         name="status"
                         render={({ field }) => (
                             <FloatingFormItem label="Status">
@@ -213,41 +181,6 @@ export function ProductForm({ initialData }: ProductFormProps) {
                                         <SelectItem value="INACTIVE">Inactive</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            </FloatingFormItem>
-                        )}
-                    />
-                </div>
-
-                <div className="flex gap-6 pt-2">
-                    <FormField
-                        control={form.control}
-                        name="fuelCharge"
-                        render={({ field }) => (
-                            <FloatingFormItem label="Fuel Charge">
-                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                </div>
-                            </FloatingFormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="gstReverse"
-                        render={({ field }) => (
-                            <FloatingFormItem label="GST Reverse">
-                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                </div>
                             </FloatingFormItem>
                         )}
                     />

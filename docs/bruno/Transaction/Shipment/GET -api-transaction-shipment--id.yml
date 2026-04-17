@@ -1,0 +1,514 @@
+info:
+  name: GET /api/transaction/shipment/:id
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/transaction/shipment/{{id}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  auth: inherit
+
+runtime:
+  variables:
+    - name: id
+      value: "1"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/api/transaction/shipment/{{id}}"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      params:
+        - name: id
+          value: "1"
+          type: path
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "7541"
+        - name: etag
+          value: W/"1d75-UFOCYZ8o0vAlHgh3PpPZ+bqgaYM"
+        - name: date
+          value: Tue, 14 Apr 2026 23:46:31 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 1,
+              "awbNo": "AWB-20260415-000001",
+              "ewaybillNumber": "EWB2310045678901",
+              "customerId": 1,
+              "shipperId": 1,
+              "consigneeId": 4,
+              "vendorId": null,
+              "productId": 1,
+              "declaredWeight": 28500,
+              "chargeWeight": 28500,
+              "paymentType": "CREDIT",
+              "currentStatus": "CREATED",
+              "version": 1,
+              "codAmount": null,
+              "isCod": false,
+              "rateMasterId": 1,
+              "baseFreight": 1425000,
+              "totalAmount": 1617597.5,
+              "fromZoneId": 1,
+              "toZoneId": 2,
+              "reversePickup": true,
+              "appointmentDelivery": false,
+              "floorDelivery": true,
+              "floorCount": 2,
+              "createdAt": "2026-04-14T23:44:34.839Z",
+              "updatedAt": "2026-04-14T23:44:34.839Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null,
+              "customer": {
+                "id": 1,
+                "code": "CUST-IND-001",
+                "name": "Indore Pharma Distributors Pvt Ltd"
+              },
+              "shipper": {
+                "id": 1,
+                "shipperCode": "SHP-IND-001",
+                "shipperName": "Indore Textile Traders Pvt Ltd",
+                "contactPerson": "Amit Malviya",
+                "address1": "Plot No. 15, Scheme 78, Part-II, Vijay Nagar",
+                "address2": "Near Palasia Square, Indore",
+                "pinCodeId": 1,
+                "countryId": 1,
+                "stateId": 1,
+                "telephone": "07314823100",
+                "email": "amit.malviya@indoretextile.com",
+                "mobile": "9826712345",
+                "aadhaarNo": "2345 6789 0123",
+                "panNo": "AAMCI4567K",
+                "bankId": 1,
+                "bankAccount": "50100234567890",
+                "bankIfsc": "HDFC0001452",
+                "firmType": "NON_GOV",
+                "createdAt": "2026-04-13T20:28:52.572Z",
+                "updatedAt": "2026-04-13T20:28:52.572Z",
+                "createdById": 1,
+                "updatedById": null,
+                "deletedAt": null,
+                "deletedById": null,
+                "serviceablePincode": {
+                  "id": 1,
+                  "countryId": 1,
+                  "stateId": 1,
+                  "pinCode": "452001",
+                  "cityName": "Indore",
+                  "areaName": "Indore City",
+                  "serviceable": true,
+                  "oda": false,
+                  "createdAt": "2026-04-13T20:26:53.094Z",
+                  "updatedAt": "2026-04-13T20:26:53.094Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                }
+              },
+              "consignee": {
+                "id": 4,
+                "code": "CNS-MUM-001",
+                "name": "Bhopal Fabric House Pvt Ltd",
+                "contactPerson": "Nitin Desai",
+                "address1": "Shop No. 12, MP Nagar",
+                "address2": "Near DB Mall, Bhopal",
+                "pinCodeId": 2,
+                "countryId": 1,
+                "stateId": 1,
+                "telephone": "075523456789",
+                "email": "nitin.desai@bhopalfabric.com",
+                "mobile": "9820456789",
+                "createdAt": "2026-04-14T23:44:34.755Z",
+                "updatedAt": "2026-04-14T23:44:34.755Z",
+                "createdById": 1,
+                "updatedById": null,
+                "deletedAt": null,
+                "deletedById": null,
+                "serviceablePincode": {
+                  "id": 2,
+                  "countryId": 1,
+                  "stateId": 1,
+                  "pinCode": "486001",
+                  "cityName": "jabalpur",
+                  "areaName": "karmeta",
+                  "serviceable": true,
+                  "oda": true,
+                  "createdAt": "2026-04-14T08:46:50.368Z",
+                  "updatedAt": "2026-04-14T08:46:50.368Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                }
+              },
+              "vendor": null,
+              "product": {
+                "id": 1,
+                "productCode": "CODE001",
+                "productName": "SURFACE"
+              },
+              "piecesRows": [
+                {
+                  "id": 1,
+                  "shipmentId": 1,
+                  "actualWeight": 9500,
+                  "pieces": 3,
+                  "length": 60,
+                  "width": 40,
+                  "height": 30,
+                  "volumetricWeight": 24000,
+                  "chargeWeight": 28500,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null,
+                  "items": [
+                    {
+                      "id": 1,
+                      "pieceId": 1,
+                      "contentId": 1,
+                      "quantity": 10,
+                      "measureValue": null,
+                      "measureUnit": null,
+                      "totalValue": 35000,
+                      "invoiceDate": "2026-04-15T00:00:00.000Z",
+                      "invoiceNumber": "INV/IND/2026/10451",
+                      "createdAt": "2026-04-14T23:44:34.839Z",
+                      "updatedAt": "2026-04-14T23:44:34.839Z",
+                      "deletedAt": null
+                    },
+                    {
+                      "id": 2,
+                      "pieceId": 1,
+                      "contentId": 2,
+                      "quantity": null,
+                      "measureValue": 200,
+                      "measureUnit": "METER",
+                      "totalValue": 10000,
+                      "invoiceDate": "2026-04-15T00:00:00.000Z",
+                      "invoiceNumber": "INV/IND/2026/10452",
+                      "createdAt": "2026-04-14T23:44:34.839Z",
+                      "updatedAt": "2026-04-14T23:44:34.839Z",
+                      "deletedAt": null
+                    }
+                  ]
+                }
+              ],
+              "charges": [
+                {
+                  "id": 1,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "FOV",
+                  "rate": null,
+                  "amount": 112.5,
+                  "fuelApply": false,
+                  "fuelAmount": 0,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 112.5,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 2,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "HANDLING",
+                  "rate": null,
+                  "amount": 25,
+                  "fuelApply": false,
+                  "fuelAmount": 0,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 25,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 3,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "ECC",
+                  "rate": null,
+                  "amount": 28500,
+                  "fuelApply": false,
+                  "fuelAmount": 0,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 28500,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 4,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "RAS",
+                  "rate": null,
+                  "amount": 14250,
+                  "fuelApply": false,
+                  "fuelAmount": 0,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 14250,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 5,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "ODA",
+                  "rate": null,
+                  "amount": 40,
+                  "fuelApply": false,
+                  "fuelAmount": 0,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 40,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 6,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "OTHER",
+                  "rate": null,
+                  "amount": 15,
+                  "fuelApply": false,
+                  "fuelAmount": 0,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 15,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 7,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "FUEL",
+                  "rate": null,
+                  "amount": 142500,
+                  "fuelApply": false,
+                  "fuelAmount": null,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 142500,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 8,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "FLOOR_DELIVERY EQ 1",
+                  "rate": null,
+                  "amount": 30,
+                  "fuelApply": false,
+                  "fuelAmount": null,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 30,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                },
+                {
+                  "id": 9,
+                  "shipmentId": 1,
+                  "chargeId": null,
+                  "description": "SHIPMENT_VALUE GTE 40000",
+                  "rate": null,
+                  "amount": 7125,
+                  "fuelApply": false,
+                  "fuelAmount": null,
+                  "taxApply": false,
+                  "taxOnFuel": false,
+                  "igst": null,
+                  "cgst": null,
+                  "sgst": null,
+                  "total": 7125,
+                  "chargeType": null,
+                  "createdAt": "2026-04-14T23:44:34.839Z",
+                  "updatedAt": "2026-04-14T23:44:34.839Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null
+                }
+              ],
+              "statuses": [
+                {
+                  "id": 1,
+                  "shipmentId": 1,
+                  "status": "CREATED",
+                  "sequence": 1,
+                  "externalStatus": null,
+                  "normalizedStatus": null,
+                  "serviceCenterId": null,
+                  "userId": null,
+                  "remark": "Shipment created",
+                  "receiverName": null,
+                  "podFilePath": null,
+                  "createdAt": "2026-04-14T23:44:34.887Z",
+                  "updatedAt": "2026-04-14T23:44:34.887Z",
+                  "createdById": 1,
+                  "updatedById": null,
+                  "deletedAt": null,
+                  "deletedById": null,
+                  "source": "CORE"
+                }
+              ],
+              "forwarding": null,
+              "kycDocuments": [],
+              "receipt": null,
+              "packages": [],
+              "trackingSummary": null,
+              "comments": [],
+              "origin": "Indore City, Indore",
+              "destination": "karmeta, jabalpur",
+              "pieces": 3,
+              "createdBy": {
+                "id": 1,
+                "username": "admin",
+                "email": "admin@system.com",
+                "roleId": 1,
+                "mobile": null,
+                "status": "ACTIVE",
+                "createdAt": "2026-04-13T10:25:37.962Z",
+                "updatedAt": "2026-04-13T10:25:37.962Z"
+              },
+              "updatedBy": null,
+              "deletedBy": null
+            }
+          }

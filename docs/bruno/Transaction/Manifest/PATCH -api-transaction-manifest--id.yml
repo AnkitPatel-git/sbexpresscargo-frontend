@@ -1,0 +1,67 @@
+info:
+  name: PATCH /api/transaction/manifest/:id
+  type: http
+  seq: 15
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/transaction/manifest/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "manifestNo": "Sample Value",
+        "masterAwbNo": "AWB100001",
+        "manifestDate": "2026-04-13T10:00:00.000Z",
+        "manifestTime": "Sample Value",
+        "location": "Sample Value",
+        "serviceCenter": "Sample Value",
+        "serviceCenterId": 1,
+        "connectStation": "Sample Value",
+        "vendorId": 1,
+        "productId": 1,
+        "format": "2026-04-13T10:00:00.000Z",
+        "singleLine": true,
+        "pdfType": "Sample Value",
+        "accountNo": "123456789012",
+        "department": "Sample Value",
+        "shipmentIds": [
+          1
+        ],
+        "items": [
+          {
+            "bagNo": "Sample Value",
+            "forwardingNo": "Sample Value",
+            "awbNo": "AWB100001",
+            "refNo": "Sample Value",
+            "crnMhbsNo": "Sample Value",
+            "pieces": 1,
+            "chargeWeight": 10,
+            "bookDate": "2026-04-13T10:00:00.000Z",
+            "origin": "Sample Value",
+            "destination": "Sample Value",
+            "code": "CODE001",
+            "customer": "Sample Value",
+            "consignee": "Sample Value",
+            "instruction": "Sample Value"
+          }
+        ],
+        "version": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

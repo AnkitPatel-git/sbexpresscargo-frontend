@@ -1,0 +1,379 @@
+info:
+  name: POST /api/transaction/shipment/calculate-charges
+  type: http
+  seq: 5.5
+
+http:
+  method: POST
+  url: '{{baseUrl}}/api/transaction/shipment/calculate-charges'
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "awbNo": null,
+        "ewaybillNumber": "EWB2310045678901",
+        "bookDate": "2026-04-15T10:00:00.000Z",
+        "bookTime": "10:30",
+        "referenceNo": "REF/IND/2026/00891",
+        "customerId": 1,
+        "clientId": 1,
+        "shipperId": null,
+        "consigneeId": null,
+        "shipper": {
+          "shipperCode": "SHP-IND-001",
+          "shipperName": "Indore Textile Traders Pvt Ltd",
+          "contactPerson": "Amit Malviya",
+          "address1": "Plot No. 15, Scheme 78, Part-II, Vijay Nagar",
+          "address2": "Near Palasia Square, Indore",
+          "pinCodeId": 452001,
+          "telephone": "07314823100",
+          "mobile": "9826712345",
+          "email": "amit.malviya@indoretextile.com"
+        },
+        "consignee": {
+          "code": "CNS-MUM-001",
+          "name": "Bhopal Fabric House Pvt Ltd",
+          "contactPerson": "Nitin Desai",
+          "address1": "Shop No. 12, MP Nagar",
+          "address2": "Near DB Mall, Bhopal",
+          "pinCodeId": 486001,
+          "telephone": "075523456789",
+          "mobile": "9820456789",
+          "email": "nitin.desai@bhopalfabric.com"
+        },
+        "productId": 1,
+        "fromZoneId": 1,
+        "toZoneId": 2,
+        "shipmentTotalValue": 45000,
+        "reversePickup": true,
+        "appointmentDelivery": false,
+        "floorDelivery": true,
+        "floorCount": 2,
+        "km": 590,
+        "commercial": true,
+        "paymentType": "PREPAID",
+        "instruction": "Handle with care. Keep dry. Do not stack more than 3 units.",
+        "fieldExecutiveId": 3,
+        "serviceCenterId": 1,
+        "podUserId": 5,
+        "isCod": false,
+        "codAmount": 0,
+        "piecesRows": [
+          {
+            "actualWeight": 9500,
+            "pieces": 3,
+            "length": 60,
+            "width": 40,
+            "height": 30,
+            "volumetricWeight": 24000,
+            "chargeWeight": 28500,
+            "items": [
+              {
+                "contentId": 1,
+                "quantity": 10,
+                "totalValue": 35000,
+                "invoiceDate": "2026-04-15",
+                "invoiceNumber": "INV/IND/2026/10451"
+              },
+              {
+                "contentId": 2,
+                "measureValue": 200,
+                "measureUnit": "METER",
+                "totalValue": 10000,
+                "invoiceDate": "2026-04-15",
+                "invoiceNumber": "INV/IND/2026/10452"
+              }
+            ]
+          }
+        ],
+        "charges": []
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: dummy charge calculation
+    request:
+      url: '{{baseUrl}}/api/transaction/shipment/calculate-charges'
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      body:
+        type: json
+        data: |-
+          {
+            "awbNo": "AWB100001",
+            "ewaybillNumber": "EWB2310045678901",
+            "bookDate": "2026-04-15T10:00:00.000Z",
+            "bookTime": "10:30",
+            "referenceNo": "REF/IND/2026/00891",
+            "customerId": 1,
+            "clientId": 1,
+            "shipperId": null,
+            "consigneeId": null,
+            "shipper": {
+              "shipperCode": "SHP-IND-001",
+              "shipperName": "Indore Textile Traders Pvt Ltd",
+              "contactPerson": "Amit Malviya",
+              "address1": "Plot No. 15, Scheme 78, Part-II, Vijay Nagar",
+              "address2": "Near Palasia Square, Indore",
+              "pinCodeId": 452001,
+              "telephone": "07314823100",
+              "mobile": "9826712345",
+              "email": "amit.malviya@indoretextile.com"
+            },
+            "consignee": {
+              "code": "CNS-MUM-001",
+              "name": "Bhopal Fabric House Pvt Ltd",
+              "contactPerson": "Nitin Desai",
+              "address1": "Shop No. 12, MP Nagar",
+              "address2": "Near DB Mall, Bhopal",
+              "pinCodeId": 486001,
+              "telephone": "075523456789",
+              "mobile": "9820456789",
+              "email": "nitin.desai@bhopalfabric.com"
+            },
+            "productId": 1,
+            "fromZoneId": 1,
+            "toZoneId": 2,
+            "shipmentTotalValue": 45000,
+            "reversePickup": true,
+            "appointmentDelivery": false,
+            "floorDelivery": true,
+            "floorCount": 2,
+            "km": 590,
+            "commercial": true,
+            "paymentType": "PREPAID",
+            "instruction": "Handle with care. Keep dry. Do not stack more than 3 units.",
+            "fieldExecutiveId": 3,
+            "serviceCenterId": 1,
+            "podUserId": 5,
+            "isCod": false,
+            "codAmount": 0,
+            "piecesRows": [
+              {
+                "actualWeight": 9500,
+                "pieces": 3,
+                "length": 60,
+                "width": 40,
+                "height": 30,
+                "volumetricWeight": 24000,
+                "chargeWeight": 28500,
+                "items": [
+                  {
+                    "contentId": 1,
+                    "quantity": 10,
+                    "totalValue": 35000,
+                    "invoiceDate": "2026-04-15",
+                    "invoiceNumber": "INV/IND/2026/10451"
+                  },
+                  {
+                    "contentId": 2,
+                    "measureValue": 200,
+                    "measureUnit": "METER",
+                    "totalValue": 10000,
+                    "invoiceDate": "2026-04-15",
+                    "invoiceNumber": "INV/IND/2026/10452"
+                  }
+                ]
+              }
+            ],
+            "charges": []
+          }
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "rateMasterId": 1,
+              "fromZoneId": 1,
+              "toZoneId": 2,
+              "baseFreight": 1425000,
+              "totalAmount": 1617597.5,
+              "totalCharges": 192597.5,
+              "rows": [
+                {
+                  "type": "RATE_CHARGE",
+                  "name": "FOV",
+                  "amount": 112.5,
+                  "calculationBase": "SHIPMENT_VALUE",
+                  "isPercentage": true
+                },
+                {
+                  "type": "RATE_CHARGE",
+                  "name": "HANDLING",
+                  "amount": 25,
+                  "calculationBase": "FLAT",
+                  "isPercentage": false
+                },
+                {
+                  "type": "RATE_CHARGE",
+                  "name": "ECC",
+                  "amount": 28500,
+                  "calculationBase": "FREIGHT",
+                  "isPercentage": true
+                },
+                {
+                  "type": "RATE_CHARGE",
+                  "name": "RAS",
+                  "amount": 14250,
+                  "calculationBase": "FREIGHT",
+                  "isPercentage": true
+                },
+                {
+                  "type": "RATE_CHARGE",
+                  "name": "ODA",
+                  "amount": 40,
+                  "calculationBase": "FLAT",
+                  "isPercentage": false
+                },
+                {
+                  "type": "RATE_CHARGE",
+                  "name": "OTHER",
+                  "amount": 15,
+                  "calculationBase": "FLAT",
+                  "isPercentage": false
+                },
+                {
+                  "type": "RATE_CHARGE",
+                  "name": "FUEL",
+                  "amount": 142500,
+                  "calculationBase": "FREIGHT",
+                  "isPercentage": true
+                },
+                {
+                  "type": "CONDITION",
+                  "name": "OTHER",
+                  "amount": 30,
+                  "field": "FLOOR_DELIVERY",
+                  "operator": "EQ",
+                  "value": 1
+                },
+                {
+                  "type": "CONDITION",
+                  "name": "OTHER",
+                  "amount": 7125,
+                  "field": "SHIPMENT_VALUE",
+                  "operator": "GTE",
+                  "value": 40000
+                }
+              ],
+              "route": {
+                "pickupPincode": "452001",
+                "deliveryPincode": "486001",
+                "pickupZones": [
+                  {
+                    "id": 1,
+                    "code": "CODE002",
+                    "name": "East Zone-2",
+                    "zoneType": "DOMESTIC"
+                  }
+                ],
+                "deliveryZones": [
+                  {
+                    "id": 1,
+                    "code": "CODE002",
+                    "name": "East Zone-2",
+                    "zoneType": "DOMESTIC"
+                  },
+                  {
+                    "id": 2,
+                    "code": "ZON000001",
+                    "name": "Central-zone-1",
+                    "zoneType": "DOMESTIC"
+                  }
+                ],
+                "fromZoneId": 1,
+                "toZoneId": 2
+              },
+              "breakdown": {
+                "baseType": "ZONE_MATRIX",
+                "baseComputation": "ZONE_MATRIX",
+                "slabUsed": {
+                  "zone": {
+                    "fromZoneId": 1,
+                    "toZoneId": 2
+                  }
+                },
+                "chargesApplied": [
+                  {
+                    "name": "FOV",
+                    "calculationBase": "SHIPMENT_VALUE",
+                    "isPercentage": true,
+                    "amount": 112.5
+                  },
+                  {
+                    "name": "HANDLING",
+                    "calculationBase": "FLAT",
+                    "isPercentage": false,
+                    "amount": 25
+                  },
+                  {
+                    "name": "ECC",
+                    "calculationBase": "FREIGHT",
+                    "isPercentage": true,
+                    "amount": 28500
+                  },
+                  {
+                    "name": "RAS",
+                    "calculationBase": "FREIGHT",
+                    "isPercentage": true,
+                    "amount": 14250
+                  },
+                  {
+                    "name": "ODA",
+                    "calculationBase": "FLAT",
+                    "isPercentage": false,
+                    "amount": 40
+                  },
+                  {
+                    "name": "OTHER",
+                    "calculationBase": "FLAT",
+                    "isPercentage": false,
+                    "amount": 15
+                  },
+                  {
+                    "name": "FUEL",
+                    "calculationBase": "FREIGHT",
+                    "isPercentage": true,
+                    "amount": 142500
+                  }
+                ],
+                "conditionsApplied": [
+                  {
+                    "name": "FLOOR DELIVERY",
+                    "field": "FLOOR_DELIVERY",
+                    "operator": "EQ",
+                    "value": 1,
+                    "amount": 30
+                  },
+                  {
+                    "name": "HIGH VALUE SURCHARGE",
+                    "field": "SHIPMENT_VALUE",
+                    "operator": "GTE",
+                    "value": 40000,
+                    "amount": 7125
+                  }
+                ]
+              }
+            }
+          }

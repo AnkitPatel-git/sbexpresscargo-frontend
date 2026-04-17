@@ -1,0 +1,42 @@
+info:
+  name: PUT /api/rate-master/:rateMasterId/distance-slabs/:id
+  type: http
+  seq: 15
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/rate-master/{{rateMasterId}}/distance-slabs/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: rateMasterId
+      value: "1"
+      type: path
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "minKm": 0,
+        "maxKm": 60,
+        "weightSlabs": [
+          {
+            "minWeight": 0,
+            "maxWeight": 10,
+            "rate": 125
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

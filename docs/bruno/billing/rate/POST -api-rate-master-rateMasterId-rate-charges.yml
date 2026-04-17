@@ -1,0 +1,161 @@
+info:
+  name: POST /api/rate-master/:rateMasterId/rate-charges
+  type: http
+  seq: 19
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/rate-master/{{rateMasterId}}/rate-charges"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: rateMasterId
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "name": "FUEL",
+        "calculationBase": "CHARGE_WEIGHT",
+        "value": 5,
+        "isPercentage": true,
+        "minValue": 0,
+        "maxValue": 999999,
+        "sequence": 1,
+        "chargeSlabs": [
+          {
+            "minValue": 0,
+            "maxValue": 1000,
+            "rate": 5
+          }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: rateMasterId
+      value: "1"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/api/rate-master/{{rateMasterId}}/rate-charges"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      params:
+        - name: rateMasterId
+          value: "1"
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "name": "FUEL",
+            "calculationBase": "CHARGE_WEIGHT",
+            "value": 5,
+            "isPercentage": true,
+            "minValue": 0,
+            "maxValue": 999999,
+            "sequence": 1,
+            "chargeSlabs": [
+              {
+                "minValue": 0,
+                "maxValue": 1000,
+                "rate": 5
+              }
+            ]
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "459"
+        - name: etag
+          value: W/"1cb-kTTCUa0rm6LQhH4Ub8wXptfvWKs"
+        - name: date
+          value: Wed, 15 Apr 2026 06:12:25 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 8,
+              "rateMasterId": 1,
+              "name": "FUEL",
+              "calculationBase": "CHARGE_WEIGHT",
+              "value": 5,
+              "isPercentage": true,
+              "minValue": 0,
+              "maxValue": 999999,
+              "weightStep": null,
+              "sequence": 1,
+              "createdAt": "2026-04-15T06:12:25.891Z",
+              "updatedAt": "2026-04-15T06:12:25.891Z",
+              "deletedAt": null,
+              "chargeSlabs": [
+                {
+                  "id": 1,
+                  "rateChargeId": 8,
+                  "minValue": 0,
+                  "maxValue": 1000,
+                  "rate": 5,
+                  "createdAt": "2026-04-15T06:12:25.896Z",
+                  "updatedAt": "2026-04-15T06:12:25.896Z",
+                  "deletedAt": null
+                }
+              ]
+            }
+          }

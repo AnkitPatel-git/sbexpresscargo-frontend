@@ -10,13 +10,21 @@ export const productService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        productCode?: string;
+        productName?: string;
+        productType?: string;
+        status?: string;
     }): Promise<ProductListResponse> {
         const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append('page', params.page.toString());
-        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+        if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'productCode');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.productCode) queryParams.append('productCode', params.productCode);
+        if (params?.productName) queryParams.append('productName', params.productName);
+        if (params?.productType) queryParams.append('productType', params.productType);
+        if (params?.status) queryParams.append('status', params.status);
 
         const response = await apiFetch(`${API_URL}/product-master?${queryParams.toString()}`, {
             headers: {
@@ -99,14 +107,26 @@ export const productService = {
 
     /** Bruno: `GET /product-master/export` — CSV; optional list-style query params. */
     async exportProducts(params?: {
+        page?: number;
+        limit?: number;
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        productCode?: string;
+        productName?: string;
+        productType?: string;
+        status?: string;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
+        if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+        if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'productCode');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.productCode) queryParams.append('productCode', params.productCode);
+        if (params?.productName) queryParams.append('productName', params.productName);
+        if (params?.productType) queryParams.append('productType', params.productType);
+        if (params?.status) queryParams.append('status', params.status);
 
         const response = await apiFetch(`${API_URL}/product-master/export?${queryParams.toString()}`, {
             headers: {

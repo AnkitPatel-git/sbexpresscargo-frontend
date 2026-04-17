@@ -1,0 +1,38 @@
+info:
+  name: PUT /api/transaction/misrouted-scan/:id
+  type: http
+  seq: 11
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/transaction/misrouted-scan/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "scanDate": "2026-04-13T10:00:00.000Z",
+        "scanTime": "Sample Value",
+        "serviceCenterId": 1,
+        "items": [
+          {
+            "awbNo": "AWB100001"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

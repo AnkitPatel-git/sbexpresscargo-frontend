@@ -11,6 +11,8 @@ export const serviceMapService = {
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
         vendorId?: number;
+        serviceType?: string;
+        status?: string;
     }): Promise<ServiceMapListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -19,6 +21,8 @@ export const serviceMapService = {
         queryParams.append('sortBy', params?.sortBy ?? 'vendor');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
         if (params?.vendorId != null) queryParams.append('vendorId', String(params.vendorId));
+        if (params?.serviceType) queryParams.append('serviceType', params.serviceType);
+        if (params?.status) queryParams.append('status', params.status);
 
         const response = await apiFetch(`${API_URL}/service-map-master?${queryParams.toString()}`, {
             headers: {
@@ -119,12 +123,16 @@ export const serviceMapService = {
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
         vendorId?: number;
+        serviceType?: string;
+        status?: string;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'vendor');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
         if (params?.vendorId != null) queryParams.append('vendorId', String(params.vendorId));
+        if (params?.serviceType) queryParams.append('serviceType', params.serviceType);
+        if (params?.status) queryParams.append('status', params.status);
 
         const response = await apiFetch(`${API_URL}/service-map-master/export?${queryParams.toString()}`, {
             headers: {

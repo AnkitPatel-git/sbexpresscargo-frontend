@@ -1,0 +1,59 @@
+info:
+  name: GET /api/customer-master/kyc/customers
+  type: http
+  seq: 16
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/customer-master/kyc/customers"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: searchBy
+      value: name
+      type: query
+    - name: name
+      value: string
+      type: query
+    - name: code
+      value: string
+      type: query
+    - name: telephone
+      value: string
+      type: query
+    - name: email
+      value: string
+      type: query
+    - name: mobile
+      value: string
+      type: query
+    - name: address
+      value: string
+      type: query
+    - name: contactPerson
+      value: string
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Plus, Edit, Trash2, Link as LinkIcon, Check, X, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Link as LinkIcon, Check, X, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Table,
     TableBody,
@@ -55,26 +56,27 @@ function SortArrows() {
 export default function ServiceMapPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const [search, setSearch] = useState("")
-    const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({
-        vendor: "",
-        serviceType: "",
-        weight: "",
-        status: "",
-    })
+    const defaultFilters = { search: "", vendorId: "", serviceType: "", status: "" }
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
+    useEffect(() => {
+        if (filtersOpen) setDraftFilters(appliedFilters)
+    }, [appliedFilters, filtersOpen])
+
     const { data: vendorsData } = useQuery({
         queryKey: ["vendors-list"],
-        queryFn: () => vendorService.getVendors({ limit: 100 }),
+        queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: "vendorName", sortOrder: "asc" }),
     })
 
     const { data, isLoading } = useQuery({
-        queryKey: ["service-maps", page, debouncedSearch],
+        queryKey: ["service-maps", page, debouncedSearch, appliedFilters.vendorId, appliedFilters.serviceType, appliedFilters.status],
         queryFn: () =>
             serviceMapService.getServiceMaps({
                 page,
@@ -82,6 +84,9 @@ export default function ServiceMapPage() {
                 search: debouncedSearch,
                 sortBy: "vendor",
                 sortOrder: "asc",
+                vendorId: appliedFilters.vendorId ? Number(appliedFilters.vendorId) : undefined,
+                serviceType: appliedFilters.serviceType || undefined,
+                status: appliedFilters.status || undefined,
             }),
     })
 
@@ -94,6 +99,9 @@ export default function ServiceMapPage() {
                 search: debouncedSearch,
                 sortBy: "vendor",
                 sortOrder: "asc",
+                vendorId: appliedFilters.vendorId ? Number(appliedFilters.vendorId) : undefined,
+                serviceType: appliedFilters.serviceType || undefined,
+                status: appliedFilters.status || undefined,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
@@ -109,8 +117,16 @@ export default function ServiceMapPage() {
         }
     }
 
-    const getVendorName = (id: number) => {
-        return vendorsData?.data?.find((v: any) => v.id === id)?.vendorName || `ID: ${id}`
+    const decimalToNumber = (value: ServiceMap["minWeight"]) => {
+        if (typeof value === "number" || typeof value === "string") return value
+        if (value && typeof value === "object" && "d" in value) {
+            const digits = Array.isArray(value.d) ? value.d.join("") : ""
+            const exponent = value.e ?? 0
+            const sign = value.s === -1 ? "-" : ""
+            const parsed = Number(`${sign}${digits}e${exponent}`)
+            return Number.isFinite(parsed) ? parsed : ""
+        }
+        return ""
     }
 
     const deleteMutation = useMutation({
@@ -147,22 +163,54 @@ export default function ServiceMapPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
-        data?.data.filter((serviceMap: ServiceMap) => {
-            const vendorName = getVendorName(serviceMap.vendorId)
-            const weightText = `${serviceMap.minWeight} - ${serviceMap.maxWeight} kg`
-
-            if (colFilters.vendor && !vendorName.toLowerCase().includes(colFilters.vendor.toLowerCase())) return false
-            if (colFilters.serviceType && !serviceMap.serviceType.toLowerCase().includes(colFilters.serviceType.toLowerCase())) return false
-            if (colFilters.weight && !weightText.toLowerCase().includes(colFilters.weight.toLowerCase())) return false
-            if (colFilters.status && !serviceMap.status.toLowerCase().includes(colFilters.status.toLowerCase())) return false
-            return true
-        }) ?? []
+    const rows = data?.data ?? []
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Service Map Filters</DialogTitle>
+                                <DialogDescription>Filter the service map list from this popup, then apply the filters.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <select className="h-9 rounded-md border border-border bg-background px-2 text-sm" value={draftFilters.vendorId} onChange={(e) => setDraftFilters((prev) => ({ ...prev, vendorId: e.target.value }))}>
+                                    <option value="">All vendors</option>
+                                    {vendorsData?.data?.map((vendor) => (
+                                        <option key={vendor.id} value={String(vendor.id)}>{vendor.vendorName}</option>
+                                    ))}
+                                </select>
+                                <Input placeholder="Service Type" className="h-9 bg-background" value={draftFilters.serviceType} onChange={(e) => setDraftFilters((prev) => ({ ...prev, serviceType: e.target.value }))} />
+                                <Input placeholder="Status" className="h-9 bg-background" value={draftFilters.status} onChange={(e) => setDraftFilters((prev) => ({ ...prev, status: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-maps"], type: "active" })}>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                     <PermissionGuard permission="master.service_map.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
                             <FilePlus className="h-4 w-4" />
@@ -187,13 +235,9 @@ export default function ServiceMapPage() {
                 </div>
                 <PermissionGuard permission="master.service_map.create">
                     <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Service Map">
-                        <Plus className="mr-1 h-4 w-4" /> Add Service Map
+                        <FilePlus className="mr-1 h-4 w-4" /> Add Service Map
                     </Button>
                 </PermissionGuard>
-            </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Search:</span>
-                <Input placeholder="Search service maps..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1200px] border-0">
@@ -206,30 +250,22 @@ export default function ServiceMapPage() {
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Status <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Vendor" className="h-8 border-border bg-background text-xs" value={colFilters.vendor} onChange={(e) => setColFilters((f) => ({ ...f, vendor: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Service Type" className="h-8 border-border bg-background text-xs" value={colFilters.serviceType} onChange={(e) => setColFilters((f) => ({ ...f, serviceType: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Weight" className="h-8 border-border bg-background text-xs" value={colFilters.weight} onChange={(e) => setColFilters((f) => ({ ...f, weight: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Single Pc" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Status" className="h-8 border-border bg-background text-xs" value={colFilters.status} onChange={(e) => setColFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2" />
-                        </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Loading service maps...</TableCell>
                             </TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No service maps found.</TableCell>
                             </TableRow>
                         ) : (
-                            filteredRows.map((serviceMap: ServiceMap, index) => (
+                            rows.map((serviceMap: ServiceMap, index) => (
                                 <TableRow key={serviceMap.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">
                                         <div className="flex items-center">
-                                            {getVendorName(serviceMap.vendorId)}
+                                            {serviceMap.vendor?.vendorName || `ID: ${serviceMap.vendorId}`}
                                             {serviceMap.vendorLink && (
                                                 <a href={serviceMap.vendorLink} target="_blank" rel="noopener noreferrer" className="ml-2">
                                                     <LinkIcon className="h-3 w-3 text-muted-foreground" />
@@ -240,7 +276,7 @@ export default function ServiceMapPage() {
                                     <TableCell>
                                         <Badge variant="outline">{serviceMap.serviceType}</Badge>
                                     </TableCell>
-                                    <TableCell className="text-foreground">{serviceMap.minWeight} - {serviceMap.maxWeight} kg</TableCell>
+                                    <TableCell className="text-foreground">{decimalToNumber(serviceMap.minWeight)} - {decimalToNumber(serviceMap.maxWeight)} kg</TableCell>
                                     <TableCell className="text-center">
                                         {serviceMap.isSinglePiece ? (
                                             <Check className="mx-auto h-4 w-4 text-green-600" />

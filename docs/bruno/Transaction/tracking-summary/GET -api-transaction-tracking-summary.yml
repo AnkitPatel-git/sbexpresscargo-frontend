@@ -1,0 +1,47 @@
+info:
+  name: GET /api/transaction/tracking-summary
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/transaction/tracking-summary"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: shipmentId
+      value: "0"
+      type: query
+    - name: awbNo
+      value: string
+      type: query
+    - name: deliveredFrom
+      value: string
+      type: query
+    - name: deliveredTo
+      value: string
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

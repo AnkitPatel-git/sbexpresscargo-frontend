@@ -1,0 +1,37 @@
+info:
+  name: PATCH /api/transaction/tracking-summary/:shipmentId
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/transaction/tracking-summary/{{shipmentId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: shipmentId
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "shipmentId": 1,
+        "firstPickupAt": "2026-04-13T10:00:00.000Z",
+        "firstInTransitAt": "2026-04-13T10:00:00.000Z",
+        "firstOfdAt": "2026-04-13T10:00:00.000Z",
+        "deliveredAt": "2026-04-13T10:00:00.000Z",
+        "totalTransitTime": 1,
+        "totalDelayTime": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

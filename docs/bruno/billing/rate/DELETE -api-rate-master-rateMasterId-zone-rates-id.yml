@@ -1,0 +1,26 @@
+info:
+  name: DELETE /api/rate-master/:rateMasterId/zone-rates/:id
+  type: http
+  seq: 11
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/rate-master/{{rateMasterId}}/zone-rates/{{id}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: rateMasterId
+      value: "1"
+      type: path
+    - name: id
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

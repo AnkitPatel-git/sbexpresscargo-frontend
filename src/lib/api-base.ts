@@ -1,8 +1,8 @@
-/** Single source for API root (matches Bruno `baseUrl`, e.g. `http://localhost:3001/api`). */
+/** Single source for the browser-facing API root. Next rewrites `/api/*` to the backend. */
 export const API_BASE_URL =
   typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL
     ? process.env.NEXT_PUBLIC_API_URL
-    : "http://localhost:3000/api";
+    : "/api";
 
 export function bearerHeaders(json = true): HeadersInit {
   const h: Record<string, string> = {

@@ -1,0 +1,39 @@
+info:
+  name: PATCH /api/customer-master/:customerId/fuel-surcharges/:surchargeId
+  type: http
+  seq: 17
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/customer-master/{{customerId}}/fuel-surcharges/{{surchargeId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: customerId
+      value: "1"
+      type: path
+    - name: surchargeId
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "productId": 1,
+        "fuelChargeType": "PERCENTAGE",
+        "fromDate": "2026-04-13T10:00:00.000Z",
+        "toDate": "2026-04-13T10:00:00.000Z",
+        "fuelSurcharge": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

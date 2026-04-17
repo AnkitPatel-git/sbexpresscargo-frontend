@@ -10,6 +10,8 @@ export const exceptionService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        name?: string;
     }): Promise<ExceptionListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -17,6 +19,8 @@ export const exceptionService = {
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'code');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.name) queryParams.append('name', params.name);
 
         const response = await apiFetch(`${API_URL}/exception-master?${queryParams.toString()}`, {
             headers: {
@@ -102,11 +106,15 @@ export const exceptionService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        name?: string;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'code');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.name) queryParams.append('name', params.name);
 
         const response = await apiFetch(`${API_URL}/exception-master/export?${queryParams.toString()}`, {
             headers: {

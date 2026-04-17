@@ -1,7 +1,0 @@
-info:
-  name: Tracking Summary
-  type: folder
-  seq: 13
-
-request:
-  auth: inherit

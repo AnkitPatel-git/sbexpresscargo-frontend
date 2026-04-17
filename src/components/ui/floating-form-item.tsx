@@ -52,22 +52,25 @@ function FloatingFieldSurface({
   label,
   className,
   children,
+  suppressError = false,
 }: {
   label: React.ReactNode
   className?: string
   children: React.ReactNode
+  suppressError?: boolean
 }) {
   const { error } = useFormField()
+  const showError = !!error && !suppressError
 
   return (
     <div
       className={cn(
         outlinedSurfaceClass,
-        error ? "border-destructive" : "border-input",
+        showError ? "border-destructive" : "border-input",
         className
       )}
     >
-      <FormLabel className={outlinedLabelClass}>{label}</FormLabel>
+      <FormLabel className={cn(outlinedLabelClass, showError && "text-destructive")}>{label}</FormLabel>
       {children}
     </div>
   )
@@ -139,18 +142,20 @@ export function FloatingFormItem({
   className,
   itemClassName,
   children,
+  suppressError = false,
 }: {
   label: React.ReactNode
   className?: string
   itemClassName?: string
   children: React.ReactNode
+  suppressError?: boolean
 }) {
   return (
-    <FormItem className={cn("gap-0", itemClassName)}>
-      <FloatingFieldSurface label={label} className={className}>
+    <FormItem className={cn("min-w-0 gap-0", itemClassName)}>
+      <FloatingFieldSurface label={label} className={className} suppressError={suppressError}>
         {children}
       </FloatingFieldSurface>
-      <FormMessage className="mt-1" />
+      {!suppressError ? <FormMessage className="mt-1" /> : null}
     </FormItem>
   )
 }

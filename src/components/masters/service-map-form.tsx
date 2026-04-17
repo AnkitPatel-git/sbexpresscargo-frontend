@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { useForm, Resolver } from 'react-hook-form'
+import { FieldErrors, Resolver, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from "@/lib/utils"
 import {
@@ -88,10 +88,10 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
         },
         values: initialData ? {
             vendorId: initialData.vendorId || 0,
-            serviceType: initialData.serviceType as any,
+            serviceType: initialData.serviceType,
             minWeight: Number(initialData.minWeight),
             maxWeight: Number(initialData.maxWeight),
-            status: initialData.status as any,
+            status: initialData.status,
             vendorLink: initialData.vendorLink || '',
             isSinglePiece: initialData.isSinglePiece,
         } : undefined
@@ -121,10 +121,9 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
         mutation.mutate(data)
     }
 
-    const onInvalid = (errors: any) => {
-        console.error("Form Validation Errors:", errors)
+    const onInvalid = (errors: FieldErrors<ServiceMapFormValues>) => {
         const errorMessages = Object.entries(errors)
-            .map(([field, error]: [string, any]) => `${field}: ${error.message}`)
+            .map(([field, error]) => `${field}: ${error?.message ?? 'Invalid value'}`)
             .join(", ")
         toast.error(`Validation Error: ${errorMessages || "Please check the form"}`)
     }
@@ -307,13 +306,14 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                 <div className="flex justify-end gap-3 pt-6 border-t">
                     <Button
                         type="button"
-                        variant="outline"
+                        variant="expressDanger"
                         onClick={() => router.push('/masters/service-map')}
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={mutation.isPending}>
-                        {mutation.isPending ? "Saving..." : isEdit ? "Update Service Map" : "Create Service Map"}
+                    <Button type="submit" variant="success" disabled={mutation.isPending}>
+                        {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isEdit ? "Update Service Map" : "Create Service Map"}
                     </Button>
                 </div>
             </form>

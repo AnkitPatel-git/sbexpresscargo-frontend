@@ -1,0 +1,36 @@
+info:
+  name: POST /api/transaction/drs/complete
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/drs/complete"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "drsNo": "Sample Value",
+        "items": [
+          {
+            "awbNo": "AWB100001",
+            "status": "DELIVERED",
+            "remark": "Sample note",
+            "receiverName": "Sample Name",
+            "podFilePath": "Sample Value"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

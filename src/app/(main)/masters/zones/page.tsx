@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Table,
     TableBody,
@@ -37,13 +38,19 @@ import { useDebounce } from "@/hooks/use-debounce"
 export default function ZonesPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const [search, setSearch] = useState("")
-    const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({ code: "", name: "", country: "", type: "" })
+    const defaultFilters = { search: "", code: "", name: "", country: "", type: "" }
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
+
+    useEffect(() => {
+        if (filtersOpen) setDraftFilters(appliedFilters)
+    }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
         queryKey: ["zones", page, debouncedSearch],
@@ -84,26 +91,57 @@ export default function ZonesPage() {
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
     const filteredRows = data?.data.filter((zone) => {
-        if (colFilters.code && !(zone.code || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
-        if (colFilters.name && !(zone.name || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
-        if (colFilters.country && !(zone.countryId != null ? String(zone.countryId) : "").includes(colFilters.country)) return false
-        if (colFilters.type && !(zone.zoneType || "").toLowerCase().includes(colFilters.type.toLowerCase())) return false
+        if (appliedFilters.code && !(zone.code || "").toLowerCase().includes(appliedFilters.code.toLowerCase())) return false
+        if (appliedFilters.name && !(zone.name || "").toLowerCase().includes(appliedFilters.name.toLowerCase())) return false
+        if (appliedFilters.country && !(zone.countryId != null ? String(zone.countryId) : "").includes(appliedFilters.country)) return false
+        if (appliedFilters.type && !(zone.zoneType || "").toLowerCase().includes(appliedFilters.type.toLowerCase())) return false
         return true
     }) ?? []
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Zone Filters</DialogTitle>
+                                <DialogDescription>Filter the zone list from this popup, then apply the filters.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
+                                <Input placeholder="Zone Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
+                                <Input placeholder="Country" className="h-9 bg-background" value={draftFilters.country} onChange={(e) => setDraftFilters((prev) => ({ ...prev, country: e.target.value }))} />
+                                <Input placeholder="Type" className="h-9 bg-background" value={draftFilters.type} onChange={(e) => setDraftFilters((prev) => ({ ...prev, type: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["zones"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                     <PermissionGuard permission="master.area.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const blob = await zoneService.exportZonesCsv(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "zones.csv"; a.click(); URL.revokeObjectURL(url); } catch { toast.error("Failed to export zones"); } }}><FileUp className="h-4 w-4" /></Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["zones"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Search:</span>
-                    <Input placeholder="Search zones..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
-                    <PermissionGuard permission="master.area.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><Plus className="mr-1 h-4 w-4" />Add Zone</Button></PermissionGuard>
-                </div>
+                <PermissionGuard permission="master.area.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Zone</Button></PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[860px] border-0">
@@ -114,13 +152,6 @@ export default function ZonesPage() {
                             <TableHead className="font-semibold text-primary-foreground">Country <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Type <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
-                        </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Zone Name" className="h-8 border-border bg-background text-xs" value={colFilters.name} onChange={(e) => setColFilters((f) => ({ ...f, name: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Country" className="h-8 border-border bg-background text-xs" value={colFilters.country} onChange={(e) => setColFilters((f) => ({ ...f, country: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Type" className="h-8 border-border bg-background text-xs" value={colFilters.type} onChange={(e) => setColFilters((f) => ({ ...f, type: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2" />
                         </TableRow>
                     </TableHeader>
                                 <TableBody>

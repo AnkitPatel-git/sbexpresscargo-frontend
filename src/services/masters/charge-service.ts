@@ -15,6 +15,12 @@ export const chargeService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        name?: string;
+        calculationBase?: string;
+        applyFuel?: boolean;
+        applyTaxOnFuel?: boolean;
+        applyTax?: boolean;
     }): Promise<ChargeListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -22,6 +28,12 @@ export const chargeService = {
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'sequence');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.name) queryParams.append('name', params.name);
+        if (params?.calculationBase) queryParams.append('calculationBase', params.calculationBase);
+        if (typeof params?.applyFuel === 'boolean') queryParams.append('applyFuel', String(params.applyFuel));
+        if (typeof params?.applyTaxOnFuel === 'boolean') queryParams.append('applyTaxOnFuel', String(params.applyTaxOnFuel));
+        if (typeof params?.applyTax === 'boolean') queryParams.append('applyTax', String(params.applyTax));
 
         const response = await apiFetch(`${API_URL}/charge-master?${queryParams.toString()}`, {
             headers: {
@@ -124,11 +136,23 @@ export const chargeService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        name?: string;
+        calculationBase?: string;
+        applyFuel?: boolean;
+        applyTaxOnFuel?: boolean;
+        applyTax?: boolean;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'sequence');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.name) queryParams.append('name', params.name);
+        if (params?.calculationBase) queryParams.append('calculationBase', params.calculationBase);
+        if (typeof params?.applyFuel === 'boolean') queryParams.append('applyFuel', String(params.applyFuel));
+        if (typeof params?.applyTaxOnFuel === 'boolean') queryParams.append('applyTaxOnFuel', String(params.applyTaxOnFuel));
+        if (typeof params?.applyTax === 'boolean') queryParams.append('applyTax', String(params.applyTax));
 
         const response = await apiFetch(`${API_URL}/charge-master/export?${queryParams.toString()}`, {
             headers: {

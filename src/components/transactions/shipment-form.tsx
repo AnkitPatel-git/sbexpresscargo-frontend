@@ -1,6 +1,6 @@
 "use client"
 
-import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { ChangeEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, useFieldArray, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -16,7 +16,8 @@ import {
     Search,
     Plus,
     Trash2,
-    Calculator
+    Calculator,
+    RotateCcw
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -30,11 +31,14 @@ import {
     FloatingFormItem,
     FLOATING_INNER_COMBO,
     FLOATING_INNER_CONTROL,
+    FLOATING_INNER_SELECT_TRIGGER,
+    FLOATING_INNER_TEXTAREA,
     OutlinedFieldShell,
     OutlinedFormSection,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import {
     Command,
     CommandEmpty,
@@ -68,16 +72,22 @@ import { Combobox } from "@/components/ui/combobox"
 
 import { shipmentService } from '@/services/transactions/shipment-service'
 import { customerService } from '@/services/masters/customer-service'
+import { contentService } from '@/services/masters/content-service'
 import { shipperService } from '@/services/masters/shipper-service'
 import { consigneeService } from '@/services/masters/consignee-service'
 import { productService } from '@/services/masters/product-service'
 import { vendorService } from '@/services/masters/vendor-service'
 import { serviceMapService } from '@/services/masters/service-map-service'
+import { serviceCenterService } from '@/services/masters/service-center-service'
 import { chargeService } from '@/services/masters/charge-service'
-import { shipmentSchema, ShipmentFormValues, Shipment } from '@/types/transactions/shipment'
+import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
+import { pincodeDistanceService } from '@/services/utilities/pincode-distance-service'
+import { shipmentSchema, ShipmentFormValues, Shipment, ShipmentCalculateResponse } from '@/types/transactions/shipment'
 import { omitEmptyCodeFields } from '@/lib/master-code-schema'
 import type { Shipper } from '@/types/masters/shipper'
 import type { Consignee } from '@/types/masters/consignee'
+import type { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
+import { useDebounce } from '@/hooks/use-debounce'
 
 interface ShipmentFormProps {
     initialData?: Shipment | null
@@ -102,28 +112,50 @@ type KycRow = {
 const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValues => {
     const payload: ShipmentFormValues = { ...values }
 
-    const optionalNumberKeys: Array<keyof ShipmentFormValues> = [
+    const optionalNumberKeys = [
         "customerId",
         "clientId",
         "shipperId",
         "consigneeId",
         "productId",
-        "vendorId",
+        "fromZoneId",
+        "toZoneId",
+        "shipmentTotalValue",
+        "serviceCenterId",
         "serviceMapId",
+        "vendorId",
         "codAmount",
         "shipmentValue",
+        "pieces",
+        "actualWeight",
         "chargeWeight",
         "volumetricWeight",
-    ]
+        "floorCount",
+        "km",
+    ] as const
 
     optionalNumberKeys.forEach((key) => {
-        const currentValue = payload[key]
+        const currentValue = (payload as Record<string, unknown>)[key]
         if (typeof currentValue === "number" && currentValue <= 0) {
             ;(payload as Record<string, unknown>)[key] = undefined
         }
     })
 
     payload.clientId = payload.customerId
+    payload.shipmentTotalValue = payload.shipmentTotalValue ?? payload.shipmentValue
+    payload.shipmentValue = undefined
+    payload.pieces = undefined
+    payload.actualWeight = undefined
+    payload.volumetricWeight = undefined
+    payload.chargeWeight = undefined
+
+    if (!payload.awbNo?.trim()) {
+        payload.awbNo = undefined
+    }
+
+    ;(["origin", "originCode", "destination", "destinationCode", "currency", "medicalCharges", "manifestNo", "manifestDate", "invoiceNo", "debitNoteNo", "creditNoteNo", "flightNo"] as const).forEach((key) => {
+        payload[key] = undefined
+    })
 
     if (!payload.bookTime) {
         payload.bookTime = undefined
@@ -154,8 +186,6 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
     payload.piecesRows = (payload.piecesRows || []).filter((row) => Number(row.pieces || 0) > 0)
     payload.charges = (payload.charges || []).filter((charge) => Number(charge.chargeId || 0) > 0)
 
-    payload.fieldExecutiveId = undefined
-
     return payload
 }
 
@@ -177,9 +207,10 @@ const parsePiecesCsv = (raw: string): NonNullable<ShipmentFormValues["piecesRows
 
     return bodyLines.map((line) => {
         const cells = line.split(",")
+        const actualWeight = parseNum(get(cells, "actualWeight"))
+        const fallbackActualWeight = parseNum(get(cells, "actualWeightPerPc"))
         return {
-            childAwbNo: get(cells, "childAwbNo") || undefined,
-            actualWeightPerPc: parseNum(get(cells, "actualWeightPerPc")) || 0,
+            actualWeight: actualWeight ?? fallbackActualWeight ?? 0,
             pieces: parseNum(get(cells, "pieces")) || 0,
             length: parseNum(get(cells, "length")),
             width: parseNum(get(cells, "width")),
@@ -187,6 +218,7 @@ const parsePiecesCsv = (raw: string): NonNullable<ShipmentFormValues["piecesRows
             division: parseNum(get(cells, "division")),
             volumetricWeight: parseNum(get(cells, "volumetricWeight")),
             chargeWeight: parseNum(get(cells, "chargeWeight")),
+            items: [createEmptyPieceItem()],
         }
     }).filter((row) => row.pieces > 0)
 }
@@ -197,6 +229,27 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 }
 
 const strOrEmpty = (v: string | null | undefined) => (v == null ? '' : String(v))
+
+const requiredFieldLabel = (label: string, required: boolean) => (
+    <>
+        {label}
+        {required ? <span className="ml-1 text-red-500">*</span> : null}
+    </>
+)
+
+const formatServiceablePincodeLabel = (pincode: ServiceablePincode) =>
+    pincode.pinCode
+
+const numberInputValue = (value: unknown) => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    return ''
+}
+
+const parseOptionalNumberInput = (value: string) => {
+    if (!value.trim()) return undefined
+    const next = Number(value)
+    return Number.isFinite(next) ? next : undefined
+}
 
 function normalizeMasterSelectId(value: unknown): number {
     if (value === '' || value === undefined || value === null) return 0
@@ -219,7 +272,6 @@ const EMPTY_SHIPPER_BLOCK: NonNullable<ShipmentFormValues['shipper']> = {
     telephone: '',
     mobile: '',
     email: '',
-    iecNo: '',
 }
 
 const EMPTY_CONSIGNEE_BLOCK: NonNullable<ShipmentFormValues['consignee']> = {
@@ -236,8 +288,45 @@ const EMPTY_CONSIGNEE_BLOCK: NonNullable<ShipmentFormValues['consignee']> = {
     telephone: '',
     mobile: '',
     email: '',
-    vat: '',
 }
+
+const createEmptyPieceItem = (): PieceItemForm => ({
+    contentId: 0,
+    quantity: 1,
+    measureValue: undefined,
+    measureUnit: '',
+    totalValue: 0,
+    invoiceDate: format(new Date(), 'yyyy-MM-dd'),
+    invoiceNumber: '',
+})
+
+const createEmptyPieceRow = (): PieceRowForm => ({
+    pieces: 1,
+    actualWeight: 0,
+    length: undefined,
+    width: undefined,
+    height: undefined,
+    division: undefined,
+    volumetricWeight: undefined,
+    chargeWeight: undefined,
+    items: [createEmptyPieceItem()],
+})
+
+const normalizePieceRows = (rows?: ShipmentFormValues['piecesRows']): NonNullable<ShipmentFormValues['piecesRows']> => {
+    if (!rows || rows.length === 0) {
+        return [createEmptyPieceRow()]
+    }
+
+    return rows.map((row) => ({
+        ...row,
+        actualWeight: Number((row as Record<string, unknown>).actualWeight ?? (row as Record<string, unknown>).actualWeightPerPc ?? 0) || 0,
+        items: row.items && row.items.length > 0 ? row.items : [createEmptyPieceItem()],
+    }))
+}
+
+type PieceRowForm = NonNullable<ShipmentFormValues['piecesRows']>[number]
+type PieceItemList = NonNullable<PieceRowForm['items']>
+type PieceItemForm = PieceItemList[number]
 
 function shipperFromMaster(s: Shipper): NonNullable<ShipmentFormValues['shipper']> {
     return {
@@ -249,12 +338,11 @@ function shipperFromMaster(s: Shipper): NonNullable<ShipmentFormValues['shipper'
         address2: strOrEmpty(s.address2),
         pinCode: strOrEmpty(s.serviceablePincode?.pinCode ?? s.pinCode),
         city: strOrEmpty(s.city ?? s.serviceablePincode?.cityName),
-        state: strOrEmpty(s.state),
-        country: '',
+        state: strOrEmpty(s.state?.stateName ?? s.serviceablePincode?.state?.stateName),
+        country: strOrEmpty(s.country?.name ?? s.serviceablePincode?.country?.name),
         telephone: strOrEmpty(s.telephone),
         mobile: strOrEmpty(s.mobile),
         email: strOrEmpty(s.email),
-        iecNo: strOrEmpty(s.iecNo),
     }
 }
 
@@ -268,12 +356,11 @@ function consigneeFromMaster(c: Consignee): NonNullable<ShipmentFormValues['cons
         address2: strOrEmpty(c.address2),
         pinCode: strOrEmpty(c.serviceablePincode?.pinCode ?? c.pinCode),
         city: strOrEmpty(c.city ?? c.serviceablePincode?.cityName),
-        state: strOrEmpty(c.state),
-        country: '',
+        state: strOrEmpty(c.stateMaster?.stateName ?? c.state?.stateName ?? c.serviceablePincode?.state?.stateName),
+        country: strOrEmpty(c.country?.name ?? c.serviceablePincode?.country?.name),
         telephone: strOrEmpty(c.telephone),
         mobile: strOrEmpty(c.mobile),
         email: strOrEmpty(c.email),
-        vat: strOrEmpty(c.vat),
     }
 }
 
@@ -300,43 +387,109 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const [kycRows, setKycRows] = useState<KycRow[]>([
         { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd"), file: null },
     ])
+    const [chargePreview, setChargePreview] = useState<ShipmentCalculateResponse | null>(null)
+    const [customerSearch, setCustomerSearch] = useState('')
+    const [shipperSearch, setShipperSearch] = useState('')
+    const [consigneeSearch, setConsigneeSearch] = useState('')
+    const [contentSearch, setContentSearch] = useState('')
+    const [productSearch, setProductSearch] = useState('')
+    const [vendorSearch, setVendorSearch] = useState('')
+    const [serviceMapSearch, setServiceMapSearch] = useState('')
+    const [chargeSearch, setChargeSearch] = useState('')
+    const [serviceCenterSearch, setServiceCenterSearch] = useState('')
+    const [piecesCsvName, setPiecesCsvName] = useState('No file chosen')
+    const [shipperPincodeSearch, setShipperPincodeSearch] = useState('')
+    const [consigneePincodeSearch, setConsigneePincodeSearch] = useState('')
+    const [selectedShipperPincode, setSelectedShipperPincode] = useState<ServiceablePincode | null>(null)
+    const [selectedConsigneePincode, setSelectedConsigneePincode] = useState<ServiceablePincode | null>(null)
+    const [suppressShipperErrors, setSuppressShipperErrors] = useState(false)
+    const [suppressConsigneeErrors, setSuppressConsigneeErrors] = useState(false)
+
+    const debouncedCustomerSearch = useDebounce(customerSearch.trim(), 300)
+    const debouncedShipperSearch = useDebounce(shipperSearch.trim(), 300)
+    const debouncedConsigneeSearch = useDebounce(consigneeSearch.trim(), 300)
+    const debouncedContentSearch = useDebounce(contentSearch.trim(), 300)
+    const debouncedProductSearch = useDebounce(productSearch.trim(), 300)
+    const debouncedVendorSearch = useDebounce(vendorSearch.trim(), 300)
+    const debouncedServiceMapSearch = useDebounce(serviceMapSearch.trim(), 300)
+    const debouncedChargeSearch = useDebounce(chargeSearch.trim(), 300)
+    const debouncedServiceCenterSearch = useDebounce(serviceCenterSearch.trim(), 300)
+    const debouncedShipperPincodeSearch = useDebounce(shipperPincodeSearch.trim(), 300)
+    const debouncedConsigneePincodeSearch = useDebounce(consigneePincodeSearch.trim(), 300)
 
     // Lookup Data
     const { data: customersData } = useQuery({
-        queryKey: ['customers-list'],
-        queryFn: () => customerService.getCustomers({ limit: 100 }),
+        queryKey: ['customers-list', debouncedCustomerSearch],
+        queryFn: () => customerService.getCustomers({ limit: 10, search: debouncedCustomerSearch || undefined }),
     })
 
     const { data: shippersData } = useQuery({
-        queryKey: ['shippers-list'],
-        queryFn: () => shipperService.getShippers({ limit: 100 }),
+        queryKey: ['shippers-list', debouncedShipperSearch],
+        queryFn: () => shipperService.getShippers({ limit: 10, search: debouncedShipperSearch || undefined }),
     })
 
     const { data: consigneesData } = useQuery({
-        queryKey: ['consignees-list'],
-        queryFn: () => consigneeService.getConsignees({ limit: 100 }),
+        queryKey: ['consignees-list', debouncedConsigneeSearch],
+        queryFn: () => consigneeService.getConsignees({ limit: 10, search: debouncedConsigneeSearch || undefined }),
     })
 
     const { data: productsData } = useQuery({
-        queryKey: ['products-list'],
-        queryFn: () => productService.getProducts({ limit: 100 }),
+        queryKey: ['products-list', debouncedProductSearch],
+        queryFn: () => productService.getProducts({ limit: 10, search: debouncedProductSearch || undefined }),
     })
 
     const { data: vendorsData } = useQuery({
-        queryKey: ['vendors-list'],
-        queryFn: () => vendorService.getVendors({ limit: 100 }),
+        queryKey: ['vendors-list', debouncedVendorSearch],
+        queryFn: () => vendorService.getVendors({ limit: 10, search: debouncedVendorSearch || undefined }),
     })
 
     const { data: serviceMapsData } = useQuery({
-        queryKey: ['service-maps-list'],
-        queryFn: () => serviceMapService.getServiceMaps({ limit: 100 }),
+        queryKey: ['service-maps-list', forwardingForm.deliveryVendorId, debouncedServiceMapSearch],
+        queryFn: () => serviceMapService.getServiceMaps({ limit: 10, search: debouncedServiceMapSearch || undefined, vendorId: forwardingForm.deliveryVendorId || undefined }),
     })
 
     const { data: masterChargesData } = useQuery({
-        queryKey: ['master-charges-list'],
-        queryFn: () => chargeService.getCharges({ limit: 100 }),
+        queryKey: ['master-charges-list', debouncedChargeSearch],
+        queryFn: () => chargeService.getCharges({ limit: 10, search: debouncedChargeSearch || undefined }),
     })
 
+    const contentsQuery = useQuery({
+        queryKey: ['shipment-content-options', debouncedContentSearch],
+        queryFn: () => contentService.getContents({
+            limit: 10,
+            search: debouncedContentSearch || undefined,
+            sortBy: 'contentName',
+            sortOrder: 'asc',
+        }),
+    })
+
+    const { data: serviceCentersData } = useQuery({
+        queryKey: ['shipment-service-centers', debouncedServiceCenterSearch],
+        queryFn: () => serviceCenterService.getServiceCenters({
+            page: 1,
+            limit: 10,
+            search: debouncedServiceCenterSearch || undefined,
+            sortBy: 'code',
+            sortOrder: 'asc',
+        }),
+    })
+
+    const { data: shipperPincodeOptionsData } = useQuery({
+        queryKey: ['shipment-shipper-pincode-options', debouncedShipperPincodeSearch],
+        queryFn: () => serviceablePincodeService.getServiceablePincodes({ limit: 10, page: 1, search: debouncedShipperPincodeSearch || undefined, sortBy: 'pinCode', sortOrder: 'asc' }),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const { data: consigneePincodeOptionsData } = useQuery({
+        queryKey: ['shipment-consignee-pincode-options', debouncedConsigneePincodeSearch],
+        queryFn: () => serviceablePincodeService.getServiceablePincodes({ limit: 10, page: 1, search: debouncedConsigneePincodeSearch || undefined, sortBy: 'pinCode', sortOrder: 'asc' }),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const shipperPincodeOptions = shipperPincodeOptionsData?.data ?? []
+    const consigneePincodeOptions = consigneePincodeOptionsData?.data ?? []
+    const contentOptions = contentsQuery.data?.data ?? []
+    const serviceCenterOptions = serviceCentersData?.data ?? []
     const form = useForm<ShipmentFormValues>({
         resolver: zodResolver(shipmentSchema) as Resolver<ShipmentFormValues>,
         defaultValues: {
@@ -349,6 +502,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             clientId: initialData?.customerId || 0,
             shipperId: initialData?.shipperId || 0,
             consigneeId: initialData?.consigneeId || 0,
+            ewaybillNumber: initialData?.ewaybillNumber || '',
             shipper: initialData?.shipper ? {
                 shipperName: initialData.shipper.shipperName || initialData.shipper.name || '',
             } : undefined,
@@ -363,6 +517,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             vendorId: initialData?.vendorId || 0,
             serviceMapId: initialData?.serviceMapId || 0,
             shipmentValue: initialData?.shipmentValue || 0,
+            shipmentTotalValue: initialData?.shipmentTotalValue || 0,
+            fromZoneId: initialData?.fromZoneId || 0,
+            toZoneId: initialData?.toZoneId || 0,
+            reversePickup: initialData?.reversePickup || false,
+            appointmentDelivery: initialData?.appointmentDelivery || false,
+            floorDelivery: initialData?.floorDelivery || false,
+            floorCount: initialData?.floorCount || 0,
             currency: initialData?.currency || 'INR',
             pieces: initialData?.pieces || 1,
             actualWeight: initialData?.actualWeight || 0,
@@ -374,9 +535,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             paymentType: initialData?.paymentType || 'CREDIT',
             content: initialData?.content || '',
             instruction: initialData?.instruction || '',
+            serviceCenterId: initialData?.serviceCenterId || 0,
             isCod: initialData?.isCod || false,
             codAmount: initialData?.codAmount || 0,
-            piecesRows: initialData?.piecesRows || [],
+            piecesRows: normalizePieceRows(initialData?.piecesRows),
             charges: initialData?.charges || [],
         }
     })
@@ -391,6 +553,44 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         name: "charges"
     })
 
+    const addPieceItem = (pieceIndex: number) => {
+        const currentItems = form.getValues(`piecesRows.${pieceIndex}.items`) || []
+        form.setValue(`piecesRows.${pieceIndex}.items`, [...currentItems, createEmptyPieceItem()], {
+            shouldDirty: true,
+            shouldValidate: true,
+        })
+    }
+
+    const removePieceItem = (pieceIndex: number, itemIndex: number) => {
+        const currentItems = form.getValues(`piecesRows.${pieceIndex}.items`) || []
+        if (currentItems.length <= 1) return
+        form.setValue(
+            `piecesRows.${pieceIndex}.items`,
+            currentItems.filter((_, index) => index !== itemIndex),
+            { shouldDirty: true, shouldValidate: true }
+        )
+    }
+
+    const updatePieceItem = (pieceIndex: number, itemIndex: number, patch: Partial<PieceItemForm>) => {
+        const currentItems = form.getValues(`piecesRows.${pieceIndex}.items`) || []
+        form.setValue(
+            `piecesRows.${pieceIndex}.items`,
+            currentItems.map((item, index) => (index === itemIndex ? { ...item, ...patch } : item)),
+            { shouldDirty: true, shouldValidate: true }
+        )
+    }
+
+    const calculateMutation = useMutation({
+        mutationFn: () => shipmentService.calculateCharges(normalizeShipmentPayload(form.getValues())),
+        onSuccess: (response) => {
+            setChargePreview(response.data)
+            toast.success("Charges calculated")
+        },
+        onError: (error: unknown) => {
+            toast.error(getErrorMessage(error, "Failed to calculate charges"))
+        },
+    })
+
     useEffect(() => {
         if (initialData) {
             form.reset({
@@ -398,18 +598,237 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 bookDate: initialData.bookDate.split('T')[0],
                 clientId: initialData.customerId,
                 version: initialData.version,
-                piecesRows: initialData.piecesRows || [],
+                piecesRows: normalizePieceRows(initialData.piecesRows),
                 charges: initialData.charges || [],
-                fieldExecutiveId: undefined,
             })
         }
     }, [initialData, form])
 
     const watchedShipperId = form.watch('shipperId')
     const watchedConsigneeId = form.watch('consigneeId')
+    const watchedFromZoneId = form.watch('fromZoneId')
+    const watchedToZoneId = form.watch('toZoneId')
+    const watchedFloorDelivery = form.watch('floorDelivery')
+    const watchedIsCod = form.watch('isCod')
+    const watchedShipperPinCode = form.watch('shipper.pinCode')
+    const watchedConsigneePinCode = form.watch('consignee.pinCode')
+    const debouncedShipperPinCode = useDebounce((watchedShipperPinCode || '').trim(), 400)
+    const debouncedConsigneePinCode = useDebounce((watchedConsigneePinCode || '').trim(), 400)
 
     const prevShipperIdRef = useRef<number>(0)
     const prevConsigneeIdRef = useRef<number>(0)
+    const isShipperLocked = normalizeMasterSelectId(watchedShipperId) > 0
+    const isConsigneeLocked = normalizeMasterSelectId(watchedConsigneeId) > 0
+
+    const clearShipperBlock = () => {
+        form.setValue('shipperId', 0, { shouldDirty: true, shouldValidate: false })
+        form.setValue('fromZoneId', 0, { shouldDirty: true, shouldValidate: false })
+        ;([
+            'shipper.shipperName',
+            'shipper.shipperOrigin',
+            'shipper.contactPerson',
+            'shipper.address1',
+            'shipper.address2',
+            'shipper.pinCode',
+            'shipper.city',
+            'shipper.state',
+            'shipper.country',
+            'shipper.telephone',
+            'shipper.mobile',
+            'shipper.email',
+        ] as const).forEach((name) => {
+            form.resetField(name, { defaultValue: '' })
+        })
+        setSelectedShipperPincode(null)
+        setShipperPincodeSearch('')
+        setSuppressShipperErrors(true)
+        form.clearErrors()
+    }
+
+    const clearConsigneeBlock = () => {
+        form.setValue('consigneeId', 0, { shouldDirty: true, shouldValidate: false })
+        form.setValue('toZoneId', 0, { shouldDirty: true, shouldValidate: false })
+        ;([
+            'consignee.name',
+            'consignee.destination',
+            'consignee.contactPerson',
+            'consignee.address1',
+            'consignee.address2',
+            'consignee.pinCode',
+            'consignee.city',
+            'consignee.state',
+            'consignee.country',
+            'consignee.telephone',
+            'consignee.mobile',
+            'consignee.email',
+        ] as const).forEach((name) => {
+            form.resetField(name, { defaultValue: '' })
+        })
+        setSelectedConsigneePincode(null)
+        setConsigneePincodeSearch('')
+        setSuppressConsigneeErrors(true)
+        form.clearErrors()
+    }
+
+    const applySelectedPincode = (scope: 'shipper' | 'consignee', pinCode: string) => {
+        const selected = (scope === 'shipper' ? shipperPincodeOptions : consigneePincodeOptions).find((item) => item.pinCode === pinCode)
+        if (scope === 'shipper') {
+            form.setValue('shipper.pinCode', pinCode, { shouldDirty: true, shouldValidate: true })
+            form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.city', selected?.areaName || selected?.cityName || '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.state', selected?.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
+            setSelectedShipperPincode(selected ?? null)
+            setShipperPincodeSearch('')
+            return
+        }
+
+        form.setValue('consignee.pinCode', pinCode, { shouldDirty: true, shouldValidate: true })
+        form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+        form.setValue('consignee.city', selected?.areaName || selected?.cityName || '', { shouldDirty: false, shouldValidate: false })
+        form.setValue('consignee.state', selected?.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
+        form.setValue('consignee.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
+        setSelectedConsigneePincode(selected ?? null)
+        setConsigneePincodeSearch('')
+    }
+
+    const { data: shipperPincodeData } = useQuery({
+        queryKey: ['shipment-shipper-pincode', debouncedShipperPinCode],
+        queryFn: () => serviceablePincodeService.getServiceablePincodes({ pinCode: debouncedShipperPinCode, limit: 1, page: 1 }),
+        enabled: debouncedShipperPinCode.length >= 6,
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const { data: consigneePincodeData } = useQuery({
+        queryKey: ['shipment-consignee-pincode', debouncedConsigneePinCode],
+        queryFn: () => serviceablePincodeService.getServiceablePincodes({ pinCode: debouncedConsigneePinCode, limit: 1, page: 1 }),
+        enabled: debouncedConsigneePinCode.length >= 6,
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const { data: pincodeDistanceData } = useQuery({
+        queryKey: ['shipment-pincode-distance', watchedShipperPinCode, watchedConsigneePinCode],
+        queryFn: () => pincodeDistanceService.getPincodeDistance((watchedShipperPinCode || '').trim(), (watchedConsigneePinCode || '').trim()),
+        enabled: (watchedShipperPinCode || '').trim().length >= 6 && (watchedConsigneePinCode || '').trim().length >= 6,
+        staleTime: 60 * 60 * 1000,
+    })
+
+    const shipperPincodeSource = normalizeMasterSelectId(watchedShipperId) > 0
+        ? shipperPincodeData?.data?.[0] ?? null
+        : selectedShipperPincode ?? shipperPincodeData?.data?.[0] ?? null
+    const consigneePincodeSource = normalizeMasterSelectId(watchedConsigneeId) > 0
+        ? consigneePincodeData?.data?.[0] ?? null
+        : selectedConsigneePincode ?? consigneePincodeData?.data?.[0] ?? null
+    const shipperZoneOptions = useMemo(() => shipperPincodeSource?.zones ?? [], [shipperPincodeSource])
+    const consigneeZoneOptions = useMemo(() => consigneePincodeSource?.zones ?? [], [consigneePincodeSource])
+
+    useEffect(() => {
+        const shipperPin = (watchedShipperPinCode || '').trim()
+        const consigneePin = (watchedConsigneePinCode || '').trim()
+
+        if (shipperPin.length < 6 || consigneePin.length < 6) {
+            if ((form.getValues('km') || 0) !== 0) {
+                form.setValue('km', 0, { shouldDirty: false, shouldValidate: false })
+            }
+            return
+        }
+
+        if (shipperPin === consigneePin) {
+            if ((form.getValues('km') || 0) !== 0) {
+                form.setValue('km', 0, { shouldDirty: false, shouldValidate: false })
+            }
+            return
+        }
+
+        const distanceKm = pincodeDistanceData?.data?.distanceKm
+        if (typeof distanceKm === 'number' && Number.isFinite(distanceKm)) {
+            if (Math.abs((form.getValues('km') || 0) - distanceKm) > 0.01) {
+                form.setValue('km', distanceKm, { shouldDirty: false, shouldValidate: false })
+            }
+        }
+    }, [form, pincodeDistanceData?.data?.distanceKm, watchedConsigneePinCode, watchedShipperPinCode])
+
+    useEffect(() => {
+        if (!watchedFromZoneId) return
+        if (shipperZoneOptions.some((zone) => zone.id === watchedFromZoneId)) return
+        form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+    }, [form, shipperZoneOptions, watchedFromZoneId])
+
+    useEffect(() => {
+        if (!watchedToZoneId) return
+        if (consigneeZoneOptions.some((zone) => zone.id === watchedToZoneId)) return
+        form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+    }, [consigneeZoneOptions, form, watchedToZoneId])
+
+    useEffect(() => {
+        if (!watchedFloorDelivery && (form.getValues('floorCount') || 0) !== 0) {
+            form.setValue('floorCount', 0, { shouldDirty: false, shouldValidate: false })
+        }
+    }, [form, watchedFloorDelivery])
+
+    useEffect(() => {
+        if (!watchedIsCod && (form.getValues('codAmount') || 0) !== 0) {
+            form.setValue('codAmount', 0, { shouldDirty: false, shouldValidate: false })
+        }
+    }, [form, watchedIsCod])
+
+    useEffect(() => {
+        const lookup = shipperPincodeData?.data?.[0]
+        if (normalizeMasterSelectId(watchedShipperId) > 0) return
+        if (debouncedShipperPinCode.length < 6) {
+            setSelectedShipperPincode(null)
+            form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.city', '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.state', '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.country', '', { shouldDirty: false, shouldValidate: false })
+            return
+        }
+
+        if (!lookup) {
+            setSelectedShipperPincode(null)
+            form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.city', '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.state', '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.country', '', { shouldDirty: false, shouldValidate: false })
+            return
+        }
+
+        if (normalizeMasterSelectId(watchedShipperId) <= 0) {
+            setSelectedShipperPincode(lookup)
+        }
+        form.setValue('shipper.city', lookup.areaName || lookup.cityName || '', { shouldDirty: false, shouldValidate: false })
+        form.setValue('shipper.state', lookup.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
+        form.setValue('shipper.country', lookup.country?.name || '', { shouldDirty: false, shouldValidate: false })
+    }, [debouncedShipperPinCode, form, shipperPincodeData?.data, watchedShipperId])
+
+    useEffect(() => {
+        const lookup = consigneePincodeData?.data?.[0]
+        if (normalizeMasterSelectId(watchedConsigneeId) > 0) return
+        if (debouncedConsigneePinCode.length < 6) {
+            setSelectedConsigneePincode(null)
+            form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee.city', '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee.state', '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee.country', '', { shouldDirty: false, shouldValidate: false })
+            return
+        }
+
+        if (!lookup) {
+            setSelectedConsigneePincode(null)
+            form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee.city', '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee.state', '', { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee.country', '', { shouldDirty: false, shouldValidate: false })
+            return
+        }
+
+        if (normalizeMasterSelectId(watchedConsigneeId) <= 0) {
+            setSelectedConsigneePincode(lookup)
+        }
+        form.setValue('consignee.city', lookup.areaName || lookup.cityName || '', { shouldDirty: false, shouldValidate: false })
+        form.setValue('consignee.state', lookup.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
+        form.setValue('consignee.country', lookup.country?.name || '', { shouldDirty: false, shouldValidate: false })
+    }, [consigneePincodeData?.data, debouncedConsigneePinCode, form, watchedConsigneeId])
 
     useEffect(() => {
         const shippers = shippersData?.data
@@ -423,12 +842,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             const found = shippers.find((s) => s.id === id)
             if (found) {
                 form.setValue('shipper', shipperFromMaster(found), { shouldDirty: false, shouldValidate: true })
+                setSelectedShipperPincode(null)
+                form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
             }
             return
         }
 
         if (prev > 0) {
-            form.setValue('shipper', EMPTY_SHIPPER_BLOCK, { shouldDirty: false, shouldValidate: true })
+            form.setValue('shipper', EMPTY_SHIPPER_BLOCK, { shouldDirty: false, shouldValidate: false })
+            setSelectedShipperPincode(null)
+            form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
         }
     }, [watchedShipperId, shippersData?.data, form])
 
@@ -444,12 +867,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             const found = list.find((c) => c.id === id)
             if (found) {
                 form.setValue('consignee', consigneeFromMaster(found), { shouldDirty: false, shouldValidate: true })
+                setSelectedConsigneePincode(null)
+                form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
             }
             return
         }
 
         if (prev > 0) {
-            form.setValue('consignee', EMPTY_CONSIGNEE_BLOCK, { shouldDirty: false, shouldValidate: true })
+            form.setValue('consignee', EMPTY_CONSIGNEE_BLOCK, { shouldDirty: false, shouldValidate: false })
+            setSelectedConsigneePincode(null)
+            form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
         }
     }, [watchedConsigneeId, consigneesData?.data, form])
 
@@ -466,7 +893,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
         watchedPiecesRows.forEach((row, index) => {
             const pcs = Number(row.pieces) || 0;
-            const weightPerPc = Number(row.actualWeightPerPc) || 0;
+            const weightPerPc = Number(row.actualWeight) || 0;
             const l = Number(row.length) || 0;
             const w = Number(row.width) || 0;
             const h = Number(row.height) || 0;
@@ -502,7 +929,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         const currentActual = totalActualWeight;
         const currentVol = totalVolWeight;
         const chargeWeight = Math.max(currentActual, currentVol);
-        if (chargeWeight > 0 && Math.abs((form.getValues('chargeWeight') || 0) - chargeWeight) > 0.001) {
+        if (Math.abs((form.getValues('chargeWeight') || 0) - chargeWeight) > 0.001) {
             form.setValue('chargeWeight', parseFloat(chargeWeight.toFixed(2)), { shouldValidate: true });
         }
     }, [watchedPiecesRows, form]);
@@ -636,11 +1063,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     const templateMutation = useMutation({
         mutationFn: () => shipmentService.downloadPiecesTemplate(),
-        onSuccess: (blob) => {
+        onSuccess: ({ blob, filename }) => {
             const url = window.URL.createObjectURL(blob)
             const anchor = document.createElement('a')
             anchor.href = url
-            anchor.download = 'shipment-pieces-template.csv'
+            anchor.download = filename
             document.body.appendChild(anchor)
             anchor.click()
             anchor.remove()
@@ -656,11 +1083,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         const file = event.target.files?.[0]
         if (!file) return
         try {
+            setPiecesCsvName(file.name)
             const raw = await file.text()
             const parsed = parsePiecesCsv(raw)
             form.setValue('piecesRows', parsed, { shouldValidate: true })
             toast.success(`${parsed.length} piece row(s) imported`)
         } catch {
+            setPiecesCsvName('No file chosen')
             toast.error('Unable to parse uploaded template')
         } finally {
             event.target.value = ''
@@ -694,10 +1123,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     }
 
     const handleAwbNext = async () => {
+        setSuppressShipperErrors(false)
+        setSuppressConsigneeErrors(false)
         const valid = await form.trigger([
             'bookDate',
             'customerId',
             'productId',
+            'fromZoneId',
+            'toZoneId',
             'pieces',
             'actualWeight',
             'paymentType',
@@ -759,9 +1192,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="awbNo"
                                         render={({ field }) => (
-                                            <FloatingFormItem label={<>AWB No <span className="text-red-500">*</span></>} itemClassName="md:col-span-1">
+                                            <FloatingFormItem label="AWB No (optional)" itemClassName="md:col-span-1">
                                                 <FormControl>
-                                                    <Input {...field} className={FLOATING_INNER_CONTROL} />
+                                                    <Input {...field} value={field.value || ""} placeholder="Leave blank for auto-generate" className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
                                             </FloatingFormItem>
                                         )}
@@ -811,7 +1244,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="customerId"
                                         render={({ field }) => (
-                                            <FloatingFormItem label={<>Client Name <span className="text-red-500">*</span></>} itemClassName="md:col-span-2">
+                                            <FloatingFormItem label={<>Client Name <span className="text-red-500">*</span></>} itemClassName="md:col-span-1">
                                                 <FormControl>
                                                     <Combobox
                                                         options={customersData?.data?.map((c) => ({ label: c.name, value: c.id })) || []}
@@ -819,8 +1252,21 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         onChange={field.onChange}
                                                         placeholder="Select customer"
                                                         searchPlaceholder="Search customer..."
+                                                        searchValue={customerSearch}
+                                                        onSearchValueChange={setCustomerSearch}
                                                         className={FLOATING_INNER_COMBO}
                                                     />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="ewaybillNumber"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Ewaybill No (optional)" itemClassName="md:col-span-1">
+                                                <FormControl>
+                                                    <Input {...field} value={field.value || ""} placeholder="Enter ewaybill number" className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
                                             </FloatingFormItem>
                                         )}
@@ -830,54 +1276,45 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
                         <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
                             <FormSection title="Shipper Details" contentClassName="space-y-3 p-3 pt-6">
-                                    <FormField
-                                        control={form.control}
-                                        name="shipperId"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Shipper Master">
-                                                <FormControl>
-                                                    <Combobox
-                                                        options={shippersData?.data?.map((s) => ({ label: s.shipperName, value: s.id })) || []}
-                                                        value={field.value}
-                                                        onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
-                                                        placeholder="Select shipper"
-                                                        searchPlaceholder="Search shipper..."
-                                                        className={FLOATING_INNER_COMBO}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
+                                    <div className="flex items-stretch gap-2">
+                                        <FormField
+                                            control={form.control}
+                                            name="shipperId"
+                                            render={({ field }) => (
+                                                <FloatingFormItem label="Shipper Master" itemClassName="flex-1">
+                                                    <FormControl>
+                                                        <Combobox
+                                                            options={shippersData?.data?.map((s) => ({ label: s.shipperName, value: s.id })) || []}
+                                                            value={field.value}
+                                                            onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
+                                                            placeholder="Select shipper"
+                                                            searchPlaceholder="Search shipper..."
+                                                            searchValue={shipperSearch}
+                                                            onSearchValueChange={setShipperSearch}
+                                                            className={FLOATING_INNER_COMBO}
+                                                        />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={clearShipperBlock}
+                                            className="h-[46px] w-[46px] self-end rounded-full bg-[#1c2a48] text-white hover:bg-[#16233e] hover:text-white"
+                                            aria-label="Reset shipper block"
+                                        >
+                                            <RotateCcw className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.shipperOrigin"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label={<>Origin <span className="text-red-500">*</span></>}>
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.shipperCode"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Shipper code (optional)">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
                                         <FormField
                                             control={form.control}
                                             name="shipper.shipperName"
                                             render={({ field }) => (
-                                                <FloatingFormItem label={<>Company Name <span className="text-red-500">*</span></>} itemClassName="col-span-2">
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("Company Name", !isShipperLocked)} itemClassName="col-span-2">
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} disabled={isShipperLocked} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -886,75 +1323,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="shipper.contactPerson"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Contact Name">
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("Contact Person Name", !isShipperLocked)}>
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.address1"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Address 1">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.address2"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Address 2" itemClassName="col-span-2">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.pinCode"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Pincode">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.city"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="City">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.state"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="State">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.telephone"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Telephone">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} disabled={isShipperLocked} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -963,9 +1334,20 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="shipper.mobile"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Mobile No.">
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("Mobile No.", !isShipperLocked)}>
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} disabled={isShipperLocked} className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="shipper.telephone"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("Telephone", !isShipperLocked)}>
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} disabled={isShipperLocked} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -974,9 +1356,86 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="shipper.email"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="E-Mail">
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("E-Mail", !isShipperLocked)}>
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} disabled={isShipperLocked} className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="shipper.address1"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("Address", !isShipperLocked)} itemClassName="col-span-2">
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} disabled={isShipperLocked} className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="shipper.pinCode"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("Pincode", !isShipperLocked)}>
+                                                    <FormControl>
+                                                        {isShipperLocked ? (
+                                                            <Input {...field} value={field.value || ""} disabled className={FLOATING_INNER_CONTROL} />
+                                                        ) : (
+                                                            <Combobox
+                                                                options={shipperPincodeOptions.map((pincode) => ({ label: formatServiceablePincodeLabel(pincode), value: pincode.pinCode }))}
+                                                                value={field.value || ""}
+                                                                onChange={(value) => applySelectedPincode('shipper', value ? String(value) : '')}
+                                                                placeholder="Select pincode"
+                                                                searchPlaceholder="Search pincode..."
+                                                                emptyMessage="No serviceable pincode found"
+                                                                searchValue={shipperPincodeSearch}
+                                                                onSearchValueChange={setShipperPincodeSearch}
+                                                                className={FLOATING_INNER_COMBO}
+                                                            />
+                                                        )}
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="fromZoneId"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("From Zone", true)}>
+                                                    <FormControl>
+                                                        <Combobox
+                                                            options={shipperZoneOptions.map((zone) => ({ label: zone.name || zone.code, value: zone.id }))}
+                                                            value={field.value}
+                                                            onChange={(value) => field.onChange(normalizeMasterSelectId(value))}
+                                                            placeholder={shipperZoneOptions.length > 0 ? "Select zone" : "Select pincode first"}
+                                                            searchPlaceholder="Search zone..."
+                                                            disabled={!shipperPincodeSource}
+                                                            className={FLOATING_INNER_COMBO}
+                                                        />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="shipper.city"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label="City">
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} readOnly disabled placeholder="Auto-filled from pincode" className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="shipper.state"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label="State">
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} readOnly disabled placeholder="Auto-filled from pincode" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -985,20 +1444,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="shipper.country"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Country">
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label="Country">
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="shipper.iecNo"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="IEC No.">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} readOnly disabled placeholder="Auto-filled from pincode" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -1007,54 +1455,45 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             </FormSection>
 
                             <FormSection title="Consignee Details" contentClassName="space-y-3 p-3 pt-6">
-                                    <FormField
-                                        control={form.control}
-                                        name="consigneeId"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Consignee Master">
-                                                <FormControl>
-                                                    <Combobox
-                                                        options={consigneesData?.data?.map((c) => ({ label: c.name, value: c.id })) || []}
-                                                        value={field.value}
-                                                        onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
-                                                        placeholder="Select consignee"
-                                                        searchPlaceholder="Search consignee..."
-                                                        className={FLOATING_INNER_COMBO}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
+                                    <div className="flex items-stretch gap-2">
+                                        <FormField
+                                            control={form.control}
+                                            name="consigneeId"
+                                            render={({ field }) => (
+                                                <FloatingFormItem label="Consignee Master" itemClassName="flex-1">
+                                                    <FormControl>
+                                                        <Combobox
+                                                            options={consigneesData?.data?.map((c) => ({ label: c.name, value: c.id })) || []}
+                                                            value={field.value}
+                                                            onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
+                                                            placeholder="Select consignee"
+                                                            searchPlaceholder="Search consignee..."
+                                                            searchValue={consigneeSearch}
+                                                            onSearchValueChange={setConsigneeSearch}
+                                                            className={FLOATING_INNER_COMBO}
+                                                        />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={clearConsigneeBlock}
+                                            className="h-[46px] w-[46px] self-end rounded-full bg-[#1c2a48] text-white hover:bg-[#16233e] hover:text-white"
+                                            aria-label="Reset consignee block"
+                                        >
+                                            <RotateCcw className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.destination"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label={<>Destination <span className="text-red-500">*</span></>}>
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.code"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Consignee code (optional)">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} placeholder="Blank = auto-generate" className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
                                         <FormField
                                             control={form.control}
                                             name="consignee.name"
                                             render={({ field }) => (
-                                                <FloatingFormItem label={<>Company Name <span className="text-red-500">*</span></>} itemClassName="col-span-2">
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("Company Name", !isConsigneeLocked)} itemClassName="col-span-2">
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} disabled={isConsigneeLocked} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -1063,75 +1502,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="consignee.contactPerson"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Contact Name">
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("Contact Person Name", !isConsigneeLocked)}>
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.address1"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Address 1">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.address2"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Address 2" itemClassName="col-span-2">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.pinCode"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Pincode">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.city"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="City">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.state"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="State">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.telephone"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Telephone">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} disabled={isConsigneeLocked} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -1140,9 +1513,20 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="consignee.mobile"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Mobile No.">
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("Mobile No.", !isConsigneeLocked)}>
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} disabled={isConsigneeLocked} className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="consignee.telephone"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("Telephone", !isConsigneeLocked)}>
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} disabled={isConsigneeLocked} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -1151,9 +1535,86 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="consignee.email"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="E-Mail">
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("E-Mail", !isConsigneeLocked)}>
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} disabled={isConsigneeLocked} className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="consignee.address1"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("Address", !isConsigneeLocked)} itemClassName="col-span-2">
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} disabled={isConsigneeLocked} className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="consignee.pinCode"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("Pincode", !isConsigneeLocked)}>
+                                                    <FormControl>
+                                                        {isConsigneeLocked ? (
+                                                            <Input {...field} value={field.value || ""} disabled className={FLOATING_INNER_CONTROL} />
+                                                        ) : (
+                                                            <Combobox
+                                                                options={consigneePincodeOptions.map((pincode) => ({ label: formatServiceablePincodeLabel(pincode), value: pincode.pinCode }))}
+                                                                value={field.value || ""}
+                                                                onChange={(value) => applySelectedPincode('consignee', value ? String(value) : '')}
+                                                                placeholder="Select pincode"
+                                                                searchPlaceholder="Search pincode..."
+                                                                emptyMessage="No serviceable pincode found"
+                                                                searchValue={consigneePincodeSearch}
+                                                                onSearchValueChange={setConsigneePincodeSearch}
+                                                                className={FLOATING_INNER_COMBO}
+                                                            />
+                                                        )}
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="toZoneId"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("To Zone", true)}>
+                                                    <FormControl>
+                                                        <Combobox
+                                                            options={consigneeZoneOptions.map((zone) => ({ label: zone.name || zone.code, value: zone.id }))}
+                                                            value={field.value}
+                                                            onChange={(value) => field.onChange(normalizeMasterSelectId(value))}
+                                                            placeholder={consigneeZoneOptions.length > 0 ? "Select zone" : "Select pincode first"}
+                                                            searchPlaceholder="Search zone..."
+                                                            disabled={!consigneePincodeSource}
+                                                            className={FLOATING_INNER_COMBO}
+                                                        />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="consignee.city"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label="City">
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} readOnly disabled placeholder="Auto-filled from pincode" className={FLOATING_INNER_CONTROL} />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="consignee.state"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label="State">
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} readOnly disabled placeholder="Auto-filled from pincode" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -1162,20 +1623,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="consignee.country"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="Country">
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label="Country">
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="consignee.vat"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="VAT">
-                                                    <FormControl>
-                                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                        <Input {...field} value={field.value || ""} readOnly disabled placeholder="Auto-filled from pincode" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -1183,211 +1633,250 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     </div>
                             </FormSection>
 
-                            <FormSection title="Services Details" contentClassName="space-y-3 p-3 pt-6">
+                        <FormSection title="Services Details" contentClassName="space-y-3 p-3 pt-6">
+                                <FormField
+                                    control={form.control}
+                                    name="productId"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label={<>Product <span className="text-red-500">*</span></>}>
+                                            <FormControl>
+                                                <Combobox
+                                                    options={productsData?.data?.map((p) => ({ label: p.productName, value: p.id })) || []}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select product"
+                                                    searchPlaceholder="Search product..."
+                                                    searchValue={productSearch}
+                                                    onSearchValueChange={setProductSearch}
+                                                    className={FLOATING_INNER_COMBO}
+                                                />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                     <FormField
                                         control={form.control}
-                                        name="productId"
+                                        name="shipmentTotalValue"
                                         render={({ field }) => (
-                                            <FloatingFormItem label={<>Product <span className="text-red-500">*</span></>}>
+                                            <FloatingFormItem label="Shipment Total Value">
                                                 <FormControl>
-                                                    <Combobox
-                                                        options={productsData?.data?.map((p) => ({ label: p.productName, value: p.id })) || []}
+                                                    <Input
+                                                        type="number"
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        {...field}
+                                                        value={numberInputValue(field.value)}
+                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                        disabled={!watchedFloorDelivery}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="km"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="KM">
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        {...field}
+                                                        value={numberInputValue(field.value)}
+                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="chargeWeight"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Charge Weight">
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        {...field}
+                                                        value={numberInputValue(field.value)}
+                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                        disabled
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="reversePickup"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Reverse Pickup">
+                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                                    <FormControl>
+                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                    </FormControl>
+                                                </div>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="appointmentDelivery"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Appointment Delivery">
+                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                                    <FormControl>
+                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                    </FormControl>
+                                                </div>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="floorDelivery"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Floor Delivery">
+                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                                    <FormControl>
+                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                    </FormControl>
+                                                </div>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="floorCount"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Floor Count">
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        {...field}
+                                                        value={numberInputValue(field.value)}
+                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="commercial"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Commercial">
+                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                                    <FormControl>
+                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                    </FormControl>
+                                                </div>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="paymentType"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label={<>Payment Type <span className="text-red-500">*</span></>}>
+                                                <FormControl>
+                                                        <Combobox
+                                                            options={[
+                                                                { label: "Prepaid", value: "PREPAID" },
+                                                                { label: "Cash", value: "CASH" },
+                                                                { label: "Credit", value: "CREDIT" },
+                                                                { label: "To Pay", value: "TOPAY" },
+                                                            ]}
                                                         value={field.value}
                                                         onChange={field.onChange}
-                                                        placeholder="Select product"
+                                                        placeholder="Select type"
                                                         className={FLOATING_INNER_COMBO}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>
                                         )}
                                     />
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <FormField
-                                            control={form.control}
-                                            name="shipmentValue"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Shipment Value">
+                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="instruction"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Instruction">
+                                            <FormControl>
+                                                <Textarea
+                                                    {...field}
+                                                    value={field.value || ""}
+                                                    placeholder="Handle with care..."
+                                                    className={FLOATING_INNER_TEXTAREA}
+                                                />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="serviceCenterId"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Service Center">
+                                            <FormControl>
+                                                <Combobox
+                                                    options={serviceCenterOptions.map((sc) => ({
+                                                        label: `${sc.code} - ${sc.name}`,
+                                                        value: sc.id,
+                                                    }))}
+                                                    value={field.value || 0}
+                                                    onChange={(val) => field.onChange(normalizeMasterSelectId(val))}
+                                                    placeholder="Select service center"
+                                                    searchPlaceholder="Search service center..."
+                                                    searchValue={serviceCenterSearch}
+                                                    onSearchValueChange={setServiceCenterSearch}
+                                                    className={FLOATING_INNER_COMBO}
+                                                />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="isCod"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="COD">
+                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                                     <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                                        />
+                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
                                                     </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="currency"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Currency">
-                                                    <FormControl>
-                                                        <Combobox
-                                                            options={[
-                                                                { label: "INR", value: "INR" },
-                                                                { label: "USD", value: "USD" },
-                                                            ]}
-                                                            value={field.value}
-                                                            onChange={field.onChange}
-                                                            placeholder="INR"
-                                                            className={FLOATING_INNER_COMBO}
-                                                        />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="pieces"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label={<>Pieces <span className="text-red-500">*</span></>}>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-                                                        />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="actualWeight"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label={<>Actual Weight <span className="text-red-500">*</span></>}>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                                        />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="km"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="KM">
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                                        />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="volumetricWeight"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Volumetric Weight">
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                                        />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="chargeWeight"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label={<>Charge Weight <span className="text-red-500">*</span></>}>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                                        />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="paymentType"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label={<>Payment Type <span className="text-red-500">*</span></>}>
-                                                    <FormControl>
-                                                        <Combobox
-                                                            options={[
-                                                                { label: "Cash", value: "CASH" },
-                                                                { label: "Credit", value: "CREDIT" },
-                                                                { label: "To Pay", value: "TOPAY" },
-                                                            ]}
-                                                            value={field.value}
-                                                            onChange={field.onChange}
-                                                            placeholder="Select type"
-                                                            className={FLOATING_INNER_COMBO}
-                                                        />
-                                                    </FormControl>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                        <FormField
-                                            control={form.control}
-                                            name="commercial"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Commercial">
-                                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                                        <FormControl>
-                                                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
-                                                        </FormControl>
-                                                    </div>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="oda"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="ODA">
-                                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                                        <FormControl>
-                                                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
-                                                        </FormControl>
-                                                    </div>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="medicalCharges"
-                                            render={({ field }) => (
-                                                <FloatingFormItem label="Medical Charges">
-                                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                                        <FormControl>
-                                                            <Checkbox
-                                                                checked={Number(field.value) > 0}
-                                                                onCheckedChange={(v) => field.onChange(v ? 1 : 0)}
-                                                            />
-                                                        </FormControl>
-                                                    </div>
-                                                </FloatingFormItem>
-                                            )}
-                                        />
-                                    </div>
-                            </FormSection>
+                                                </div>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="codAmount"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="COD Amount">
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        {...field}
+                                                        value={numberInputValue(field.value)}
+                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                        disabled={!watchedIsCod}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                </div>
+                        </FormSection>
                         </div>
                     </div>
                 </div>
@@ -1398,15 +1887,24 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                         <Button type="button" variant="outline" size="sm" onClick={() => templateMutation.mutate()} disabled={templateMutation.isPending}>
                             Download Template
                         </Button>
-                        <OutlinedFieldShell label="Import CSV" className="w-full min-w-[200px] sm:w-[230px]">
-                            <Input
+                        <OutlinedFieldShell label="Import CSV" className="w-full min-w-[200px] sm:w-[230px] !pt-1.5 !pb-0.5">
+                            <div className="flex h-8 items-center gap-2">
+                                <Button type="button" variant="outline" size="sm" className="h-8 shrink-0" onClick={() => document.getElementById('shipment-pieces-csv-input')?.click()}>
+                                    Choose file
+                                </Button>
+                                <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                                    {piecesCsvName}
+                                </span>
+                            </div>
+                            <input
+                                id="shipment-pieces-csv-input"
                                 type="file"
                                 accept=".csv"
                                 onChange={handlePiecesCsvUpload}
-                                className={cn(FLOATING_INNER_CONTROL, "cursor-pointer file:mr-2")}
+                                className="hidden"
                             />
                         </OutlinedFieldShell>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendPiece({ pieces: 1, actualWeightPerPc: 0 })}>
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendPiece(createEmptyPieceRow())}>
                             <Plus className="mr-2 h-4 w-4" /> Add Piece
                         </Button>
                     </div>
@@ -1415,9 +1913,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             <TableHeader>
                                 <TableRow className="border-b-0 bg-primary hover:bg-primary">
                                     <TableHead className="whitespace-nowrap text-primary-foreground first:rounded-tl-md">
-                                        Child AWB
-                                    </TableHead>
-                                    <TableHead className="whitespace-nowrap text-primary-foreground">
                                         Pcs
                                     </TableHead>
                                     <TableHead className="whitespace-nowrap text-primary-foreground">
@@ -1434,34 +1929,192 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             </TableHeader>
                             <TableBody>
                                 {pieceFields.map((field, index) => (
-                                    <TableRow key={field.id}>
-                                        <TableCell>
-                                            <Input {...form.register(`piecesRows.${index}.childAwbNo` as const)} placeholder="AWB-1" className="h-8" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input type="number" {...form.register(`piecesRows.${index}.pieces` as const, { valueAsNumber: true })} className="h-8 w-16" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input type="number" step="0.01" {...form.register(`piecesRows.${index}.actualWeightPerPc` as const, { valueAsNumber: true })} className="h-8 w-20" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input type="number" {...form.register(`piecesRows.${index}.length` as const, { valueAsNumber: true })} className="h-8 w-16" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input type="number" {...form.register(`piecesRows.${index}.width` as const, { valueAsNumber: true })} className="h-8 w-16" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input type="number" {...form.register(`piecesRows.${index}.height` as const, { valueAsNumber: true })} className="h-8 w-16" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input type="number" step="0.01" {...form.register(`piecesRows.${index}.volumetricWeight` as const, { valueAsNumber: true })} className="h-8 w-20" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button type="button" variant="ghost" size="sm" onClick={() => removePiece(index)}>
-                                                <Trash2 className="h-4 w-4 text-red-500" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
+                                    <Fragment key={field.id}>
+                                        <TableRow>
+                                            <TableCell>
+                                                <Input type="number" {...form.register(`piecesRows.${index}.pieces` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input type="number" step="0.01" {...form.register(`piecesRows.${index}.actualWeight` as const, { valueAsNumber: true })} className="h-8 w-20" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input type="number" {...form.register(`piecesRows.${index}.length` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input type="number" {...form.register(`piecesRows.${index}.width` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input type="number" {...form.register(`piecesRows.${index}.height` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input type="number" step="0.01" {...form.register(`piecesRows.${index}.volumetricWeight` as const, { valueAsNumber: true })} className="h-8 w-20" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button type="button" variant="ghost" size="sm" onClick={() => removePiece(index)} disabled={pieceFields.length <= 1}>
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="border-t-0 pb-4 pt-0">
+                                                <div className="space-y-3 rounded-md border border-dashed border-border/70 bg-background/80 p-3">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <div>
+                                                            <p className="text-sm font-medium">Items</p>
+                                                            <p className="text-xs text-muted-foreground">At least one item is required for every piece.</p>
+                                                        </div>
+                                                        <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => addPieceItem(index)}>
+                                                            <Plus className="mr-2 h-4 w-4" /> Add Item
+                                                        </Button>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        {(watchedPiecesRows?.[index]?.items || []).map((item, itemIndex) => (
+                                                            <div key={`${field.id}-item-${itemIndex}`} className="rounded-md border border-border/60 bg-card p-3">
+                                                                <div className="mb-3 flex items-center justify-between gap-2">
+                                                                    <span className="text-xs font-medium text-muted-foreground">Item {itemIndex + 1}</span>
+                                                                    <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => removePieceItem(index, itemIndex)} disabled={(watchedPiecesRows?.[index]?.items || []).length <= 1}>
+                                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                                    </Button>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`piecesRows.${index}.items.${itemIndex}.contentId` as const}
+                                                                        render={({ field: itemField }) => (
+                                                                            <FloatingFormItem label={requiredFieldLabel("Content", true)} itemClassName="min-w-0">
+                                                                                <FormControl>
+                                                                                    <Combobox
+                                                                                        options={contentOptions.map((content) => ({
+                                                                                            label: `${content.contentCode} - ${content.contentName}`,
+                                                                                            value: content.id,
+                                                                                        }))}
+                                                                                        value={itemField.value || ""}
+                                                                                        onChange={(val) => {
+                                                                                            const nextValue = typeof val === "number" ? val : Number(val)
+                                                                                            itemField.onChange(Number.isFinite(nextValue) ? nextValue : 0)
+                                                                                        }}
+                                                                                        placeholder="Select content"
+                                                                                        searchPlaceholder="Search content..."
+                                                                                        emptyMessage="No content found."
+                                                                                        searchValue={contentSearch}
+                                                                                        onSearchValueChange={setContentSearch}
+                                                                                        isSearching={contentsQuery.isLoading}
+                                                                                        className="h-8"
+                                                                                    />
+                                                                                </FormControl>
+                                                                            </FloatingFormItem>
+                                                                        )}
+                                                                    />
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`piecesRows.${index}.items.${itemIndex}.quantity` as const}
+                                                                        render={({ field: itemField }) => (
+                                                                            <FloatingFormItem label="Quantity">
+                                                                                <FormControl>
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        value={numberInputValue(itemField.value)}
+                                                                                        onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                        className={FLOATING_INNER_CONTROL}
+                                                                                    />
+                                                                                </FormControl>
+                                                                            </FloatingFormItem>
+                                                                        )}
+                                                                    />
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`piecesRows.${index}.items.${itemIndex}.measureValue` as const}
+                                                                        render={({ field: itemField }) => (
+                                                                            <FloatingFormItem label="Measure Value">
+                                                                                <FormControl>
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        value={numberInputValue(itemField.value)}
+                                                                                        onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                        className={FLOATING_INNER_CONTROL}
+                                                                                    />
+                                                                                </FormControl>
+                                                                            </FloatingFormItem>
+                                                                        )}
+                                                                    />
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`piecesRows.${index}.items.${itemIndex}.measureUnit` as const}
+                                                                        render={({ field: itemField }) => (
+                                                                            <FloatingFormItem label="Measure Unit">
+                                                                                <Select value={itemField.value || ""} onValueChange={itemField.onChange}>
+                                                                                    <FormControl>
+                                                                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                                                            <SelectValue placeholder="Select unit" />
+                                                                                        </SelectTrigger>
+                                                                                    </FormControl>
+                                                                                    <SelectContent>
+                                                                                        {["PCS", "KG", "METER", "LITER"].map((unit) => (
+                                                                                            <SelectItem key={unit} value={unit}>
+                                                                                                {unit}
+                                                                                            </SelectItem>
+                                                                                        ))}
+                                                                                    </SelectContent>
+                                                                                </Select>
+                                                                            </FloatingFormItem>
+                                                                        )}
+                                                                    />
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`piecesRows.${index}.items.${itemIndex}.totalValue` as const}
+                                                                        render={({ field: itemField }) => (
+                                                                            <FloatingFormItem label="Total Value">
+                                                                                <FormControl>
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        value={numberInputValue(itemField.value)}
+                                                                                        onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                        className={FLOATING_INNER_CONTROL}
+                                                                                    />
+                                                                                </FormControl>
+                                                                            </FloatingFormItem>
+                                                                        )}
+                                                                    />
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`piecesRows.${index}.items.${itemIndex}.invoiceDate` as const}
+                                                                        render={({ field: itemField }) => (
+                                                                            <FloatingFormItem label="Invoice Date">
+                                                                                <FormControl>
+                                                                                    <Input
+                                                                                        type="date"
+                                                                                        value={itemField.value || ""}
+                                                                                        onChange={itemField.onChange}
+                                                                                        className={FLOATING_INNER_CONTROL}
+                                                                                    />
+                                                                                </FormControl>
+                                                                            </FloatingFormItem>
+                                                                        )}
+                                                                    />
+                                                                    <FormField
+                                                                        control={form.control}
+                                                                        name={`piecesRows.${index}.items.${itemIndex}.invoiceNumber` as const}
+                                                                        render={({ field: itemField }) => (
+                                                                            <FloatingFormItem label="Invoice No.">
+                                                                                <FormControl>
+                                                                                    <Input
+                                                                                        value={itemField.value || ""}
+                                                                                        onChange={itemField.onChange}
+                                                                                        placeholder="INV/001"
+                                                                                        className={FLOATING_INNER_CONTROL}
+                                                                                    />
+                                                                                </FormControl>
+                                                                            </FloatingFormItem>
+                                                                        )}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    </Fragment>
                                 ))}
                                 {pieceFields.length === 0 && (
                                     <TableRow>
@@ -1477,7 +2130,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
                 {/* Section 6: Charges */}
                 <OutlinedFormSection label="Charge Details" labelTone="navy">
-                    <div className="flex justify-end border-b border-border/70 pb-3">
+                    <div className="flex flex-wrap justify-end gap-2 border-b border-border/70 pb-3">
+                        <Button type="button" variant="outline" size="sm" onClick={() => calculateMutation.mutate()} disabled={calculateMutation.isPending}>
+                            <Calculator className="mr-2 h-4 w-4" /> Calculate Charges
+                        </Button>
                         <Button type="button" variant="outline" size="sm" onClick={() => appendCharge({ chargeId: 0, amount: 0, fuelApply: false, taxApply: false, taxOnFuel: false })}>
                             <Plus className="mr-2 h-4 w-4" /> Add Charge
                         </Button>
@@ -1510,6 +2166,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 value={form.watch(`charges.${index}.chargeId`)}
                                                 onChange={(val) => form.setValue(`charges.${index}.chargeId`, val as number)}
                                                 placeholder="Select Charge"
+                                                searchPlaceholder="Search charge..."
+                                                searchValue={chargeSearch}
+                                                onSearchValueChange={setChargeSearch}
                                                 className="h-8"
                                             />
                                         </TableCell>
@@ -1551,6 +2210,25 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             </TableBody>
                         </Table>
                     </div>
+                    {chargePreview && (
+                        <div className="mt-3 rounded-md border border-border/70 bg-muted/20 p-3 text-sm">
+                            <div className="flex flex-wrap gap-4">
+                                <p><span className="text-muted-foreground">Base Freight:</span> {chargePreview.baseFreight ?? "—"}</p>
+                                <p><span className="text-muted-foreground">Total Charges:</span> {chargePreview.totalCharges ?? "—"}</p>
+                                <p><span className="text-muted-foreground">Total Amount:</span> {chargePreview.totalAmount ?? "—"}</p>
+                            </div>
+                            {chargePreview.rows?.length > 0 && (
+                                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                                    {chargePreview.rows.map((row, index) => (
+                                        <div key={`${row.type}-${index}`} className="rounded border border-border bg-card p-2 text-xs">
+                                            <div className="font-medium">{row.name}</div>
+                                            <div className="text-muted-foreground">{row.type} | {row.amount}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </OutlinedFormSection>
 
                 <FormSection title="Shipment Type" contentClassName="grid grid-cols-1 gap-3 p-3 pt-6 md:grid-cols-2">
@@ -1607,6 +2285,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             })
                                         }
                                         placeholder="Select vendor"
+                                        searchPlaceholder="Search vendor..."
+                                        searchValue={vendorSearch}
+                                        onSearchValueChange={setVendorSearch}
                                         className={FLOATING_INNER_COMBO}
                                     />
                                 </FloatingFormItem>
@@ -1616,6 +2297,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         value={forwardingForm.deliveryServiceMapId}
                                         onChange={(val) => updateForwardingForm({ deliveryServiceMapId: Number(val) || 0 })}
                                         placeholder={forwardingForm.deliveryVendorId > 0 ? "Select service" : "Select vendor first"}
+                                        searchPlaceholder="Search service..."
+                                        searchValue={serviceMapSearch}
+                                        onSearchValueChange={setServiceMapSearch}
                                         className={FLOATING_INNER_COMBO}
                                     />
                                 </FloatingFormItem>

@@ -1,0 +1,38 @@
+info:
+  name: GET /api/mobile/attendance
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/mobile/attendance"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: fromDate
+      value: string
+      type: query
+    - name: toDate
+      value: string
+      type: query
+    - name: userId
+      value: "0"
+      type: query
+    - name: serviceCenterId
+      value: "0"
+      type: query
+    - name: page
+      value: "1"
+      type: query
+    - name: limit
+      value: "20"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

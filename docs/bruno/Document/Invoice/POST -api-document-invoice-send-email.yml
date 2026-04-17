@@ -1,0 +1,47 @@
+info:
+  name: POST /api/document/invoice/send-email
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/document/invoice/send-email"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "fromDate": "string",
+        "toDate": "string",
+        "serviceCenterId": 0,
+        "productType": "string",
+        "invoiceFormat": "string",
+        "customerId": 0,
+        "invoiceStatus": "string",
+        "year": "string",
+        "invoiceMessage": "string",
+        "pendingEmailOnly": true,
+        "senderSmtp": "string",
+        "smtpPort": 0,
+        "senderUserId": "string",
+        "password": "string",
+        "senderEmailId": "string",
+        "additionalCc": "string",
+        "invalidEmailFallbackTo": "string",
+        "sendInvoiceEmail": true,
+        "sendInvoiceAckEmail": true,
+        "ssl": true,
+        "emailDocument": "string"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

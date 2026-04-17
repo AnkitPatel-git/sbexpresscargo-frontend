@@ -1,0 +1,225 @@
+info:
+  name: POST /api/service-center-master
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/service-center-master"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "code": "",
+        "name": "Indore Central Service Center",
+        "subName": "Express Cargo & Logistics Hub",
+        "address1": "Survey No. 23, AB Road, Scheme No. 54",
+        "address2": "Near Bombay Hospital, Indore",
+        "telephone": "07314567800",
+        "email": "indore.ops@cargoexpress.com",
+        "gstNo": "23AAMCI4567K1Z3",
+        "panNo": "AAMCI4567K",
+        "pinCodeId": 452001,
+        "companyLogo": "logos/company/sc-ind-001-logo.png",
+        "signatoryLogo": "logos/signatory/sc-ind-001-sign.png",
+        "terms": [
+          "Goods once booked will not be returned without prior written approval.",
+          "The company is not liable for delays caused due to natural calamities or force majeure.",
+          "All disputes are subject to Indore jurisdiction only.",
+          "GST will be charged as applicable on all services.",
+          "Claims for damages must be reported within 24 hours of delivery."
+        ],
+        "lastInvoicePrefix": "IND",
+        "lastInvoiceNo": "",
+        "lastInvoiceSuffix": "",
+        "freeFormPrefix": "FF-IND",
+        "lastFreeFormInvoiceNo": "",
+        "freeFormSuffix": "",
+        "rcpLastNo": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/api/service-center-master"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      body:
+        type: json
+        data: |-
+          {
+            "code": "",
+            "name": "Indore Central Service Center",
+            "subName": "Express Cargo & Logistics Hub",
+            "address1": "Survey No. 23, AB Road, Scheme No. 54",
+            "address2": "Near Bombay Hospital, Indore",
+            "telephone": "07314567800",
+            "email": "indore.ops@cargoexpress.com",
+            "gstNo": "23AAMCI4567K1Z3",
+            "panNo": "AAMCI4567K",
+            "pinCodeId": 452001,
+            "companyLogo": "logos/company/sc-ind-001-logo.png",
+            "signatoryLogo": "logos/signatory/sc-ind-001-sign.png",
+            "terms": [
+              "Goods once booked will not be returned without prior written approval.",
+              "The company is not liable for delays caused due to natural calamities or force majeure.",
+              "All disputes are subject to Indore jurisdiction only.",
+              "GST will be charged as applicable on all services.",
+              "Claims for damages must be reported within 24 hours of delivery."
+            ],
+            "lastInvoicePrefix": "IND",
+            "lastInvoiceNo": "",
+            "lastInvoiceSuffix": "",
+            "freeFormPrefix": "FF-IND",
+            "lastFreeFormInvoiceNo": "",
+            "freeFormSuffix": "",
+            "rcpLastNo": ""
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "1680"
+        - name: etag
+          value: W/"690-tq1tWJ0hhsAxXDNfwyAp1ozpfrA"
+        - name: date
+          value: Mon, 13 Apr 2026 20:37:45 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 1,
+              "code": "SVC000001",
+              "name": "Indore Central Service Center",
+              "subName": "Express Cargo & Logistics Hub",
+              "address1": "Survey No. 23, AB Road, Scheme No. 54",
+              "address2": "Near Bombay Hospital, Indore",
+              "telephone": "07314567800",
+              "email": "indore.ops@cargoexpress.com",
+              "pinCodeId": 1,
+              "countryId": 1,
+              "stateId": 1,
+              "companyLogo": "logos/company/sc-ind-001-logo.png",
+              "signatoryLogo": "logos/signatory/sc-ind-001-sign.png",
+              "version": 1,
+              "localBranchId": null,
+              "createdAt": "2026-04-13T20:37:45.734Z",
+              "updatedAt": "2026-04-13T20:37:45.747Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null,
+              "country": {
+                "id": 1,
+                "code": "IN",
+                "name": "India",
+                "weightUnit": "KGS",
+                "currency": "INR",
+                "isdCode": "+91",
+                "createdAt": "2026-04-13T20:25:52.037Z",
+                "updatedAt": "2026-04-13T20:25:52.037Z",
+                "createdById": 1,
+                "updatedById": null,
+                "deletedAt": null,
+                "deletedById": null
+              },
+              "state": {
+                "id": 1,
+                "stateName": "MADHYA PRADESH",
+                "stateCode": "MP",
+                "countryId": 1,
+                "gstAlias": "27ABCDE1234F1Z5",
+                "unionTerritory": true,
+                "createdAt": "2026-04-13T20:25:58.261Z",
+                "updatedAt": "2026-04-13T20:25:58.261Z",
+                "createdById": 1,
+                "updatedById": null,
+                "deletedAt": null,
+                "deletedById": null
+              },
+              "localBranch": null,
+              "serviceablePincode": {
+                "id": 1,
+                "countryId": 1,
+                "stateId": 1,
+                "pinCode": "452001",
+                "cityName": "Indore",
+                "areaName": "Indore City",
+                "serviceable": true,
+                "oda": false,
+                "createdAt": "2026-04-13T20:26:53.094Z",
+                "updatedAt": "2026-04-13T20:26:53.094Z",
+                "createdById": 1,
+                "updatedById": null,
+                "deletedAt": null,
+                "deletedById": null
+              },
+              "createdBy": {
+                "id": 1,
+                "username": "admin",
+                "email": "admin@system.com",
+                "roleId": 1,
+                "mobile": null,
+                "status": "ACTIVE",
+                "createdAt": "2026-04-13T10:25:37.962Z",
+                "updatedAt": "2026-04-13T10:25:37.962Z"
+              },
+              "updatedBy": null,
+              "deletedBy": null
+            }
+          }

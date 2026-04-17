@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api-fetch';
-import { VendorListResponse, VendorSingleResponse, VendorFormData } from '@/types/masters/vendor';
+import { VendorFormData, VendorListResponse, VendorSingleResponse } from '@/types/masters/vendor';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -10,13 +10,21 @@ export const vendorService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        vendorCode?: string;
+        vendorName?: string;
+        address?: string;
+        telephone?: string;
     }): Promise<VendorListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
-        if (params?.search) queryParams.append('search', params.search);
-        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'vendorCode');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.vendorCode) queryParams.append('vendorCode', params.vendorCode);
+        if (params?.vendorName) queryParams.append('vendorName', params.vendorName);
+        if (params?.address) queryParams.append('address', params.address);
+        if (params?.telephone) queryParams.append('telephone', params.telephone);
 
         const response = await apiFetch(`${API_URL}/vendor-master?${queryParams.toString()}`, {
             headers: {
@@ -81,8 +89,25 @@ export const vendorService = {
         return response.json();
     },
 
-    async exportVendorsCsv(): Promise<Blob> {
-        const response = await apiFetch(`${API_URL}/vendor-master/export`, {
+    async exportVendors(params?: {
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+        vendorCode?: string;
+        vendorName?: string;
+        address?: string;
+        telephone?: string;
+    }): Promise<{ blob: Blob; filename: string }> {
+        const queryParams = new URLSearchParams();
+        queryParams.append('search', params?.search ?? '');
+        queryParams.append('sortBy', params?.sortBy ?? 'vendorCode');
+        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.vendorCode) queryParams.append('vendorCode', params.vendorCode);
+        if (params?.vendorName) queryParams.append('vendorName', params.vendorName);
+        if (params?.address) queryParams.append('address', params.address);
+        if (params?.telephone) queryParams.append('telephone', params.telephone);
+
+        const response = await apiFetch(`${API_URL}/vendor-master/export?${queryParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
@@ -92,7 +117,12 @@ export const vendorService = {
             throw new Error('Failed to export vendors');
         }
 
-        return response.blob();
+        const cd = response.headers.get('content-disposition');
+        let filename = 'vendors.csv';
+        const match = cd?.match(/filename="?([^";\n]+)"?/i);
+        if (match?.[1]) filename = match[1].trim();
+
+        return { blob: await response.blob(), filename };
     },
 
     async deleteVendor(id: number): Promise<{ success: boolean; message: string }> {

@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown, Filter } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
     Table,
     TableBody,
@@ -30,31 +32,65 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 import { customerService } from "@/services/masters/customer-service"
+import { serviceCenterService } from "@/services/masters/service-center-service"
 import { Customer } from "@/types/masters/customer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
-import { useDebounce } from "@/hooks/use-debounce"
+
+type CustomerFilters = {
+    search: string
+    code: string
+    name: string
+    mobile: string
+    serviceCenterId: string
+    status: string
+}
+
+const emptyFilters: CustomerFilters = {
+    search: "",
+    code: "",
+    name: "",
+    mobile: "",
+    serviceCenterId: "all",
+    status: "all",
+}
 
 export default function CustomersPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const [search, setSearch] = useState("")
-    const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({ code: "", name: "", contact: "", city: "", type: "", status: "" })
-
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState<CustomerFilters>(emptyFilters)
+    const [draftFilters, setDraftFilters] = useState<CustomerFilters>(emptyFilters)
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
+    useEffect(() => {
+        if (filtersOpen) {
+            setDraftFilters(appliedFilters)
+        }
+    }, [appliedFilters, filtersOpen])
+
+    const { data: serviceCentersResponse } = useQuery({
+        queryKey: ["customer-filters-service-centers"],
+        queryFn: () => serviceCenterService.getServiceCenters({ page: 1, limit: 100, sortBy: "code", sortOrder: "asc" }),
+    })
+
+    const listParams = {
+        page,
+        limit,
+        search: appliedFilters.search || undefined,
+        sortBy: "code",
+        sortOrder: "asc" as const,
+        code: appliedFilters.code || undefined,
+        name: appliedFilters.name || undefined,
+        mobile: appliedFilters.mobile || undefined,
+        serviceCenterId: appliedFilters.serviceCenterId === "all" ? undefined : Number(appliedFilters.serviceCenterId),
+        status: appliedFilters.status === "all" ? undefined : appliedFilters.status,
+    }
+
     const { data, isLoading } = useQuery({
-        queryKey: ["customers", page, debouncedSearch],
-        queryFn: () =>
-            customerService.getCustomers({
-                page,
-                limit,
-                search: debouncedSearch,
-                sortBy: "code",
-                sortOrder: "asc",
-            }),
+        queryKey: ["customers", listParams],
+        queryFn: () => customerService.getCustomers(listParams),
     })
 
     const [exporting, setExporting] = useState(false)
@@ -62,11 +98,7 @@ export default function CustomersPage() {
     async function handleExportCsv() {
         setExporting(true)
         try {
-            const { blob, filename } = await customerService.exportCustomers({
-                search: debouncedSearch,
-                sortBy: "code",
-                sortOrder: "asc",
-            })
+            const { blob, filename } = await customerService.exportCustomers(listParams)
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
             a.href = url
@@ -115,30 +147,73 @@ export default function CustomersPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
-        data?.data.filter((customer: Customer) => {
-            if (colFilters.code && !customer.code.toLowerCase().includes(colFilters.code.toLowerCase())) return false
-            if (colFilters.name && !customer.name.toLowerCase().includes(colFilters.name.toLowerCase())) return false
-            if (colFilters.contact && !(customer.contactPerson || "").toLowerCase().includes(colFilters.contact.toLowerCase())) return false
-            if (
-                colFilters.city &&
-                !(`${customer.city ?? ""} ${customer.serviceablePincode?.cityName ?? ""}`)
-                    .toLowerCase()
-                    .includes(colFilters.city.toLowerCase())
-            )
-                return false
-            if (colFilters.type && !(customer.customerType || "").toLowerCase().includes(colFilters.type.toLowerCase())) return false
-            if (colFilters.status && !(customer.status || "").toLowerCase().includes(colFilters.status.toLowerCase())) return false
-            return true
-        }) ?? []
+    const rows = data?.data ?? []
+
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+
+    const resetFilters = () => {
+        setDraftFilters(emptyFilters)
+        setAppliedFilters(emptyFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
-                    <PermissionGuard permission="master.customer.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
-                    </PermissionGuard>
+                <div className="flex flex-wrap items-center gap-1 self-start rounded-md border border-border p-1 sm:self-auto">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Customer Filters</DialogTitle>
+                                <DialogDescription>Apply customer filters from this popup and keep the table clean.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search customers..." className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
+                                <Input placeholder="Customer Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
+                                <Input placeholder="Mobile" className="h-9 bg-background" value={draftFilters.mobile} onChange={(e) => setDraftFilters((prev) => ({ ...prev, mobile: e.target.value }))} />
+                                <div className="sm:col-span-2">
+                                    <Select value={draftFilters.serviceCenterId} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, serviceCenterId: value }))}>
+                                        <SelectTrigger className="h-9 w-full bg-background">
+                                            <SelectValue placeholder="Service Center" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All service centers</SelectItem>
+                                            {(serviceCentersResponse?.data ?? []).map((serviceCenter) => (
+                                                <SelectItem key={serviceCenter.id} value={String(serviceCenter.id)}>
+                                                    {serviceCenter.code} - {serviceCenter.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Select value={draftFilters.status} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}>
+                                    <SelectTrigger className="h-9 w-full bg-background">
+                                        <SelectValue placeholder="Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All statuses</SelectItem>
+                                        <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                                        <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                     <PermissionGuard permission="master.customer.read">
                         <Button
                             type="button"
@@ -154,13 +229,12 @@ export default function CustomersPage() {
                     </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["customers"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Search:</span>
-                    <Input placeholder="Search customers..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
-                    <PermissionGuard permission="master.customer.create">
-                        <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><Plus className="mr-1 h-4 w-4" />Add Customer</Button>
-                    </PermissionGuard>
-                </div>
+                <PermissionGuard permission="master.customer.create">
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Customer
+                    </Button>
+                </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1080px] border-0">
@@ -174,23 +248,14 @@ export default function CustomersPage() {
                             <TableHead className="font-semibold text-primary-foreground">Status <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Customer Name" className="h-8 border-border bg-background text-xs" value={colFilters.name} onChange={(e) => setColFilters((f) => ({ ...f, name: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Contact Person" className="h-8 border-border bg-background text-xs" value={colFilters.contact} onChange={(e) => setColFilters((f) => ({ ...f, contact: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="City" className="h-8 border-border bg-background text-xs" value={colFilters.city} onChange={(e) => setColFilters((f) => ({ ...f, city: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Type" className="h-8 border-border bg-background text-xs" value={colFilters.type} onChange={(e) => setColFilters((f) => ({ ...f, type: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Status" className="h-8 border-border bg-background text-xs" value={colFilters.status} onChange={(e) => setColFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2" />
-                        </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading customers...</TableCell></TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No customers found.</TableCell></TableRow>
                         ) : (
-                            filteredRows.map((customer, index) => (
+                            rows.map((customer: Customer, index) => (
                                 <TableRow key={customer.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{customer.code}</TableCell>
                                     <TableCell className="font-medium text-foreground">{customer.name}</TableCell>

@@ -1,0 +1,128 @@
+info:
+  name: PATCH /api/rate-master/:id
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/rate-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "updateType": "AWB_ENTRY_RATE",
+        "fromDate": "2026-04-13T00:00:00.000Z",
+        "toDate": "2026-12-31T23:59:59.000Z",
+        "customerId": 1,
+        "version":1,
+        "serviceType": "EXPRESS",
+        "rateType": "ZONE_MATRIX",
+        "productId": 1,
+        "paymentType": "TO_PAY",
+        "zeroContract": false,
+        "zoneRates": [
+          {
+            "fromZoneId": 1,
+            "toZoneId": 2,
+            "rate": 50
+          }
+        ],
+        "rateCharges": [
+          {
+            "name": "FOV",
+            "calculationBase": "SHIPMENT_VALUE",
+            "value": 0.25,
+            "isPercentage": true,
+            "sequence": 1,
+            "chargeSlabs": []
+          },
+          {
+            "name": "HANDLING",
+            "calculationBase": "FLAT",
+            "value": 25,
+            "isPercentage": false,
+            "sequence": 2,
+            "chargeSlabs": []
+          },
+          {
+            "name": "ECC",
+            "calculationBase": "FREIGHT",
+            "value": 2,
+            "isPercentage": true,
+            "sequence": 3,
+            "chargeSlabs": []
+          },
+          {
+            "name": "RAS",
+            "calculationBase": "FREIGHT",
+            "value": 1,
+            "isPercentage": true,
+            "sequence": 4,
+            "chargeSlabs": []
+          },
+          {
+            "name": "ODA",
+            "calculationBase": "FLAT",
+            "value": 40,
+            "isPercentage": false,
+            "sequence": 5,
+            "chargeSlabs": []
+          },
+          {
+            "name": "OTHER",
+            "calculationBase": "FLAT",
+            "value": 15,
+            "isPercentage": false,
+            "sequence": 6,
+            "chargeSlabs": []
+          },
+          {
+            "name": "FUEL",
+            "calculationBase": "FREIGHT",
+            "value": 10,
+            "isPercentage": true,
+            "sequence": 7,
+            "chargeSlabs": []
+          }
+        ],
+        "rateConditions": [
+          {
+            "field": "FLOOR_DELIVERY",
+            "operator": "EQ",
+            "value": 1,
+            "chargeName": "FLOOR DELIVERY",
+            "chargeAmount": 30,
+            "isPercentage": false
+          },
+          {
+            "field": "SHIPMENT_VALUE",
+            "operator": "GTE",
+            "value": 40000,
+            "chargeName": "HIGH VALUE SURCHARGE",
+            "chargeAmount": 0.5,
+            "isPercentage": true
+          }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: id
+      value: "1"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

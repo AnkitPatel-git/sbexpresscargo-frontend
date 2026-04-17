@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { Resolver, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -34,13 +34,14 @@ import { Switch } from "@/components/ui/switch"
 import { vendorConfigService } from "@/services/masters/vendor-config-service"
 import { vendorService } from "@/services/masters/vendor-service"
 import { customerService } from "@/services/masters/customer-service"
+import { serviceMapService } from "@/services/masters/service-map-service"
 import { VendorConfig } from "@/types/masters/vendor-config"
 
 const vendorConfigSchema = z.object({
-    vendorId: z.coerce.number().min(1, "Vendor is required"),
-    mode: z.enum(["B2B", "B2C", "API"]),
+    vendorId: z.coerce.number().int().positive("Vendor is required"),
+    serviceMapId: z.coerce.number().int().positive("Service map is required"),
     environment: z.enum(["SANDBOX", "PRODUCTION"]),
-    customerId: z.coerce.number().nullable().optional(),
+    customerId: z.union([z.coerce.number().int().positive(), z.null()]).optional(),
     apiKey: z.string().optional().or(z.literal("")),
     secretKey: z.string().optional().or(z.literal("")),
     baseUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
@@ -59,21 +60,26 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
     const isEdit = !!initialData
 
     const { data: vendorsResponse } = useQuery({
-        queryKey: ["vendors-list"],
-        queryFn: () => vendorService.getVendors({ limit: 100 }),
+        queryKey: ["vendor-config-form-vendors"],
+        queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: "vendorName", sortOrder: "asc" }),
     })
 
     const { data: customersResponse } = useQuery({
-        queryKey: ["customers-list"],
-        queryFn: () => customerService.getCustomers({ limit: 100 }),
+        queryKey: ["vendor-config-form-customers"],
+        queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
+    })
+
+    const { data: serviceMapsResponse } = useQuery({
+        queryKey: ["vendor-config-form-service-maps"],
+        queryFn: () => serviceMapService.getServiceMaps({ page: 1, limit: 100, sortBy: "vendor", sortOrder: "asc" }),
     })
 
     const form = useForm<VendorConfigFormValues>({
-        resolver: zodResolver(vendorConfigSchema) as any,
+        resolver: zodResolver(vendorConfigSchema) as Resolver<VendorConfigFormValues>,
         defaultValues: {
             vendorId: 0,
-            mode: "B2B",
-            environment: "PRODUCTION",
+            serviceMapId: 0,
+            environment: "SANDBOX",
             customerId: null,
             apiKey: "",
             secretKey: "",
@@ -83,33 +89,38 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
     })
 
     useEffect(() => {
-        if (initialData) {
-            form.reset({
-                vendorId: initialData.vendorId,
-                mode: initialData.mode,
-                environment: initialData.environment,
-                customerId: initialData.customerId,
-                apiKey: initialData.apiKey || "",
-                secretKey: initialData.secretKey || "",
-                baseUrl: initialData.baseUrl || "",
-                isActive: initialData.isActive,
-            })
-        }
-    }, [initialData, form])
+        if (!initialData) return
+
+        form.reset({
+            vendorId: initialData.vendorId,
+            serviceMapId: initialData.serviceMapId,
+            environment: initialData.environment,
+            customerId: initialData.customerId,
+            apiKey: initialData.apiKey ?? "",
+            secretKey: initialData.secretKey ?? "",
+            baseUrl: initialData.baseUrl ?? "",
+            isActive: initialData.isActive,
+        })
+    }, [form, initialData])
 
     const mutation = useMutation({
         mutationFn: (data: VendorConfigFormValues) => {
             const payload = {
-                ...data,
+                vendorId: data.vendorId,
+                serviceMapId: data.serviceMapId,
+                environment: data.environment,
+                customerId: data.customerId ?? undefined,
                 apiKey: data.apiKey || undefined,
                 secretKey: data.secretKey || undefined,
                 baseUrl: data.baseUrl || undefined,
-                customerId: data.customerId || undefined,
+                isActive: data.isActive,
             }
+
             if (isEdit && initialData) {
-                return vendorConfigService.updateVendorConfig(initialData.id, payload as any)
+                return vendorConfigService.updateVendorConfig(initialData.id, payload)
             }
-            return vendorConfigService.createVendorConfig(payload as any)
+
+            return vendorConfigService.createVendorConfig(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["vendor-configs"] })
@@ -124,14 +135,14 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
         },
     })
 
-    function onSubmit(data: VendorConfigFormValues) {
+    const onSubmit = (data: VendorConfigFormValues) => {
         mutation.mutate(data)
     }
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormSection
                         title={
                             <span className="flex items-center gap-2">
@@ -144,48 +155,56 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                         contentClassName="space-y-4"
                     >
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="vendorId"
                             render={({ field }) => (
                                 <FloatingFormItem label="Vendor*">
-                                    <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? String(field.value) : ""}>
+                                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                 <SelectValue placeholder="Select vendor" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {vendorsResponse?.data?.map((v) => (
-                                                <SelectItem key={v.id} value={String(v.id)}>{v.vendorName}</SelectItem>
+                                            {vendorsResponse?.data?.map((vendor) => (
+                                                <SelectItem key={vendor.id} value={String(vendor.id)}>
+                                                    {vendor.vendorName}
+                                                </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </FloatingFormItem>
                             )}
                         />
-                        <div className="grid grid-cols-2 gap-4">
+
+                        <FormField
+                            control={form.control}
+                            name="serviceMapId"
+                            render={({ field }) => (
+                                <FloatingFormItem label="Service Map*">
+                                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
+                                        <FormControl>
+                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                <SelectValue placeholder="Select service map" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {serviceMapsResponse?.data?.map((serviceMap) => (
+                                                <SelectItem key={serviceMap.id} value={String(serviceMap.id)}>
+                                                    {serviceMap.vendor?.vendorName
+                                                        ? `${serviceMap.vendor.vendorName} - ${serviceMap.serviceType}`
+                                                        : `${serviceMap.serviceType} - ${serviceMap.id}`}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FloatingFormItem>
+                            )}
+                        />
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <FormField
-                                control={form.control as any}
-                                name="mode"
-                                render={({ field }) => (
-                                    <FloatingFormItem label="Mode*">
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                    <SelectValue placeholder="Select mode" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="B2B">B2B</SelectItem>
-                                                <SelectItem value="B2C">B2C</SelectItem>
-                                                <SelectItem value="API">API</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </FloatingFormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="environment"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Environment*">
@@ -203,35 +222,43 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                                     </FloatingFormItem>
                                 )}
                             />
+
+                            <FormField
+                                control={form.control}
+                                name="isActive"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="Active">
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={(value) => field.onChange(Boolean(value))} />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
                         </div>
+
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="customerId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Customer (optional)">
-                                    <Select onValueChange={(v) => field.onChange(v ? Number(v) : null)} value={field.value ? String(field.value) : ""}>
+                                <FloatingFormItem label="Customer">
+                                    <Select
+                                        onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                                        value={field.value ? String(field.value) : "none"}
+                                    >
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                 <SelectValue placeholder="Select customer" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {customersResponse?.data?.map((c) => (
-                                                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                                            <SelectItem value="none">None</SelectItem>
+                                            {customersResponse?.data?.map((customer) => (
+                                                <SelectItem key={customer.id} value={String(customer.id)}>
+                                                    {customer.name}
+                                                </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control as any}
-                            name="isActive"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Active">
-                                    <FormControl>
-                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                    </FormControl>
                                 </FloatingFormItem>
                             )}
                         />
@@ -249,18 +276,24 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                         contentClassName="space-y-4"
                     >
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="baseUrl"
                             render={({ field }) => (
                                 <FloatingFormItem label="Base URL">
                                     <FormControl>
-                                        <Input placeholder="https://vendor.example.com" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                        <Input
+                                            placeholder="https://vendor.example.com"
+                                            {...field}
+                                            value={field.value || ""}
+                                            className={FLOATING_INNER_CONTROL}
+                                        />
                                     </FormControl>
                                 </FloatingFormItem>
                             )}
                         />
+
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="apiKey"
                             render={({ field }) => (
                                 <FloatingFormItem label="API Key">
@@ -270,13 +303,20 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                                 </FloatingFormItem>
                             )}
                         />
+
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="secretKey"
                             render={({ field }) => (
                                 <FloatingFormItem label="Secret Key">
                                     <FormControl>
-                                        <Input type="password" placeholder="Secret key" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                        <Input
+                                            type="password"
+                                            placeholder="Secret key"
+                                            {...field}
+                                            value={field.value || ""}
+                                            className={FLOATING_INNER_CONTROL}
+                                        />
                                     </FormControl>
                                 </FloatingFormItem>
                             )}
@@ -287,22 +327,21 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                 <div className="flex justify-end gap-3 pt-6">
                     <Button
                         type="button"
-                        variant="outline"
+                        variant="expressDanger"
                         onClick={() => router.push("/masters/vendor-config")}
-                        className="border-slate-200 text-slate-600 hover:bg-slate-50"
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={mutation.isPending} className="bg-primary hover:bg-primary/90 text-white px-8">
+                    <Button type="submit" variant="success" disabled={mutation.isPending}>
                         {mutation.isPending ? (
-                            <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin" />
                                 Saving...
-                            </div>
+                            </span>
                         ) : isEdit ? (
-                            "Update Config"
+                            "Update"
                         ) : (
-                            "Create Config"
+                            "Create"
                         )}
                     </Button>
                 </div>

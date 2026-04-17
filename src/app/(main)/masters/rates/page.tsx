@@ -1,70 +1,75 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth } from "date-fns";
-import { FileUp, RefreshCw, Trash2 } from "lucide-react";
+import { Edit, FilePlus, FileUp, Filter, RefreshCw, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { rateService } from "@/services/masters/rate-service";
 import type { RateMaster } from "@/types/masters/rate";
 import { PermissionGuard } from "@/components/auth/permission-guard";
-import { useDebounce } from "@/hooks/use-debounce";
+
+function displayName(value?: { code?: string; name?: string } | { productCode?: string; productName?: string } | { vendorCode?: string; vendorName?: string } | null, fallback = "—") {
+  if (!value) return fallback;
+  if ("productName" in value) return value.productName || value.productCode || fallback;
+  if ("vendorName" in value) return value.vendorName || value.vendorCode || fallback;
+  return value.name || value.code || fallback;
+}
 
 export default function RateMasterPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 400);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
-  const [fromDate, setFromDate] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
-  const [toDate, setToDate] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: "",
+    fromDate: "",
+    toDate: "",
+    updateType: "",
+    paymentType: "",
+    zeroContract: "all",
+  });
+  const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const listParams = useMemo(
-    () => ({
-      page,
-      limit,
-      search: debouncedSearch,
-      fromDate,
-      toDate,
-      sortBy: "fromDate" as const,
-      sortOrder: "desc" as const,
-    }),
-    [page, limit, debouncedSearch, fromDate, toDate],
-  );
+  useEffect(() => {
+    if (filtersOpen) {
+      setDraftFilters(appliedFilters);
+    }
+  }, [appliedFilters, filtersOpen]);
 
-  const exportParams = useMemo(
-    () => ({
-      search: debouncedSearch,
-      fromDate,
-      toDate,
-      sortBy: "fromDate" as const,
-      sortOrder: "desc" as const,
-    }),
-    [debouncedSearch, fromDate, toDate],
-  );
+  const listParams = {
+    page,
+    limit,
+    search: appliedFilters.search || undefined,
+    fromDate: appliedFilters.fromDate || undefined,
+    toDate: appliedFilters.toDate || undefined,
+    updateType: appliedFilters.updateType || undefined,
+    paymentType: appliedFilters.paymentType || undefined,
+    zeroContract: appliedFilters.zeroContract === "all" ? undefined : appliedFilters.zeroContract === "true",
+    sortBy: "fromDate" as const,
+    sortOrder: "desc" as const,
+  };
+
+  const exportParams = {
+    search: appliedFilters.search || undefined,
+    fromDate: appliedFilters.fromDate || undefined,
+    toDate: appliedFilters.toDate || undefined,
+    updateType: appliedFilters.updateType || undefined,
+    paymentType: appliedFilters.paymentType || undefined,
+    zeroContract: appliedFilters.zeroContract === "all" ? undefined : appliedFilters.zeroContract === "true",
+    sortBy: "fromDate" as const,
+    sortOrder: "desc" as const,
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["rate-masters", listParams],
@@ -75,11 +80,11 @@ export default function RateMasterPage() {
     mutationFn: (id: number) => rateService.deleteRateMaster(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rate-masters"] });
-      toast.success("Rate deleted successfully");
+      toast.success("Rate master deleted successfully");
       setDeleteId(null);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete rate");
+      toast.error(error.message || "Failed to delete rate master");
       setDeleteId(null);
     },
   });
@@ -105,51 +110,112 @@ export default function RateMasterPage() {
   const to = Math.min(page * limit, total);
   const rows = data?.data ?? [];
 
+  const applyFilters = () => {
+    setAppliedFilters(draftFilters);
+    setPage(1);
+    setFiltersOpen(false);
+  };
+
+  const resetFilters = () => {
+    const emptyFilters = {
+      search: "",
+      fromDate: "",
+      toDate: "",
+      updateType: "",
+      paymentType: "",
+      zeroContract: "all",
+    };
+    setDraftFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
+    setPage(1);
+    setFiltersOpen(false);
+  };
+
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              From
-            </label>
-            <Input
-              type="date"
-              className="h-9 w-[150px] bg-background"
-              value={fromDate}
-              onChange={(e) => {
-                setFromDate(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              To
-            </label>
-            <Input
-              type="date"
-              className="h-9 w-[150px] bg-background"
-              value={toDate}
-              onChange={(e) => {
-                setToDate(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Search
-            </label>
-            <Input
-              placeholder="Search…"
-              className="h-9 w-48 bg-background"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-1 self-start rounded-md border border-border p-1 sm:self-auto">
+          <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <DialogTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                <Filter className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Rate Filters</DialogTitle>
+                <DialogDescription>Filter the rate list and apply changes only when you are ready.</DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search</label>
+                  <Input
+                    placeholder="Search…"
+                    className="h-9 bg-background"
+                    value={draftFilters.search}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Update Type</label>
+                  <Input
+                    placeholder="Update type"
+                    className="h-9 bg-background"
+                    value={draftFilters.updateType}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, updateType: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">From Date</label>
+                  <Input
+                    type="date"
+                    className="h-9 bg-background"
+                    value={draftFilters.fromDate}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">To Date</label>
+                  <Input
+                    type="date"
+                    className="h-9 bg-background"
+                    value={draftFilters.toDate}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, toDate: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payment Type</label>
+                  <Input
+                    placeholder="Payment type"
+                    className="h-9 bg-background"
+                    value={draftFilters.paymentType}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, paymentType: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Zero Contract</label>
+                  <Select value={draftFilters.zeroContract} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, zeroContract: value }))}>
+                    <SelectTrigger className="h-9 w-full bg-background">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="true">True</SelectItem>
+                      <SelectItem value="false">False</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button type="button" variant="outline" onClick={resetFilters}>
+                  Reset
+                </Button>
+                <Button type="button" onClick={applyFilters}>
+                  Apply
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <PermissionGuard permission="master.rate.read">
             <Button
               type="button"
@@ -169,21 +235,38 @@ export default function RateMasterPage() {
             size="icon"
             className="h-8 w-8 text-primary"
             onClick={() => queryClient.refetchQueries({ queryKey: ["rate-masters"], type: "active" })}
+            title="Refresh"
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
+        <Button
+          type="button"
+          variant="default"
+          className="h-8 gap-2 px-3 font-semibold"
+          onClick={() => router.push("/masters/rates/create")}
+          title="Create rate master"
+        >
+          <FilePlus className="h-4 w-4" />
+          Create Rate
+        </Button>
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
-        <Table className="min-w-[900px] border-0">
+        <Table className="min-w-[1120px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
               <TableHead className="font-semibold text-primary-foreground">ID</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Update type</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Service type</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Rate type</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Product</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Vendor</TableHead>
               <TableHead className="font-semibold text-primary-foreground">From</TableHead>
               <TableHead className="font-semibold text-primary-foreground">To</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Payment type</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Zero contract</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Flat rate</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
@@ -191,32 +274,36 @@ export default function RateMasterPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">
                   Loading rates…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">
                   No rate masters found.
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((row: RateMaster, index: number) => (
-                <TableRow
-                  key={row.id}
-                  className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}
-                >
+                <TableRow key={row.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                   <TableCell className="font-medium">{row.id}</TableCell>
                   <TableCell>{row.updateType}</TableCell>
+                  <TableCell>{row.serviceType || "—"}</TableCell>
+                  <TableCell>{row.rateType || "—"}</TableCell>
+                  <TableCell>{displayName(row.customer)}</TableCell>
+                  <TableCell>{displayName(row.product)}</TableCell>
+                  <TableCell>{displayName(row.vendor)}</TableCell>
                   <TableCell>{row.fromDate?.slice(0, 10)}</TableCell>
                   <TableCell>{row.toDate?.slice(0, 10)}</TableCell>
+                  <TableCell>{row.paymentType || "—"}</TableCell>
+                  <TableCell>{row.zeroContract ? "Yes" : "No"}</TableCell>
+                  <TableCell>{row.flatRate != null && row.flatRate !== "" ? String(row.flatRate) : "—"}</TableCell>
                   <TableCell>
-                    {row.customer?.customerName ?? row.customer?.customerCode ?? row.customerId}
-                  </TableCell>
-                  <TableCell>{row.flatRate != null ? String(row.flatRate) : "—"}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-center">
+                    <div className="flex justify-center gap-1">
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => router.push(`/masters/rates/${row.id}/edit`)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
                       <PermissionGuard permission="master.rate.delete">
                         <Button
                           type="button"
@@ -242,43 +329,19 @@ export default function RateMasterPage() {
           Showing {from} to {to} of {total} entries
         </p>
         <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 min-w-8 px-2"
-            disabled={page <= 1}
-            onClick={() => setPage(1)}
-          >
+          <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage(1)}>
             «
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 min-w-8 px-2"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          >
+          <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={page <= 1} onClick={() => setPage((p) => Math.max(p - 1, 1))}>
             ‹
           </Button>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
             {page}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 min-w-8 px-2"
-            disabled={!data || page >= (data.meta?.totalPages || 1)}
-            onClick={() => setPage((p) => p + 1)}
-          >
+          <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.meta?.totalPages || 1)} onClick={() => setPage((p) => p + 1)}>
             ›
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 min-w-8 px-2"
-            disabled={!data || page >= (data.meta?.totalPages || 1)}
-            onClick={() => setPage(data?.meta?.totalPages ?? 1)}
-          >
+          <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.meta?.totalPages || 1)} onClick={() => setPage(data?.meta?.totalPages ?? 1)}>
             »
           </Button>
         </div>
@@ -289,15 +352,12 @@ export default function RateMasterPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this rate?</AlertDialogTitle>
             <AlertDialogDescription>
-              This soft-deletes the rate master record. Shipments already linked are unchanged.
+              This soft-deletes the rate master record. Existing rate details stay intact for the backend history.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
-            >
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700 focus:ring-red-600" onClick={() => deleteId && deleteMutation.mutate(deleteId)}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

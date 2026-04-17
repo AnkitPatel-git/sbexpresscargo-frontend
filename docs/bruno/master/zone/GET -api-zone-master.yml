@@ -1,0 +1,53 @@
+info:
+  name: GET /api/zone-master
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/zone-master"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: zoneCode
+      value: string
+      type: query
+    - name: zoneName
+      value: string
+      type: query
+    - name: exportType
+      value: string
+      type: query
+    - name: country
+      value: string
+      type: query
+    - name: zoneType
+      value: string
+      type: query
+    - name: countryId
+      value: "0"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,43 @@
+info:
+  name: PATCH /api/customer-master/:customerId/other-charges/:chargeId
+  type: http
+  seq: 19
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/customer-master/{{customerId}}/other-charges/{{chargeId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: customerId
+      value: "1"
+      type: path
+    - name: chargeId
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "productId": 1,
+        "srNo": 1,
+        "chargeType": "FIXED",
+        "fromDate": "2026-04-13T10:00:00.000Z",
+        "toDate": "2026-04-13T10:00:00.000Z",
+        "origin": "Sample Value",
+        "destination": "Sample Value",
+        "amount": 10,
+        "minimumValue": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

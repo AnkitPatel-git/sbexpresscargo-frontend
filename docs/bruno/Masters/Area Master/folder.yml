@@ -1,7 +1,0 @@
-info:
-  name: Area Master
-  type: folder
-  seq: 13
-
-request:
-  auth: inherit

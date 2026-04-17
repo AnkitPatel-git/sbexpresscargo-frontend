@@ -1,0 +1,38 @@
+info:
+  name: POST /api/transaction/drs/scan
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/drs/scan"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "drsNo": "Sample Value",
+        "drsDate": "2026-04-13T10:00:00.000Z",
+        "drsTime": "Sample Value",
+        "courierId": 1,
+        "serviceCenterId": 1,
+        "remark": "Sample note",
+        "items": [
+          {
+            "awbNo": "AWB100001",
+            "shipmentId": 1
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

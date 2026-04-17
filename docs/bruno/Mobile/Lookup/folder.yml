@@ -1,7 +1,7 @@
 info:
-  name: Lookup
+  name: lookup
   type: folder
-  seq: 2
+  seq: 5
 
 request:
   auth: inherit

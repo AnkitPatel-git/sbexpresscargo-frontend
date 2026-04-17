@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Table,
     TableBody,
@@ -16,14 +17,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -52,23 +45,25 @@ function SortArrows() {
 export default function LocalBranchesPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const [search, setSearch] = useState("")
-    const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({
-        code: "",
-        branchName: "",
-        city: "",
-        state: "",
-        telephone: "",
-        gstNo: "",
-    })
+    const defaultFilters = { search: "", code: "", companyName: "", branchName: "" }
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const debouncedCode = useDebounce(appliedFilters.code, 400)
+    const debouncedCompanyName = useDebounce(appliedFilters.companyName, 400)
+    const debouncedBranchName = useDebounce(appliedFilters.branchName, 400)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
+    useEffect(() => {
+        if (filtersOpen) setDraftFilters(appliedFilters)
+    }, [appliedFilters, filtersOpen])
+
     const { data, isLoading } = useQuery({
-        queryKey: ["local-branches", page, debouncedSearch],
+        queryKey: ["local-branches", page, debouncedSearch, debouncedCode, debouncedCompanyName, debouncedBranchName],
         queryFn: () =>
             localBranchService.getLocalBranches({
                 page,
@@ -76,6 +71,9 @@ export default function LocalBranchesPage() {
                 search: debouncedSearch,
                 sortBy: "branchCode",
                 sortOrder: "asc",
+                branchCode: debouncedCode || undefined,
+                companyName: debouncedCompanyName || undefined,
+                name: debouncedBranchName || undefined,
             }),
     })
 
@@ -88,6 +86,9 @@ export default function LocalBranchesPage() {
                 search: debouncedSearch,
                 sortBy: "branchCode",
                 sortOrder: "asc",
+                branchCode: debouncedCode || undefined,
+                companyName: debouncedCompanyName || undefined,
+                name: debouncedBranchName || undefined,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
@@ -137,21 +138,49 @@ export default function LocalBranchesPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
-        data?.data.filter((branch) => {
-            if (colFilters.code && !(branch.branchCode || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
-            if (colFilters.branchName && !(branch.name || "").toLowerCase().includes(colFilters.branchName.toLowerCase())) return false
-            if (colFilters.city && !(branch.city || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
-            if (colFilters.state && !(branch.state || "").toLowerCase().includes(colFilters.state.toLowerCase())) return false
-            if (colFilters.telephone && !(branch.telephone || "").toLowerCase().includes(colFilters.telephone.toLowerCase())) return false
-            if (colFilters.gstNo && !(branch.gstNo || "").toLowerCase().includes(colFilters.gstNo.toLowerCase())) return false
-            return true
-        }) ?? []
+    const rows = data?.data ?? []
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Local Branch Filters</DialogTitle>
+                                <DialogDescription>Filter the branch list from this popup, then apply the filters.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
+                                <Input placeholder="Company Name" className="h-9 bg-background" value={draftFilters.companyName} onChange={(e) => setDraftFilters((prev) => ({ ...prev, companyName: e.target.value }))} />
+                                <Input placeholder="Branch Name" className="h-9 bg-background" value={draftFilters.branchName} onChange={(e) => setDraftFilters((prev) => ({ ...prev, branchName: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["local-branches"], type: "active" })}>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                     <PermissionGuard permission="master.local_branch.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
                             <FilePlus className="h-4 w-4" />
@@ -176,54 +205,37 @@ export default function LocalBranchesPage() {
                 </div>
                 <PermissionGuard permission="master.local_branch.create">
                     <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Branch">
-                        <Plus className="mr-1 h-4 w-4" /> Add Branch
+                        <FilePlus className="mr-1 h-4 w-4" /> Add Branch
                     </Button>
                 </PermissionGuard>
             </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Search:</span>
-                <Input placeholder="Search branches..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[1150px] border-0">
+                <Table className="min-w-[1000px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Code <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Company Name <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Branch Name <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">City <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Telephone <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">GST No <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Service Center <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
-                        </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Branch Name" className="h-8 border-border bg-background text-xs" value={colFilters.branchName} onChange={(e) => setColFilters((f) => ({ ...f, branchName: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="City" className="h-8 border-border bg-background text-xs" value={colFilters.city} onChange={(e) => setColFilters((f) => ({ ...f, city: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="State" className="h-8 border-border bg-background text-xs" value={colFilters.state} onChange={(e) => setColFilters((f) => ({ ...f, state: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Telephone" className="h-8 border-border bg-background text-xs" value={colFilters.telephone} onChange={(e) => setColFilters((f) => ({ ...f, telephone: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="GST No" className="h-8 border-border bg-background text-xs" value={colFilters.gstNo} onChange={(e) => setColFilters((f) => ({ ...f, gstNo: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading branches...</TableCell>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Loading branches...</TableCell>
                             </TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No branches found.</TableCell>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No branches found.</TableCell>
                             </TableRow>
                         ) : (
-                            filteredRows.map((branch, index) => (
+                            rows.map((branch, index) => (
                                 <TableRow key={branch.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{branch.branchCode}</TableCell>
+                                    <TableCell className="text-foreground">{branch.companyName}</TableCell>
                                     <TableCell className="font-medium text-foreground">{branch.name}</TableCell>
-                                    <TableCell className="text-foreground">{branch.city}</TableCell>
-                                    <TableCell className="text-foreground">{branch.state}</TableCell>
-                                    <TableCell className="text-foreground">{branch.telephone || "-"}</TableCell>
-                                    <TableCell className="text-foreground">{branch.gstNo}</TableCell>
+                                    <TableCell className="text-foreground">{branch.serviceCenter?.name ?? "-"}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
                                             <PermissionGuard permission="master.local_branch.update">

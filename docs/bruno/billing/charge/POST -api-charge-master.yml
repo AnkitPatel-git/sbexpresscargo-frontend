@@ -1,0 +1,37 @@
+info:
+  name: POST /api/charge-master
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/charge-master"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "code": "CODE001",
+        "name": "Sample Name",
+        "chargeType": "FLAT",
+        "calculationBase": "CHARGE_WEIGHT",
+        "chargeRate": 10,
+        "applyFuel": true,
+        "applyTaxOnFuel": true,
+        "applyTax": true,
+        "hsnCode": "CODE001",
+        "sequence": 1,
+        "multipleCharges": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

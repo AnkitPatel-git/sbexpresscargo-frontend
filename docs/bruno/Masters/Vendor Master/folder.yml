@@ -1,7 +1,0 @@
-info:
-  name: Vendor Master
-  type: folder
-  seq: 11
-
-request:
-  auth: inherit

@@ -1,0 +1,7 @@
+info:
+  name: vendor-config
+  type: folder
+  seq: 19
+
+request:
+  auth: inherit

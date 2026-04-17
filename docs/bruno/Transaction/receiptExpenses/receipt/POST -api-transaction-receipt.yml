@@ -1,0 +1,41 @@
+info:
+  name: POST /api/transaction/receipt
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/receipt"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "shipmentId": 1,
+        "amount": 10,
+        "totalRcp": 1,
+        "balance": 1,
+        "lines": [
+          {
+            "receiptNo": "Sample Value",
+            "receiptDate": "2026-04-13T10:00:00.000Z",
+            "amount": 10,
+            "userId": 1,
+            "receiptType": "Sample Value",
+            "referenceNo": "Sample Value",
+            "bankId": 1
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

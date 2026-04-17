@@ -1,0 +1,31 @@
+info:
+  name: POST /api/exception-master
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/exception-master"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "code": "CODE001",
+        "name": "Sample Name",
+        "type": "Sample Value",
+        "inscan": true,
+        "showOnMobileApps": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
