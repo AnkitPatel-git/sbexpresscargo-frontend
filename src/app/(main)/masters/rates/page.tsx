@@ -21,7 +21,12 @@ function displayName(value?: { code?: string; name?: string } | { productCode?: 
   if (!value) return fallback;
   if ("productName" in value) return value.productName || value.productCode || fallback;
   if ("vendorName" in value) return value.vendorName || value.vendorCode || fallback;
-  return value.name || value.code || fallback;
+  if ("name" in value) {
+    const namedValue = value as { name?: string; code?: string };
+    return namedValue.name || namedValue.code || fallback;
+  }
+  const codedValue = value as { code?: string };
+  return codedValue.code || fallback;
 }
 
 export default function RateMasterPage() {
@@ -267,20 +272,19 @@ export default function RateMasterPage() {
               <TableHead className="font-semibold text-primary-foreground">To</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Payment type</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Zero contract</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Flat rate</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
                   Loading rates…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
                   No rate masters found.
                 </TableCell>
               </TableRow>
@@ -298,7 +302,6 @@ export default function RateMasterPage() {
                   <TableCell>{row.toDate?.slice(0, 10)}</TableCell>
                   <TableCell>{row.paymentType || "—"}</TableCell>
                   <TableCell>{row.zeroContract ? "Yes" : "No"}</TableCell>
-                  <TableCell>{row.flatRate != null && row.flatRate !== "" ? String(row.flatRate) : "—"}</TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => router.push(`/masters/rates/${row.id}/edit`)}>

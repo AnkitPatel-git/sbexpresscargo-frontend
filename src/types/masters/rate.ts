@@ -144,7 +144,6 @@ export interface RateMaster {
   serviceCenterId?: number | null;
   paymentType?: string | null;
   zeroContract: boolean;
-  flatRate?: string | number | null;
   weightUnitStep?: number | null;
   createdAt?: string;
   updatedAt?: string;
@@ -186,7 +185,6 @@ export interface CreateRateMasterPayload {
   vendorId?: number;
   paymentType: string;
   zeroContract: boolean;
-  flatRate?: number;
   zoneRates?: RateZoneRatePayload[];
   distanceSlabs?: RateDistanceSlabPayload[];
   rateCharges?: RateChargePayload[];

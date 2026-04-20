@@ -70,11 +70,11 @@ export default function ExceptionPage() {
         setExporting(true)
         try {
             const { blob, filename } = await exceptionService.exportExceptions({
-                search: debouncedSearch,
+                search: appliedFilters.search,
                 sortBy: "code",
                 sortOrder: "asc",
-                code: debouncedCode,
-                name: debouncedName,
+                code: appliedFilters.code,
+                name: appliedFilters.name,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")

@@ -48,7 +48,6 @@ const vendorSchema = z.object({
     bankAccount: z.string().min(1, "Bank account is required"),
     bankIfsc: z.string().min(1, "Bank IFSC is required"),
     telephone: z.string().min(10, "Telephone must be at least 10 characters"),
-    fax: z.string().optional().or(z.literal("")),
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),
@@ -89,7 +88,6 @@ export function VendorForm({ initialData }: VendorFormProps) {
             bankAccount: "",
             bankIfsc: "",
             telephone: "",
-            fax: "",
             email: "",
             mobile: "",
             website: "",
@@ -116,7 +114,6 @@ export function VendorForm({ initialData }: VendorFormProps) {
                 bankAccount: initialData.bankAccount || "",
                 bankIfsc: initialData.bankIfsc || "",
                 telephone: initialData.telephone,
-                fax: initialData.fax || "",
                 email: initialData.email,
                 mobile: initialData.mobile,
                 website: initialData.website || "",
@@ -276,17 +273,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                         </FloatingFormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="fax"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Fax">
-                                            <FormControl>
-                                                <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
+                                <div />
                             </div>
                             <FormField
                                 control={form.control}

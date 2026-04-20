@@ -77,12 +77,12 @@ export default function ProductsPage() {
         setExporting(true)
         try {
             const { blob, filename } = await productService.exportProducts({
-                search: debouncedSearch,
+                search: appliedFilters.search,
                 sortBy: "productCode",
                 sortOrder: "asc",
-                productCode: debouncedCode || undefined,
-                productName: debouncedName || undefined,
-                productType: debouncedType || undefined,
+                productCode: appliedFilters.code || undefined,
+                productName: appliedFilters.name || undefined,
+                productType: appliedFilters.type || undefined,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")

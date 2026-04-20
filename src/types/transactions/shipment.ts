@@ -55,6 +55,7 @@ export const shipmentSchema = z.object({
     .object({
       shipperCode: optionalMasterCode(2).optional(),
       shipperName: z.string().optional(),
+      pinCodeId: z.number().optional(),
       shipperOrigin: z.string().optional(),
       contactPerson: z.string().optional(),
       address1: z.string().optional(),
@@ -88,6 +89,7 @@ export const shipmentSchema = z.object({
     .object({
       code: optionalMasterCode(2).optional(),
       name: z.string().optional(),
+      pinCodeId: z.number().optional(),
       destination: z.string().optional(),
       contactPerson: z.string().optional(),
       address1: z.string().optional(),
@@ -122,11 +124,14 @@ export const shipmentSchema = z.object({
   appointmentDelivery: z.boolean().default(false),
   floorDelivery: z.boolean().default(false),
   floorCount: z.number().optional(),
+  pieces: z.number().optional(),
+  actualWeight: z.number().optional(),
+  volumetricWeight: z.number().optional(),
+  chargeWeight: z.number().optional(),
   km: z.number().optional(),
   commercial: z.boolean().default(false),
   paymentType: z.string().optional(),
   currency: z.string().optional(),
-  content: z.string().optional(),
   instruction: z.string().optional(),
   serviceCenterId: z.number().optional(),
   serviceMapId: z.number().optional(),
@@ -243,7 +248,7 @@ export interface PieceItem extends z.infer<typeof pieceItemSchema> {
 export interface PieceRow extends z.infer<typeof pieceRowSchema> {
   id?: number;
   shipmentId?: number;
-  actualWeight?: number;
+  actualWeight: number;
   items?: PieceItem[];
   createdAt?: string;
   updatedAt?: string;
@@ -355,9 +360,8 @@ export interface Shipment {
   pieces?: number | null;
   km?: number | null;
   commercial?: boolean;
-  serviceCenterId?: number | null;
   instruction?: string | null;
-  content?: string | null;
+  serviceCenterId?: number | null;
   createdAt: string;
   updatedAt: string;
   createdById?: number | null;

@@ -91,7 +91,7 @@ export const shipmentService = {
     );
   },
 
-  async calculateCharges(data: ShipmentFormPayload): Promise<ApiEnvelope<ShipmentCalculateResponse>> {
+  async calculateCharges(data: Omit<ShipmentFormPayload, "oda">): Promise<ApiEnvelope<ShipmentCalculateResponse>> {
     return requestJson(
       `${API_URL}/transaction/shipment/calculate-charges`,
       {
@@ -125,7 +125,6 @@ export const shipmentService = {
     shipmentId: number,
     data: {
       version: number;
-      deliveryAwb?: string;
       forwardingAwb?: string;
       deliveryVendorId?: number;
       deliveryServiceMapId?: number;
@@ -172,7 +171,6 @@ export const shipmentService = {
     shipmentId: number,
     data: {
       version: number;
-      deliveryAwb?: string;
       forwardingAwb?: string;
       deliveryVendorId?: number;
       deliveryServiceMapId?: number;
@@ -188,7 +186,6 @@ export const shipmentService = {
       type: string;
       entryType?: string;
       entryDate?: string;
-      file?: File;
     },
   ): Promise<ApiEnvelope<unknown>> {
     return requestJson(

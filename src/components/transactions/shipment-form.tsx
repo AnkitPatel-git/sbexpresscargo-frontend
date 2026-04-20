@@ -82,8 +82,7 @@ import { serviceCenterService } from '@/services/masters/service-center-service'
 import { chargeService } from '@/services/masters/charge-service'
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
 import { pincodeDistanceService } from '@/services/utilities/pincode-distance-service'
-import { shipmentSchema, ShipmentFormValues, Shipment, ShipmentCalculateResponse } from '@/types/transactions/shipment'
-import { omitEmptyCodeFields } from '@/lib/master-code-schema'
+import { shipmentSchema, ShipmentFormValues, Shipment, ShipmentCalculateResponse, ShipmentKycDocument } from '@/types/transactions/shipment'
 import type { Shipper } from '@/types/masters/shipper'
 import type { Consignee } from '@/types/masters/consignee'
 import type { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
@@ -94,10 +93,19 @@ interface ShipmentFormProps {
 }
 
 type ForwardingRow = {
-    deliveryAwb: string
     forwardingAwb: string
     deliveryVendorId: number
     deliveryServiceMapId: number
+    vendorWeight: number
+    vendorAmount: number
+    vendorInvoice: string
+    contractCharges: number
+    otherCharges: number
+    subTotal: number
+    totalFuel: number
+    igst: number
+    cgst: number
+    sgst: number
     totalAmount: number
 }
 
@@ -106,87 +114,239 @@ type KycRow = {
     type: string
     entryType: string
     entryDate: string
-    file: File | null
+}
+
+const normalizeNumberValue = (value: unknown): number | undefined => {
+    if (typeof value === "number" && Number.isFinite(value)) return value
+    if (typeof value === "string" && value.trim()) {
+        const next = Number(value)
+        return Number.isFinite(next) ? next : undefined
+    }
+    return undefined
+}
+
+const normalizePositiveNumberValue = (value: unknown): number | undefined => {
+    const next = normalizeNumberValue(value)
+    return typeof next === "number" && next > 0 ? next : undefined
+}
+
+const normalizePieceItem = (item: Partial<PieceItemForm> & Record<string, unknown>): PieceItemForm => ({
+    contentId: normalizeNumberValue(item.contentId) || 0,
+    quantity: normalizeNumberValue(item.quantity),
+    measureValue: normalizeNumberValue(item.measureValue),
+    measureUnit: strOrEmpty(item.measureUnit),
+    totalValue: normalizeNumberValue(item.totalValue),
+    invoiceDate: strOrEmpty(item.invoiceDate) || format(new Date(), 'yyyy-MM-dd'),
+    invoiceNumber: strOrEmpty(item.invoiceNumber),
+})
+
+const normalizePieceRows = (rows?: ShipmentFormValues['piecesRows']): NonNullable<ShipmentFormValues['piecesRows']> => {
+    if (!rows || rows.length === 0) {
+        return [createEmptyPieceRow()]
+    }
+
+    return rows.map((row) => ({
+        actualWeight: normalizeNumberValue(row.actualWeight) ?? normalizeNumberValue((row as Record<string, unknown>).actualWeightPerPc) ?? 0,
+        pieces: normalizeNumberValue(row.pieces) || 0,
+        length: normalizeNumberValue(row.length),
+        width: normalizeNumberValue(row.width),
+        height: normalizeNumberValue(row.height),
+        division: normalizeNumberValue(row.division),
+        volumetricWeight: normalizeNumberValue(row.volumetricWeight),
+        chargeWeight: normalizeNumberValue(row.chargeWeight),
+        items: (row.items && row.items.length > 0 ? row.items : [createEmptyPieceItem()]).map((item) => normalizePieceItem(item as Partial<PieceItemForm> & Record<string, unknown>)),
+    }))
+}
+
+const normalizeCharge = (charge: NonNullable<ShipmentFormValues['charges']>[number] & Record<string, unknown>): NonNullable<ShipmentFormValues['charges']>[number] => ({
+    chargeId: normalizeNumberValue(charge.chargeId) || 0,
+    description: strOrEmpty(charge.description),
+    rate: normalizeNumberValue(charge.rate),
+    amount: normalizeNumberValue(charge.amount),
+    fuelApply: Boolean(charge.fuelApply),
+    fuelAmount: normalizeNumberValue(charge.fuelAmount),
+    taxApply: Boolean(charge.taxApply),
+    taxOnFuel: Boolean(charge.taxOnFuel),
+    igst: normalizeNumberValue(charge.igst),
+    cgst: normalizeNumberValue(charge.cgst),
+    sgst: normalizeNumberValue(charge.sgst),
+    total: normalizeNumberValue(charge.total),
+    chargeType: strOrEmpty(charge.chargeType),
+})
+
+const normalizeCharges = (charges?: ShipmentFormValues['charges']) =>
+    (charges || []).map((charge) => normalizeCharge(charge as NonNullable<ShipmentFormValues['charges']>[number] & Record<string, unknown>))
+
+const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues => {
+    const shipmentRef = shipment as ShipmentFormSource | null
+    const shipperRef = shipmentRef?.shipper ?? undefined
+    const consigneeRef = shipmentRef?.consignee ?? undefined
+
+    return {
+        version: shipment?.version,
+        awbNo: shipment?.awbNo || '',
+        bookDate: toDateInputValue(shipment?.bookDate),
+        bookTime: shipment?.bookTime || format(new Date(), "HH:mm"),
+        referenceNo: shipment?.referenceNo || '',
+        customerId: shipmentRef?.customerId || 0,
+        clientId: shipmentRef?.customerId || 0,
+        shipperId: shipmentRef?.shipperId || 0,
+        consigneeId: shipmentRef?.consigneeId || 0,
+        ewaybillNumber: shipmentRef?.ewaybillNumber || '',
+        shipper: shipperRef ? {
+            shipperName: shipperRef.shipperName || shipperRef.name || '',
+            pinCodeId: shipperRef.pinCodeId ?? shipperRef.serviceablePincode?.id ?? undefined,
+            shipperOrigin: '',
+            contactPerson: shipperRef.contactPerson || '',
+            address1: shipperRef.address1 || '',
+            address2: shipperRef.address2 || '',
+            pinCode: shipperRef.serviceablePincode?.pinCode || '',
+            city: shipperRef.serviceablePincode?.cityName || '',
+            state: shipperRef.state?.stateName || shipperRef.serviceablePincode?.state?.stateName || '',
+            country: shipperRef.country?.name || shipperRef.serviceablePincode?.country?.name || '',
+            telephone: shipperRef.telephone || '',
+            mobile: shipperRef.mobile || '',
+            email: shipperRef.email || '',
+        } : undefined,
+        consignee: consigneeRef ? {
+            name: consigneeRef.consigneeName || consigneeRef.name || '',
+            pinCodeId: consigneeRef.pinCodeId ?? consigneeRef.serviceablePincode?.id ?? undefined,
+            destination: '',
+            contactPerson: consigneeRef.contactPerson || '',
+            address1: consigneeRef.address1 || '',
+            address2: consigneeRef.address2 || '',
+            pinCode: consigneeRef.serviceablePincode?.pinCode || '',
+            city: consigneeRef.serviceablePincode?.cityName || '',
+            state: consigneeRef.state?.stateName || consigneeRef.stateMaster?.stateName || consigneeRef.serviceablePincode?.state?.stateName || '',
+            country: consigneeRef.country?.name || consigneeRef.serviceablePincode?.country?.name || '',
+            telephone: consigneeRef.telephone || '',
+            mobile: consigneeRef.mobile || '',
+            email: consigneeRef.email || '',
+        } : undefined,
+        origin: shipmentRef?.origin || '',
+        originCode: shipmentRef?.originCode || '',
+        destination: shipmentRef?.destination || '',
+        destinationCode: shipmentRef?.destinationCode || '',
+        productId: shipmentRef?.productId || 0,
+        vendorId: shipmentRef?.vendorId || 0,
+        serviceMapId: shipmentRef?.serviceMapId || 0,
+        shipmentValue: shipmentRef?.shipmentValue || 0,
+        shipmentTotalValue: shipmentRef?.shipmentTotalValue || 0,
+        fromZoneId: shipmentRef?.fromZoneId || 0,
+        toZoneId: shipmentRef?.toZoneId || 0,
+        reversePickup: shipmentRef?.reversePickup || false,
+        appointmentDelivery: shipmentRef?.appointmentDelivery || false,
+        floorDelivery: shipmentRef?.floorDelivery || false,
+        floorCount: shipmentRef?.floorCount || 0,
+        currency: shipmentRef?.currency || 'INR',
+        pieces: shipmentRef?.pieces || 1,
+        actualWeight: shipmentRef?.actualWeight || 0,
+        volumetricWeight: shipmentRef?.volumetricWeight || 0,
+        chargeWeight: shipmentRef?.chargeWeight || 0,
+        km: shipmentRef?.km || 0,
+        commercial: shipmentRef?.commercial || false,
+        oda: shipmentRef?.oda || false,
+        medicalCharges: shipmentRef?.medicalCharges ?? 0,
+        paymentType: shipmentRef?.paymentType || 'CREDIT',
+        instruction: shipmentRef?.instruction || '',
+        serviceCenterId: shipmentRef?.serviceCenterId || 0,
+        isCod: shipmentRef?.isCod || false,
+        codAmount: shipmentRef?.codAmount || 0,
+        piecesRows: normalizePieceRows(shipmentRef?.piecesRows),
+        charges: normalizeCharges(shipmentRef?.charges),
+    }
 }
 
 const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValues => {
-    const payload: ShipmentFormValues = { ...values }
-
-    const optionalNumberKeys = [
-        "customerId",
-        "clientId",
-        "shipperId",
-        "consigneeId",
-        "productId",
-        "fromZoneId",
-        "toZoneId",
-        "shipmentTotalValue",
-        "serviceCenterId",
-        "serviceMapId",
-        "vendorId",
-        "codAmount",
-        "shipmentValue",
-        "pieces",
-        "actualWeight",
-        "chargeWeight",
-        "volumetricWeight",
-        "floorCount",
-        "km",
-    ] as const
-
-    optionalNumberKeys.forEach((key) => {
-        const currentValue = (payload as Record<string, unknown>)[key]
-        if (typeof currentValue === "number" && currentValue <= 0) {
-            ;(payload as Record<string, unknown>)[key] = undefined
-        }
-    })
-
-    payload.clientId = payload.customerId
-    payload.shipmentTotalValue = payload.shipmentTotalValue ?? payload.shipmentValue
-    payload.shipmentValue = undefined
-    payload.pieces = undefined
-    payload.actualWeight = undefined
-    payload.volumetricWeight = undefined
-    payload.chargeWeight = undefined
-
-    if (!payload.awbNo?.trim()) {
-        payload.awbNo = undefined
+    const payload: ShipmentFormValues = {
+        awbNo: values.awbNo?.trim() || undefined,
+        bookDate: toDateInputValue(values.bookDate),
+        bookTime: values.bookTime?.trim() || undefined,
+        referenceNo: values.referenceNo?.trim() || undefined,
+        customerId: normalizePositiveNumberValue(values.customerId),
+        clientId: normalizePositiveNumberValue(values.clientId ?? values.customerId),
+        shipperId: normalizePositiveNumberValue(values.shipperId),
+        consigneeId: normalizePositiveNumberValue(values.consigneeId),
+        shipper: values.shipper
+            ? {
+                shipperCode: values.shipper.shipperCode?.trim() || undefined,
+                shipperName: values.shipper.shipperName?.trim() || undefined,
+                pinCodeId: normalizePositiveNumberValue(values.shipper.pinCodeId),
+                contactPerson: values.shipper.contactPerson?.trim() || undefined,
+                address1: values.shipper.address1?.trim() || undefined,
+                address2: values.shipper.address2?.trim() || undefined,
+                telephone: values.shipper.telephone?.trim() || undefined,
+                mobile: values.shipper.mobile?.trim() || undefined,
+                email: values.shipper.email?.trim() || undefined,
+            } as NonNullable<ShipmentFormValues['shipper']>
+            : undefined,
+        consignee: values.consignee
+            ? {
+                code: values.consignee.code?.trim() || undefined,
+                name: values.consignee.name?.trim() || undefined,
+                pinCodeId: normalizePositiveNumberValue(values.consignee.pinCodeId),
+                contactPerson: values.consignee.contactPerson?.trim() || undefined,
+                address1: values.consignee.address1?.trim() || undefined,
+                address2: values.consignee.address2?.trim() || undefined,
+                telephone: values.consignee.telephone?.trim() || undefined,
+                mobile: values.consignee.mobile?.trim() || undefined,
+                email: values.consignee.email?.trim() || undefined,
+            } as NonNullable<ShipmentFormValues['consignee']>
+            : undefined,
+        productId: normalizePositiveNumberValue(values.productId),
+        fromZoneId: normalizePositiveNumberValue(values.fromZoneId),
+        toZoneId: normalizePositiveNumberValue(values.toZoneId),
+        shipmentTotalValue: normalizeNumberValue(values.shipmentTotalValue ?? values.shipmentValue),
+        reversePickup: Boolean(values.reversePickup),
+        appointmentDelivery: Boolean(values.appointmentDelivery),
+        floorDelivery: Boolean(values.floorDelivery),
+        floorCount: normalizeNumberValue(values.floorCount),
+        km: normalizeNumberValue(values.km),
+        commercial: Boolean(values.commercial),
+        oda: Boolean(values.oda),
+        paymentType: values.paymentType?.trim() || undefined,
+        instruction: values.instruction?.trim() || undefined,
+        serviceCenterId: normalizePositiveNumberValue(values.serviceCenterId),
+        serviceMapId: normalizeNumberValue(values.serviceMapId),
+        isCod: Boolean(values.isCod),
+        codAmount: normalizeNumberValue(values.codAmount),
+        piecesRows: normalizePieceRows(values.piecesRows).filter((row) => Number(row.pieces || 0) > 0),
+        charges: (values.charges || []).map((charge) => normalizeCharge(charge as NonNullable<ShipmentFormValues['charges']>[number] & Record<string, unknown>)).filter((charge) => Number(charge.chargeId || 0) > 0),
     }
-
-    ;(["origin", "originCode", "destination", "destinationCode", "currency", "medicalCharges", "manifestNo", "manifestDate", "invoiceNo", "debitNoteNo", "creditNoteNo", "flightNo"] as const).forEach((key) => {
-        payload[key] = undefined
-    })
-
-    if (!payload.bookTime) {
-        payload.bookTime = undefined
-    }
-
-    if (payload.shipperId) {
-        payload.shipper = undefined
-    } else if (payload.shipper) {
-        const s = omitEmptyCodeFields({ ...payload.shipper }, ['shipperCode']) as NonNullable<ShipmentFormValues['shipper']>
-        if (!s.shipperName?.trim() && !s.mobile?.trim() && !s.shipperCode?.trim()) {
-            payload.shipper = undefined
-        } else {
-            payload.shipper = s
-        }
-    }
-
-    if (payload.consigneeId) {
-        payload.consignee = undefined
-    } else if (payload.consignee) {
-        const c = omitEmptyCodeFields({ ...payload.consignee }, ['code']) as NonNullable<ShipmentFormValues['consignee']>
-        if (!c.name?.trim() && !c.mobile?.trim() && !c.code?.trim()) {
-            payload.consignee = undefined
-        } else {
-            payload.consignee = c
-        }
-    }
-
-    payload.piecesRows = (payload.piecesRows || []).filter((row) => Number(row.pieces || 0) > 0)
-    payload.charges = (payload.charges || []).filter((charge) => Number(charge.chargeId || 0) > 0)
 
     return payload
+}
+
+const normalizeShipmentUpdatePayload = (values: ShipmentFormValues): ShipmentFormValues => {
+    const { serviceMapId: _serviceMapId, ...payload } = normalizeShipmentPayload(values)
+    return payload
+}
+
+const normalizeShipmentCalculatePayload = (values: ShipmentFormValues): Omit<ShipmentFormValues, 'oda'> => {
+    const { serviceMapId: _serviceMapId, oda: _oda, ...payload } = normalizeShipmentPayload(values)
+    return payload
+}
+
+const normalizeForwardingPayload = (values: ForwardingRow, charges?: ShipmentFormValues['charges']) => ({
+    forwardingAwb: values.forwardingAwb?.trim() || undefined,
+    deliveryVendorId: normalizePositiveNumberValue(values.deliveryVendorId),
+    deliveryServiceMapId: normalizePositiveNumberValue(values.deliveryServiceMapId),
+    vendorWeight: normalizeNumberValue(values.vendorWeight),
+    vendorAmount: normalizeNumberValue(values.vendorAmount),
+    vendorInvoice: values.vendorInvoice?.trim() || undefined,
+    contractCharges: normalizeNumberValue(values.contractCharges),
+    otherCharges: normalizeNumberValue(values.otherCharges),
+    subTotal: normalizeNumberValue(values.subTotal),
+    totalFuel: normalizeNumberValue(values.totalFuel),
+    igst: normalizeNumberValue(values.igst),
+    cgst: normalizeNumberValue(values.cgst),
+    sgst: normalizeNumberValue(values.sgst),
+    totalAmount: normalizeNumberValue(values.totalAmount),
+    charges: normalizeCharges(charges).filter((charge) => Number(charge.chargeId || 0) > 0),
+})
+
+const toDateInputValue = (value?: string | null, fallback = new Date().toISOString().split('T')[0]) => {
+    return value?.split('T')[0] || fallback
 }
 
 const parseNum = (value?: string): number | undefined => {
@@ -261,6 +421,7 @@ function normalizeMasterSelectId(value: unknown): number {
 const EMPTY_SHIPPER_BLOCK: NonNullable<ShipmentFormValues['shipper']> = {
     shipperCode: '',
     shipperName: '',
+    pinCodeId: undefined,
     shipperOrigin: '',
     contactPerson: '',
     address1: '',
@@ -277,6 +438,7 @@ const EMPTY_SHIPPER_BLOCK: NonNullable<ShipmentFormValues['shipper']> = {
 const EMPTY_CONSIGNEE_BLOCK: NonNullable<ShipmentFormValues['consignee']> = {
     code: '',
     name: '',
+    pinCodeId: undefined,
     destination: '',
     contactPerson: '',
     address1: '',
@@ -312,55 +474,111 @@ const createEmptyPieceRow = (): PieceRowForm => ({
     items: [createEmptyPieceItem()],
 })
 
-const normalizePieceRows = (rows?: ShipmentFormValues['piecesRows']): NonNullable<ShipmentFormValues['piecesRows']> => {
-    if (!rows || rows.length === 0) {
-        return [createEmptyPieceRow()]
-    }
-
-    return rows.map((row) => ({
-        ...row,
-        actualWeight: Number((row as Record<string, unknown>).actualWeight ?? (row as Record<string, unknown>).actualWeightPerPc ?? 0) || 0,
-        items: row.items && row.items.length > 0 ? row.items : [createEmptyPieceItem()],
-    }))
-}
-
 type PieceRowForm = NonNullable<ShipmentFormValues['piecesRows']>[number]
 type PieceItemList = NonNullable<PieceRowForm['items']>
 type PieceItemForm = PieceItemList[number]
 
+type ShipmentPartySource = {
+    shipperCode?: string | null
+    shipperName?: string | null
+    consigneeName?: string | null
+    name?: string | null
+    code?: string | null
+    pinCodeId?: number | null
+    serviceablePincode?: {
+        id?: number | null
+        pinCode?: string | null
+        cityName?: string | null
+        state?: { stateName?: string | null } | null
+        country?: { name?: string | null } | null
+    } | null
+    contactPerson?: string | null
+    address1?: string | null
+    address2?: string | null
+    city?: string | null
+    state?: { stateName?: string | null } | null
+    stateMaster?: { stateName?: string | null } | null
+    country?: { name?: string | null } | null
+    telephone?: string | null
+    mobile?: string | null
+    email?: string | null
+}
+
+type ShipmentFormSource = Shipment & {
+    customerId?: number | null
+    shipperId?: number | null
+    consigneeId?: number | null
+    ewaybillNumber?: string | null
+    origin?: string | null
+    originCode?: string | null
+    destination?: string | null
+    destinationCode?: string | null
+    vendorId?: number | null
+    serviceMapId?: number | null
+    shipmentValue?: number | null
+    shipmentTotalValue?: number | null
+    fromZoneId?: number | null
+    toZoneId?: number | null
+    reversePickup?: boolean | null
+    appointmentDelivery?: boolean | null
+    floorDelivery?: boolean | null
+    floorCount?: number | null
+    currency?: string | null
+    pieces?: number | null
+    actualWeight?: number | null
+    volumetricWeight?: number | null
+    chargeWeight?: number | null
+    km?: number | null
+    commercial?: boolean | null
+    oda?: boolean | null
+    medicalCharges?: number | null
+    paymentType?: string | null
+    serviceCenterId?: number | null
+    isCod?: boolean | null
+    codAmount?: number | null
+    shipper?: ShipmentPartySource | null
+    consignee?: ShipmentPartySource | null
+    piecesRows?: ShipmentFormValues['piecesRows']
+    charges?: ShipmentFormValues['charges']
+}
+
 function shipperFromMaster(s: Shipper): NonNullable<ShipmentFormValues['shipper']> {
+    const shipper = s as ShipmentPartySource
     return {
-        shipperCode: strOrEmpty(s.shipperCode),
-        shipperName: strOrEmpty(s.shipperName),
-        shipperOrigin: strOrEmpty(s.shipperOrigin),
-        contactPerson: strOrEmpty(s.contactPerson),
-        address1: strOrEmpty(s.address1),
-        address2: strOrEmpty(s.address2),
-        pinCode: strOrEmpty(s.serviceablePincode?.pinCode ?? s.pinCode),
-        city: strOrEmpty(s.city ?? s.serviceablePincode?.cityName),
-        state: strOrEmpty(s.state?.stateName ?? s.serviceablePincode?.state?.stateName),
-        country: strOrEmpty(s.country?.name ?? s.serviceablePincode?.country?.name),
-        telephone: strOrEmpty(s.telephone),
-        mobile: strOrEmpty(s.mobile),
-        email: strOrEmpty(s.email),
+        shipperCode: strOrEmpty(shipper.shipperCode),
+        shipperName: strOrEmpty(shipper.shipperName),
+        pinCodeId: shipper.pinCodeId ?? shipper.serviceablePincode?.id ?? undefined,
+        shipperOrigin: '',
+        contactPerson: strOrEmpty(shipper.contactPerson),
+        address1: strOrEmpty(shipper.address1),
+        address2: strOrEmpty(shipper.address2),
+        pinCode: strOrEmpty(shipper.serviceablePincode?.pinCode),
+        city: strOrEmpty(shipper.city ?? shipper.serviceablePincode?.cityName),
+        state: strOrEmpty(shipper.state?.stateName ?? shipper.serviceablePincode?.state?.stateName),
+        country: strOrEmpty(shipper.country?.name ?? shipper.serviceablePincode?.country?.name),
+        telephone: strOrEmpty(shipper.telephone),
+        mobile: strOrEmpty(shipper.mobile),
+        email: strOrEmpty(shipper.email),
     }
 }
 
 function consigneeFromMaster(c: Consignee): NonNullable<ShipmentFormValues['consignee']> {
+    const consignee = c as ShipmentPartySource
     return {
-        code: strOrEmpty(c.code),
-        name: strOrEmpty(c.name),
-        destination: strOrEmpty(c.destination),
-        contactPerson: strOrEmpty(c.contactPerson),
-        address1: strOrEmpty(c.address1),
-        address2: strOrEmpty(c.address2),
-        pinCode: strOrEmpty(c.serviceablePincode?.pinCode ?? c.pinCode),
-        city: strOrEmpty(c.city ?? c.serviceablePincode?.cityName),
-        state: strOrEmpty(c.stateMaster?.stateName ?? c.state?.stateName ?? c.serviceablePincode?.state?.stateName),
-        country: strOrEmpty(c.country?.name ?? c.serviceablePincode?.country?.name),
-        telephone: strOrEmpty(c.telephone),
-        mobile: strOrEmpty(c.mobile),
-        email: strOrEmpty(c.email),
+        code: strOrEmpty(consignee.code),
+        name: strOrEmpty(consignee.name),
+        pinCodeId: consignee.pinCodeId ?? consignee.serviceablePincode?.id ?? undefined,
+        destination: '',
+        contactPerson: strOrEmpty(consignee.contactPerson),
+        address1: strOrEmpty(consignee.address1),
+        address2: strOrEmpty(consignee.address2),
+        pinCode: strOrEmpty(consignee.serviceablePincode?.pinCode),
+        city: strOrEmpty(consignee.city ?? consignee.serviceablePincode?.cityName),
+        state: strOrEmpty(consignee.stateMaster?.stateName ?? consignee.state?.stateName ?? consignee.serviceablePincode?.state?.stateName),
+        country: strOrEmpty(consignee.country?.name ?? consignee.serviceablePincode?.country?.name),
+        telephone: strOrEmpty(consignee.telephone),
+        mobile: strOrEmpty(consignee.mobile),
+        email: strOrEmpty(consignee.email),
     }
 }
 
@@ -373,20 +591,30 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         initialData ? { id: initialData.id, version: initialData.version } : null
     )
     const [isAwbStepComplete, setIsAwbStepComplete] = useState(Boolean(initialData))
-    const [isForwardingStepComplete, setIsForwardingStepComplete] = useState(Boolean(initialData?.forwardings?.length))
+    const [isForwardingStepComplete, setIsForwardingStepComplete] = useState(Boolean(initialData?.forwarding))
     const [forwardingForm, setForwardingForm] = useState<ForwardingRow>(() => {
-        const existing = initialData?.forwardings?.[0]
+        const existing = initialData?.forwarding
         return {
-            deliveryAwb: existing?.deliveryAwb || "",
             forwardingAwb: existing?.forwardingAwb || "",
-            deliveryVendorId: existing?.deliveryVendorId || existing?.deliveryVendor?.id || 0,
+            deliveryVendorId: existing?.deliveryVendorId || 0,
             deliveryServiceMapId: existing?.deliveryServiceMapId || 0,
+            vendorWeight: Number(existing?.vendorWeight || 0),
+            vendorAmount: Number(existing?.vendorAmount || 0),
+            vendorInvoice: existing?.vendorInvoice || "",
+            contractCharges: Number(existing?.contractCharges || 0),
+            otherCharges: Number(existing?.otherCharges || 0),
+            subTotal: Number(existing?.subTotal || 0),
+            totalFuel: Number(existing?.totalFuel || 0),
+            igst: Number(existing?.igst || 0),
+            cgst: Number(existing?.cgst || 0),
+            sgst: Number(existing?.sgst || 0),
             totalAmount: Number(existing?.totalAmount || 0),
         }
     })
     const [kycRows, setKycRows] = useState<KycRow[]>([
-        { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd"), file: null },
+        { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
     ])
+    const existingKycDocuments: ShipmentKycDocument[] = initialData?.kycDocuments || []
     const [chargePreview, setChargePreview] = useState<ShipmentCalculateResponse | null>(null)
     const [customerSearch, setCustomerSearch] = useState('')
     const [shipperSearch, setShipperSearch] = useState('')
@@ -492,55 +720,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const serviceCenterOptions = serviceCentersData?.data ?? []
     const form = useForm<ShipmentFormValues>({
         resolver: zodResolver(shipmentSchema) as Resolver<ShipmentFormValues>,
-        defaultValues: {
-            version: initialData?.version,
-            awbNo: initialData?.awbNo || '',
-            bookDate: initialData?.bookDate || new Date().toISOString().split('T')[0],
-            bookTime: initialData?.bookTime || format(new Date(), "HH:mm"),
-            referenceNo: initialData?.referenceNo || '',
-            customerId: initialData?.customerId || 0,
-            clientId: initialData?.customerId || 0,
-            shipperId: initialData?.shipperId || 0,
-            consigneeId: initialData?.consigneeId || 0,
-            ewaybillNumber: initialData?.ewaybillNumber || '',
-            shipper: initialData?.shipper ? {
-                shipperName: initialData.shipper.shipperName || initialData.shipper.name || '',
-            } : undefined,
-            consignee: initialData?.consignee ? {
-                name: initialData.consignee.consigneeName || initialData.consignee.name || '',
-            } : undefined,
-            origin: initialData?.origin || '',
-            originCode: initialData?.originCode || '',
-            destination: initialData?.destination || '',
-            destinationCode: initialData?.destinationCode || '',
-            productId: initialData?.productId || 0,
-            vendorId: initialData?.vendorId || 0,
-            serviceMapId: initialData?.serviceMapId || 0,
-            shipmentValue: initialData?.shipmentValue || 0,
-            shipmentTotalValue: initialData?.shipmentTotalValue || 0,
-            fromZoneId: initialData?.fromZoneId || 0,
-            toZoneId: initialData?.toZoneId || 0,
-            reversePickup: initialData?.reversePickup || false,
-            appointmentDelivery: initialData?.appointmentDelivery || false,
-            floorDelivery: initialData?.floorDelivery || false,
-            floorCount: initialData?.floorCount || 0,
-            currency: initialData?.currency || 'INR',
-            pieces: initialData?.pieces || 1,
-            actualWeight: initialData?.actualWeight || 0,
-            volumetricWeight: initialData?.volumetricWeight || 0,
-            chargeWeight: initialData?.chargeWeight || 0,
-            km: initialData?.km || 0,
-            commercial: initialData?.commercial || false,
-            medicalCharges: initialData?.medicalCharges ?? 0,
-            paymentType: initialData?.paymentType || 'CREDIT',
-            content: initialData?.content || '',
-            instruction: initialData?.instruction || '',
-            serviceCenterId: initialData?.serviceCenterId || 0,
-            isCod: initialData?.isCod || false,
-            codAmount: initialData?.codAmount || 0,
-            piecesRows: normalizePieceRows(initialData?.piecesRows),
-            charges: initialData?.charges || [],
-        }
+        defaultValues: buildShipmentFormValues(initialData),
     })
 
     const { fields: pieceFields, append: appendPiece, remove: removePiece } = useFieldArray({
@@ -581,7 +761,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     }
 
     const calculateMutation = useMutation({
-        mutationFn: () => shipmentService.calculateCharges(normalizeShipmentPayload(form.getValues())),
+        mutationFn: () => shipmentService.calculateCharges(normalizeShipmentCalculatePayload(form.getValues())),
         onSuccess: (response) => {
             setChargePreview(response.data)
             toast.success("Charges calculated")
@@ -593,14 +773,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     useEffect(() => {
         if (initialData) {
-            form.reset({
-                ...initialData,
-                bookDate: initialData.bookDate.split('T')[0],
-                clientId: initialData.customerId,
-                version: initialData.version,
-                piecesRows: normalizePieceRows(initialData.piecesRows),
-                charges: initialData.charges || [],
-            })
+            form.reset(buildShipmentFormValues(initialData))
         }
     }, [initialData, form])
 
@@ -625,6 +798,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         form.setValue('fromZoneId', 0, { shouldDirty: true, shouldValidate: false })
         ;([
             'shipper.shipperName',
+            'shipper.pinCodeId',
             'shipper.shipperOrigin',
             'shipper.contactPerson',
             'shipper.address1',
@@ -650,6 +824,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         form.setValue('toZoneId', 0, { shouldDirty: true, shouldValidate: false })
         ;([
             'consignee.name',
+            'consignee.pinCodeId',
             'consignee.destination',
             'consignee.contactPerson',
             'consignee.address1',
@@ -674,7 +849,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         const selected = (scope === 'shipper' ? shipperPincodeOptions : consigneePincodeOptions).find((item) => item.pinCode === pinCode)
         if (scope === 'shipper') {
             form.setValue('shipper.pinCode', pinCode, { shouldDirty: true, shouldValidate: true })
-            form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.pinCodeId', selected?.id, { shouldDirty: true, shouldValidate: true })
+            form.setValue('fromZoneId', selected?.zones?.length === 1 ? selected.zones[0].id : 0, { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.city', selected?.areaName || selected?.cityName || '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.state', selected?.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
@@ -684,7 +860,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
 
         form.setValue('consignee.pinCode', pinCode, { shouldDirty: true, shouldValidate: true })
-        form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+        form.setValue('consignee.pinCodeId', selected?.id, { shouldDirty: true, shouldValidate: true })
+        form.setValue('toZoneId', selected?.zones?.length === 1 ? selected.zones[0].id : 0, { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.city', selected?.areaName || selected?.cityName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.state', selected?.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
@@ -750,12 +927,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     useEffect(() => {
         if (!watchedFromZoneId) return
+        if (shipperZoneOptions.length === 0) return
         if (shipperZoneOptions.some((zone) => zone.id === watchedFromZoneId)) return
         form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
     }, [form, shipperZoneOptions, watchedFromZoneId])
 
     useEffect(() => {
         if (!watchedToZoneId) return
+        if (consigneeZoneOptions.length === 0) return
         if (consigneeZoneOptions.some((zone) => zone.id === watchedToZoneId)) return
         form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
     }, [consigneeZoneOptions, form, watchedToZoneId])
@@ -777,7 +956,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (normalizeMasterSelectId(watchedShipperId) > 0) return
         if (debouncedShipperPinCode.length < 6) {
             setSelectedShipperPincode(null)
-            form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            if (!initialData) {
+                form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            }
+            form.setValue('shipper.pinCodeId', undefined, { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.city', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.state', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.country', '', { shouldDirty: false, shouldValidate: false })
@@ -786,7 +968,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
         if (!lookup) {
             setSelectedShipperPincode(null)
-            form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            if (!initialData) {
+                form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            }
+            form.setValue('shipper.pinCodeId', undefined, { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.city', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.state', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.country', '', { shouldDirty: false, shouldValidate: false })
@@ -796,17 +981,22 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (normalizeMasterSelectId(watchedShipperId) <= 0) {
             setSelectedShipperPincode(lookup)
         }
+        form.setValue('shipper.pinCodeId', lookup.id, { shouldDirty: false, shouldValidate: false })
+        form.setValue('fromZoneId', lookup.zones?.length === 1 ? lookup.zones[0].id : form.getValues('fromZoneId'), { shouldDirty: false, shouldValidate: false })
         form.setValue('shipper.city', lookup.areaName || lookup.cityName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('shipper.state', lookup.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('shipper.country', lookup.country?.name || '', { shouldDirty: false, shouldValidate: false })
-    }, [debouncedShipperPinCode, form, shipperPincodeData?.data, watchedShipperId])
+    }, [debouncedShipperPinCode, form, initialData, shipperPincodeData?.data, watchedShipperId])
 
     useEffect(() => {
         const lookup = consigneePincodeData?.data?.[0]
         if (normalizeMasterSelectId(watchedConsigneeId) > 0) return
         if (debouncedConsigneePinCode.length < 6) {
             setSelectedConsigneePincode(null)
-            form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            if (!initialData) {
+                form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            }
+            form.setValue('consignee.pinCodeId', undefined, { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.city', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.state', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.country', '', { shouldDirty: false, shouldValidate: false })
@@ -815,7 +1005,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
         if (!lookup) {
             setSelectedConsigneePincode(null)
-            form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            if (!initialData) {
+                form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            }
+            form.setValue('consignee.pinCodeId', undefined, { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.city', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.state', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.country', '', { shouldDirty: false, shouldValidate: false })
@@ -825,10 +1018,12 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (normalizeMasterSelectId(watchedConsigneeId) <= 0) {
             setSelectedConsigneePincode(lookup)
         }
+        form.setValue('consignee.pinCodeId', lookup.id, { shouldDirty: false, shouldValidate: false })
+        form.setValue('toZoneId', lookup.zones?.length === 1 ? lookup.zones[0].id : form.getValues('toZoneId'), { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.city', lookup.areaName || lookup.cityName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.state', lookup.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.country', lookup.country?.name || '', { shouldDirty: false, shouldValidate: false })
-    }, [consigneePincodeData?.data, debouncedConsigneePinCode, form, watchedConsigneeId])
+    }, [consigneePincodeData?.data, debouncedConsigneePinCode, form, initialData, watchedConsigneeId])
 
     useEffect(() => {
         const shippers = shippersData?.data
@@ -843,7 +1038,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             if (found) {
                 form.setValue('shipper', shipperFromMaster(found), { shouldDirty: false, shouldValidate: true })
                 setSelectedShipperPincode(null)
-                form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+                if (!initialData) {
+                    form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+                }
             }
             return
         }
@@ -851,9 +1048,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (prev > 0) {
             form.setValue('shipper', EMPTY_SHIPPER_BLOCK, { shouldDirty: false, shouldValidate: false })
             setSelectedShipperPincode(null)
-            form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            if (!initialData) {
+                form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            }
         }
-    }, [watchedShipperId, shippersData?.data, form])
+    }, [watchedShipperId, shippersData?.data, form, initialData])
 
     useEffect(() => {
         const list = consigneesData?.data
@@ -868,7 +1067,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             if (found) {
                 form.setValue('consignee', consigneeFromMaster(found), { shouldDirty: false, shouldValidate: true })
                 setSelectedConsigneePincode(null)
-                form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+                if (!initialData) {
+                    form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+                }
             }
             return
         }
@@ -876,9 +1077,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (prev > 0) {
             form.setValue('consignee', EMPTY_CONSIGNEE_BLOCK, { shouldDirty: false, shouldValidate: false })
             setSelectedConsigneePincode(null)
-            form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            if (!initialData) {
+                form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
+            }
         }
-    }, [watchedConsigneeId, consigneesData?.data, form])
+    }, [watchedConsigneeId, consigneesData?.data, form, initialData])
 
     // --- Automatic Calculations ---
 
@@ -984,11 +1187,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     const awbMutation = useMutation({
         mutationFn: (values: ShipmentFormValues) => {
-            const payload = normalizeShipmentPayload(values)
             const targetId = savedShipment?.id || initialData?.id
-            return targetId
-                ? shipmentService.updateShipment(targetId, { ...payload, version: payload.version || savedShipment?.version || initialData?.version })
-                : shipmentService.createShipment(payload)
+            if (targetId) {
+                return shipmentService.updateShipment(targetId, normalizeShipmentUpdatePayload(values))
+            }
+            return shipmentService.createShipment(normalizeShipmentPayload(values))
         },
         onSuccess: (response) => {
             const shipment = response?.data
@@ -999,29 +1202,25 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 setIsAwbStepComplete(true)
                 setActiveTab('forwarding')
             }
-            toast.success(`Shipment ${isEdit || savedShipment ? 'updated' : 'created'} successfully`)
+            toast.success(`Shiment booking ${isEdit || savedShipment ? 'updated' : 'created'} successfully`)
         },
         onError: (error: unknown) => {
-            toast.error(getErrorMessage(error, `Failed to ${isEdit || savedShipment ? 'update' : 'create'} shipment`))
+            toast.error(getErrorMessage(error, `Failed to ${isEdit || savedShipment ? 'update' : 'create'} shiment booking`))
         }
     })
 
     const forwardingMutation = useMutation({
         mutationFn: async () => {
             if (!savedShipment?.id || !savedShipment.version) {
-                throw new Error('Please create shipment first')
+                throw new Error('Please create shiment booking first')
             }
             return shipmentService.upsertForwarding(savedShipment.id, {
                 version: Number(savedShipment.version),
-                deliveryAwb: forwardingForm.deliveryAwb || undefined,
-                forwardingAwb: forwardingForm.forwardingAwb || undefined,
-                deliveryVendorId: forwardingForm.deliveryVendorId || undefined,
-                deliveryServiceMapId: forwardingForm.deliveryServiceMapId || undefined,
-                totalAmount: forwardingForm.totalAmount > 0 ? forwardingForm.totalAmount : undefined,
+                ...normalizeForwardingPayload(forwardingForm, form.getValues('charges')),
             })
         },
         onSuccess: (response) => {
-            const nextVersion = response?.data?.shipment?.version || savedShipment?.version
+            const nextVersion = ((response?.data as { shipment?: { version?: number } })?.shipment?.version) || savedShipment?.version
             if (savedShipment?.id) {
                 setSavedShipment({ id: savedShipment.id, version: nextVersion })
             }
@@ -1037,23 +1236,19 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const kycMutation = useMutation({
         mutationFn: async () => {
             if (!savedShipment?.id) {
-                throw new Error('Please create shipment first')
+                throw new Error('Please create shiment booking first')
             }
-            const uploads = kycRows.filter((row) => row.file)
-            for (const row of uploads) {
-                if (row.file) {
-                    await shipmentService.uploadKyc(savedShipment.id, {
-                        type: row.type,
-                        entryType: row.entryType,
-                        entryDate: row.entryDate || undefined,
-                        file: row.file,
-                    })
-                }
+            for (const row of kycRows) {
+                await shipmentService.uploadKyc(savedShipment.id, {
+                    type: row.type,
+                    entryType: row.entryType,
+                    entryDate: row.entryDate || undefined,
+                })
             }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['shipments'] })
-            toast.success('Shipment process completed')
+            toast.success('Shiment booking process completed')
             router.push('/transactions/shipment')
         },
         onError: (error: unknown) => {
@@ -1110,7 +1305,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const addKycRow = () => {
         setKycRows((prev) => [
             ...prev,
-            { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd"), file: null },
+            { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
         ])
     }
 
@@ -1659,7 +1854,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="shipmentTotalValue"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Shipment Total Value">
+                                            <FloatingFormItem label="Booking Total Value">
                                                 <FormControl>
                                                     <Input
                                                         type="number"
@@ -2231,42 +2426,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     )}
                 </OutlinedFormSection>
 
-                <FormSection title="Shipment Type" contentClassName="grid grid-cols-1 gap-3 p-3 pt-6 md:grid-cols-2">
-                        <FormField
-                            control={form.control}
-                            name="content"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Shipment Type">
-                                    <FormControl>
-                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="instruction"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Instruction">
-                                    <FormControl>
-                                        <Input {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                </FormSection>
                     </TabsContent>
 
                     <TabsContent value="forwarding">
                         <OutlinedFormSection label="Forwarding Details" labelTone="navy">
-                            <div className="grid grid-cols-1 gap-3 pt-2 md:grid-cols-2">
-                                <FloatingFormItem label="Delivery AWB">
-                                    <Input
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={forwardingForm.deliveryAwb}
-                                        onChange={(e) => updateForwardingForm({ deliveryAwb: e.target.value })}
-                                    />
-                                </FloatingFormItem>
+                            <div className="grid grid-cols-1 gap-3 pt-2 md:grid-cols-2 xl:grid-cols-3">
                                 <FloatingFormItem label="Forwarding AWB">
                                     <Input
                                         className={FLOATING_INNER_CONTROL}
@@ -2303,6 +2467,85 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         className={FLOATING_INNER_COMBO}
                                     />
                                 </FloatingFormItem>
+                                <FloatingFormItem label="Vendor Weight">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.vendorWeight)}
+                                        onChange={(e) => updateForwardingForm({ vendorWeight: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Vendor Amount">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.vendorAmount)}
+                                        onChange={(e) => updateForwardingForm({ vendorAmount: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Vendor Invoice">
+                                    <Input
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={forwardingForm.vendorInvoice}
+                                        onChange={(e) => updateForwardingForm({ vendorInvoice: e.target.value })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Contract Charges">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.contractCharges)}
+                                        onChange={(e) => updateForwardingForm({ contractCharges: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Other Charges">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.otherCharges)}
+                                        onChange={(e) => updateForwardingForm({ otherCharges: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Sub Total">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.subTotal)}
+                                        onChange={(e) => updateForwardingForm({ subTotal: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Total Fuel">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.totalFuel)}
+                                        onChange={(e) => updateForwardingForm({ totalFuel: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="IGST">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.igst)}
+                                        onChange={(e) => updateForwardingForm({ igst: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="CGST">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.cgst)}
+                                        onChange={(e) => updateForwardingForm({ cgst: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="SGST">
+                                    <Input
+                                        type="number"
+                                        className={FLOATING_INNER_CONTROL}
+                                        value={numberInputValue(forwardingForm.sgst)}
+                                        onChange={(e) => updateForwardingForm({ sgst: parseOptionalNumberInput(e.target.value) || 0 })}
+                                    />
+                                </FloatingFormItem>
                                 <FloatingFormItem label="Total Amount">
                                     <Input
                                         type="number"
@@ -2312,12 +2555,36 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     />
                                 </FloatingFormItem>
                             </div>
-                            <p className="pt-2 text-xs text-muted-foreground">Forwarding details are saved after shipment save/update.</p>
+                            <p className="pt-2 text-xs text-muted-foreground">Forwarding details are saved after shiment booking save/update.</p>
                         </OutlinedFormSection>
                     </TabsContent>
 
                     <TabsContent value="kyc">
                         <OutlinedFormSection label="KYC Upload" labelTone="navy">
+                            {existingKycDocuments.length > 0 && (
+                                <div className="mb-4 overflow-hidden rounded-md border border-border/70 bg-muted/20">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="border-b-0 bg-primary hover:bg-primary">
+                                                <TableHead className="text-primary-foreground first:rounded-tl-md">Type</TableHead>
+                                                <TableHead className="text-primary-foreground">Entry Type</TableHead>
+                                                <TableHead className="text-primary-foreground">Entry Date</TableHead>
+                                                <TableHead className="text-primary-foreground last:rounded-tr-md">Document</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {existingKycDocuments.map((doc) => (
+                                                <TableRow key={doc.id}>
+                                                    <TableCell>{doc.type}</TableCell>
+                                                    <TableCell>{doc.entryType || '—'}</TableCell>
+                                                    <TableCell>{doc.entryDate ? doc.entryDate.split('T')[0] : '—'}</TableCell>
+                                                    <TableCell>{doc.documentPath || '—'}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
                             <div className="flex justify-end border-b border-border/70 pb-3">
                                 <Button type="button" variant="outline" size="sm" onClick={addKycRow}>
                                     <Plus className="mr-2 h-4 w-4" /> Add KYC Row
@@ -2330,7 +2597,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <TableHead className="text-primary-foreground first:rounded-tl-md">Type</TableHead>
                                             <TableHead className="text-primary-foreground">Entry Type</TableHead>
                                             <TableHead className="text-primary-foreground">Entry Date</TableHead>
-                                            <TableHead className="text-primary-foreground">File</TableHead>
                                             <TableHead className="w-[50px] text-primary-foreground last:rounded-tr-md" />
                                         </TableRow>
                                     </TableHeader>
@@ -2375,13 +2641,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     />
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Input
-                                                        type="file"
-                                                        className="h-8 cursor-pointer"
-                                                        onChange={(e) => updateKycRow(row.id, { file: e.target.files?.[0] || null })}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
                                                     <Button type="button" variant="ghost" size="sm" onClick={() => removeKycRow(row.id)}>
                                                         <Trash2 className="h-4 w-4 text-red-500" />
                                                     </Button>
@@ -2391,7 +2650,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     </TableBody>
                                 </Table>
                             </div>
-                            <p className="pt-2 text-xs text-muted-foreground">KYC files are uploaded after shipment save/update using AWB number.</p>
+                            <p className="pt-2 text-xs text-muted-foreground">KYC files are uploaded after shiment booking save/update using AWB number.</p>
                         </OutlinedFormSection>
                     </TabsContent>
                 </Tabs>

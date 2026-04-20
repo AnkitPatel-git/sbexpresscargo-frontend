@@ -91,7 +91,7 @@ const headerNavItems = [
   { href: "/masters/vehicle", label: "Vehicle Master" },
   { href: "/masters/courier", label: "Courier Master" },
   { href: "/masters/vendor-config", label: "Vendor Config Master" },
-  { href: "/transactions/shipment", label: "Shipment" },
+  { href: "/transactions/shipment", label: "Shiment Booking" },
   { href: "/transactions/manifest", label: "Manifest" },
   { href: "/transactions/drs", label: "DRS" },
   { href: "/transactions/tracking", label: "Tracking" },
@@ -901,7 +901,7 @@ const SidebarContent = ({
                 active={isActive("/transactions/shipment")}
                 icon={Package}
               >
-                Shipment Booking
+                Shiment Booking
               </LinkItem>
             </PermissionGuard>
             <PermissionGuard permission="transaction.manifest.read">
@@ -986,7 +986,7 @@ const SidebarContent = ({
                     showTextOverride
                     inFlyout
                   >
-                    Shipment
+                    Shiment Booking
                   </LinkItem>
                 </PermissionGuard>
                 <PermissionGuard permission="transaction.manifest.read">
@@ -1719,7 +1719,7 @@ export default function DashboardLayout({
               {[
                 {
                   icon: Truck,
-                  label: "Shipment",
+                  label: "Shiment Booking",
                   href: "/transactions/shipment",
                 },
                 { icon: BarChart3, label: "Analytics", href: "/dashboard" },

@@ -44,8 +44,8 @@ function buildCalculationPayload(shipment: Shipment) {
         }
       : undefined,
     productId: shipment.productId,
-    fromZoneId: shipment.fromZoneId,
-    toZoneId: shipment.toZoneId,
+    fromZoneId: shipment.fromZoneId ?? undefined,
+    toZoneId: shipment.toZoneId ?? undefined,
     shipmentTotalValue: shipment.shipmentTotalValue ?? shipment.totalAmount ?? undefined,
     reversePickup: shipment.reversePickup ?? false,
     appointmentDelivery: shipment.appointmentDelivery ?? false,
@@ -55,11 +55,28 @@ function buildCalculationPayload(shipment: Shipment) {
     commercial: shipment.commercial ?? false,
     paymentType: shipment.paymentType,
     instruction: shipment.instruction || undefined,
-    serviceCenterId: shipment.serviceCenterId || undefined,
-    podUserId: shipment.podUserId || undefined,
+    serviceCenterId: shipment.serviceCenterId ?? undefined,
     isCod: shipment.isCod,
     codAmount: shipment.codAmount ?? undefined,
-    piecesRows: shipment.piecesRows || [],
+    piecesRows: (shipment.piecesRows || []).map((row) => ({
+      actualWeight: Number(row.actualWeight) || 0,
+      pieces: Number(row.pieces) || 0,
+      length: row.length ?? undefined,
+      width: row.width ?? undefined,
+      height: row.height ?? undefined,
+      division: row.division ?? undefined,
+      volumetricWeight: row.volumetricWeight ?? undefined,
+      chargeWeight: row.chargeWeight ?? undefined,
+      items: (row.items || []).map((item) => ({
+        contentId: Number(item.contentId) || 0,
+        quantity: item.quantity ?? undefined,
+        measureValue: item.measureValue ?? undefined,
+        measureUnit: item.measureUnit ?? undefined,
+        totalValue: item.totalValue ?? undefined,
+        invoiceDate: item.invoiceDate ?? undefined,
+        invoiceNumber: item.invoiceNumber ?? undefined,
+      })),
+    })),
     charges: shipment.charges || [],
   };
 }
@@ -98,9 +115,9 @@ export default function ShipmentDetailsPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipment", id] });
-      toast.success("Shipment status updated");
+      toast.success("Shiment booking status updated");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to update shipment status"),
+    onError: (error: Error) => toast.error(error.message || "Failed to update shiment booking status"),
   });
 
   const podMutation = useMutation({
@@ -128,6 +145,7 @@ export default function ShipmentDetailsPage() {
   });
 
   const shipment = shipmentResponse?.data;
+  const kycDocuments = shipment?.kycDocuments ?? [];
   const calcResult = calcMutation.data?.data;
   const statuses = useMemo(() => shipment?.statuses ?? [], [shipment?.statuses]);
 
@@ -144,7 +162,7 @@ export default function ShipmentDetailsPage() {
   if (!shipment?.id) {
     return (
       <div className="flex h-[400px] items-center justify-center">
-        <p className="text-muted-foreground">Shipment not found.</p>
+        <p className="text-muted-foreground">Shiment booking not found.</p>
       </div>
     );
   }
@@ -153,7 +171,7 @@ export default function ShipmentDetailsPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card p-3">
         <div>
-          <h1 className="text-base font-semibold tracking-tight">Shipment Booking Details</h1>
+          <h1 className="text-base font-semibold tracking-tight">Shiment Booking Details</h1>
           <p className="text-xs text-muted-foreground">AWB: {shipment.awbNo}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -209,7 +227,7 @@ export default function ShipmentDetailsPage() {
           <p><span className="text-muted-foreground">Pieces:</span> {fallbackText(shipment.pieces)}</p>
           <p><span className="text-muted-foreground">Declared Weight:</span> {fallbackText(shipment.declaredWeight)}</p>
           <p><span className="text-muted-foreground">Charge Weight:</span> {fallbackText(shipment.chargeWeight)}</p>
-          <p><span className="text-muted-foreground">Shipment Value:</span> {fallbackText(shipment.shipmentTotalValue)}</p>
+          <p><span className="text-muted-foreground">Booking Value:</span> {fallbackText(shipment.shipmentTotalValue)}</p>
           <p><span className="text-muted-foreground">Commercial:</span> {shipment.commercial ? "Yes" : "No"}</p>
           <p><span className="text-muted-foreground">Reverse Pickup:</span> {shipment.reversePickup ? "Yes" : "No"}</p>
           <p><span className="text-muted-foreground">Floor Delivery:</span> {shipment.floorDelivery ? "Yes" : "No"}</p>
@@ -294,11 +312,32 @@ export default function ShipmentDetailsPage() {
 
       <div className="grid grid-cols-1 gap-4">
         <FormSection title="Forwarding" contentClassName="space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Forwarding:</span> {fallbackText(shipment.forwarding?.forwardingAwb)}</p>
-          <p><span className="text-muted-foreground">Delivery AWB:</span> {fallbackText(shipment.forwarding?.deliveryAwb)}</p>
+          <p><span className="text-muted-foreground">Forwarding AWB:</span> {fallbackText(shipment.forwarding?.forwardingAwb)}</p>
           <p><span className="text-muted-foreground">Vendor:</span> {fallbackText(shipment.forwarding?.deliveryVendorId)}</p>
           <p><span className="text-muted-foreground">Service Map:</span> {fallbackText(shipment.forwarding?.deliveryServiceMapId)}</p>
           <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(shipment.forwarding?.totalAmount)}</p>
+        </FormSection>
+        <FormSection title="KYC Documents" contentClassName="space-y-2 text-sm">
+          {kycDocuments.length > 0 ? (
+            <div className="overflow-hidden rounded-md border border-border/70">
+              <div className="grid grid-cols-4 gap-2 border-b border-border/70 bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">
+                <div>Type</div>
+                <div>Entry Type</div>
+                <div>Entry Date</div>
+                <div>Document</div>
+              </div>
+              {kycDocuments.map((doc) => (
+                <div key={doc.id} className="grid grid-cols-4 gap-2 border-b border-border/60 px-3 py-2 last:border-b-0">
+                  <div>{fallbackText(doc.type)}</div>
+                  <div>{fallbackText(doc.entryType)}</div>
+                  <div>{doc.entryDate ? format(new Date(doc.entryDate), "dd/MM/yyyy") : "—"}</div>
+                  <div className="truncate">{fallbackText(doc.documentPath)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No KYC documents uploaded yet.</p>
+          )}
         </FormSection>
       </div>
     </div>

@@ -261,7 +261,7 @@ export default function CustomersPage() {
                                     <TableCell className="font-medium text-foreground">{customer.name}</TableCell>
                                     <TableCell className="text-foreground">{customer.contactPerson}</TableCell>
                                     <TableCell className="text-foreground">
-                                        {customer.city || customer.serviceablePincode?.cityName || "-"}
+                                        {customer.serviceablePincode?.cityName || "-"}
                                     </TableCell>
                                     <TableCell><Badge variant="outline">{customer.customerType}</Badge></TableCell>
                                     <TableCell><Badge variant={customer.status === "ACTIVE" ? "success" : "secondary"} className={customer.status === "ACTIVE" ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200"}>{customer.status}</Badge></TableCell>

@@ -98,6 +98,7 @@ export function CourierForm({ initialData }: CourierFormProps) {
         if (initialData?.serviceCenter && !list.some((serviceCenter) => serviceCenter.id === initialData.serviceCenterId)) {
             list.unshift({
                 ...initialData.serviceCenter,
+                subName: initialData.serviceCenter.subName ?? null,
                 address1: '',
                 address2: '',
                 telephone: '',

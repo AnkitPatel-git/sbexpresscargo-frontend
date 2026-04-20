@@ -26,9 +26,13 @@ import { zoneService } from "@/services/masters/zone-service";
 import type {
   CreateRateMasterPayload,
   RateChargePayload,
+  RateCharge,
   RateConditionPayload,
+  RateCondition,
   RateDistanceSlabPayload,
+  RateDistanceSlab,
   RateMaster,
+  RateZoneRate,
   RateZoneRatePayload,
   UpdateRateMasterPayload,
 } from "@/types/masters/rate";
@@ -44,7 +48,6 @@ const rateMasterSchema = z.object({
   vendorId: z.string().optional().or(z.literal("")),
   paymentType: z.string().min(1, "Payment type is required"),
   zeroContract: z.boolean(),
-  flatRate: z.string().optional().or(z.literal("")),
 });
 
 type RateMasterFormValues = z.infer<typeof rateMasterSchema>;
@@ -59,7 +62,12 @@ const RATE_TABS: Array<{ value: TabValue; label: string }> = [
   { value: "rate-conditions", label: "Rate Conditions" },
 ];
 
+const DEFAULT_SERVICE_TYPE = "EXPRESS";
+const DEFAULT_RATE_TYPE = "ZONE_MATRIX";
+const DEFAULT_PAYMENT_TYPE = "TO_PAY";
+
 type ZoneRateDraft = {
+  id?: number;
   fromZoneId: string;
   toZoneId: string;
   rate: string;
@@ -72,6 +80,7 @@ type WeightSlabDraft = {
 };
 
 type DistanceSlabDraft = {
+  id?: number;
   minKm: string;
   maxKm: string;
   weightSlabs: WeightSlabDraft[];
@@ -84,6 +93,7 @@ type ChargeSlabDraft = {
 };
 
 type RateChargeDraft = {
+  id?: number;
   name: string;
   calculationBase: string;
   value: string;
@@ -95,6 +105,7 @@ type RateChargeDraft = {
 };
 
 type RateConditionDraft = {
+  id?: number;
   field: string;
   operator: string;
   value: string;
@@ -102,6 +113,11 @@ type RateConditionDraft = {
   chargeAmount: string;
   isPercentage: boolean;
 };
+
+type ZoneRateRow = Partial<RateZoneRate> & Pick<RateZoneRate, "fromZoneId" | "toZoneId" | "rate">;
+type DistanceSlabRow = Partial<RateDistanceSlab> & Pick<RateDistanceSlab, "minKm" | "maxKm" | "weightSlabs">;
+type RateChargeRow = Partial<RateCharge> & Pick<RateCharge, "name" | "calculationBase" | "value" | "isPercentage" | "minValue" | "maxValue" | "sequence" | "chargeSlabs">;
+type RateConditionRow = Partial<RateCondition> & Pick<RateCondition, "field" | "operator" | "value" | "chargeName" | "chargeAmount" | "isPercentage">;
 
 interface RateFormProps {
   initialData?: RateMaster | null;
@@ -112,10 +128,10 @@ export function RateForm({ initialData }: RateFormProps) {
   const queryClient = useQueryClient();
   const isEdit = !!initialData;
   const [activeTab, setActiveTab] = useState<TabValue>("master");
-  const [zoneRates, setZoneRates] = useState<RateZoneRatePayload[]>([]);
-  const [distanceSlabs, setDistanceSlabs] = useState<RateDistanceSlabPayload[]>([]);
-  const [rateCharges, setRateCharges] = useState<RateChargePayload[]>([]);
-  const [rateConditions, setRateConditions] = useState<RateConditionPayload[]>([]);
+  const [zoneRates, setZoneRates] = useState<ZoneRateRow[]>([]);
+  const [distanceSlabs, setDistanceSlabs] = useState<DistanceSlabRow[]>([]);
+  const [rateCharges, setRateCharges] = useState<RateChargeRow[]>([]);
+  const [rateConditions, setRateConditions] = useState<RateConditionRow[]>([]);
 
   const form = useForm<RateMasterFormValues>({
     resolver: zodResolver(rateMasterSchema) as Resolver<RateMasterFormValues>,
@@ -124,13 +140,12 @@ export function RateForm({ initialData }: RateFormProps) {
       fromDate: "",
       toDate: "",
       customerId: "",
-      serviceType: "",
-      rateType: "",
+      serviceType: DEFAULT_SERVICE_TYPE,
+      rateType: DEFAULT_RATE_TYPE,
       productId: "",
       vendorId: "",
-      paymentType: "",
+      paymentType: DEFAULT_PAYMENT_TYPE,
       zeroContract: false,
-      flatRate: "",
     },
   });
 
@@ -141,13 +156,12 @@ export function RateForm({ initialData }: RateFormProps) {
         fromDate: "",
         toDate: "",
         customerId: "",
-        serviceType: "",
-        rateType: "",
+        serviceType: DEFAULT_SERVICE_TYPE,
+        rateType: DEFAULT_RATE_TYPE,
         productId: "",
         vendorId: "",
-        paymentType: "",
+        paymentType: DEFAULT_PAYMENT_TYPE,
         zeroContract: false,
-        flatRate: "",
       });
       setZoneRates([]);
       setDistanceSlabs([]);
@@ -167,32 +181,11 @@ export function RateForm({ initialData }: RateFormProps) {
       vendorId: initialData.vendorId != null ? String(initialData.vendorId) : "",
       paymentType: initialData.paymentType || "",
       zeroContract: initialData.zeroContract ?? false,
-      flatRate: initialData.flatRate != null ? String(initialData.flatRate) : "",
     });
-    setZoneRates((initialData.zoneRates ?? []).map(({ fromZoneId, toZoneId, rate }) => ({ fromZoneId, toZoneId, rate })));
-    setDistanceSlabs((initialData.distanceSlabs ?? []).map((slab) => ({
-      minKm: slab.minKm,
-      maxKm: slab.maxKm,
-      weightSlabs: (slab.weightSlabs ?? []).map(({ minWeight, maxWeight, rate }) => ({ minWeight, maxWeight, rate })),
-    })));
-    setRateCharges((initialData.rateCharges ?? []).map((charge) => ({
-      name: charge.name,
-      calculationBase: charge.calculationBase,
-      value: charge.value,
-      isPercentage: charge.isPercentage,
-      minValue: charge.minValue,
-      maxValue: charge.maxValue,
-      sequence: charge.sequence,
-      chargeSlabs: (charge.chargeSlabs ?? []).map(({ minValue, maxValue, rate }) => ({ minValue, maxValue, rate })),
-    })));
-    setRateConditions((initialData.rateConditions ?? []).map(({ field, operator, value, chargeName, chargeAmount, isPercentage }) => ({
-      field,
-      operator,
-      value,
-      chargeName,
-      chargeAmount,
-      isPercentage,
-    })));
+    setZoneRates(initialData.zoneRates ?? []);
+    setDistanceSlabs(initialData.distanceSlabs ?? []);
+    setRateCharges(initialData.rateCharges ?? []);
+    setRateConditions(initialData.rateConditions ?? []);
   }, [form, initialData]);
 
   const { data: customerResponse } = useQuery({
@@ -286,39 +279,6 @@ export function RateForm({ initialData }: RateFormProps) {
               />
               <FormField
                 control={form.control}
-                name="serviceType"
-                render={({ field }) => (
-                  <FloatingFormItem label="Service Type">
-                    <FormControl>
-                      <Input placeholder="EXPRESS" {...field} className={FLOATING_INNER_CONTROL} />
-                    </FormControl>
-                  </FloatingFormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="rateType"
-                render={({ field }) => (
-                  <FloatingFormItem label="Rate Type">
-                    <FormControl>
-                      <Input placeholder="ZONE_MATRIX" {...field} className={FLOATING_INNER_CONTROL} />
-                    </FormControl>
-                  </FloatingFormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="paymentType"
-                render={({ field }) => (
-                  <FloatingFormItem label="Payment Type">
-                    <FormControl>
-                      <Input placeholder="TO_PAY" {...field} className={FLOATING_INNER_CONTROL} />
-                    </FormControl>
-                  </FloatingFormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="fromDate"
                 render={({ field }) => (
                   <FloatingFormItem label="From Date">
@@ -406,37 +366,6 @@ export function RateForm({ initialData }: RateFormProps) {
                   </FloatingFormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="flatRate"
-                render={({ field }) => (
-                  <FloatingFormItem label="Flat Rate">
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Optional"
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value)}
-                        className={FLOATING_INNER_CONTROL}
-                      />
-                    </FormControl>
-                  </FloatingFormItem>
-                )}
-              />
-              <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/20 px-4 py-3 md:col-span-2">
-                <FormField
-                  control={form.control}
-                  name="zeroContract"
-                  render={({ field }) => (
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(Boolean(checked))} />
-                    </FormControl>
-                  )}
-                />
-                <span className="text-sm font-medium text-foreground">Zero contract</span>
-              </div>
             </div>
           </TabsContent>
 
@@ -449,6 +378,8 @@ export function RateForm({ initialData }: RateFormProps) {
                 setZoneRates={setZoneRates}
                 zoneLabelById={zoneLabelById}
                 zoneOptions={zoneOptions}
+                rateMasterId={initialData?.id}
+                isEdit={isEdit}
               />
             )}
           </TabsContent>
@@ -457,7 +388,12 @@ export function RateForm({ initialData }: RateFormProps) {
             {!isEdit ? (
               <DisabledTab title="Distance Slabs" />
             ) : (
-              <DistanceSlabsEditor distanceSlabs={distanceSlabs} setDistanceSlabs={setDistanceSlabs} />
+              <DistanceSlabsEditor
+                distanceSlabs={distanceSlabs}
+                setDistanceSlabs={setDistanceSlabs}
+                rateMasterId={initialData?.id}
+                isEdit={isEdit}
+              />
             )}
           </TabsContent>
 
@@ -465,7 +401,12 @@ export function RateForm({ initialData }: RateFormProps) {
             {!isEdit ? (
               <DisabledTab title="Rate Charges" />
             ) : (
-              <RateChargesEditor rateCharges={rateCharges} setRateCharges={setRateCharges} />
+              <RateChargesEditor
+                rateCharges={rateCharges}
+                setRateCharges={setRateCharges}
+                rateMasterId={initialData?.id}
+                isEdit={isEdit}
+              />
             )}
           </TabsContent>
 
@@ -473,7 +414,12 @@ export function RateForm({ initialData }: RateFormProps) {
             {!isEdit ? (
               <DisabledTab title="Rate Conditions" />
             ) : (
-              <RateConditionsEditor rateConditions={rateConditions} setRateConditions={setRateConditions} />
+              <RateConditionsEditor
+                rateConditions={rateConditions}
+                setRateConditions={setRateConditions}
+                rateMasterId={initialData?.id}
+                isEdit={isEdit}
+              />
             )}
           </TabsContent>
         </Tabs>
@@ -506,10 +452,10 @@ export function RateForm({ initialData }: RateFormProps) {
 
 function buildPayload(
   values: RateMasterFormValues,
-  zoneRates: RateZoneRatePayload[],
-  distanceSlabs: RateDistanceSlabPayload[],
-  rateCharges: RateChargePayload[],
-  rateConditions: RateConditionPayload[],
+  zoneRates: ZoneRateRow[],
+  distanceSlabs: DistanceSlabRow[],
+  rateCharges: RateChargeRow[],
+  rateConditions: RateConditionRow[],
 ): CreateRateMasterPayload {
   const payload: CreateRateMasterPayload = {
     updateType: values.updateType.trim(),
@@ -521,18 +467,20 @@ function buildPayload(
     productId: Number(values.productId),
     paymentType: values.paymentType.trim(),
     zeroContract: values.zeroContract,
-    zoneRates,
-    distanceSlabs,
-    rateCharges,
-    rateConditions,
+    zoneRates: zoneRates.map(({ id, rateMasterId, createdAt, updatedAt, deletedAt, fromZone, toZone, ...row }) => row),
+    distanceSlabs: distanceSlabs.map(({ id, rateMasterId, createdAt, updatedAt, deletedAt, weightSlabs, ...row }) => ({
+      ...row,
+      weightSlabs: (weightSlabs || []).map(({ id: _weightId, distanceSlabId: _distanceSlabId, createdAt: _weightCreatedAt, updatedAt: _weightUpdatedAt, deletedAt: _weightDeletedAt, ...weight }) => weight),
+    })),
+    rateCharges: rateCharges.map(({ id, rateMasterId, createdAt, updatedAt, deletedAt, chargeSlabs, weightStep, ...row }) => ({
+      ...row,
+      chargeSlabs: (chargeSlabs || []).map(({ id: _chargeSlabId, rateChargeId: _rateChargeId, createdAt: _chargeCreatedAt, updatedAt: _chargeUpdatedAt, deletedAt: _chargeDeletedAt, ...slab }) => slab),
+    })),
+    rateConditions: rateConditions.map(({ id, rateMasterId, createdAt, updatedAt, deletedAt, ...row }) => row),
   };
 
   if (values.vendorId) {
     payload.vendorId = Number(values.vendorId);
-  }
-
-  if (values.flatRate !== undefined && values.flatRate !== "") {
-    payload.flatRate = Number(values.flatRate);
   }
 
   return payload;
@@ -552,21 +500,94 @@ function ZoneRatesEditor({
   setZoneRates,
   zoneLabelById,
   zoneOptions,
+  rateMasterId,
+  isEdit,
 }: {
-  zoneRates: RateZoneRatePayload[];
-  setZoneRates: Dispatch<SetStateAction<RateZoneRatePayload[]>>;
+  zoneRates: ZoneRateRow[];
+  setZoneRates: Dispatch<SetStateAction<ZoneRateRow[]>>;
   zoneLabelById: Map<number, string>;
   zoneOptions: Array<{ id: number; code?: string; name?: string }>;
+  rateMasterId?: number;
+  isEdit: boolean;
 }) {
   const [draft, setDraft] = useState<ZoneRateDraft>({ fromZoneId: "", toZoneId: "", rate: "" });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const editingRowId = editingIndex === null ? undefined : zoneRates[editingIndex]?.id;
+  const { data: editingRowResponse } = useQuery({
+    queryKey: ["rate-zone-rate", rateMasterId, editingRowId],
+    queryFn: () => rateService.getZoneRateById(rateMasterId!, editingRowId!),
+    enabled: isEdit && Boolean(rateMasterId) && Boolean(editingRowId),
+  });
+  const createMutation = useMutation({
+    mutationFn: async (payload: RateZoneRatePayload) => {
+      if (!rateMasterId) {
+        throw new Error("Rate master id is required");
+      }
+      return rateService.createZoneRate(rateMasterId, payload);
+    },
+    onSuccess: (response) => {
+      setZoneRates((current) => [...current, response.data]);
+      toast.success("Zone rate added");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to add zone rate");
+    },
+  });
+  const updateMutation = useMutation({
+    mutationFn: async ({ rowId, payload }: { rowId: number; payload: RateZoneRatePayload }) => {
+      if (!rateMasterId) {
+        throw new Error("Rate master id is required");
+      }
+      return rateService.updateZoneRate(rateMasterId, rowId, payload);
+    },
+    onSuccess: (response, variables) => {
+      setZoneRates((current) =>
+        current.map((row) =>
+          row.id === variables.rowId ? { ...response.data, id: response.data.id } : row,
+        ),
+      );
+      toast.success("Zone rate updated");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update zone rate");
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: async ({ rowId }: { rowId: number; index: number }) => {
+      if (!rateMasterId) {
+        throw new Error("Rate master id is required");
+      }
+      return rateService.deleteZoneRate(rateMasterId, rowId);
+    },
+    onSuccess: (_, variables) => {
+      const { rowId, index } = variables;
+      setZoneRates((current) => current.filter((row) => row.id !== rowId));
+      toast.success("Zone rate deleted");
+      if (editingIndex === index) {
+        resetDraft();
+      } else if (editingIndex !== null && index < editingIndex) {
+        setEditingIndex((current) => (current === null ? current : current - 1));
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete zone rate");
+    },
+  });
 
   useEffect(() => {
     if (editingIndex === null) return;
     const row = zoneRates[editingIndex];
     if (!row) return;
-    setDraft({ fromZoneId: String(row.fromZoneId), toZoneId: String(row.toZoneId), rate: String(row.rate) });
-  }, [editingIndex, zoneRates]);
+    const details = editingRowResponse?.data ?? row;
+    setDraft({
+      id: details.id,
+      fromZoneId: String(details.fromZoneId),
+      toZoneId: String(details.toZoneId),
+      rate: String(details.rate),
+    });
+  }, [editingIndex, editingRowResponse?.data, zoneRates]);
 
   function resetDraft() {
     setDraft({ fromZoneId: "", toZoneId: "", rate: "" });
@@ -574,11 +595,21 @@ function ZoneRatesEditor({
   }
 
   function saveDraft() {
+    if (!draft.fromZoneId.trim() || !draft.toZoneId.trim() || !draft.rate.trim()) return;
     const fromZoneId = Number(draft.fromZoneId);
     const toZoneId = Number(draft.toZoneId);
     const rate = Number(draft.rate);
     if (!Number.isFinite(fromZoneId) || !Number.isFinite(toZoneId) || !Number.isFinite(rate)) return;
-    const next = { fromZoneId, toZoneId, rate };
+    if (fromZoneId <= 0 || toZoneId <= 0) return;
+    const next: ZoneRateRow = { id: draft.id, fromZoneId, toZoneId, rate };
+    if (isEdit && rateMasterId && draft.id) {
+      updateMutation.mutate({ rowId: draft.id, payload: { fromZoneId, toZoneId, rate } });
+      return;
+    }
+    if (isEdit && rateMasterId && !draft.id) {
+      createMutation.mutate({ fromZoneId, toZoneId, rate });
+      return;
+    }
     setZoneRates((current) => {
       const copy = [...current];
       if (editingIndex === null) copy.push(next);
@@ -589,9 +620,26 @@ function ZoneRatesEditor({
   }
 
   function removeRow(index: number) {
+    const row = zoneRates[index];
+    if (isEdit && rateMasterId && row?.id) {
+      deleteMutation.mutate({ rowId: row.id, index });
+      return;
+    }
     setZoneRates((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    if (editingIndex === index) resetDraft();
+    if (editingIndex === index) {
+      resetDraft();
+    } else if (editingIndex !== null && index < editingIndex) {
+      setEditingIndex((current) => (current === null ? current : current - 1));
+    }
   }
+
+  const canSaveDraft =
+    draft.fromZoneId.trim().length > 0 &&
+    draft.toZoneId.trim().length > 0 &&
+    draft.rate.trim().length > 0 &&
+    Number(draft.fromZoneId) > 0 &&
+    Number(draft.toZoneId) > 0 &&
+    Number.isFinite(Number(draft.rate));
 
   return (
     <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
@@ -622,7 +670,12 @@ function ZoneRatesEditor({
         </Select>
         <Input type="number" step="0.01" placeholder="Rate" className={FLOATING_INNER_CONTROL} value={draft.rate} onChange={(e) => setDraft((current) => ({ ...current, rate: e.target.value }))} />
         <div className="flex items-center gap-2">
-          <Button type="button" variant="success" onClick={saveDraft}>
+          <Button
+            type="button"
+            variant="success"
+            onClick={saveDraft}
+            disabled={createMutation.isPending || updateMutation.isPending || !canSaveDraft}
+          >
             {editingIndex === null ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
             {editingIndex === null ? "Add" : "Update"}
           </Button>
@@ -660,7 +713,7 @@ function ZoneRatesEditor({
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)]" onClick={() => setEditingIndex(index)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)} disabled={deleteMutation.isPending}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -678,26 +731,85 @@ function ZoneRatesEditor({
 function DistanceSlabsEditor({
   distanceSlabs,
   setDistanceSlabs,
+  rateMasterId,
+  isEdit,
 }: {
-  distanceSlabs: RateDistanceSlabPayload[];
-  setDistanceSlabs: Dispatch<SetStateAction<RateDistanceSlabPayload[]>>;
+  distanceSlabs: DistanceSlabRow[];
+  setDistanceSlabs: Dispatch<SetStateAction<DistanceSlabRow[]>>;
+  rateMasterId?: number;
+  isEdit: boolean;
 }) {
   const [draft, setDraft] = useState<DistanceSlabDraft>({ minKm: "", maxKm: "", weightSlabs: [{ minWeight: "", maxWeight: "", rate: "" }] });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const editingRowId = editingIndex === null ? undefined : distanceSlabs[editingIndex]?.id;
+  const { data: editingRowResponse } = useQuery({
+    queryKey: ["rate-distance-slab", rateMasterId, editingRowId],
+    queryFn: () => rateService.getDistanceSlabById(rateMasterId!, editingRowId!),
+    enabled: isEdit && Boolean(rateMasterId) && Boolean(editingRowId),
+  });
+  const createMutation = useMutation({
+    mutationFn: async (payload: RateDistanceSlabPayload) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.createDistanceSlab(rateMasterId, payload);
+    },
+    onSuccess: (response) => {
+      setDistanceSlabs((current) => [...current, response.data]);
+      toast.success("Distance slab added");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to add distance slab");
+    },
+  });
+  const updateMutation = useMutation({
+    mutationFn: async ({ rowId, payload }: { rowId: number; payload: RateDistanceSlabPayload }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.updateDistanceSlab(rateMasterId, rowId, payload);
+    },
+    onSuccess: (response, variables) => {
+      setDistanceSlabs((current) => current.map((row) => (row.id === variables.rowId ? response.data : row)));
+      toast.success("Distance slab updated");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update distance slab");
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: async ({ rowId }: { rowId: number; index: number }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.deleteDistanceSlab(rateMasterId, rowId);
+    },
+    onSuccess: (_, variables) => {
+      const { rowId, index } = variables;
+      setDistanceSlabs((current) => current.filter((row) => row.id !== rowId));
+      toast.success("Distance slab deleted");
+      if (editingIndex === index) {
+        resetDraft();
+      } else if (editingIndex !== null && index < editingIndex) {
+        setEditingIndex((current) => (current === null ? current : current - 1));
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete distance slab");
+    },
+  });
 
   useEffect(() => {
     if (editingIndex === null) return;
     const row = distanceSlabs[editingIndex];
     if (!row) return;
+    const details = editingRowResponse?.data ?? row;
     setDraft({
-      minKm: String(row.minKm),
-      maxKm: String(row.maxKm),
-      weightSlabs: (row.weightSlabs ?? []).map((item) => ({ minWeight: String(item.minWeight), maxWeight: String(item.maxWeight), rate: String(item.rate) })),
+      id: details.id,
+      minKm: String(details.minKm),
+      maxKm: String(details.maxKm),
+      weightSlabs: (details.weightSlabs ?? []).map((item) => ({ minWeight: String(item.minWeight), maxWeight: String(item.maxWeight), rate: String(item.rate) })),
     });
-  }, [editingIndex, distanceSlabs]);
+  }, [editingIndex, editingRowResponse?.data, distanceSlabs]);
 
   function resetDraft() {
-    setDraft({ minKm: "", maxKm: "", weightSlabs: [{ minWeight: "", maxWeight: "", rate: "" }] });
+    setDraft({ id: undefined, minKm: "", maxKm: "", weightSlabs: [{ minWeight: "", maxWeight: "", rate: "" }] });
     setEditingIndex(null);
   }
 
@@ -708,19 +820,38 @@ function DistanceSlabsEditor({
       .map((item) => ({ minWeight: Number(item.minWeight), maxWeight: Number(item.maxWeight), rate: Number(item.rate) }))
       .filter((item) => Number.isFinite(item.minWeight) && Number.isFinite(item.maxWeight) && Number.isFinite(item.rate));
     if (!Number.isFinite(minKm) || !Number.isFinite(maxKm)) return;
-    const next = { minKm, maxKm, weightSlabs };
+    if (weightSlabs.length === 0) return;
+    const next: RateDistanceSlabPayload = { minKm, maxKm, weightSlabs };
+    const editingRowId = distanceSlabs[editingIndex ?? -1]?.id ?? draft.id;
+    if (isEdit && rateMasterId && editingRowId) {
+      updateMutation.mutate({ rowId: editingRowId, payload: next });
+      return;
+    }
+    if (isEdit && rateMasterId) {
+      createMutation.mutate(next);
+      return;
+    }
     setDistanceSlabs((current) => {
       const copy = [...current];
-      if (editingIndex === null) copy.push(next);
-      else copy[editingIndex] = next;
+      if (editingIndex === null) copy.push({ ...next } as DistanceSlabRow);
+      else copy[editingIndex] = { ...(next as DistanceSlabRow) };
       return copy;
     });
     resetDraft();
   }
 
   function removeRow(index: number) {
+    const row = distanceSlabs[index];
+    if (isEdit && rateMasterId && row?.id) {
+      deleteMutation.mutate({ rowId: row.id, index });
+      return;
+    }
     setDistanceSlabs((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    if (editingIndex === index) resetDraft();
+    if (editingIndex === index) {
+      resetDraft();
+    } else if (editingIndex !== null && index < editingIndex) {
+      setEditingIndex((current) => (current === null ? current : current - 1));
+    }
   }
 
   function updateWeightSlab(index: number, field: keyof WeightSlabDraft, value: string) {
@@ -754,7 +885,7 @@ function DistanceSlabsEditor({
             <Plus className="h-4 w-4" />
             Add weight slab
           </Button>
-          <Button type="button" variant="success" onClick={saveDraft}>
+          <Button type="button" variant="success" onClick={saveDraft} disabled={createMutation.isPending || updateMutation.isPending}>
             {editingIndex === null ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
             {editingIndex === null ? "Add" : "Update"}
           </Button>
@@ -807,7 +938,7 @@ function DistanceSlabsEditor({
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)]" onClick={() => setEditingIndex(index)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)} disabled={deleteMutation.isPending}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -825,11 +956,16 @@ function DistanceSlabsEditor({
 function RateChargesEditor({
   rateCharges,
   setRateCharges,
+  rateMasterId,
+  isEdit,
 }: {
-  rateCharges: RateChargePayload[];
-  setRateCharges: Dispatch<SetStateAction<RateChargePayload[]>>;
+  rateCharges: RateChargeRow[];
+  setRateCharges: Dispatch<SetStateAction<RateChargeRow[]>>;
+  rateMasterId?: number;
+  isEdit: boolean;
 }) {
   const [draft, setDraft] = useState<RateChargeDraft>({
+    id: undefined,
     name: "",
     calculationBase: "",
     value: "",
@@ -840,25 +976,81 @@ function RateChargesEditor({
     chargeSlabs: [{ minValue: "", maxValue: "", rate: "" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const editingRowId = editingIndex === null ? undefined : rateCharges[editingIndex]?.id;
+  const { data: editingRowResponse } = useQuery({
+    queryKey: ["rate-charge", rateMasterId, editingRowId],
+    queryFn: () => rateService.getRateChargeById(rateMasterId!, editingRowId!),
+    enabled: isEdit && Boolean(rateMasterId) && Boolean(editingRowId),
+  });
+  const createMutation = useMutation({
+    mutationFn: async (payload: RateChargePayload) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.createRateCharge(rateMasterId, payload);
+    },
+    onSuccess: (response) => {
+      setRateCharges((current) => [...current, response.data]);
+      toast.success("Rate charge added");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to add rate charge");
+    },
+  });
+  const updateMutation = useMutation({
+    mutationFn: async ({ rowId, payload }: { rowId: number; payload: RateChargePayload }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.updateRateCharge(rateMasterId, rowId, payload);
+    },
+    onSuccess: (response, variables) => {
+      setRateCharges((current) => current.map((row) => (row.id === variables.rowId ? response.data : row)));
+      toast.success("Rate charge updated");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update rate charge");
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: async ({ rowId }: { rowId: number; index: number }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.deleteRateCharge(rateMasterId, rowId);
+    },
+    onSuccess: (_, variables) => {
+      const { rowId, index } = variables;
+      setRateCharges((current) => current.filter((row) => row.id !== rowId));
+      toast.success("Rate charge deleted");
+      if (editingIndex === index) {
+        resetDraft();
+      } else if (editingIndex !== null && index < editingIndex) {
+        setEditingIndex((current) => (current === null ? current : current - 1));
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete rate charge");
+    },
+  });
 
   useEffect(() => {
     if (editingIndex === null) return;
     const row = rateCharges[editingIndex];
     if (!row) return;
+    const details = editingRowResponse?.data ?? row;
     setDraft({
-      name: row.name,
-      calculationBase: row.calculationBase,
-      value: String(row.value),
-      isPercentage: row.isPercentage,
-      minValue: String(row.minValue ?? ""),
-      maxValue: String(row.maxValue ?? ""),
-      sequence: String(row.sequence),
-      chargeSlabs: (row.chargeSlabs ?? []).map((item) => ({ minValue: String(item.minValue), maxValue: String(item.maxValue), rate: String(item.rate) })),
+      id: details.id,
+      name: details.name,
+      calculationBase: details.calculationBase,
+      value: String(details.value),
+      isPercentage: details.isPercentage,
+      minValue: String(details.minValue ?? ""),
+      maxValue: String(details.maxValue ?? ""),
+      sequence: String(details.sequence),
+      chargeSlabs: (details.chargeSlabs ?? []).map((item) => ({ minValue: String(item.minValue), maxValue: String(item.maxValue), rate: String(item.rate) })),
     });
-  }, [editingIndex, rateCharges]);
+  }, [editingIndex, editingRowResponse?.data, rateCharges]);
 
   function resetDraft() {
     setDraft({
+      id: undefined,
       name: "",
       calculationBase: "",
       value: "",
@@ -880,7 +1072,7 @@ function RateChargesEditor({
       .map((item) => ({ minValue: Number(item.minValue), maxValue: Number(item.maxValue), rate: Number(item.rate) }))
       .filter((item) => Number.isFinite(item.minValue) && Number.isFinite(item.maxValue) && Number.isFinite(item.rate));
     if (!draft.name.trim() || !draft.calculationBase.trim() || !Number.isFinite(value) || !Number.isFinite(minValue) || !Number.isFinite(maxValue) || !Number.isFinite(sequence)) return;
-    const next = {
+    const next: RateChargePayload = {
       name: draft.name.trim(),
       calculationBase: draft.calculationBase.trim(),
       value,
@@ -890,18 +1082,36 @@ function RateChargesEditor({
       sequence,
       chargeSlabs,
     };
+    const editingRowId = rateCharges[editingIndex ?? -1]?.id ?? draft.id;
+    if (isEdit && rateMasterId && editingRowId) {
+      updateMutation.mutate({ rowId: editingRowId, payload: next });
+      return;
+    }
+    if (isEdit && rateMasterId) {
+      createMutation.mutate(next);
+      return;
+    }
     setRateCharges((current) => {
       const copy = [...current];
-      if (editingIndex === null) copy.push(next);
-      else copy[editingIndex] = next;
+      if (editingIndex === null) copy.push({ ...next } as RateChargeRow);
+      else copy[editingIndex] = { ...(next as RateChargeRow) };
       return copy;
     });
     resetDraft();
   }
 
   function removeRow(index: number) {
+    const row = rateCharges[index];
+    if (isEdit && rateMasterId && row?.id) {
+      deleteMutation.mutate({ rowId: row.id, index });
+      return;
+    }
     setRateCharges((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    if (editingIndex === index) resetDraft();
+    if (editingIndex === index) {
+      resetDraft();
+    } else if (editingIndex !== null && index < editingIndex) {
+      setEditingIndex((current) => (current === null ? current : current - 1));
+    }
   }
 
   function updateChargeSlab(index: number, field: keyof ChargeSlabDraft, value: string) {
@@ -945,7 +1155,7 @@ function RateChargesEditor({
             <Plus className="h-4 w-4" />
             Add charge slab
           </Button>
-          <Button type="button" variant="success" onClick={saveDraft}>
+          <Button type="button" variant="success" onClick={saveDraft} disabled={createMutation.isPending || updateMutation.isPending}>
             {editingIndex === null ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
             {editingIndex === null ? "Add" : "Update"}
           </Button>
@@ -1000,7 +1210,7 @@ function RateChargesEditor({
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)]" onClick={() => setEditingIndex(index)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)} disabled={deleteMutation.isPending}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -1018,11 +1228,16 @@ function RateChargesEditor({
 function RateConditionsEditor({
   rateConditions,
   setRateConditions,
+  rateMasterId,
+  isEdit,
 }: {
-  rateConditions: RateConditionPayload[];
-  setRateConditions: Dispatch<SetStateAction<RateConditionPayload[]>>;
+  rateConditions: RateConditionRow[];
+  setRateConditions: Dispatch<SetStateAction<RateConditionRow[]>>;
+  rateMasterId?: number;
+  isEdit: boolean;
 }) {
   const [draft, setDraft] = useState<RateConditionDraft>({
+    id: undefined,
     field: "",
     operator: "",
     value: "",
@@ -1031,23 +1246,78 @@ function RateConditionsEditor({
     isPercentage: false,
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const editingRowId = editingIndex === null ? undefined : rateConditions[editingIndex]?.id;
+  const { data: editingRowResponse } = useQuery({
+    queryKey: ["rate-condition", rateMasterId, editingRowId],
+    queryFn: () => rateService.getRateConditionById(rateMasterId!, editingRowId!),
+    enabled: isEdit && Boolean(rateMasterId) && Boolean(editingRowId),
+  });
+  const createMutation = useMutation({
+    mutationFn: async (payload: RateConditionPayload) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.createRateCondition(rateMasterId, payload);
+    },
+    onSuccess: (response) => {
+      setRateConditions((current) => [...current, response.data]);
+      toast.success("Rate condition added");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to add rate condition");
+    },
+  });
+  const updateMutation = useMutation({
+    mutationFn: async ({ rowId, payload }: { rowId: number; payload: RateConditionPayload }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.updateRateCondition(rateMasterId, rowId, payload);
+    },
+    onSuccess: (response, variables) => {
+      setRateConditions((current) => current.map((row) => (row.id === variables.rowId ? response.data : row)));
+      toast.success("Rate condition updated");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update rate condition");
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: async ({ rowId }: { rowId: number; index: number }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.deleteRateCondition(rateMasterId, rowId);
+    },
+    onSuccess: (_, variables) => {
+      const { rowId, index } = variables;
+      setRateConditions((current) => current.filter((row) => row.id !== rowId));
+      toast.success("Rate condition deleted");
+      if (editingIndex === index) {
+        resetDraft();
+      } else if (editingIndex !== null && index < editingIndex) {
+        setEditingIndex((current) => (current === null ? current : current - 1));
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete rate condition");
+    },
+  });
 
   useEffect(() => {
     if (editingIndex === null) return;
     const row = rateConditions[editingIndex];
     if (!row) return;
+    const details = editingRowResponse?.data ?? row;
     setDraft({
-      field: row.field,
-      operator: row.operator,
-      value: String(row.value),
-      chargeName: row.chargeName,
-      chargeAmount: String(row.chargeAmount),
-      isPercentage: row.isPercentage,
+      id: details.id,
+      field: details.field,
+      operator: details.operator,
+      value: String(details.value),
+      chargeName: details.chargeName,
+      chargeAmount: String(details.chargeAmount),
+      isPercentage: details.isPercentage,
     });
-  }, [editingIndex, rateConditions]);
+  }, [editingIndex, editingRowResponse?.data, rateConditions]);
 
   function resetDraft() {
-    setDraft({ field: "", operator: "", value: "", chargeName: "", chargeAmount: "", isPercentage: false });
+    setDraft({ id: undefined, field: "", operator: "", value: "", chargeName: "", chargeAmount: "", isPercentage: false });
     setEditingIndex(null);
   }
 
@@ -1063,18 +1333,36 @@ function RateConditionsEditor({
       chargeAmount,
       isPercentage: draft.isPercentage,
     };
+    const editingRowId = rateConditions[editingIndex ?? -1]?.id ?? draft.id;
+    if (isEdit && rateMasterId && editingRowId) {
+      updateMutation.mutate({ rowId: editingRowId, payload: next });
+      return;
+    }
+    if (isEdit && rateMasterId) {
+      createMutation.mutate(next);
+      return;
+    }
     setRateConditions((current) => {
       const copy = [...current];
-      if (editingIndex === null) copy.push(next);
-      else copy[editingIndex] = next;
+      if (editingIndex === null) copy.push({ ...next } as RateConditionRow);
+      else copy[editingIndex] = { ...(next as RateConditionRow) };
       return copy;
     });
     resetDraft();
   }
 
   function removeRow(index: number) {
+    const row = rateConditions[index];
+    if (isEdit && rateMasterId && row?.id) {
+      deleteMutation.mutate({ rowId: row.id, index });
+      return;
+    }
     setRateConditions((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    if (editingIndex === index) resetDraft();
+    if (editingIndex === index) {
+      resetDraft();
+    } else if (editingIndex !== null && index < editingIndex) {
+      setEditingIndex((current) => (current === null ? current : current - 1));
+    }
   }
 
   return (
@@ -1092,7 +1380,7 @@ function RateConditionsEditor({
           <span className="text-sm font-medium text-foreground">Is percentage</span>
         </div>
         <div className="flex items-center gap-2 md:col-span-2">
-          <Button type="button" variant="success" onClick={saveDraft}>
+          <Button type="button" variant="success" onClick={saveDraft} disabled={createMutation.isPending || updateMutation.isPending}>
             {editingIndex === null ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
             {editingIndex === null ? "Add" : "Update"}
           </Button>
@@ -1134,7 +1422,7 @@ function RateConditionsEditor({
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)]" onClick={() => setEditingIndex(index)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)} disabled={deleteMutation.isPending}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

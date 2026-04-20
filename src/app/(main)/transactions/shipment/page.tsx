@@ -106,16 +106,16 @@ export default function ShipmentsPage() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Shipments exported");
+      toast.success("Shiment bookings exported");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export shipments");
+      toast.error(error instanceof Error ? error.message : "Failed to export shiment bookings");
     }
   }
 
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
       <div className="mb-4">
-        <h1 className="text-lg font-semibold tracking-tight">Shipment Booking</h1>
+        <h1 className="text-lg font-semibold tracking-tight">Shiment Booking</h1>
       </div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-1 self-start rounded-md border border-border p-1 sm:self-auto">
@@ -127,8 +127,8 @@ export default function ShipmentsPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-xl">
               <DialogHeader>
-                <DialogTitle>Shipment Filters</DialogTitle>
-                <DialogDescription>Choose one or more filters, then apply them to the shipment list.</DialogDescription>
+                <DialogTitle>Shiment Booking Filters</DialogTitle>
+                <DialogDescription>Choose one or more filters, then apply them to the shiment booking list.</DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Input placeholder="AWB no" value={draftFilters.awbNo} onChange={(e) => setDraftFilters((prev) => ({ ...prev, awbNo: e.target.value }))} />
@@ -179,7 +179,7 @@ export default function ShipmentsPage() {
             variant="default"
             className="h-8 gap-2 px-3 font-semibold"
             onClick={handleCreate}
-            title="Create shipment booking"
+            title="Create shiment booking"
           >
             <FilePlus className="h-4 w-4" />
             Create Booking
@@ -211,13 +211,13 @@ export default function ShipmentsPage() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={14} className="h-24 text-center text-muted-foreground">
-                  Loading shipments…
+                  Loading shiment bookings…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={14} className="h-24 text-center text-muted-foreground">
-                  No shipments found.
+                  No shiment bookings found.
                 </TableCell>
               </TableRow>
             ) : (

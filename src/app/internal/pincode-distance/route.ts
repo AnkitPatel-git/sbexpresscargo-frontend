@@ -148,7 +148,7 @@ async function routeDistanceKm(from: GeoPoint, to: GeoPoint): Promise<number> {
   const data = (await response.json()) as OsrmRouteResponse
   const distanceMeters = data.routes?.[0]?.distance
 
-  if (!Number.isFinite(distanceMeters)) {
+  if (distanceMeters === undefined || !Number.isFinite(distanceMeters)) {
     throw new Error("OSRM returned an empty route")
   }
 
