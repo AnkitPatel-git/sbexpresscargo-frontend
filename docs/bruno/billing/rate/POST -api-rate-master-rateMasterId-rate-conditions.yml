@@ -23,8 +23,9 @@ http:
         "field": "WEIGHT",
         "operator": "GT",
         "value": 10,
-        "chargeName": "ODD_SIZE",
+        "chargeName": "ODD SIZE SURCHARGE",
         "chargeAmount": 50,
+        "calculationBase": "FLAT",
         "isPercentage": false
       }
   auth: inherit
@@ -62,8 +63,9 @@ examples:
             "field": "WEIGHT",
             "operator": "GT",
             "value": 10,
-            "chargeName": "ODD_SIZE",
+            "chargeName": "ODD SIZE SURCHARGE",
             "chargeAmount": 50,
+            "calculationBase": "FLAT",
             "isPercentage": false
           }
     response:
@@ -118,14 +120,17 @@ examples:
             "data": {
               "id": 3,
               "rateMasterId": 1,
+              "chargeId": null,
               "field": "WEIGHT",
               "operator": "GT",
               "value": 10,
-              "chargeName": "ODD_SIZE",
+              "chargeName": "ODD SIZE SURCHARGE",
               "chargeAmount": 50,
+              "calculationBase": "FLAT",
               "isPercentage": false,
               "createdAt": "2026-04-15T06:13:16.637Z",
               "updatedAt": "2026-04-15T06:13:16.637Z",
-              "deletedAt": null
+              "deletedAt": null,
+              "charge": null
             }
           }

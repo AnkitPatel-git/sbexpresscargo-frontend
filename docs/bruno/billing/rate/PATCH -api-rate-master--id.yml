@@ -25,11 +25,8 @@ http:
         "toDate": "2026-12-31T23:59:59.000Z",
         "customerId": 1,
         "version":1,
-        "serviceType": "EXPRESS",
-        "rateType": "ZONE_MATRIX",
         "productId": 1,
-        "paymentType": "TO_PAY",
-        "zeroContract": false,
+        "rateType": "ZONE_MATRIX",
         "zoneRates": [
           {
             "fromZoneId": 1,
@@ -102,6 +99,7 @@ http:
             "value": 1,
             "chargeName": "FLOOR DELIVERY",
             "chargeAmount": 30,
+            "calculationBase": "FLAT",
             "isPercentage": false
           },
           {
@@ -110,6 +108,7 @@ http:
             "value": 40000,
             "chargeName": "HIGH VALUE SURCHARGE",
             "chargeAmount": 0.5,
+            "calculationBase": "SHIPMENT_VALUE",
             "isPercentage": true
           }
         ]

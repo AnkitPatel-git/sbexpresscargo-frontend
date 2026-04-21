@@ -140,12 +140,6 @@ export interface CustomerSingleResponse {
     data: Customer;
 }
 
-export interface CustomerVendorRef {
-    id: number;
-    vendorCode: string;
-    vendorName: string;
-}
-
 export interface CustomerProductRef {
     id: number;
     productCode: string;
@@ -155,19 +149,16 @@ export interface CustomerProductRef {
 export interface CustomerFuelSurcharge {
     id: number;
     customerId: number;
-    vendorId: number;
-    productId: number;
+    productId: number | null;
     fuelChargeType: string;
     fromDate: string;
     toDate: string;
     fuelSurcharge: number | string | { s?: number; e?: number; d?: number[] };
-    vendor?: CustomerVendorRef | null;
     product?: CustomerProductRef | null;
 }
 
 export interface CustomerFuelSurchargeFormData {
-    vendorId: number;
-    productId: number;
+    productId?: number;
     fuelChargeType: string;
     fromDate: string;
     toDate: string;
@@ -177,8 +168,7 @@ export interface CustomerFuelSurchargeFormData {
 export interface CustomerOtherCharge {
     id: number;
     customerId: number;
-    vendorId: number;
-    productId: number;
+    productId: number | null;
     srNo: number;
     chargeType: string;
     fromDate: string;
@@ -187,13 +177,11 @@ export interface CustomerOtherCharge {
     destination: string;
     amount: number | string | { s?: number; e?: number; d?: number[] };
     minimumValue: number | string | { s?: number; e?: number; d?: number[] };
-    vendor?: CustomerVendorRef | null;
     product?: CustomerProductRef | null;
 }
 
 export interface CustomerOtherChargeFormData {
-    vendorId: number;
-    productId: number;
+    productId?: number;
     srNo: number;
     chargeType: string;
     fromDate: string;
@@ -207,18 +195,15 @@ export interface CustomerOtherChargeFormData {
 export interface CustomerVolumetric {
     id: number;
     customerId: number;
-    vendorId: number;
-    productId: number;
+    productId: number | null;
     cmDivide: number | string | { s?: number; e?: number; d?: number[] };
     inchDivide: number | string | { s?: number; e?: number; d?: number[] };
     cft: number | string | { s?: number; e?: number; d?: number[] };
-    vendor?: CustomerVendorRef | null;
     product?: CustomerProductRef | null;
 }
 
 export interface CustomerVolumetricFormData {
-    vendorId: number;
-    productId: number;
+    productId?: number;
     cmDivide: number;
     inchDivide: number;
     cft: number;

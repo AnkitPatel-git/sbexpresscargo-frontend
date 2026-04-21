@@ -10,10 +10,12 @@ import type {
   RateDistanceSlab,
   RateDistanceSlabPayload,
   RateMasterListResponse,
+  RateMasterReviewResponse,
   RateMasterSingleResponse,
   RateZoneRate,
   RateZoneRatePayload,
   UpdateRateMasterPayload,
+  UpdateRateMasterReviewPayload,
 } from "@/types/masters/rate";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -22,13 +24,11 @@ export type RateMasterListQueryParams = {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
+  sortBy?: "fromDate" | "id" | "updateType" | string;
   sortOrder?: "asc" | "desc";
   updateType?: string;
   fromDate?: string;
   toDate?: string;
-  paymentType?: string;
-  zeroContract?: boolean;
 };
 
 function authHeaders(includeJson = false) {
@@ -43,14 +43,12 @@ function appendRateMasterListFilters(queryParams: URLSearchParams, params?: Rate
     if (params?.page !== undefined) queryParams.append("page", String(params.page));
     if (params?.limit !== undefined) queryParams.append("limit", String(params.limit));
   }
-  queryParams.append("search", params?.search ?? "");
+  if (params?.search) queryParams.append("search", params.search);
   queryParams.append("sortBy", params?.sortBy ?? "fromDate");
   queryParams.append("sortOrder", params?.sortOrder ?? "desc");
   if (params?.updateType) queryParams.append("updateType", params.updateType);
   if (params?.fromDate) queryParams.append("fromDate", params.fromDate);
   if (params?.toDate) queryParams.append("toDate", params.toDate);
-  if (params?.paymentType) queryParams.append("paymentType", params.paymentType);
-  if (typeof params?.zeroContract === "boolean") queryParams.append("zeroContract", String(params.zeroContract));
 }
 
 async function readErrorMessage(response: Response, fallback: string) {
@@ -87,6 +85,10 @@ export const rateService = {
     return requestJson(`${API_URL}/rate-master/${id}`, { headers: authHeaders() }, "Failed to fetch rate master");
   },
 
+  async getRateMasterReviewById(id: number): Promise<RateMasterReviewResponse> {
+    return requestJson(`${API_URL}/rate-master/${id}/review`, { headers: authHeaders() }, "Failed to fetch rate master review");
+  },
+
   async createRateMaster(data: CreateRateMasterPayload): Promise<RateMasterSingleResponse> {
     return requestJson(
       `${API_URL}/rate-master`,
@@ -108,6 +110,18 @@ export const rateService = {
         body: JSON.stringify(data),
       },
       "Failed to update rate master",
+    );
+  },
+
+  async updateRateMasterReview(id: number, data: UpdateRateMasterReviewPayload): Promise<RateMasterSingleResponse> {
+    return requestJson(
+      `${API_URL}/rate-master/${id}/review`,
+      {
+        method: "PUT",
+        headers: authHeaders(true),
+        body: JSON.stringify(data),
+      },
+      "Failed to update rate master review",
     );
   },
 

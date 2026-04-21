@@ -1,0 +1,2457 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+//
+// PRODUCTION SCHEMA — Final enforcement pass
+// - No date+time splits: use single DateTime (e.g. pickupAt, commentedAt, manifestAt).
+// - Business logic uses enums (RateUpdateType, ChargeType, CustomerType, etc.).
+// - Shipment.currentStatus denormalized for filtering/dashboards without joins.
+// - Audit: createdBy/updatedBy/deletedBy FK relations on key models.
+// - Location: Option B — city/state/country kept as strings; validation in service layer
+//   (pinCode India: 6 digits; city/state uppercase normalization; no random strings).
+// - Validation (service layer): weight > 0, pieces >= 1 on Shipment; pinCode/mobile valid before DB.
+// - currentStatus sync: ALWAYS update Shipment.currentStatus in same transaction as ShipmentStatus.
+// - Shipment status transitions (reject invalid): CREATED → PICKED → IN_TRANSIT → DELIVERED, or → FAILED. No backward moves.
+// - VendorTrackingLog = RAW ONLY; never use for business logic. Always map to ShipmentStatus.
+// - Optimistic locking: all updates WHERE id AND version; increment version on update.
+// - Soft delete: ALL queries MUST include deletedAt = null unless explicitly required to see deleted records.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ================= ENUMS =================
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum PaymentType {
+  CASH
+  CREDIT
+  TO_PAY
+}
+
+enum ShipmentStatusType {
+  CREATED
+  PICKED
+  IN_TRANSIT
+  OFD
+  DELIVERED
+  FAILED
+}
+
+enum ProductType {
+  DOMESTIC
+  INTERNATIONAL
+  LOCAL
+}
+
+enum DocType {
+  DOX
+  NDOX
+}
+
+enum InvoiceStatus {
+  DRAFT
+  LOCKED
+}
+
+enum ZoneType {
+  DOMESTIC
+  VENDOR
+}
+
+enum ExceptionType {
+  DELIVERED
+  UNDELIVERED
+}
+
+// Common Indian road transport body classes used for manifest movement.
+enum VehicleType {
+  TWO_WHEELER
+  THREE_WHEELER
+  PICKUP_TRUCK
+  LCV
+  HCV
+  TRAILER
+  CONTAINER
+  TANKER
+  OTHER
+}
+
+enum NotificationType {
+  CUSTOMER
+  USER
+}
+
+enum RateUpdateType {
+  AWB_ENTRY_RATE
+  VENDOR_RATE
+  TAX_FUEL
+  VENDOR_OBC_RATE
+}
+
+enum ChargeType {
+  AIRWAYBILL
+  FREIGHT
+  FUEL
+  OBC
+  FLAT
+  OTHER
+}
+
+enum CalculationBase {
+  CHARGE_WEIGHT
+  CHARGE_WEIGHT_PER_FLOOR
+  FLAT
+  ACTUAL_WEIGHT
+  DISTANCE_KM
+  FREIGHT
+  SHIPMENT_VALUE
+}
+
+enum ChargeName {
+  FUEL
+  FOV
+  HANDLING
+  ECC
+  RAS
+  ODA
+  REVERSE_PICKUP
+  APPOINTMENT_DELIVERY
+  FLOOR_DELIVERY
+  OTHER
+}
+
+enum CustomerType {
+  CORPORATE
+  INDIVIDUAL
+  SME
+  GOVERNMENT
+  RETAIL
+  WHOLESALE
+  FRANCHISE
+  INSTITUTIONAL
+  ECOMMERCE
+  INTERNATIONAL
+}
+
+enum RegisterType {
+  REGISTERED
+  UNREGISTERED
+}
+
+enum InvoiceLockAction {
+  LOCK
+  UNLOCK
+}
+
+enum FirmType {
+  GOV
+  NON_GOV
+}
+
+enum WeightUnit {
+  KGS
+  LBS
+}
+
+enum UserType {
+  ADMIN
+  CUSTOMER
+  VENDOR
+  STAFF
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+}
+
+enum ServiceType {
+  AIR
+  SURFACE
+  EXPRESS
+}
+
+enum KycDocType {
+  AADHAAR
+  PAN
+  GST
+  PASSPORT
+  VOTER_ID
+}
+
+// Rate master pricing type: determines which child table supplies the base freight.
+enum RateType {
+  ZONE_MATRIX
+  DISTANCE_MATRIX
+  FLAT
+}
+
+// Operator for RateCondition expressions.
+enum ConditionOperator {
+  GT // >
+  GTE // >=
+  LT // <
+  LTE // <=
+  EQ // =
+}
+
+// Field the RateCondition evaluates against.
+enum ConditionField {
+  DIMENSION_LENGTH
+  DIMENSION_WIDTH
+  DIMENSION_HEIGHT
+  DIMENSION_MAX // max(L, W, H)
+  WEIGHT
+  CHARGEABLE_WEIGHT
+  SHIPMENT_VALUE
+  REVERSE_PICKUP
+  APPOINTMENT_DELIVERY
+  FLOOR_DELIVERY
+  FLOOR_COUNT
+}
+
+enum VendorMode {
+  AIR
+  SURFACE
+  TRAIN
+}
+
+enum GstType {
+  FORWARD
+  REVERSE
+}
+
+enum FuelHeadType {
+  BASIC
+  ADVANCED
+}
+
+enum FuelChargeType {
+  FLAT
+  PERCENTAGE
+}
+
+enum PermissionGroup {
+  DASHBOARD
+  SHIPMENT
+  MANIFEST
+  INVOICE
+  CUSTOMER
+  MASTER
+}
+
+enum ManifestStatus {
+  CREATED
+  CLOSED
+}
+
+enum VendorIntegrationMode {
+  B2B
+  B2C
+}
+
+enum Environment {
+  SANDBOX
+  PRODUCTION
+}
+
+// State transitions (enforce in service layer): CREATED → AWB_ASSIGNED → SYNCED, or CREATED → FAILED → RETRYING → SYNCED. No direct jumps.
+enum VendorMappingStatus {
+  CREATED
+  AWB_ASSIGNED
+  FAILED
+  RETRYING
+  SYNCED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+}
+
+// Soft delete: deletedAt = NULL means active; set to now() when soft-deleted.
+// Uniqueness of active rows (e.g. one user per email) is enforced in application logic.
+
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String    @db.VarChar(255)
+  email        String    @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  roleId       Int       @map("role_id")
+  mobile       String?   @db.VarChar(20)
+  status       Status    @default(ACTIVE)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById  Int?      @map("created_by_id")
+  updatedById  Int?      @map("updated_by_id")
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById  Int?      @map("deleted_by_id")
+
+  role    Role         @relation(fields: [roleId], references: [id])
+  profile UserProfile?
+
+  creator      User?  @relation("UserCreatedBy", fields: [createdById], references: [id])
+  updater      User?  @relation("UserUpdatedBy", fields: [updatedById], references: [id])
+  deleter      User?  @relation("UserDeletedBy", fields: [deletedById], references: [id])
+  createdUsers User[] @relation("UserCreatedBy")
+  updatedUsers User[] @relation("UserUpdatedBy")
+  deletedUsers User[] @relation("UserDeletedBy")
+
+  auditLogs             AuditLog[]
+  userSessions          UserSession[]
+  notifications         Notification[]
+  shipmentStatuses      ShipmentStatus[]
+  attendances           Attendance[]
+  shipmentComments      ShipmentComment[]
+  shipmentLogs          ShipmentLog[]
+  shipmentsCreated      Shipment[]        @relation("ShipmentCreatedBy")
+  shipmentsUpdated      Shipment[]        @relation("ShipmentUpdatedBy")
+  shipmentsDeleted      Shipment[]        @relation("ShipmentDeletedBy")
+  invoicesCreated       Invoice[]         @relation("InvoiceCreatedBy")
+  invoicesUpdated       Invoice[]         @relation("InvoiceUpdatedBy")
+  invoicesDeleted       Invoice[]         @relation("InvoiceDeletedBy")
+  customersCreated      Customer[]        @relation("CustomerCreatedBy")
+  customersUpdated      Customer[]        @relation("CustomerUpdatedBy")
+  customersDeleted      Customer[]        @relation("CustomerDeletedBy")
+  vendorsCreated        Vendor[]          @relation("VendorCreatedBy")
+  vendorsUpdated        Vendor[]          @relation("VendorUpdatedBy")
+  vendorsDeleted        Vendor[]          @relation("VendorDeletedBy")
+  productsCreated       Product[]         @relation("ProductCreatedBy")
+  productsUpdated       Product[]         @relation("ProductUpdatedBy")
+  productsDeleted       Product[]         @relation("ProductDeletedBy")
+  rateMastersCreated    RateMaster[]      @relation("RateMasterCreatedBy")
+  rateMastersUpdated    RateMaster[]      @relation("RateMasterUpdatedBy")
+  rateMastersDeleted    RateMaster[]      @relation("RateMasterDeletedBy")
+  chargesCreated        Charge[]          @relation("ChargeCreatedBy")
+  chargesUpdated        Charge[]          @relation("ChargeUpdatedBy")
+  chargesDeleted        Charge[]          @relation("ChargeDeletedBy")
+  serviceCentersCreated ServiceCenter[]   @relation("ServiceCenterCreatedBy")
+  serviceCentersUpdated ServiceCenter[]   @relation("ServiceCenterUpdatedBy")
+  serviceCentersDeleted ServiceCenter[]   @relation("ServiceCenterDeletedBy")
+  zonesCreated          Zone[]            @relation("ZoneCreatedBy")
+  zonesUpdated          Zone[]            @relation("ZoneUpdatedBy")
+  zonesDeleted          Zone[]            @relation("ZoneDeletedBy")
+  serviceMapsCreated    ServiceMap[]      @relation("ServiceMapCreatedBy")
+  serviceMapsUpdated    ServiceMap[]      @relation("ServiceMapUpdatedBy")
+  serviceMapsDeleted    ServiceMap[]      @relation("ServiceMapDeletedBy")
+  contentsCreated       Content[]         @relation("ContentCreatedBy")
+  contentsUpdated       Content[]         @relation("ContentUpdatedBy")
+  vehiclesAsDriver      Vehicle[]         @relation("VehicleDriver")
+  couriers              Courier[]
+
+  @@unique([email, deletedAt])
+  @@map("users")
+}
+
+// Role is the source of truth for authority.
+model UserProfile {
+  id                 Int       @id @default(autoincrement())
+  userId             Int       @unique @map("user_id")
+  userGroup          String?   @map("user_group") @db.VarChar(100)
+  origin             String?   @db.VarChar(100)
+  serviceCenterId    Int?      @map("service_center_id")
+  customerId         Int?      @map("customer_id")
+  groupName          String?   @map("group_name") @db.VarChar(100)
+  birthDate          DateTime? @map("birth_date") @db.Date
+  joiningDate        DateTime? @map("joining_date") @db.Date
+  applicationType    String?   @map("application_type") @db.VarChar(20)
+  allowChangingDate  Boolean   @default(false) @map("allow_changing_date")
+  addEntryOnManifest Boolean   @default(false) @map("add_entry_on_manifest")
+  globalManifest     Boolean   @default(false) @map("global_manifest")
+  allowChangingAwbNo Boolean   @default(false) @map("allow_changing_awb_no")
+  mobileAppLens      Boolean   @default(false) @map("mobile_app_lens")
+  manifestBranch     Boolean   @default(false) @map("manifest_branch")
+  weightType         String?   @map("weight_type") @db.VarChar(10)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById        Int?      @map("created_by_id")
+  updatedById        Int?      @map("updated_by_id")
+  deletedAt          DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById        Int?      @map("deleted_by_id")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+
+  @@index([serviceCenterId])
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("user_profiles")
+}
+
+model Role {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  identifier  String    @unique @db.VarChar(255)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int             @id @default(autoincrement())
+  name        String          @db.VarChar(255)
+  identifier  String          @unique @db.VarChar(255) // module.subModule.action (lowercase)
+  module      PermissionGroup
+  subModule   String          @map("sub_module") @db.VarChar(64)
+  action      String          @db.VarChar(64)
+  description String?         @db.VarChar(255)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?            @map("created_by_id")
+  updatedById Int?            @map("updated_by_id")
+  deletedAt   DateTime?       @map("deleted_at") @db.DateTime(6)
+  deletedById Int?            @map("deleted_by_id")
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int       @map("role_id")
+  permissionId Int       @map("permission_id")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  createdById  Int?      @map("created_by_id")
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById  Int?      @map("deleted_by_id")
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// entityId is the integer primary key of the entity identified by entityType (e.g. Shipment.id, Customer.id).
+model AuditLog {
+  id            Int         @id @default(autoincrement())
+  entityType    String      @map("entity_type") @db.VarChar(64)
+  entityId      Int         @map("entity_id")
+  action        AuditAction
+  performedById Int?        @map("performed_by_id")
+  oldValue      Json?       @map("old_value")
+  newValue      Json?       @map("new_value")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+
+  performer User? @relation(fields: [performedById], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([performedById, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Active login sessions: one row per logged-in session (used for "Logged In Users" list and force log off).
+model UserSession {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  loginAt   DateTime @default(now()) @map("login_at") @db.DateTime(6)
+  userType  UserType @map("user_type")
+  jti       String   @unique @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loginAt])
+  @@index([createdAt])
+  @@map("user_sessions")
+}
+
+// Revoked JWT IDs so tokens are invalid before expiry (logout / force log off).
+model RevokedJti {
+  id        Int      @id @default(autoincrement())
+  jti       String   @unique @db.VarChar(64)
+  revokedAt DateTime @default(now()) @map("revoked_at") @db.Timestamp(6)
+
+  @@map("revoked_jtis")
+}
+
+// Pincodes (Utilities): country/state/city scoped serviceability and ODA.
+model ServiceablePincode {
+  id          Int       @id @default(autoincrement())
+  countryId   Int       @map("country_id")
+  stateId     Int       @map("state_id")
+  pinCode     String    @map("pin_code") @db.VarChar(20)
+  cityName    String    @map("city_name") @db.VarChar(100)
+  areaName    String?   @map("area_name") @db.VarChar(255)
+  serviceable Boolean   @default(true) @map("serviceable")
+  oda         Boolean   @default(false) @map("oda")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  country                 Country                  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  state                   State                    @relation(fields: [stateId], references: [id], onDelete: Restrict)
+  serviceablePincodeZones ServiceablePincodeZone[]
+
+  consignees              Consignee[]     @relation("ConsigneePincode")
+  shippers                Shipper[]       @relation("ShipperPincode")
+  vendors                 Vendor[]        @relation("VendorPincode")
+  localBranches           LocalBranch[]   @relation("LocalBranchPincode")
+  customers               Customer[]      @relation("CustomerPincode")
+  serviceCentersAsAddress ServiceCenter[] @relation("ServiceCenterAddressPincode")
+
+  @@unique([pinCode, deletedAt])
+  @@index([pinCode])
+  @@map("serviceable_pincodes")
+}
+
+model ServiceablePincodeZone {
+  id                   Int @id @default(autoincrement())
+  serviceablePincodeId Int @map("serviceable_pincode_id")
+  zoneId               Int @map("zone_id")
+
+  serviceablePincode ServiceablePincode @relation(fields: [serviceablePincodeId], references: [id], onDelete: Cascade)
+  zone               Zone               @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  @@unique([serviceablePincodeId, zoneId])
+  @@index([zoneId])
+  @@map("serviceable_pincode_zones")
+}
+
+// Notifications (Utilities). Used for listing/searching notifications by date, type, message and user.
+model Notification {
+  id          Int              @id @default(autoincrement())
+  type        NotificationType
+  message     String           @map("message") @db.VarChar(255)
+  userId      Int?             @map("user_id")
+  // readAt = NULL means unread. Set to now() when user reads the notification.
+  // Use this for badge counts: SELECT COUNT(*) WHERE userId = ? AND readAt IS NULL AND deletedAt IS NULL
+  readAt      DateTime?        @map("read_at") @db.DateTime(6)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  deletedAt   DateTime?        @map("deleted_at") @db.DateTime(6)
+  deletedById Int?             @map("deleted_by_id")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+// Attendance. One row per user per calendar check-in date (IST).
+// Check-in creates/updates the row; check-out updates the same row.
+// Open-window checkout: last open record by checkedInAt, not by date (night shift).
+model Attendance {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  date            DateTime @map("date") @db.Date
+  serviceCenterId Int?     @map("service_center_id")
+
+  checkedInAt       DateTime? @map("checked_in_at") @db.DateTime(6)
+  checkInLat        Decimal?  @map("check_in_lat") @db.Decimal(10, 7)
+  checkInLng        Decimal?  @map("check_in_lng") @db.Decimal(10, 7)
+  checkInAddress    String?   @map("check_in_address") @db.VarChar(500)
+  checkInPhotoPath  String?   @map("check_in_photo_path") @db.VarChar(512)
+  checkInDeviceTime DateTime? @map("check_in_device_time") @db.DateTime(6)
+
+  checkedOutAt       DateTime? @map("checked_out_at") @db.DateTime(6)
+  checkOutLat        Decimal?  @map("check_out_lat") @db.Decimal(10, 7)
+  checkOutLng        Decimal?  @map("check_out_lng") @db.Decimal(10, 7)
+  checkOutAddress    String?   @map("check_out_address") @db.VarChar(500)
+  checkOutPhotoPath  String?   @map("check_out_photo_path") @db.VarChar(512)
+  checkOutDeviceTime DateTime? @map("check_out_device_time") @db.DateTime(6)
+
+  status          AttendanceStatus @default(PRESENT)
+  workingMinutes  Int?             @map("working_minutes")
+  remarks         String?          @db.VarChar(500)
+  autoCloseReason String?          @map("auto_close_reason") @db.VarChar(255)
+
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?     @map("created_by_id")
+  updatedById Int?     @map("updated_by_id")
+
+  user          User           @relation(fields: [userId], references: [id])
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+
+  @@unique([userId, date])
+  @@index([date])
+  @@index([userId, date])
+  @@index([serviceCenterId, date])
+  @@index([checkedInAt])
+  @@map("attendances")
+}
+
+// Zone master (child of Rate Master). Used in export/import: Domestic, Vendor.
+model Zone {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  code        String    @unique @db.VarChar(32)
+  // Optimistic locking: always WHERE id = ? AND version = ?; increment on every UPDATE.
+  version     Int       @default(1)
+  countryId   Int?      @map("country_id")
+  zoneType    ZoneType? @map("zone_type")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  createdBy               User?                    @relation("ZoneCreatedBy", fields: [createdById], references: [id])
+  updatedBy               User?                    @relation("ZoneUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy               User?                    @relation("ZoneDeletedBy", fields: [deletedById], references: [id])
+  country                 Country?                 @relation(fields: [countryId], references: [id])
+  vendors                 Vendor[]
+  shipmentFromZones       Shipment[]               @relation("ShipmentFromZone")
+  shipmentToZones         Shipment[]               @relation("ShipmentToZone")
+  serviceablePincodeZones ServiceablePincodeZone[]
+  fromZoneRates           ZoneRate[]               @relation("FromZone")
+  toZoneRates             ZoneRate[]               @relation("ToZone")
+  routeRateSlabFromZones  RouteRateSlab[]          @relation("RouteRateSlabFromZone")
+  routeRateSlabToZones    RouteRateSlab[]          @relation("RouteRateSlabToZone")
+  odaRateSlabFromZones    OdaRateSlab[]            @relation("OdaRateSlabFromZone")
+  odaRateSlabToZones      OdaRateSlab[]            @relation("OdaRateSlabToZone")
+
+  @@map("zones")
+}
+
+// Rate master. Update types: awb_entry_rate, vendor_rate, tax_fuel, vendor_obc_rate.
+// Service layer MUST enforce valid combinations; avoid half-configured rates (e.g. require scope: customer + product or customer + zone as per updateType).
+model RateMaster {
+  id             Int            @id @default(autoincrement())
+  updateType     RateUpdateType @map("update_type")
+  rateType       RateType?      @map("rate_type")
+  fromDate       DateTime       @map("from_date") @db.Date
+  toDate         DateTime       @map("to_date") @db.Date
+  // Optimistic locking: always WHERE id = ? AND version = ?; increment on every UPDATE.
+  version        Int            @default(1)
+  customerId     Int            @map("customer_id")
+  productId      Int            @map("product_id")
+  flatRate       Decimal?       @map("flat_rate") @db.Decimal(12, 4)
+  weightUnitStep Decimal?       @map("weight_unit_step") @db.Decimal(10, 3)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById    Int?           @map("created_by_id")
+  updatedById    Int?           @map("updated_by_id")
+  deletedAt      DateTime?      @map("deleted_at") @db.DateTime(6)
+  deletedById    Int?           @map("deleted_by_id")
+
+  createdBy User?    @relation("RateMasterCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?    @relation("RateMasterUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy User?    @relation("RateMasterDeletedBy", fields: [deletedById], references: [id])
+  customer  Customer @relation(fields: [customerId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  zoneRates      ZoneRate[]
+  distanceSlabs  DistanceSlab[]
+  routeRateSlabs RouteRateSlab[]
+  odaRateSlabs   OdaRateSlab[]
+  rateCharges    RateCharge[]
+  rateConditions RateCondition[]
+  shipments      Shipment[]
+
+  @@index([updateType, customerId, fromDate, toDate])
+  @@index([customerId, productId, rateType, fromDate, toDate], map: "rate_masters_customer_id_product_id_rate_type_from_date_to_idx")
+  @@index([productId])
+  @@index([createdAt])
+  @@map("rate_masters")
+}
+
+// Zone-to-zone rate row. One per (fromZone, toZone) pair within a RateMaster.
+model ZoneRate {
+  id           Int       @id @default(autoincrement())
+  rateMasterId Int       @map("rate_master_id")
+  fromZoneId   Int       @map("from_zone_id")
+  toZoneId     Int       @map("to_zone_id")
+  rate         Decimal   @db.Decimal(12, 4)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(6)
+
+  rateMaster RateMaster @relation(fields: [rateMasterId], references: [id], onDelete: Cascade)
+  fromZone   Zone       @relation("FromZone", fields: [fromZoneId], references: [id], onDelete: Restrict)
+  toZone     Zone       @relation("ToZone", fields: [toZoneId], references: [id], onDelete: Restrict)
+
+  @@unique([rateMasterId, fromZoneId, toZoneId])
+  @@index([rateMasterId])
+  @@map("zone_rates")
+}
+
+// Distance slab header (e.g. 0–50 km, 50–100 km). Child WeightSlabs supply the per-kg rate.
+model DistanceSlab {
+  id           Int       @id @default(autoincrement())
+  rateMasterId Int       @map("rate_master_id")
+  minKm        Decimal   @map("min_km") @db.Decimal(10, 2)
+  maxKm        Decimal   @map("max_km") @db.Decimal(10, 2)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(6)
+
+  rateMaster  RateMaster   @relation(fields: [rateMasterId], references: [id], onDelete: Cascade)
+  weightSlabs WeightSlab[]
+
+  @@index([rateMasterId])
+  @@index([rateMasterId, minKm, maxKm])
+  @@map("distance_slabs")
+}
+
+// Unified route slab for main freight. Can match by zone pair, km range, or both.
+model RouteRateSlab {
+  id           Int       @id @default(autoincrement())
+  rateMasterId Int       @map("rate_master_id")
+  fromZoneId   Int?      @map("from_zone_id")
+  toZoneId     Int?      @map("to_zone_id")
+  minKm        Decimal?  @map("min_km") @db.Decimal(10, 2)
+  maxKm        Decimal?  @map("max_km") @db.Decimal(10, 2)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(6)
+
+  rateMaster  RateMaster           @relation(fields: [rateMasterId], references: [id], onDelete: Cascade)
+  fromZone    Zone?                @relation("RouteRateSlabFromZone", fields: [fromZoneId], references: [id], onDelete: Restrict)
+  toZone      Zone?                @relation("RouteRateSlabToZone", fields: [toZoneId], references: [id], onDelete: Restrict)
+  weightSlabs RouteRateWeightSlab[]
+
+  @@index([rateMasterId])
+  @@index([rateMasterId, fromZoneId, toZoneId])
+  @@index([rateMasterId, minKm, maxKm])
+  @@map("route_rate_slabs")
+}
+
+model RouteRateWeightSlab {
+  id              Int       @id @default(autoincrement())
+  routeRateSlabId Int       @map("route_rate_slab_id")
+  minWeight       Decimal   @map("min_weight") @db.Decimal(10, 3)
+  maxWeight       Decimal   @map("max_weight") @db.Decimal(10, 3)
+  rate            Decimal   @db.Decimal(12, 4)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
+
+  routeRateSlab RouteRateSlab @relation(fields: [routeRateSlabId], references: [id], onDelete: Cascade)
+
+  @@index([routeRateSlabId])
+  @@index([routeRateSlabId, minWeight, maxWeight], map: "idx_rrws_slab_weights")
+  @@map("route_rate_weight_slabs")
+}
+
+// Unified slab for ODA surcharge. Can match by zone pair, km range, or both.
+model OdaRateSlab {
+  id           Int       @id @default(autoincrement())
+  rateMasterId Int       @map("rate_master_id")
+  fromZoneId   Int?      @map("from_zone_id")
+  toZoneId     Int?      @map("to_zone_id")
+  minKm        Decimal?  @map("min_km") @db.Decimal(10, 2)
+  maxKm        Decimal?  @map("max_km") @db.Decimal(10, 2)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(6)
+
+  rateMaster  RateMaster         @relation(fields: [rateMasterId], references: [id], onDelete: Cascade)
+  fromZone    Zone?              @relation("OdaRateSlabFromZone", fields: [fromZoneId], references: [id], onDelete: Restrict)
+  toZone      Zone?              @relation("OdaRateSlabToZone", fields: [toZoneId], references: [id], onDelete: Restrict)
+  weightSlabs OdaRateWeightSlab[]
+
+  @@index([rateMasterId])
+  @@index([rateMasterId, fromZoneId, toZoneId])
+  @@index([rateMasterId, minKm, maxKm])
+  @@map("oda_rate_slabs")
+}
+
+model OdaRateWeightSlab {
+  id            Int       @id @default(autoincrement())
+  odaRateSlabId Int       @map("oda_rate_slab_id")
+  minWeight     Decimal   @map("min_weight") @db.Decimal(10, 3)
+  maxWeight     Decimal   @map("max_weight") @db.Decimal(10, 3)
+  rate          Decimal   @db.Decimal(12, 4)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt     DateTime? @map("deleted_at") @db.DateTime(6)
+
+  odaRateSlab OdaRateSlab @relation(fields: [odaRateSlabId], references: [id], onDelete: Cascade)
+
+  @@index([odaRateSlabId])
+  @@index([odaRateSlabId, minWeight, maxWeight], map: "idx_orws_slab_weights")
+  @@map("oda_rate_weight_slabs")
+}
+
+// Weight slab within a distance slab (e.g. 0–100 kg at ₹825).
+model WeightSlab {
+  id             Int       @id @default(autoincrement())
+  distanceSlabId Int       @map("distance_slab_id")
+  minWeight      Decimal   @map("min_weight") @db.Decimal(10, 3)
+  maxWeight      Decimal   @map("max_weight") @db.Decimal(10, 3)
+  rate           Decimal   @db.Decimal(12, 4)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt      DateTime? @map("deleted_at") @db.DateTime(6)
+
+  distanceSlab DistanceSlab @relation(fields: [distanceSlabId], references: [id], onDelete: Cascade)
+
+  @@index([distanceSlabId])
+  @@index([distanceSlabId, minWeight, maxWeight])
+  @@map("weight_slabs")
+}
+
+// Configurable charge attached to a RateMaster (Fuel, FOV, Handling, ODA, etc.).
+model RateCharge {
+  id              Int             @id @default(autoincrement())
+  rateMasterId    Int             @map("rate_master_id")
+  chargeId        Int?            @map("charge_id")
+  name            String          @db.VarChar(255)
+  calculationBase CalculationBase @map("calculation_base")
+  value           Decimal         @db.Decimal(12, 4)
+  isPercentage    Boolean         @default(false) @map("is_percentage")
+  minValue        Decimal?        @map("min_value") @db.Decimal(12, 4)
+  maxValue        Decimal?        @map("max_value") @db.Decimal(12, 4)
+  weightStep      Decimal?        @map("weight_step") @db.Decimal(10, 3)
+  sequence        Int             @default(0)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt       DateTime?       @map("deleted_at") @db.DateTime(6)
+
+  rateMaster  RateMaster   @relation(fields: [rateMasterId], references: [id], onDelete: Cascade)
+  charge      Charge?      @relation(fields: [chargeId], references: [id], onDelete: SetNull)
+  chargeSlabs ChargeSlab[]
+
+  @@index([rateMasterId])
+  @@index([chargeId])
+  @@map("rate_charges")
+}
+
+// Slab-based override for a RateCharge (e.g. ECC: 0–500 → ₹50, 500–1000 → ₹80).
+model ChargeSlab {
+  id           Int       @id @default(autoincrement())
+  rateChargeId Int       @map("rate_charge_id")
+  minValue     Decimal   @map("min_value") @db.Decimal(12, 4)
+  maxValue     Decimal   @map("max_value") @db.Decimal(12, 4)
+  rate         Decimal   @db.Decimal(12, 4)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(6)
+
+  rateCharge RateCharge @relation(fields: [rateChargeId], references: [id], onDelete: Cascade)
+
+  @@index([rateChargeId])
+  @@map("charge_slabs")
+}
+
+// Conditional rule that triggers an extra charge (e.g. dimension > 200cm → odd-size surcharge).
+model RateCondition {
+  id           Int               @id @default(autoincrement())
+  rateMasterId Int               @map("rate_master_id")
+  chargeId     Int?              @map("charge_id")
+  field        ConditionField
+  operator     ConditionOperator
+  value        Decimal           @db.Decimal(12, 4)
+  // Charge to apply when condition is met — name + flat amount or percentage.
+  chargeName   String            @map("charge_name") @db.VarChar(100)
+  chargeAmount Decimal           @map("charge_amount") @db.Decimal(12, 4)
+  calculationBase CalculationBase @default(FLAT) @map("calculation_base")
+  isPercentage Boolean           @default(false) @map("is_percentage")
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt    DateTime?         @map("deleted_at") @db.DateTime(6)
+
+  rateMaster RateMaster @relation(fields: [rateMasterId], references: [id], onDelete: Cascade)
+  charge     Charge?    @relation(fields: [chargeId], references: [id], onDelete: SetNull)
+
+  @@index([rateMasterId])
+  @@index([chargeId])
+  @@map("rate_conditions")
+}
+
+// Tax and Charges Setup – Fuel Setup (child).
+
+// Consignee master. Area, Code, Name, Contact Person, Address, contacts, tax IDs.
+model Consignee {
+  id            Int       @id @default(autoincrement())
+  code          String    @db.VarChar(32)
+  name          String    @db.VarChar(255)
+  contactPerson String?   @map("contact_person") @db.VarChar(255)
+  address1      String?   @map("address1") @db.VarChar(255)
+  address2      String?   @map("address2") @db.VarChar(255)
+  pinCodeId     Int       @map("serviceable_pincode_id")
+  countryId     Int?      @map("country_id")
+  stateId       Int?      @map("state_id")
+  telephone     String?   @db.VarChar(32)
+  email         String?   @db.VarChar(255)
+  mobile        String?   @db.VarChar(32)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById   Int?      @map("created_by_id")
+  updatedById   Int?      @map("updated_by_id")
+  deletedAt     DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById   Int?      @map("deleted_by_id")
+
+  serviceablePincode ServiceablePincode @relation("ConsigneePincode", fields: [pinCodeId], references: [id], onDelete: Restrict)
+  country            Country?           @relation("ConsigneeCountry", fields: [countryId], references: [id], onDelete: SetNull)
+  stateMaster        State?             @relation("ConsigneeState", fields: [stateId], references: [id], onDelete: SetNull)
+  shipments          Shipment[]
+
+  @@map("consignees")
+}
+
+// Shipper master. Area, Shipper Code/Name, contacts, tax IDs and bank details.
+model Shipper {
+  id            Int       @id @default(autoincrement())
+  shipperCode   String    @map("shipper_code") @db.VarChar(32)
+  shipperName   String    @map("shipper_name") @db.VarChar(255)
+  contactPerson String?   @map("contact_person") @db.VarChar(255)
+  address1      String?   @map("address1") @db.VarChar(255)
+  address2      String?   @map("address2") @db.VarChar(255)
+  pinCodeId     Int       @map("serviceable_pincode_id")
+  countryId     Int?      @map("country_id")
+  stateId       Int?      @map("state_id")
+  telephone     String?   @db.VarChar(32)
+  email         String?   @db.VarChar(255)
+  mobile        String?   @db.VarChar(32)
+  aadhaarNo     String?   @map("aadhaar_no") @db.VarChar(32)
+  panNo         String?   @map("pan_no") @db.VarChar(32)
+  bankId        Int?      @map("bank_id")
+  bankAccount   String?   @map("bank_account") @db.VarChar(64)
+  bankIfsc      String?   @map("bank_ifsc") @db.VarChar(32)
+  firmType      FirmType? @map("firm_type")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById   Int?      @map("created_by_id")
+  updatedById   Int?      @map("updated_by_id")
+  deletedAt     DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById   Int?      @map("deleted_by_id")
+
+  bank               Bank?              @relation("ShipperBank", fields: [bankId], references: [id], onDelete: SetNull)
+  serviceablePincode ServiceablePincode @relation("ShipperPincode", fields: [pinCodeId], references: [id], onDelete: Restrict)
+  country            Country?           @relation("ShipperCountry", fields: [countryId], references: [id], onDelete: SetNull)
+  stateMaster        State?             @relation("ShipperState", fields: [stateId], references: [id], onDelete: SetNull)
+  shipments          Shipment[]
+
+  @@map("shippers")
+}
+
+// Vendor master. Vendor Code/Name, address, phones, GST, mode, fuel head, currency, origin, zip, status, global, volumetric rounding.
+model Vendor {
+  id              Int       @id @default(autoincrement())
+  vendorCode      String    @map("vendor_code") @db.VarChar(32)
+  vendorName      String    @map("vendor_name") @db.VarChar(255)
+  // Optimistic locking: always WHERE id = ? AND version = ?; increment on every UPDATE.
+  version         Int       @default(1)
+  contactPerson   String?   @map("contact_person") @db.VarChar(255)
+  address1        String?   @map("address1") @db.VarChar(255)
+  address2        String?   @map("address2") @db.VarChar(255)
+  pinCodeId       Int?      @map("serviceable_pincode_id")
+  countryId       Int?      @map("country_id")
+  stateId         Int?      @map("state_id")
+  zoneId          Int?      @map("zone_id")
+  bankId          Int?      @map("bank_id")
+  bankAccount     String?   @map("bank_account") @db.VarChar(64)
+  bankIfsc        String?   @map("bank_ifsc") @db.VarChar(32)
+  telephone       String?   @db.VarChar(32)
+  email           String?   @db.VarChar(255)
+  mobile          String?   @db.VarChar(32)
+  website         String?   @db.VarChar(255)
+  gstNo           String?   @map("gst_no") @db.VarChar(32)
+  currency        String?   @db.VarChar(16)
+  origin          String?   @db.VarChar(100)
+  vendorZip       String?   @map("vendor_zip") @db.VarChar(20)
+  status          Status    @default(ACTIVE)
+  global          Boolean   @default(false) @map("global") @db.TinyInt
+  volumetricRound Int?      @map("volumetric_round") // volumetric weight round off
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?      @map("created_by_id")
+  updatedById     Int?      @map("updated_by_id")
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?      @map("deleted_by_id")
+
+  createdBy              User?                   @relation("VendorCreatedBy", fields: [createdById], references: [id])
+  updatedBy              User?                   @relation("VendorUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy              User?                   @relation("VendorDeletedBy", fields: [deletedById], references: [id])
+  serviceablePincode     ServiceablePincode?     @relation("VendorPincode", fields: [pinCodeId], references: [id], onDelete: SetNull)
+  country                Country?                @relation("VendorCountry", fields: [countryId], references: [id], onDelete: SetNull)
+  stateMaster            State?                  @relation("VendorState", fields: [stateId], references: [id], onDelete: SetNull)
+  zone                   Zone?                   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  bank                   Bank?                   @relation("VendorBank", fields: [bankId], references: [id], onDelete: SetNull)
+  shipments              Shipment[]
+  customerFuelSurcharges CustomerFuelSurcharge[]
+  customerOtherCharges   CustomerOtherCharge[]
+  customerVolumetrics    CustomerVolumetric[]
+
+  serviceMapsAsVendor ServiceMap[]          @relation("Vendor")
+  configs             VendorConfig[]
+  statusMappings      VendorStatusMapping[]
+  vendorTrackingLogs  VendorTrackingLog[]
+
+  @@unique([vendorCode, deletedAt])
+  @@index([bankId])
+  @@map("vendors")
+}
+
+// Per-vendor mapping from external/raw partner status strings to internal ShipmentStatusType.
+// Business logic MUST always use Shipment.currentStatus / ShipmentStatus; never use raw partner status directly.
+// Priority: higher priority wins; if a new event maps to a lower priority than current, ignore for state transition.
+// Terminal: if isTerminal = true for the current internalStatus, reject further status updates for that shipment.
+// normalizedStatus: optional normalized label for analytics/search (e.g. \"OUT_FOR_DELIVERY\").
+model VendorStatusMapping {
+  id               Int                @id @default(autoincrement())
+  vendorId         Int                @map("vendor_id")
+  externalStatus   String             @map("external_status") @db.VarChar(128)
+  normalizedStatus String?            @map("normalized_status") @db.VarChar(128)
+  internalStatus   ShipmentStatusType @map("internal_status")
+  priority         Int                @default(1)
+  isTerminal       Boolean            @default(false) @map("is_terminal")
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@unique([vendorId, externalStatus])
+  @@index([vendorId, internalStatus])
+  @@index([vendorId, priority])
+  @@map("vendor_status_mappings")
+}
+
+// When customerId is NULL (global config), MySQL UNIQUE allows multiple rows. Service layer MUST enforce only one config per (vendorId, serviceMapId, environment) when customerId is NULL.
+model VendorConfig {
+  id           Int         @id @default(autoincrement())
+  vendorId     Int         @map("vendor_id")
+  serviceMapId Int         @map("service_map_id")
+  environment  Environment
+  customerId   Int?        @map("customer_id")
+  apiKey       String?     @map("api_key") @db.VarChar(255)
+  secretKey    String?     @map("secret_key") @db.VarChar(255)
+  baseUrl      String?     @map("base_url") @db.VarChar(255)
+  isActive     Boolean     @default(true) @map("is_active")
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt    DateTime?   @map("deleted_at") @db.DateTime(6)
+  deletedById  Int?        @map("deleted_by_id")
+
+  vendor     Vendor     @relation(fields: [vendorId], references: [id])
+  serviceMap ServiceMap @relation(fields: [serviceMapId], references: [id])
+  customer   Customer?  @relation(fields: [customerId], references: [id])
+
+  @@unique([vendorId, serviceMapId, environment, customerId])
+  @@index([vendorId, serviceMapId, environment])
+  @@map("vendor_configs")
+}
+
+// Service Map master.
+model ServiceMap {
+  id            Int          @id @default(autoincrement())
+  vendorId      Int?         @map("vendor_id")
+  serviceType   ServiceType? @map("service_type")
+  minWeight     Decimal?     @map("min_weight") @db.Decimal(12, 4)
+  maxWeight     Decimal?     @map("max_weight") @db.Decimal(12, 4)
+  status        Status       @default(ACTIVE)
+  vendorLink    String?      @map("vendor_link") @db.VarChar(100) // e.g. AFTERSHIP
+  isSinglePiece Boolean      @default(false) @map("is_single_piece") @db.TinyInt
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById   Int?         @map("created_by_id")
+  updatedById   Int?         @map("updated_by_id")
+  deletedAt     DateTime?    @map("deleted_at") @db.DateTime(6)
+  deletedById   Int?         @map("deleted_by_id")
+
+  createdBy User?          @relation("ServiceMapCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?          @relation("ServiceMapUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy User?          @relation("ServiceMapDeletedBy", fields: [deletedById], references: [id])
+  vendor    Vendor?        @relation("Vendor", fields: [vendorId], references: [id])
+  configs   VendorConfig[]
+
+  @@map("service_maps")
+}
+
+// Exception master. Exception Code, Name, Type (Delivered/Un-Delivered), Inscan, Show on Mobile Apps.
+model Exception {
+  id               Int            @id @default(autoincrement())
+  code             String         @unique @db.VarChar(32)
+  name             String         @db.VarChar(255)
+  type             ExceptionType?
+  inscan           Boolean        @default(false) @db.TinyInt
+  showOnMobileApps Boolean        @default(false) @map("show_on_mobile_apps") @db.TinyInt
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById      Int?           @map("created_by_id")
+  updatedById      Int?           @map("updated_by_id")
+  deletedAt        DateTime?      @map("deleted_at") @db.DateTime(6)
+  deletedById      Int?           @map("deleted_by_id")
+
+  manifestProgresses ManifestProgress[]
+
+  @@map("exceptions")
+}
+
+// Product master. Product Code, Product Name, Product Type, Product Service, Fuel Charge, GST Reverse,
+// DOX/NDOX type, Status (ACTIVE/INACTIVE).
+model Product {
+  id          Int         @id @default(autoincrement())
+  productCode String      @unique @map("product_code") @db.VarChar(32)
+  productName String      @map("product_name") @db.VarChar(255)
+  // Optimistic locking: always WHERE id = ? AND version = ?; increment on every UPDATE.
+  version     Int         @default(1)
+  productType ProductType @map("product_type")
+  status      Status      @default(ACTIVE)
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?        @map("created_by_id")
+  updatedById Int?        @map("updated_by_id")
+  deletedAt   DateTime?   @map("deleted_at") @db.DateTime(6)
+  deletedById Int?        @map("deleted_by_id")
+
+  createdBy              User?                   @relation("ProductCreatedBy", fields: [createdById], references: [id])
+  updatedBy              User?                   @relation("ProductUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy              User?                   @relation("ProductDeletedBy", fields: [deletedById], references: [id])
+  shipments              Shipment[]
+  rateMasters            RateMaster[]
+  customerFuelSurcharges CustomerFuelSurcharge[]
+  customerOtherCharges   CustomerOtherCharge[]
+  customerVolumetrics    CustomerVolumetric[]
+
+  @@map("products")
+}
+
+// Country master. Code, Name, Weight Unit (Kgs/Lbs), Currency, ISD Code.
+model Country {
+  id          Int        @id @default(autoincrement())
+  code        String     @db.VarChar(16)
+  name        String     @db.VarChar(100)
+  weightUnit  WeightUnit @map("weight_unit")
+  currency    String?    @db.VarChar(32) // e.g. INR, USD or "All"
+  isdCode     String?    @map("isd_code") @db.VarChar(16) // e.g. +91, +1
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?       @map("created_by_id")
+  updatedById Int?       @map("updated_by_id")
+  deletedAt   DateTime?  @map("deleted_at") @db.DateTime(6)
+  deletedById Int?       @map("deleted_by_id")
+
+  contents            Content[]
+  serviceablePincodes ServiceablePincode[]
+  consignees          Consignee[]          @relation("ConsigneeCountry")
+  shippers            Shipper[]            @relation("ShipperCountry")
+  vendors             Vendor[]             @relation("VendorCountry")
+  localBranches       LocalBranch[]        @relation("LocalBranchCountry")
+  serviceCenters      ServiceCenter[]      @relation("ServiceCenterCountry")
+  customers           Customer[]           @relation("CustomerCountry")
+  zones               Zone[]
+  states              State[]
+
+  @@map("countries")
+}
+
+// State master. State Code, State Name, Country (FK), GST Alias, Union Territory.
+model State {
+  id             Int       @id @default(autoincrement())
+  stateName      String    @map("state_name") @db.VarChar(100)
+  stateCode      String?   @map("state_code") @db.VarChar(8)
+  countryId      Int       @map("country_id")
+  gstAlias       String?   @map("gst_alias") @db.VarChar(64)
+  unionTerritory Boolean   @default(false) @map("union_territory")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById    Int?      @map("created_by_id")
+  updatedById    Int?      @map("updated_by_id")
+  deletedAt      DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById    Int?      @map("deleted_by_id")
+
+  country             Country              @relation(fields: [countryId], references: [id])
+  serviceablePincodes ServiceablePincode[]
+  consignees          Consignee[]          @relation("ConsigneeState")
+  shippers            Shipper[]            @relation("ShipperState")
+  vendors             Vendor[]             @relation("VendorState")
+  localBranches       LocalBranch[]        @relation("LocalBranchState")
+  serviceCenters      ServiceCenter[]      @relation("ServiceCenterState")
+  customers           Customer[]           @relation("CustomerState")
+
+  @@map("states")
+}
+
+// Vehicle master for Indian transport operations (road movement).
+model Vehicle {
+  id           Int         @id @default(autoincrement())
+  vehicleNo    String      @unique @map("vehicle_no") @db.VarChar(20)
+  vehicleType  VehicleType @map("vehicle_type")
+  ownerName    String?     @map("owner_name") @db.VarChar(255)
+  driverName   String?     @map("driver_name") @db.VarChar(255)
+  driverUserId Int?        @map("driver_user_id")
+  capacityKg   Decimal?    @map("capacity_kg") @db.Decimal(12, 3)
+  status       Status      @default(ACTIVE)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById  Int?        @map("created_by_id")
+  updatedById  Int?        @map("updated_by_id")
+  deletedAt    DateTime?   @map("deleted_at") @db.DateTime(6)
+  deletedById  Int?        @map("deleted_by_id")
+
+  driver    User?      @relation("VehicleDriver", fields: [driverUserId], references: [id], onDelete: SetNull)
+  manifests Manifest[]
+
+  @@map("vehicles")
+}
+
+// Content master. Content Code, Content Name, HSN Code, Country, Additional Field, and clearance details.
+model Content {
+  id              Int       @id @default(autoincrement())
+  contentCode     String    @map("content_code") @db.VarChar(32)
+  contentName     String    @map("content_name") @db.VarChar(255)
+  hsnCode         String?   @map("hsn_code") @db.VarChar(32)
+  countryId       Int?      @map("country_id")
+  additionalField String?   @map("additional_field") @db.VarChar(255)
+  clearanceCethNo String?   @map("clearance_ceth_no") @db.VarChar(64)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?      @map("created_by_id")
+  updatedById     Int?      @map("updated_by_id")
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?      @map("deleted_by_id")
+
+  country            Country?            @relation(fields: [countryId], references: [id])
+  createdBy          User?               @relation("ContentCreatedBy", fields: [createdById], references: [id])
+  updatedBy          User?               @relation("ContentUpdatedBy", fields: [updatedById], references: [id])
+  shipmentPieceItems ShipmentPieceItem[]
+
+  @@map("contents")
+}
+
+// Bank master. Bank Code, Bank Name, Status (ACTIVE/INACTIVE).
+model Bank {
+  id                   Int                   @id @default(autoincrement())
+  bankCode             String                @unique @map("bank_code") @db.VarChar(32)
+  bankName             String                @map("bank_name") @db.VarChar(255)
+  status               Status                @default(ACTIVE)
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt            DateTime              @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById          Int?                  @map("created_by_id")
+  updatedById          Int?                  @map("updated_by_id")
+  deletedAt            DateTime?             @map("deleted_at") @db.DateTime(6)
+  deletedById          Int?                  @map("deleted_by_id")
+  shippers             Shipper[]             @relation("ShipperBank")
+  shipmentReceiptLines ShipmentReceiptLine[] @relation("ReceiptLineBank")
+  customers            Customer[]            @relation("CustomerBank")
+  vendors              Vendor[]              @relation("VendorBank")
+
+  @@map("banks")
+}
+
+// Local Branch master. Company details, address, invoice/voucher numbering.
+model LocalBranch {
+  id                    Int       @id @default(autoincrement())
+  branchCode            String    @map("branch_code") @db.VarChar(32)
+  companyName           String?   @map("company_name") @db.VarChar(255)
+  name                  String?   @db.VarChar(255)
+  address1              String?   @map("address1") @db.VarChar(255)
+  address2              String?   @map("address2") @db.VarChar(255)
+  pinCodeId             Int?      @map("serviceable_pincode_id")
+  countryId             Int?      @map("country_id")
+  stateId               Int?      @map("state_id")
+  serviceCenterId       Int?      @map("service_center_id")
+  telephone             String?   @db.VarChar(32)
+  email                 String?   @db.VarChar(255)
+  panNo                 String?   @map("pan_no") @db.VarChar(32)
+  gstNo                 String?   @map("gst_no") @db.VarChar(32)
+  companyLogo           String?   @map("company_logo") @db.VarChar(512)
+  signatoryLogo         String?   @map("signatory_logo") @db.VarChar(512)
+  lastInvoiceNo         Int?      @map("last_invoice_no")
+  invoicePrefix         String?   @map("invoice_prefix") @db.VarChar(32)
+  invoiceSuffix         String?   @map("invoice_suffix") @db.VarChar(32)
+  lastFreeFormInvoiceNo Int?      @map("last_free_form_invoice_no")
+  freeFormPrefix        String?   @map("free_form_prefix") @db.VarChar(32)
+  freeFormSuffix        String?   @map("free_form_suffix") @db.VarChar(32)
+  rcpLastNo             Int?      @map("rcp_last_no")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById           Int?      @map("created_by_id")
+  updatedById           Int?      @map("updated_by_id")
+  deletedAt             DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById           Int?      @map("deleted_by_id")
+
+  serviceCenter             ServiceCenter?      @relation(fields: [serviceCenterId], references: [id])
+  serviceablePincode        ServiceablePincode? @relation("LocalBranchPincode", fields: [pinCodeId], references: [id], onDelete: SetNull)
+  country                   Country?            @relation("LocalBranchCountry", fields: [countryId], references: [id], onDelete: SetNull)
+  stateMaster               State?              @relation("LocalBranchState", fields: [stateId], references: [id], onDelete: SetNull)
+  serviceCentersBillingHere ServiceCenter[]     @relation("BillingBranch")
+  terms                     BranchTerm[]
+
+  @@map("local_branches")
+}
+
+// Charge master. Code, Name, Base On (calculation base), Apply Fuel, sequence.
+model Charge {
+  id              Int             @id @default(autoincrement())
+  code            String          @db.VarChar(32)
+  name            String          @db.VarChar(255)
+  // Optimistic locking: always WHERE id = ? AND version = ?; increment on every UPDATE.
+  version         Int             @default(1)
+  calculationBase CalculationBase @map("calculation_base")
+  applyFuel       Boolean         @default(true) @map("apply_fuel")
+  sequence        Int             @default(0)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?            @map("created_by_id")
+  updatedById     Int?            @map("updated_by_id")
+  deletedAt       DateTime?       @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?            @map("deleted_by_id")
+
+  createdBy User? @relation("ChargeCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("ChargeUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy User? @relation("ChargeDeletedBy", fields: [deletedById], references: [id])
+  rateCharges RateCharge[]
+  rateConditions RateCondition[]
+
+  @@map("charges")
+}
+
+// Service Center = operational hub (pickups, manifests, shipments). Billing/financial config lives on LocalBranch (localBranchId). Service layer: use ServiceCenter for ops, LocalBranch for invoicing/identity only.
+model ServiceCenter {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique @db.VarChar(32)
+  name          String    @db.VarChar(255)
+  subName       String?   @map("sub_name") @db.VarChar(255)
+  address1      String?   @map("address1") @db.VarChar(255)
+  address2      String?   @map("address2") @db.VarChar(255)
+  telephone     String?   @db.VarChar(32)
+  email         String?   @db.VarChar(255)
+  pinCodeId     Int?      @map("serviceable_pincode_id")
+  countryId     Int?      @map("country_id")
+  stateId       Int?      @map("state_id")
+  companyLogo   String?   @map("company_logo") @db.VarChar(512)
+  signatoryLogo String?   @map("signatory_logo") @db.VarChar(512)
+  // Optimistic locking: always WHERE id = ? AND version = ?; increment on every UPDATE.
+  version       Int       @default(1)
+  localBranchId Int?      @map("local_branch_id")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById   Int?      @map("created_by_id")
+  updatedById   Int?      @map("updated_by_id")
+  deletedAt     DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById   Int?      @map("deleted_by_id")
+
+  localBranch               LocalBranch?        @relation("BillingBranch", fields: [localBranchId], references: [id])
+  addressServiceablePincode ServiceablePincode? @relation("ServiceCenterAddressPincode", fields: [pinCodeId], references: [id], onDelete: SetNull)
+  country                   Country?            @relation("ServiceCenterCountry", fields: [countryId], references: [id], onDelete: SetNull)
+  stateMaster               State?              @relation("ServiceCenterState", fields: [stateId], references: [id], onDelete: SetNull)
+  createdBy                 User?               @relation("ServiceCenterCreatedBy", fields: [createdById], references: [id])
+  updatedBy                 User?               @relation("ServiceCenterUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy                 User?               @relation("ServiceCenterDeletedBy", fields: [deletedById], references: [id])
+  shipmentStatuses          ShipmentStatus[]
+  invoices                  Invoice[]
+  customers                 Customer[]
+  couriers                  Courier[]
+  userProfiles              UserProfile[]
+  manifests                 Manifest[]
+  drsScans                  DrsScan[]
+  eventScans                EventScan[]
+  localBranches             LocalBranch[]
+  manifestProgresses        ManifestProgress[]
+  manifestInscans           ManifestInscan[]
+  invoiceLockLogs           InvoiceLockLog[]
+  terms                     BranchTerm[]
+  attendances               Attendance[]
+
+  @@map("service_centers")
+}
+
+// Courier (Field Executive) master linked to a mobile user profile.
+model Courier {
+  id              Int       @id @default(autoincrement())
+  code            String    @unique @db.VarChar(32)
+  userId          Int       @unique @map("user_id")
+  inActive        Boolean   @default(false) @map("in_active") @db.TinyInt
+  pickupCharge    Decimal   @default(0) @map("pickup_charge") @db.Decimal(12, 4)
+  deliveryCharge  Decimal   @default(0) @map("delivery_charge") @db.Decimal(12, 4)
+  serviceCenterId Int?      @map("service_center_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?      @map("created_by_id")
+  updatedById     Int?      @map("updated_by_id")
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?      @map("deleted_by_id")
+
+  user          User           @relation(fields: [userId], references: [id])
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+  drsScans      DrsScan[]
+
+  @@map("couriers")
+}
+
+model BranchTerm {
+  id              Int       @id @default(autoincrement())
+  localBranchId   Int?      @map("local_branch_id")
+  serviceCenterId Int?      @map("service_center_id")
+  sequence        Int
+  content         String    @db.VarChar(500)
+  termType        String?   @map("term_type") @db.VarChar(64)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?      @map("created_by_id")
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?      @map("deleted_by_id")
+
+  localBranch   LocalBranch?   @relation(fields: [localBranchId], references: [id], onDelete: Cascade)
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id], onDelete: Cascade)
+
+  @@index([localBranchId, sequence])
+  @@index([serviceCenterId, sequence])
+  @@map("branch_terms")
+}
+
+// Customer master with step-form related child tables.
+model Customer {
+  id               Int           @id @default(autoincrement())
+  code             String        @db.VarChar(32)
+  name             String        @db.VarChar(255)
+  version          Int           @default(1)
+  contactPerson    String?       @map("contact_person") @db.VarChar(255)
+  address1         String?       @map("address1") @db.VarChar(255)
+  address2         String?       @map("address2") @db.VarChar(255)
+  pinCodeId        Int?          @map("serviceable_pincode_id")
+  countryId        Int?          @map("country_id")
+  stateId          Int?          @map("state_id")
+  bankId           Int?          @map("bank_id")
+  bankAccount      String?       @map("bank_account") @db.VarChar(64)
+  bankIfsc         String?       @map("bank_ifsc") @db.VarChar(32)
+  telephone        String?       @map("tel_no_1") @db.VarChar(32)
+  mobile           String?       @db.VarChar(32)
+  serviceCenterId  Int?          @map("service_center_id")
+  serviceStartDate DateTime?     @map("service_start_date") @db.Date
+  status           Status        @default(ACTIVE)
+  origin           String?       @db.VarChar(100)
+  gstNo            String?       @map("gst_no") @db.VarChar(32)
+  aadhaarNo        String?       @map("aadhaar_no") @db.VarChar(32)
+  dobOnAadhaar     DateTime?     @map("dob_on_aadhaar") @db.Date
+  panNo            String?       @map("pan_no") @db.VarChar(32)
+  invoiceFormat    String?       @map("invoice_format") @db.VarChar(64)
+  customerType     CustomerType? @map("customer_type")
+  registerType     RegisterType? @map("register_type")
+  signatureFile    String?       @map("signature_file") @db.VarChar(512)
+  logoFile         String?       @map("logo_file") @db.VarChar(512)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById      Int?          @map("created_by_id")
+  updatedById      Int?          @map("updated_by_id")
+  deletedAt        DateTime?     @map("deleted_at") @db.DateTime(6)
+  deletedById      Int?          @map("deleted_by_id")
+
+  createdBy        User?                   @relation("CustomerCreatedBy", fields: [createdById], references: [id])
+  updatedBy        User?                   @relation("CustomerUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy        User?                   @relation("CustomerDeletedBy", fields: [deletedById], references: [id])
+  fuelSurcharges   CustomerFuelSurcharge[]
+  otherCharges     CustomerOtherCharge[]
+  volumetrics      CustomerVolumetric[]
+  kycDocuments     CustomerKycDocument[]
+  contacts         CustomerContact[]
+  customerPayments CustomerPayment[]
+  invoices         Invoice[]
+  shipments        Shipment[]
+  rateMasters      RateMaster[]
+  userProfiles     UserProfile[]
+  vendorConfigs    VendorConfig[]
+  emails           CustomerEmail[]
+
+  serviceCenter      ServiceCenter?      @relation(fields: [serviceCenterId], references: [id])
+  serviceablePincode ServiceablePincode? @relation("CustomerPincode", fields: [pinCodeId], references: [id], onDelete: SetNull)
+  country            Country?            @relation("CustomerCountry", fields: [countryId], references: [id], onDelete: SetNull)
+  stateMaster        State?              @relation("CustomerState", fields: [stateId], references: [id], onDelete: SetNull)
+  bank               Bank?               @relation("CustomerBank", fields: [bankId], references: [id], onDelete: SetNull)
+
+  @@unique([code, deletedAt])
+  @@index([bankId])
+  @@index([serviceCenterId, createdAt])
+  @@map("customers")
+}
+
+// Customer email(s). One row per email; email is unique globally. Use for login, notifications, no ambiguity.
+model CustomerEmail {
+  id         Int    @id @default(autoincrement())
+  customerId Int    @map("customer_id")
+  email      String @unique @db.VarChar(255)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_emails")
+}
+
+// Per-customer Fuel Surcharge rows (step: Fuel Surcharges).
+model CustomerFuelSurcharge {
+  id             Int            @id @default(autoincrement())
+  customerId     Int            @map("customer_id")
+  vendorId       Int?           @map("vendor_id")
+  productId      Int?           @map("product_id")
+  fuelChargeType FuelChargeType @default(PERCENTAGE) @map("fuel_charge_type")
+  fromDate       DateTime       @map("from_date") @db.Date
+  toDate         DateTime       @map("to_date") @db.Date
+  fuelSurcharge  Decimal        @map("fuel_surcharge") @db.Decimal(8, 2)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById    Int?           @map("created_by_id")
+  updatedById    Int?           @map("updated_by_id")
+  deletedAt      DateTime?      @map("deleted_at") @db.DateTime(6)
+  deletedById    Int?           @map("deleted_by_id")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor   Vendor?  @relation(fields: [vendorId], references: [id])
+  product  Product? @relation(fields: [productId], references: [id])
+
+  @@map("customer_fuel_surcharges")
+}
+
+// Per-customer Other Charges rows (step: Other Charges).
+model CustomerOtherCharge {
+  id           Int         @id @default(autoincrement())
+  customerId   Int         @map("customer_id")
+  vendorId     Int?        @map("vendor_id")
+  productId    Int?        @map("product_id")
+  srNo         Int?        @map("sr_no")
+  chargeType   ChargeType? @map("charge_type")
+  fromDate     DateTime?   @map("from_date") @db.Date
+  toDate       DateTime?   @map("to_date") @db.Date
+  origin       String?     @db.VarChar(100)
+  destination  String?     @db.VarChar(100)
+  amount       Decimal?    @db.Decimal(12, 2)
+  minimumValue Decimal?    @map("minimum_value") @db.Decimal(12, 2)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById  Int?        @map("created_by_id")
+  updatedById  Int?        @map("updated_by_id")
+  deletedAt    DateTime?   @map("deleted_at") @db.DateTime(6)
+  deletedById  Int?        @map("deleted_by_id")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade, map: "customer_other_charges_customer_fkey")
+  vendor   Vendor?  @relation(fields: [vendorId], references: [id], map: "customer_other_charges_vendor_fkey")
+  product  Product? @relation(fields: [productId], references: [id], map: "customer_other_charges_product_fkey")
+
+  @@index([customerId])
+  @@index([customerId, createdAt])
+  @@map("customer_other_charges")
+}
+
+// Per-customer volumetric configuration rows (step: Customer Volumetric).
+model CustomerVolumetric {
+  id          Int       @id @default(autoincrement())
+  customerId  Int       @map("customer_id")
+  vendorId    Int?      @map("vendor_id")
+  productId   Int?      @map("product_id")
+  cmDivide    Decimal?  @map("cm_divide") @db.Decimal(10, 4)
+  inchDivide  Decimal?  @map("inch_divide") @db.Decimal(10, 4)
+  cft         Decimal?  @db.Decimal(10, 4)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor   Vendor?  @relation(fields: [vendorId], references: [id])
+  product  Product? @relation(fields: [productId], references: [id])
+
+  @@map("customer_volumetrics")
+}
+
+// Per-customer KYC document uploads (step: KYC Details).
+model CustomerKycDocument {
+  id          Int        @id @default(autoincrement())
+  customerId  Int        @map("customer_id")
+  docType     KycDocType @map("doc_type")
+  filePath    String     @map("file_path") @db.VarChar(512)
+  fileName    String?    @map("file_name") @db.VarChar(255)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?       @map("created_by_id")
+  updatedById Int?       @map("updated_by_id")
+  deletedAt   DateTime?  @map("deleted_at") @db.DateTime(6)
+  deletedById Int?       @map("deleted_by_id")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_kyc_documents")
+}
+
+// Per-customer contact/address rows (step: Customer Address).
+model CustomerContact {
+  id            Int       @id @default(autoincrement())
+  customerId    Int       @map("customer_id")
+  contactPerson String?   @map("contact_person") @db.VarChar(255)
+  startDate     DateTime? @map("start_date") @db.Date
+  designation   String?   @db.VarChar(100)
+  mobile        String?   @db.VarChar(32)
+  filePath      String?   @map("file_path") @db.VarChar(512)
+  fileName      String?   @map("file_name") @db.VarChar(255)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById   Int?      @map("created_by_id")
+  updatedById   Int?      @map("updated_by_id")
+  deletedAt     DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById   Int?      @map("deleted_by_id")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_contacts")
+}
+
+// Shipment AWB entry (transaction). Minimal core: who, weight, payment.
+// Route/pieces are derived from linked shipper/consignee pincodes and ShipmentPiece rows.
+// Validation: weight > 0. Status transitions (reject invalid): CREATED → PICKED → IN_TRANSIT → DELIVERED, or CREATED → PICKED → IN_TRANSIT → FAILED. Update currentStatus in same transaction as ShipmentStatus.
+model Shipment {
+  id             Int     @id @default(autoincrement())
+  awbNo          String  @unique @map("awb_no") @db.VarChar(64)
+  ewaybillNumber String? @map("ewaybill_number") @db.VarChar(64)
+
+  customerId  Int  @map("customer_id")
+  shipperId   Int? @map("shipper_id")
+  consigneeId Int? @map("consignee_id")
+  vendorId    Int? @map("vendor_id")
+  productId   Int? @map("product_id")
+
+  // declaredWeight: weight as declared at booking time. Source of truth for AWB.
+  // chargeWeight: denormalized sum of ShipmentPiece.chargeWeight rows.
+  // MUST be updated in the same transaction as any ShipmentPiece upsert/delete.
+  // Used for billing and rate lookup. Do NOT recalculate on read - use this stored value.
+  declaredWeight      Decimal            @map("declared_weight") @db.Decimal(10, 3)
+  chargeWeight        Decimal?           @map("charge_weight") @db.Decimal(10, 3)
+  paymentType         PaymentType        @map("payment_type")
+  currentStatus       ShipmentStatusType @default(CREATED) @map("current_status")
+  version             Int                @default(1)
+  codAmount           Decimal?           @map("cod_amount") @db.Decimal(14, 2)
+  isCod               Boolean            @default(false) @map("is_cod") @db.TinyInt
+  rateMasterId        Int?               @map("rate_master_id")
+  baseFreight         Decimal?           @map("base_freight") @db.Decimal(14, 4)
+  totalAmount         Decimal?           @map("total_amount") @db.Decimal(14, 4)
+  fromZoneId          Int?               @map("from_zone_id")
+  toZoneId            Int?               @map("to_zone_id")
+  reversePickup       Boolean            @default(false) @map("reverse_pickup")
+  appointmentDelivery Boolean            @default(false) @map("appointment_delivery")
+  floorDelivery       Boolean            @default(false) @map("floor_delivery")
+  floorCount          Int?               @map("floor_count") @db.Int
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  shipper    Shipper?    @relation(fields: [shipperId], references: [id])
+  consignee  Consignee?  @relation(fields: [consigneeId], references: [id])
+  vendor     Vendor?     @relation(fields: [vendorId], references: [id])
+  product    Product?    @relation(fields: [productId], references: [id])
+  rateMaster RateMaster? @relation(fields: [rateMasterId], references: [id])
+  fromZone   Zone?       @relation("ShipmentFromZone", fields: [fromZoneId], references: [id], onDelete: SetNull)
+  toZone     Zone?       @relation("ShipmentToZone", fields: [toZoneId], references: [id], onDelete: SetNull)
+
+  forwarding          ShipmentForwarding?
+  kycDocuments        ShipmentKycDocument[]
+  receipt             ShipmentReceipt?
+  receiptLines        ShipmentReceiptLine[]
+  piecesRows          ShipmentPiece[]
+  charges             ShipmentCharge[]
+  manifestShipments   ManifestShipment[]
+  manifestInscanItems ManifestInscanItem[]
+  drsScanItems        DrsScanItem[]
+  eventScanItems      EventScanItem[]
+  statuses            ShipmentStatus[]
+  comments            ShipmentComment[]
+  logs                ShipmentLog[]
+  packages            ShipmentPackage[]
+  vendorTrackingLogs  VendorTrackingLog[]
+  trackingSummary     ShipmentTrackingSummary?
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById         Int?                     @map("created_by_id")
+  updatedById         Int?                     @map("updated_by_id")
+  deletedAt           DateTime?                @map("deleted_at") @db.DateTime(6)
+  deletedById         Int?                     @map("deleted_by_id")
+
+  createdBy        User?             @relation("ShipmentCreatedBy", fields: [createdById], references: [id])
+  updatedBy        User?             @relation("ShipmentUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy        User?             @relation("ShipmentDeletedBy", fields: [deletedById], references: [id])
+  invoiceShipments InvoiceShipment[]
+
+  @@index([customerId, createdAt])
+  @@index([shipperId])
+  @@index([consigneeId])
+  @@index([customerId, currentStatus])
+  @@index([customerId, currentStatus, createdAt])
+  @@index([vendorId])
+  @@index([vendorId, createdAt])
+  @@index([vendorId, currentStatus])
+  @@index([currentStatus])
+  @@index([paymentType])
+  @@index([createdAt])
+  @@index([createdAt, currentStatus])
+  @@index([rateMasterId])
+  @@index([fromZoneId])
+  @@index([toZoneId])
+  @@index([fromZoneId, toZoneId])
+  @@map("shipments")
+}
+
+model ShipmentPackage {
+  id          Int       @id @default(autoincrement())
+  shipmentId  Int       @map("shipment_id")
+  length      Decimal   @db.Decimal(10, 2)
+  width       Decimal   @db.Decimal(10, 2)
+  height      Decimal   @db.Decimal(10, 2)
+  weight      Decimal   @db.Decimal(10, 3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id])
+
+  @@index([shipmentId])
+  @@map("shipment_packages")
+}
+
+// Partner webhook / tracking log. Insert event first, process asynchronously, then update Shipment.currentStatus. Order by sequence per shipment.
+// Idempotency: eventId (when set) + shipmentId + vendorId unique → prevents duplicate webhook events. Retries reuse same eventId.
+// Status transitions (enforce in service layer): CREATED → PICKED → IN_TRANSIT → DELIVERED. FAILED is terminal. Never allow backward transitions.
+// Validation: externalAwb MUST map to Shipment; if not → store event but set isProcessed = false for later retry/debug.
+// Avoid storing full payload for high-frequency events. Consider compression or external storage (S3) for large payloads.
+model VendorTrackingLog {
+  id           Int       @id @default(autoincrement())
+  shipmentId   Int       @map("shipment_id")
+  vendorId     Int       @map("vendor_id")
+  eventId      String?   @map("event_id") @db.VarChar(128)
+  sequence     Int?      @map("sequence")
+  status       String    @db.VarChar(64)
+  location     String?   @db.VarChar(255)
+  remarks      String?   @db.VarChar(500)
+  rawData      Json?     @map("raw_data")
+  isProcessed  Boolean   @default(false) @map("is_processed")
+  errorMessage String?   @map("error_message") @db.VarChar(1000)
+  retryCount   Int       @default(0) @map("retry_count")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  deletedAt    DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById  Int?      @map("deleted_by_id")
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id])
+  vendor   Vendor   @relation(fields: [vendorId], references: [id])
+
+  @@unique([shipmentId, vendorId, eventId])
+  @@index([shipmentId, vendorId, createdAt])
+  @@index([shipmentId, sequence])
+  @@index([shipmentId, createdAt])
+  @@index([isProcessed])
+  @@index([status])
+  @@map("vendor_tracking_logs")
+}
+
+// Shipment status/progress and POD (proof of delivery).
+// status = business truth (ShipmentStatusType). externalStatus = raw carrier status; normalizedStatus = analytics/search layer.
+model ShipmentStatus {
+  id               Int                @id @default(autoincrement())
+  shipmentId       Int                @map("shipment_id")
+  status           ShipmentStatusType
+  sequence         Int                @default(0)
+  externalStatus   String?            @map("external_status") @db.VarChar(128)
+  normalizedStatus String?            @map("normalized_status") @db.VarChar(128)
+  serviceCenterId  Int?               @map("service_center_id")
+  userId           Int?               @map("user_id")
+  remark           String?            @db.VarChar(500)
+  receiverName     String?            @map("receiver_name") @db.VarChar(255)
+  podFilePath      String?            @map("pod_file_path") @db.VarChar(512)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById      Int?               @map("created_by_id")
+  updatedById      Int?               @map("updated_by_id")
+  deletedAt        DateTime?          @map("deleted_at") @db.DateTime(6)
+  deletedById      Int?               @map("deleted_by_id")
+  source           String?            @db.VarChar(50)
+
+  shipment      Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+  user          User?          @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([shipmentId])
+  @@index([shipmentId, sequence])
+  @@map("shipment_statuses")
+}
+
+// Aggregated tracking/SLA metrics per shipment. Built from ShipmentStatus + VendorTrackingLog.
+// Use for dashboards, SLA reports, delay/RTO insights; keep Shipment core minimal.
+model ShipmentTrackingSummary {
+  shipmentId       Int       @id @map("shipment_id")
+  firstPickupAt    DateTime? @map("first_pickup_at") @db.DateTime(6)
+  firstInTransitAt DateTime? @map("first_in_transit_at") @db.DateTime(6)
+  firstOfdAt       DateTime? @map("first_ofd_at") @db.DateTime(6)
+  deliveredAt      DateTime? @map("delivered_at") @db.DateTime(6)
+
+  totalTransitTime Int? @map("total_transit_time") // e.g. minutes or seconds
+  totalDelayTime   Int? @map("total_delay_time")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([deliveredAt])
+  @@index([firstPickupAt])
+  @@map("shipment_tracking_summaries")
+}
+
+// Shipment comment (user comments with optional file).
+model ShipmentComment {
+  id          Int       @id @default(autoincrement())
+  shipmentId  Int       @map("shipment_id")
+  userId      Int?      @map("user_id")
+  commentedAt DateTime  @default(now()) @map("commented_at") @db.DateTime(6)
+  comment     String?   @db.VarChar(1000)
+  filePath    String?   @map("file_path") @db.VarChar(512)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+  shipment    Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@map("shipment_comments")
+}
+
+// Shipment log (audit messages per shipment).
+model ShipmentLog {
+  id         Int      @id @default(autoincrement())
+  shipmentId Int      @map("shipment_id")
+  userId     Int?     @map("user_id")
+  loggedAt   DateTime @default(now()) @map("logged_at") @db.DateTime(6)
+  message    String?  @db.VarChar(1000)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([shipmentId, createdAt])
+  @@map("shipment_logs")
+}
+
+// Shipment piece details (child AWB / piece grid).
+model ShipmentPiece {
+  id               Int      @id @default(autoincrement())
+  shipmentId       Int      @map("shipment_id")
+  actualWeight     Decimal? @map("actual_weight") @db.Decimal(10, 3)
+  pieces           Int      @default(1)
+  length           Decimal? @db.Decimal(10, 2)
+  width            Decimal? @db.Decimal(10, 2)
+  height           Decimal? @db.Decimal(10, 2)
+  volumetricWeight Decimal? @map("volumetric_weight") @db.Decimal(10, 3)
+  chargeWeight     Decimal? @map("charge_weight") @db.Decimal(10, 3)
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  shipment Shipment            @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  items    ShipmentPieceItem[]
+
+  @@index([shipmentId])
+  @@index([shipmentId, createdAt])
+  @@map("shipment_pieces")
+}
+
+model ShipmentPieceItem {
+  id            Int       @id @default(autoincrement())
+  pieceId       Int       @map("piece_id")
+  contentId     Int       @map("content_id")
+  quantity      Int?
+  measureValue  Decimal?  @map("measure_value") @db.Decimal(10, 3)
+  measureUnit   String?   @map("measure_unit") @db.VarChar(20)
+  totalValue    Decimal?  @map("total_value") @db.Decimal(14, 4)
+  invoiceDate   DateTime? @map("invoice_date") @db.Date
+  invoiceNumber String?   @map("invoice_number") @db.VarChar(64)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt     DateTime? @map("deleted_at") @db.DateTime(6)
+
+  piece   ShipmentPiece @relation(fields: [pieceId], references: [id], onDelete: Cascade)
+  content Content       @relation(fields: [contentId], references: [id])
+
+  @@index([pieceId])
+  @@index([contentId])
+  @@map("shipment_piece_items")
+}
+
+// Shipment charge details (charges grid).
+model ShipmentCharge {
+  id          Int         @id @default(autoincrement())
+  shipmentId  Int         @map("shipment_id")
+  chargeId    Int?        @map("charge_id")
+  description String?     @db.VarChar(255)
+  rate        Decimal?    @db.Decimal(14, 4)
+  amount      Decimal?    @db.Decimal(14, 4)
+  fuelApply   Boolean     @default(false) @map("fuel_apply") @db.TinyInt
+  fuelAmount  Decimal?    @map("fuel_amount") @db.Decimal(14, 4)
+  taxApply    Boolean     @default(false) @map("tax_apply") @db.TinyInt
+  taxOnFuel   Boolean     @default(false) @map("tax_on_fuel") @db.TinyInt
+  igst        Decimal?    @db.Decimal(14, 4)
+  cgst        Decimal?    @db.Decimal(14, 4)
+  sgst        Decimal?    @db.Decimal(14, 4)
+  total       Decimal?    @db.Decimal(14, 4)
+  chargeType  ChargeType? @map("charge_type")
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([shipmentId, createdAt])
+  @@map("shipment_charges")
+}
+
+// Shipment forwarding step (Delivery AWB, Vendor, Vendor charges grid).
+model ShipmentForwarding {
+  id                   Int                        @id @default(autoincrement())
+  shipmentId           Int                        @unique @map("shipment_id")
+  forwardingAwb        String?                    @map("forwarding_awb") @db.VarChar(64)
+  deliveryVendorId     Int?                       @map("delivery_vendor_id")
+  deliveryServiceMapId Int?                       @map("delivery_service_map_id")
+  vendorWeight         Decimal?                   @map("vendor_weight") @db.Decimal(14, 3)
+  vendorAmount         Decimal?                   @map("vendor_amount") @db.Decimal(14, 4)
+  vendorInvoice        String?                    @map("vendor_invoice") @db.VarChar(255)
+  contractCharges      Decimal?                   @map("contract_charges") @db.Decimal(14, 4)
+  otherCharges         Decimal?                   @map("other_charges") @db.Decimal(14, 4)
+  subTotal             Decimal?                   @map("sub_total") @db.Decimal(14, 4)
+  totalFuel            Decimal?                   @map("total_fuel") @db.Decimal(14, 4)
+  igst                 Decimal?                   @db.Decimal(14, 4)
+  cgst                 Decimal?                   @db.Decimal(14, 4)
+  sgst                 Decimal?                   @db.Decimal(14, 4)
+  totalAmount          Decimal?                   @map("total_amount") @db.Decimal(14, 4)
+  createdAt            DateTime                   @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt            DateTime                   @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById          Int?                       @map("created_by_id")
+  updatedById          Int?                       @map("updated_by_id")
+  deletedAt            DateTime?                  @map("deleted_at") @db.DateTime(6)
+  deletedById          Int?                       @map("deleted_by_id")
+  shipment             Shipment                   @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  charges              ShipmentForwardingCharge[]
+
+  @@map("shipment_forwardings")
+}
+
+// Shipment forwarding vendor charge rows.
+model ShipmentForwardingCharge {
+  id           Int                @id @default(autoincrement())
+  forwardingId Int                @map("forwarding_id")
+  chargeId     Int?               @map("charge_id")
+  description  String?            @db.VarChar(255)
+  rate         Decimal?           @db.Decimal(14, 4)
+  amount       Decimal?           @db.Decimal(14, 4)
+  fuelApply    Boolean            @default(false) @map("fuel_apply") @db.TinyInt
+  fuelAmount   Decimal?           @map("fuel_amount") @db.Decimal(14, 4)
+  taxApply     Boolean            @default(false) @map("tax_apply") @db.TinyInt
+  taxOnFuel    Boolean            @default(false) @map("tax_on_fuel") @db.TinyInt
+  igst         Decimal?           @db.Decimal(14, 4)
+  cgst         Decimal?           @db.Decimal(14, 4)
+  sgst         Decimal?           @db.Decimal(14, 4)
+  total        Decimal?           @db.Decimal(14, 4)
+  chargeType   ChargeType?        @map("charge_type")
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById  Int?               @map("created_by_id")
+  updatedById  Int?               @map("updated_by_id")
+  deletedAt    DateTime?          @map("deleted_at") @db.DateTime(6)
+  deletedById  Int?               @map("deleted_by_id")
+  forwarding   ShipmentForwarding @relation(fields: [forwardingId], references: [id], onDelete: Cascade)
+
+  @@index([forwardingId])
+  @@index([forwardingId, createdAt])
+  @@map("shipment_forwarding_charges")
+}
+
+// Shipment KYC document (step: KYC - multiple docs per shipment).
+model ShipmentKycDocument {
+  id          Int       @id @default(autoincrement())
+  shipmentId  Int       @map("shipment_id")
+  type        String    @db.VarChar(64) // Aadhaar Number, PAN, etc.
+  fileName    String?   @map("file_name") @db.VarChar(255)
+  filePath    String    @map("file_path") @db.VarChar(512)
+  entryType   String?   @map("entry_type") @db.VarChar(64)
+  entryDate   DateTime? @map("entry_date") @db.Date
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+  shipment    Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([shipmentId, createdAt])
+  @@map("shipment_kyc_documents")
+}
+
+// Shipment receipts step (summary + receipt lines).
+model ShipmentReceipt {
+  id          Int                   @id @default(autoincrement())
+  shipmentId  Int                   @unique @map("shipment_id")
+  amount      Decimal?              @db.Decimal(14, 2)
+  totalRcp    Decimal?              @map("total_rcp") @db.Decimal(14, 2)
+  balance     Decimal?              @db.Decimal(14, 2)
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime              @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?                  @map("created_by_id")
+  updatedById Int?                  @map("updated_by_id")
+  deletedAt   DateTime?             @map("deleted_at") @db.DateTime(6)
+  deletedById Int?                  @map("deleted_by_id")
+  shipment    Shipment              @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  lines       ShipmentReceiptLine[]
+
+  @@map("shipment_receipts")
+}
+
+// Shipment receipt line (Receipt No, Date, Amount, User, Type, Reference, Bank).
+model ShipmentReceiptLine {
+  id          Int             @id @default(autoincrement())
+  receiptId   Int             @map("receipt_id")
+  shipmentId  Int             @map("shipment_id")
+  receiptNo   String?         @map("receipt_no") @db.VarChar(64)
+  receiptDate DateTime?       @map("receipt_date") @db.Date
+  amount      Decimal?        @db.Decimal(14, 2)
+  userId      Int?            @map("user_id")
+  receiptType String?         @map("receipt_type") @db.VarChar(64)
+  referenceNo String?         @map("reference_no") @db.VarChar(64)
+  bankId      Int?            @map("bank_id")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?            @map("created_by_id")
+  updatedById Int?            @map("updated_by_id")
+  deletedAt   DateTime?       @map("deleted_at") @db.DateTime(6)
+  deletedById Int?            @map("deleted_by_id")
+  receipt     ShipmentReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  shipment    Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  bank        Bank?           @relation("ReceiptLineBank", fields: [bankId], references: [id], onDelete: SetNull)
+
+  @@index([receiptId])
+  @@index([shipmentId])
+  @@index([receiptId, shipmentId])
+  @@index([receiptId, createdAt])
+  @@map("shipment_receipt_lines")
+}
+
+// Manifest scan header (transaction-level manifest).
+// Active uniqueness enforced via generated column active_key (MySQL 8.0+).
+// Soft-deleted rows have active_key = NULL; MySQL allows multiple NULLs in unique index.
+model Manifest {
+  id              Int            @id @default(autoincrement())
+  manifestNo      String         @map("manifest_no") @db.VarChar(64)
+  masterAwbNo     String?        @map("master_awb_no") @db.VarChar(64)
+  manifestAt      DateTime       @map("manifest_at") @db.DateTime(6)
+  status          ManifestStatus @default(CREATED)
+  version         Int            @default(1)
+  location        String?        @db.VarChar(100)
+  serviceCenterId Int?           @map("service_center_id")
+  connectStation  String?        @map("connect_station") @db.VarChar(100)
+  vendorId        Int?           @map("vendor_id")
+  productId       Int?           @map("product_id")
+  vehicleId       Int?           @map("vehicle_id")
+  format          String?        @db.VarChar(64)
+  singleLine      Boolean        @default(false) @map("single_line") @db.TinyInt
+  pdfType         String?        @map("pdf_type") @db.VarChar(64)
+  accountNo       String?        @map("account_no") @db.VarChar(64)
+  department      String?        @db.VarChar(100)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?           @map("created_by_id")
+  updatedById     Int?           @map("updated_by_id")
+  deletedAt       DateTime?      @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?           @map("deleted_by_id")
+  activeKey       String?        @map("active_key") @db.VarChar(64)
+
+  items             ManifestItem[]
+  manifestShipments ManifestShipment[]
+  progresses        ManifestProgress[]
+  inscans           ManifestInscan[]
+  logs              ManifestLog[]
+
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+  vehicle       Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@unique([activeKey])
+  @@map("manifests")
+}
+
+// Manifest-Shipment link: one shipment belongs to at most one manifest.
+// Active uniqueness enforced via generated column active_key (MySQL 8.0+).
+// Soft-deleted rows have active_key = NULL; MySQL allows multiple NULLs in unique index.
+model ManifestShipment {
+  id          Int       @id @default(autoincrement())
+  manifestId  Int       @map("manifest_id")
+  shipmentId  Int       @map("shipment_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+  activeKey   String?   @map("active_key") @db.VarChar(64)
+
+  manifest Manifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([activeKey])
+  @@index([manifestId])
+  @@index([manifestId, createdAt])
+  @@index([shipmentId])
+  @@map("manifest_shipments")
+}
+
+model ManifestLog {
+  id          Int      @id @default(autoincrement())
+  manifestId  Int      @map("manifest_id")
+  message     String   @db.VarChar(1000)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  createdById Int?     @map("created_by_id")
+
+  manifest Manifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+
+  @@index([manifestId, createdAt])
+  @@map("manifest_logs")
+}
+
+// Manifest AWB rows (scan details, denormalized for export & print).
+model ManifestItem {
+  id              Int       @id @default(autoincrement())
+  manifestId      Int       @map("manifest_id")
+  bagNo           String?   @map("bag_no") @db.VarChar(64)
+  forwardingNo    String?   @map("forwarding_no") @db.VarChar(64)
+  awbNo           String    @map("awb_no") @db.VarChar(64)
+  refNo           String?   @map("ref_no") @db.VarChar(64)
+  crnMhbsNo       String?   @map("crn_mhbs_no") @db.VarChar(64)
+  pieces          Int       @default(1)
+  chargeWeight    Decimal?  @map("charge_weight") @db.Decimal(10, 3)
+  bookDate        DateTime? @map("book_date") @db.Date
+  origin          String?   @db.VarChar(100)
+  destination     String?   @db.VarChar(100)
+  code            String?   @db.VarChar(32)
+  customer        String?   @db.VarChar(255)
+  consignee       String?   @db.VarChar(255)
+  instruction     String?   @db.VarChar(500)
+  // Export/print helper fields (optional, copied from shipment & masters)
+  content         String?   @db.VarChar(255)
+  actlWeight      Decimal?  @map("actl_weight") @db.Decimal(10, 3)
+  shipperName     String?   @map("shipper_name") @db.VarChar(255)
+  shipperTelNo    String?   @map("shipper_tel_no") @db.VarChar(32)
+  shipperAdd1     String?   @map("shipper_add1") @db.VarChar(255)
+  orgCode         String?   @map("org_code") @db.VarChar(32)
+  consigneeTelNo  String?   @map("consignee_tel_no") @db.VarChar(32)
+  consigneeAdd1   String?   @map("consignee_add1") @db.VarChar(255)
+  consigneeAdd2   String?   @map("consignee_add2") @db.VarChar(255)
+  consigneeAdd3   String?   @map("consignee_add3") @db.VarChar(255)
+  destinationCode String?   @map("destination_code") @db.VarChar(32)
+  keydate2        DateTime? @db.Date
+  vendorCode      String?   @map("vendor_code") @db.VarChar(32)
+  prodName        String?   @map("prod_name") @db.VarChar(100)
+  orgCountry      String?   @map("org_country") @db.VarChar(100)
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  // snapshotAt: set when manifest status transitions to CLOSED.
+  // Service layer MUST populate all denormalized fields (shipperName, consigneeTelNo, etc.)
+  // in the same transaction as the CLOSED transition. Null = manifest not yet closed/printed.
+  snapshotAt  DateTime? @map("snapshot_at") @db.DateTime(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  manifest            Manifest             @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+  manifestInscanItems ManifestInscanItem[]
+
+  @@index([manifestId])
+  @@index([manifestId, createdAt])
+  @@index([awbNo])
+  @@map("manifest_items")
+}
+
+// Manifest progress rows.
+model ManifestProgress {
+  id              Int       @id @default(autoincrement())
+  manifestId      Int       @map("manifest_id")
+  bagNo           String?   @map("bag_no") @db.VarChar(64)
+  progressedAt    DateTime  @map("progressed_at") @db.DateTime(6)
+  serviceCenterId Int?      @map("service_center_id")
+  exceptionId     Int?      @map("exception_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?      @map("created_by_id")
+  updatedById     Int?      @map("updated_by_id")
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?      @map("deleted_by_id")
+
+  manifest      Manifest       @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+  exception     Exception?     @relation(fields: [exceptionId], references: [id])
+
+  @@map("manifest_progresses")
+}
+
+// Manifest inscan: record of scanning in a bag/manifest at a service center (links to Manifest, ManifestItem, Shipment).
+model ManifestInscan {
+  id                 Int       @id @default(autoincrement())
+  manifestId         Int?      @map("manifest_id")
+  bagOrManifestAwbNo String?   @map("bag_or_manifest_awb_no") @db.VarChar(64)
+  inscanAt           DateTime  @map("inscan_at") @db.DateTime(6)
+  serviceCenterId    Int?      @map("service_center_id")
+  bagNo              String?   @map("bag_no") @db.VarChar(64)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById        Int?      @map("created_by_id")
+  updatedById        Int?      @map("updated_by_id")
+  deletedAt          DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById        Int?      @map("deleted_by_id")
+
+  manifest      Manifest?            @relation(fields: [manifestId], references: [id], onDelete: SetNull)
+  serviceCenter ServiceCenter?       @relation(fields: [serviceCenterId], references: [id])
+  items         ManifestInscanItem[]
+
+  @@index([serviceCenterId, inscanAt])
+  @@map("manifest_inscans")
+}
+
+// Manifest inscan detail: each AWB row (links to ManifestItem or Shipment when present).
+model ManifestInscanItem {
+  id               Int       @id @default(autoincrement())
+  manifestInscanId Int       @map("manifest_inscan_id")
+  manifestNo       String?   @map("manifest_no") @db.VarChar(64)
+  bagNo            String?   @map("bag_no") @db.VarChar(64)
+  awbNo            String    @map("awb_no") @db.VarChar(64)
+  pieces           Int       @default(1)
+  weight           Decimal?  @db.Decimal(10, 3)
+  manifestItemId   Int?      @map("manifest_item_id")
+  shipmentId       Int?      @map("shipment_id")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById      Int?      @map("created_by_id")
+  updatedById      Int?      @map("updated_by_id")
+  deletedAt        DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById      Int?      @map("deleted_by_id")
+
+  manifestInscan ManifestInscan @relation(fields: [manifestInscanId], references: [id], onDelete: Cascade)
+  manifestItem   ManifestItem?  @relation(fields: [manifestItemId], references: [id], onDelete: SetNull)
+  shipment       Shipment?      @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+
+  @@index([shipmentId])
+  @@index([manifestItemId])
+  @@map("manifest_inscan_items")
+}
+
+// DRS Scan (Delivery Run Sheet). Header: DRS No., Date, Time, Field Executive, Area, Service Center, Remark.
+// Active uniqueness enforced via generated column active_key (MySQL 8.0+).
+// Soft-deleted rows have active_key = NULL; MySQL allows multiple NULLs in unique index.
+model DrsScan {
+  id              Int       @id @default(autoincrement())
+  drsNo           String    @map("drs_no") @db.VarChar(64)
+  drsAt           DateTime  @map("drs_at") @db.DateTime(6)
+  status          DrsStatus @default(CREATED)
+  version         Int       @default(1)
+  courierId       Int?      @map("courier_id")
+  serviceCenterId Int?      @map("service_center_id")
+  remark          String?   @db.VarChar(500)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?      @map("created_by_id")
+  updatedById     Int?      @map("updated_by_id")
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?      @map("deleted_by_id")
+  activeKey       String?   @map("active_key") @db.VarChar(64)
+
+  items DrsScanItem[]
+
+  courier       Courier?       @relation(fields: [courierId], references: [id])
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+
+  @@unique([activeKey])
+  @@map("drs_scans")
+}
+
+// DRS Scan item: AWB line (links to Shipment when present).
+model DrsScanItem {
+  id          Int       @id @default(autoincrement())
+  drsScanId   Int       @map("drs_scan_id")
+  shipmentId  Int?      @map("shipment_id")
+  awbNo       String    @map("awb_no") @db.VarChar(64)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  drsScan  DrsScan   @relation(fields: [drsScanId], references: [id], onDelete: Cascade)
+  shipment Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+
+  @@index([shipmentId])
+  @@index([drsScanId])
+  @@map("drs_scan_items")
+}
+
+// Event scan (Undelivered Received / Misrouted). Header: Scan Date, Time, Service Center, Event Type.
+enum DrsStatus {
+  CREATED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model EventScan {
+  id              Int       @id @default(autoincrement())
+  eventType       String    @map("event_type") @db.VarChar(32)
+  scanAt          DateTime  @map("scan_at") @db.DateTime(6)
+  serviceCenterId Int?      @map("service_center_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?      @map("created_by_id")
+  updatedById     Int?      @map("updated_by_id")
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?      @map("deleted_by_id")
+
+  items EventScanItem[]
+
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+
+  @@index([serviceCenterId, scanAt])
+  @@map("event_scans")
+}
+
+// Event scan item: AWB line (links to Shipment when present).
+model EventScanItem {
+  id          Int       @id @default(autoincrement())
+  eventScanId Int       @map("event_scan_id")
+  shipmentId  Int?      @map("shipment_id")
+  awbNo       String    @map("awb_no") @db.VarChar(64)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  eventScan EventScan @relation(fields: [eventScanId], references: [id], onDelete: Cascade)
+  shipment  Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+
+  @@index([shipmentId])
+  @@map("event_scan_items")
+}
+
+// Customer Payment: register payments (date, paid date, amount, remark, customer, optional image, approved).
+model CustomerPayment {
+  id          Int       @id @default(autoincrement())
+  date        DateTime  @db.Date
+  paidDate    DateTime  @map("paid_date") @db.Date
+  amount      Decimal   @db.Decimal(14, 2)
+  remark      String?   @db.VarChar(500)
+  invoiceNo   String?   @map("invoice_no") @db.VarChar(64)
+  customerId  Int       @map("customer_id")
+  approved    Boolean   @default(false) @db.TinyInt
+  filePath    String?   @map("file_path") @db.VarChar(512)
+  fileName    String?   @map("file_name") @db.VarChar(255)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById Int?      @map("created_by_id")
+  updatedById Int?      @map("updated_by_id")
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
+  deletedById Int?      @map("deleted_by_id")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoice  Invoice? @relation(fields: [invoiceNo], references: [invoiceNo], onDelete: SetNull)
+
+  @@index([invoiceNo])
+  @@index([customerId, createdAt])
+  @@map("customer_payments")
+}
+
+// Invoice (document). Generated from shipments; one per customer per period. Lock/unlock for finalise.
+model Invoice {
+  id              Int           @id @default(autoincrement())
+  invoiceNo       String        @map("invoice_no") @db.VarChar(64)
+  invoiceDate     DateTime      @map("invoice_date") @db.Date
+  version         Int           @default(1)
+  financialYear   String?       @map("financial_year") @db.VarChar(32)
+  customerId      Int           @map("customer_id")
+  fromDate        DateTime      @map("from_date") @db.Date
+  toDate          DateTime      @map("to_date") @db.Date
+  productType     ProductType?  @map("product_type")
+  serviceCenterId Int?          @map("service_center_id")
+  billingType     String?       @map("billing_type") @db.VarChar(64)
+  registerType    RegisterType? @map("register_type")
+  totalAmount     Decimal?      @map("total_amount") @db.Decimal(14, 2)
+  igst            Decimal?      @db.Decimal(14, 2)
+  cgst            Decimal?      @db.Decimal(14, 2)
+  sgst            Decimal?      @db.Decimal(14, 2)
+  grandTotal      Decimal?      @map("grand_total") @db.Decimal(14, 2)
+  awbCount        Int           @default(0) @map("awb_count") @db.Int
+  status          InvoiceStatus @default(DRAFT)
+  emailSentAt     DateTime?     @map("email_sent_at") @db.DateTime(6)
+  lockedAt        DateTime?     @map("locked_at") @db.DateTime(6)
+  lockedById      Int?          @map("locked_by_id")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdById     Int?          @map("created_by_id")
+  updatedById     Int?          @map("updated_by_id")
+  deletedAt       DateTime?     @map("deleted_at") @db.DateTime(6)
+  deletedById     Int?          @map("deleted_by_id")
+
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  serviceCenter    ServiceCenter?    @relation(fields: [serviceCenterId], references: [id])
+  createdBy        User?             @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  updatedBy        User?             @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id])
+  deletedBy        User?             @relation("InvoiceDeletedBy", fields: [deletedById], references: [id])
+  lockLogs         InvoiceLockLog[]
+  invoiceShipments InvoiceShipment[]
+  customerPayments CustomerPayment[]
+
+  @@unique([invoiceNo])
+  @@index([customerId, createdAt])
+  @@index([serviceCenterId, createdAt])
+  @@index([status])
+  @@map("invoices")
+}
+
+// Invoice-Shipment link: which shipments are included in an invoice.
+model InvoiceShipment {
+  id         Int @id @default(autoincrement())
+  invoiceId  Int @map("invoice_id")
+  shipmentId Int @map("shipment_id")
+
+  invoice  Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId])
+  @@index([invoiceId])
+  @@map("invoice_shipments")
+}
+
+// Invoice lock/unlock log for report (Lock/Unlock Invoice Log Report Type Wise).
+model InvoiceLockLog {
+  id              Int               @id @default(autoincrement())
+  invoiceId       Int               @map("invoice_id")
+  action          InvoiceLockAction
+  serviceCenterId Int?              @map("service_center_id")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  createdById     Int?              @map("created_by_id")
+
+  invoice       Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
+
+  @@map("invoice_lock_logs")
+}

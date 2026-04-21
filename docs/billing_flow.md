@@ -1,374 +1,619 @@
-# Billing Flow
+# Billing Architecture
 
-This project uses a snapshot-based billing flow.
+This document describes the billing structure after the Charge Master cleanup and Rate Master refactor.
 
-The important idea is simple:
+The billing flow is now:
 
-1. Rate masters define pricing rules.
-2. Shipments read those rules at calculation time.
-3. The computed freight and charge rows are stored on the shipment.
-4. Later invoice or pricing screens read the stored snapshot, not the live rate tables.
+`Charge Master -> Rate Master -> Shipment Pricing -> ShipmentCharge snapshot`
 
-## Main Tables And Their Roles
+The core idea is:
 
-### `RateMaster`
+- `Charge` defines the reusable billing catalog.
+- `RateMaster` defines customer-specific pricing rules.
+- `Shipment` calculates final billing from the active rate master.
+- `ShipmentCharge` stores the final frozen billing rows.
 
-The header record that decides which pricing configuration is active for a customer, service type, product, and date range.
+## 1. Charge Master
 
-Key fields:
+`Charge` is the main billing master above rate master.
 
-- `customerId`
-- `serviceType`
-- `rateType`
-- `fromDate`
-- `toDate`
-- `zeroContract`
-- `flatRate`
+Typical charges:
 
-### `DistanceSlab`
+- AWB CHARGES
+- DOCKET CHARGES
+- ECC CHARGES
+- EDL / ODA
+- FOV
+- RAS
+- HANDLING CHARGES
+- REVERSE PICK UP
+- APPOINTMENT DELIVERY
+- FLOOR DELIVERY
 
-Used when the base rate is distance based.
+### Active Charge Master Fields
 
-Each slab has:
+Charge master now keeps only these business fields:
 
+- `id`
+- `code`
+- `name`
+- `calculationBase`
+- `applyFuel`
+- `sequence`
+
+### Removed From Charge Master
+
+These fields were removed from charge master and should not be shown in frontend:
+
+- `chargeType`
+- `multipleCharges`
+- `chargeRate`
+- `applyTaxOnFuel`
+- `applyTax`
+
+### Meaning Of Remaining Fields
+
+- `code`
+  Stable billing identifier. Use for matching and frontend mapping.
+
+- `name`
+  Human-readable label for dropdowns, preview rows, and invoice labels.
+
+- `calculationBase`
+  Default billing basis for this charge when linked in rate master. Must be one of the `CalculationBase` enum values (see **Reference: Prisma enums (billing)** below).
+
+- `applyFuel`
+  If true, and customer has active fuel surcharge setup, this charge amount becomes part of the fuel calculation base.
+
+- `sequence`
+  Billing execution order. Charges are applied in ascending sequence during shipment pricing.
+
+## Reference: Prisma enums (billing)
+
+Authoritative definitions live in [`schema.prisma`]. APIs accept these as **string literals** matching the enum name exactly (JSON / query).
+
+### `CalculationBase`
+
+Used on `Charge.calculationBase`, `RateCharge.calculationBase`, and `RateCondition.calculationBase` (plus engine breakdown fields).
+
+| Value | Typical use |
+| --- | --- |
+| `CHARGE_WEIGHT` | Amount scales with **chargeable weight** (often with slabs). |
+| `CHARGE_WEIGHT_PER_FLOOR` | Weight basis multiplied by **floor** when floor delivery applies. |
+| `FLAT` | **Fixed** rupee amount (not %-of-freight / %-of-value unless combined with `isPercentage` on the rate row). |
+| `ACTUAL_WEIGHT` | Basis uses **declared / actual weight** path in the engine. |
+| `DISTANCE_KM` | Basis uses **distance** (km). |
+| `FREIGHT` | **Percent or amount** relative to **base freight** (e.g. ECC % of freight). |
+| `SHIPMENT_VALUE` | Basis is **shipment / declared value** (e.g. FOV). |
+
+### `RateUpdateType` (`RateMaster.updateType`)
+
+- `AWB_ENTRY_RATE`
+- `VENDOR_RATE`
+- `TAX_FUEL`
+- `VENDOR_OBC_RATE`
+
+### `ServiceType` (`ServiceMap.serviceType`, optional)
+
+Used on service map / vendor routing masters, **not** on `RateMaster`.
+
+- `AIR`
+- `SURFACE`
+- `EXPRESS`
+
+### `RateType` (`RateMaster.rateType`, optional)
+
+Drives which child data supplies base freight.
+
+- `ZONE_MATRIX`
+- `DISTANCE_MATRIX`
+- `FLAT`
+
+### `PaymentType` (`Shipment.paymentType`)
+
+- `CASH`
+- `CREDIT`
+- `TO_PAY`
+
+### `ConditionField` (`RateCondition.field`)
+
+What the rule compares (shipment / booking context).
+
+- `DIMENSION_LENGTH`, `DIMENSION_WIDTH`, `DIMENSION_HEIGHT`, `DIMENSION_MAX`
+- `WEIGHT`, `CHARGEABLE_WEIGHT`, `SHIPMENT_VALUE`
+- `REVERSE_PICKUP`, `APPOINTMENT_DELIVERY`, `FLOOR_DELIVERY`, `FLOOR_COUNT`
+
+### `ConditionOperator` (`RateCondition.operator`)
+
+- `GT`, `GTE`, `LT`, `LTE`, `EQ`
+
+### `ChargeType` (shipment charge rows, not charge master)
+
+Used on persisted `ShipmentCharge`-style payloads / responses where a row type is stored: `AIRWAYBILL`, `FREIGHT`, `FUEL`, `OBC`, `FLAT`, `OTHER`.
+
+## 2. Charge Sequence Rules
+
+`sequence` is now important operationally, not only for display.
+
+### How Sequence Works
+
+- Shipment billing applies `rateCharges` in ascending `sequence`
+- lower sequence runs first
+- higher sequence runs later
+
+### Validation Rule
+
+Among active charge master rows:
+
+- a sequence cannot be reused
+
+If frontend sends a sequence that already exists:
+
+- backend returns a conflict error
+- the error message includes the next usable sequence
+
+Example error shape in plain language:
+
+- `Charge sequence "4" is already in use. Next usable sequence is 7.`
+
+### Default Behavior
+
+If frontend does not send sequence:
+
+- backend automatically assigns the next usable sequence
+
+Frontend recommendation:
+
+- show sequence as editable
+- if create API fails with sequence conflict, show returned message directly
+
+## 3. Fuel Behavior
+
+Fuel is controlled by both customer setup and charge master.
+
+### Fuel Rule
+
+Fuel surcharge is applied only when both are true:
+
+1. customer has active fuel surcharge configuration for the shipment date
+2. the applied charge has `applyFuel = true` in charge master
+
+### Important Business Meaning
+
+Fuel is not limited to one single billing row.
+
+Fuel can be applied on multiple shipment charges together.
+
+That means:
+
+- AWB can contribute to fuel
+- Handling can contribute to fuel
+- FOV can contribute to fuel
+- any other applied charge can contribute to fuel
+
+if those charges are marked with `applyFuel = true`.
+
+### Fuel Calculation Source
+
+Fuel calculation reads:
+
+- customer fuel setup
+- final shipment charge rows that were actually applied
+- charge master `applyFuel` flag
+
+So the charge master controls which charge rows are fuel-applicable.
+
+## 4. Rate Master
+
+`RateMaster` is the contract for a customer, **product**, and billing window. **`productId` is required** on create and in the rate engine when calculating freight.
+
+Typical header filters:
+
+- customer
+- product (required; identifies which product master contract applies)
+- from date
+- to date
+
+`updateType` uses `RateUpdateType`; optional `rateType` uses `RateType`. See **Reference: Prisma enums (billing)**.
+
+Route setup should now be treated as:
+
+- `From Zone`
+- `To Zone`
+
+not:
+
+- origin
+- destination
+
+## 5. Main Freight Setup
+
+Main freight is driven by `routeRateSlabs`.
+
+Each slab can match by:
+
+- `fromZoneId`
+- `toZoneId`
 - `minKm`
 - `maxKm`
-- child `WeightSlab` rows
 
-Rule:
+Each slab contains weight slabs:
 
-- Slabs must not overlap.
-- If one slab already covers `0-50`, the next slab should start after that range, for example `51-100`.
+- `minWeight`
+- `maxWeight`
+- `rate`
 
-### `WeightSlab`
+This supports:
 
-Child rows under a distance slab.
+- zone to zone with weight slab
+- km to km with weight slab
+- zone to zone + km with weight slab
 
-Each row maps a weight range to a rate.
+## 6. ODA / EDL Setup
 
-Example:
+ODA surcharge is handled separately using `odaRateSlabs`.
 
-- `0-100 kg -> 825`
-- `101-200 kg -> 950`
+This is different from normal freight on purpose.
 
-Rule:
+ODA can be configured by:
 
-- Weight slabs inside one distance slab must not overlap.
-- If one weight slab covers `0-10`, the next one should start after that range, for example `11-20`.
+- zone pair
+- km range
+- zone pair + km range
 
-### `RateCharge`
+and must still use weight slabs for the final rate.
 
-Additional charge setup attached to a rate master.
+Business meaning:
 
-Examples:
+- base freight comes from `routeRateSlabs`
+- ODA / EDL surcharge comes from `odaRateSlabs`
 
-- Fuel
-- Handling
-- Reverse Pickup
-- Appointment Delivery
-- Floor Delivery
+## 7. Rate Charges
 
-Fields:
+`RateCharge` is customer-contract-specific charge setup.
 
+It now links to charge master using:
+
+- `chargeId`
+
+Meaning:
+
+- `Charge` says what the charge is
+- `RateCharge` says how this customer contract applies that charge
+
+### `RateCharge` Fields Used In Billing
+
+- `chargeId`
 - `name`
 - `calculationBase`
 - `value`
 - `isPercentage`
 - `minValue`
 - `maxValue`
-- `weightStep`
 - `sequence`
+- `chargeSlabs`
 
-### `ChargeSlab`
+Frontend rule:
 
-Optional slab override for a `RateCharge`.
+- always select charge from charge master
+- store `chargeId`
+- use `name` only as fallback display text
 
-If a charge has slabs, the matched slab rate can override the normal calculation.
+## 8. Rate Conditions
 
-### `RateCondition`
+`RateCondition` is used for conditional billing.
 
-Conditional rule that decides whether an extra charge should be applied.
+It now also links to charge master using:
+
+- `chargeId`
+
+`field` must be a `ConditionField` enum value and `operator` a `ConditionOperator` enum value (see **Reference: Prisma enums (billing)**).
 
 Examples:
 
-- `REVERSE_PICKUP EQ 1`
-- `APPOINTMENT_DELIVERY EQ 1`
-- `FLOOR_DELIVERY EQ 1`
-- `DIMENSION_MAX GT 200`
+- reverse pickup
+- appointment delivery
+- floor delivery
+- dimension-based rules
 
-Fields:
+When a condition matches:
 
-- `field`
-- `operator`
-- `value`
-- `chargeName`
-- `chargeAmount`
-- `isPercentage`
+1. backend first prefers the linked charge
+2. then tries matching a configured `RateCharge`
+3. then falls back to condition amount/config
 
-## Shipment Tables In Billing
+This keeps legacy contracts working while moving billing to charge-master-first logic.
 
-### `Shipment`
+## 9. Supported Calculation Bases
 
-Stores the booking and the billing snapshot.
+The full list and semantics are documented under **Reference: Prisma enums (billing) → `CalculationBase`**. The same enum applies to charge master defaults, `RateCharge`, and `RateCondition` rows (where applicable).
 
-Billing related fields:
+### Shipment Extra Charges
 
-- `rateMasterId`
-- `baseFreight`
-- `totalAmount`
-- `chargeWeight`
+These shipment flags are used in pricing:
+
 - `reversePickup`
 - `appointmentDelivery`
 - `floorDelivery`
 - `floorCount`
 
-### `ShipmentCharge`
+Supported behaviors:
 
-Stores the final charge rows for a shipment.
+#### Reverse Pickup
 
-Each row is persisted with:
+- `FLAT`
+- `CHARGE_WEIGHT`
+- `DISTANCE_KM`
 
-- `description`
-- `amount`
-- `total`
-- `fuelApply`
-- `fuelAmount`
-- `chargeType`
+#### Appointment Delivery
 
-This is the stored billing snapshot used later by invoice and pricing screens.
+- `FLAT`
+- `CHARGE_WEIGHT`
+- `DISTANCE_KM`
 
-## How Billing Is Connected
+#### Floor Delivery
 
-The billing chain in this codebase is:
+- `FLAT`
+- `CHARGE_WEIGHT`
+- `DISTANCE_KM`
+- `CHARGE_WEIGHT_PER_FLOOR`
 
-`RateMaster` -> `RateEngineService` -> `ShipmentService` -> `Shipment` and `ShipmentCharge`
+Special rule:
 
-The important files are:
+- `CHARGE_WEIGHT_PER_FLOOR` multiplies by chargeable weight and `floorCount`
+- plain `CHARGE_WEIGHT` does not multiply by floor count
 
-- [Rate master service](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/rate/rate-master.service.ts)
-- [Rate engine](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/pricing/rate-engine.service.ts)
-- [Shipment service](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/transaction/shipment/shipment.service.ts)
+## 10. Shipment Billing Flow
 
-## Rate Master Setup Flow
+Main pricing logic lives in:
 
-When a user creates or updates rate master data:
+- [rate-engine.service.ts](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/pricing/rate-engine.service.ts)
+- [shipment.service.ts](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/transaction/shipment/shipment.service.ts)
 
-1. The header record is saved in `rate_masters`.
-2. Zone rates are saved in `zone_rates`.
-3. Distance slabs are saved in `distance_slabs`.
-4. Weight slabs are saved in `weight_slabs`.
-5. Rate charges are saved in `rate_charges`.
-6. Charge slabs are saved in `charge_slabs`.
-7. Rate conditions are saved in `rate_conditions`.
+### Step 1. Resolve Route
 
-### Distance Slab Validation
+Shipment pricing resolves:
 
-Distance slabs are validated so they do not overlap.
-
-That means:
-
-- `0-50` is valid
-- `51-100` is valid
-- `40-50` is not valid if `0-50` already exists
-
-The backend enforces this when distance slabs are created or updated.
-
-## Shipment Billing Flow
-
-### 1. Shipment Create Or Preview
-
-The shipment service calls the rate engine with:
-
-- customer
-- service type
 - pickup pincode
 - delivery pincode
-- zones
-- weight
-- chargeable weight
-- shipment value
-- reverse pickup flag
-- appointment delivery flag
-- floor delivery flag
-- floor count
-- dimensions
-- booking date
+- from zone
+- to zone
+- distance in km
 
-See:
+### Step 2. Pick Active Rate Master
 
-- [Shipment service](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/transaction/shipment/shipment.service.ts)
-- [Rate engine](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/pricing/rate-engine.service.ts)
-
-### 2. Base Freight Selection
-
-`RateEngineService` selects the active `RateMaster` by:
+The active contract is selected by:
 
 - customer
-- service type
-- product, if present
-- booking date range
+- **product** (required)
+- shipment booking date inside contract date range
 
-Then it calculates base freight using the configured rate type:
+Overlapping contracts for the same customer and product are rejected when saving a rate master.
 
-- `ZONE_MATRIX`
-- `DISTANCE_MATRIX`
-- `FLAT`
+### Step 3. Calculate Base Freight
 
-### 3. Charge Calculation
+Base freight uses:
 
-After base freight, the engine applies `RateCharge` rows.
+1. `routeRateSlabs` if present
+2. legacy `zoneRates` / `distanceSlabs` as fallback
+3. `flatRate` for flat contracts
 
-Supported calculation patterns:
+### Step 4. Calculate ODA
 
-- flat
-- percentage
-- per kg
-- actual weight
-- freight-based
-- shipment value-based
-- slab override
+If shipment is ODA and `odaRateSlabs` exist:
 
-### 4. Condition Calculation
+- backend matches ODA route slab
+- backend matches ODA weight slab
+- backend adds ODA charge row
 
-The engine then checks `RateCondition` rows.
+### Step 5. Apply Rate Charges
 
-If the condition matches, the linked charge is applied.
+All applicable `RateCharge` rows are processed in `sequence` order.
 
-For the shipment flags:
+This is why charge master sequence uniqueness now matters.
 
-- `REVERSE_PICKUP` applies when `reversePickup = true`
-- `APPOINTMENT_DELIVERY` applies when `appointmentDelivery = true`
-- `FLOOR_DELIVERY` applies when `floorDelivery = true`
+### Step 6. Apply Conditions
 
-### 5. Special Multipliers
+The engine evaluates conditions such as:
 
-These rules are important for the new billing behavior:
+- reverse pickup
+- appointment delivery
+- floor delivery
 
-- `Reverse Pickup`
-  - usually a flat add-on
-  - the condition simply enables the charge
+and applies linked or fallback charges.
 
-- `Appointment Delivery`
-  - can be configured as per-kg
-  - example: `1 rupee/kg * 100 kg = 100`
+### Step 7. Apply Fuel
 
-- `Floor Delivery`
-  - can be configured as per-kg or per-floor-per-kg
-  - example: `1 rupee/kg * 100 kg * 10 floors = 1000`
+After charge rows are known:
 
-The shipment code multiplies floor delivery charges by `floorCount`.
+- backend checks customer fuel setup
+- backend checks which applied charges have `applyFuel = true`
+- fuel is calculated over all eligible applied charges
 
-## What Gets Stored On Shipment
+## 11. Shipment Snapshot
 
-When pricing is finalized:
+Final billing is stored on shipment tables.
 
-1. Existing charge rows for the shipment are soft-deleted.
-2. New `ShipmentCharge` rows are inserted.
-3. `Shipment.rateMasterId` is updated.
-4. `Shipment.baseFreight` is updated.
-5. `Shipment.totalAmount` is updated.
+Important shipment fields:
 
-This means the shipment keeps a frozen billing snapshot.
+- `rateMasterId`
+- `baseFreight`
+- `totalAmount`
 
-## Fuel Surcharge
+Important shipment charge fields:
 
-Fuel is applied after the base charges are computed.
+- `chargeId`
+- `description`
+- `amount`
+- `fuelApply`
+- `fuelAmount`
+- `total`
 
-The project checks customer fuel surcharge setup and the charge master flag:
+Frontend and invoice screens should use stored shipment charges, not live rate master rows.
 
-- if the customer has active fuel surcharge setup, fuel is applied
-- if a charge is marked as fuel-applicable, fuel is added to that row
+Reason:
 
-Fuel is also stored in the shipment charge breakdown.
+- old shipments should not change if rate master changes later
+- billing remains auditable
+- invoice data stays stable
 
-## Condition And Charge Linkage
+## 12. Frontend Guidance
 
-In this project, a condition row does not always calculate money by itself.
+### Charge Master Screen
 
-The flow is:
+Frontend should expose only:
 
-1. Rate condition matches shipment data.
-2. The system looks for a rate charge with the same name.
-3. If found, that charge configuration is used.
-4. If not found, the condition falls back to the amount defined on the condition row.
+- code
+- name
+- calculation base
+- apply fuel
+- sequence
 
-This lets the system support both:
+Frontend should not show removed fields.
 
-- legacy condition-only charges
-- newer first-class rate-charge driven billing
+### Rate Master Screen
 
-## Example Scenarios
+Frontend should build rate master in these sections:
 
-### Reverse Pickup
+1. Header
+   - customer
+   - date range
+   - **product** (mandatory dropdown from product master)
 
-If:
+2. Main freight
+   - `routeRateSlabs`
+   - `fromZone`
+   - `toZone`
+   - `fromKm`
+   - `toKm`
+   - weight slabs
 
-- `reversePickup = true`
-- rate condition exists for `REVERSE_PICKUP`
-- linked rate charge is flat `75`
+3. ODA
+   - `odaRateSlabs`
+   - same structure as route slabs
 
-Then shipment gets an extra `75`.
+4. Charges
+   - select charge from charge master
+   - store `chargeId`
+   - configure value and slab overrides
 
-### Appointment Delivery
+5. Conditions
+   - field
+   - operator
+   - comparison value
+   - linked charge
+   - fallback billing config
 
-If:
+### Naming Guidance
 
-- `appointmentDelivery = true`
-- linked charge is `1 rupee/kg`
-- chargeable weight is `100`
+For route setup labels use:
 
-Then shipment gets an extra `100`.
+- `From Zone`
+- `To Zone`
 
-### Floor Delivery
+Do not use:
 
-If:
+- `Origin`
+- `Destination`
 
-- `floorDelivery = true`
-- linked charge is `1 rupee/kg`
-- chargeable weight is `100`
-- floor count is `10`
+for the rate master route matrix UI.
 
-Then shipment gets an extra `1000`.
+## 13. Example Rate Master Payload
 
-## Practical Data Flow
+```json
+{
+  "updateType": "AWB_ENTRY_RATE",
+  "fromDate": "2025-02-01",
+  "toDate": "2027-03-31",
+  "customerId": 12,
+  "productId": 3,
+  "rateType": "DISTANCE_MATRIX",
+  "routeRateSlabs": [
+    {
+      "fromZoneId": 1,
+      "toZoneId": 4,
+      "minKm": 0,
+      "maxKm": 100,
+      "weightSlabs": [
+        { "minWeight": 0, "maxWeight": 20, "rate": 180 },
+        { "minWeight": 20.001, "maxWeight": 50, "rate": 260 }
+      ]
+    }
+  ],
+  "odaRateSlabs": [
+    {
+      "minKm": 0,
+      "maxKm": 100,
+      "weightSlabs": [
+        { "minWeight": 0, "maxWeight": 20, "rate": 35 },
+        { "minWeight": 20.001, "maxWeight": 50, "rate": 60 }
+      ]
+    }
+  ],
+  "rateCharges": [
+    {
+      "chargeId": 7,
+      "value": 75,
+      "calculationBase": "FLAT",
+      "sequence": 1
+    },
+    {
+      "chargeId": 15,
+      "value": 2,
+      "calculationBase": "CHARGE_WEIGHT",
+      "sequence": 2
+    }
+  ],
+  "rateConditions": [
+    {
+      "field": "REVERSE_PICKUP",
+      "operator": "EQ",
+      "value": 1,
+      "chargeId": 21,
+      "chargeAmount": 40,
+      "calculationBase": "DISTANCE_KM"
+    },
+    {
+      "field": "FLOOR_DELIVERY",
+      "operator": "EQ",
+      "value": 1,
+      "chargeId": 22,
+      "chargeAmount": 2,
+      "calculationBase": "CHARGE_WEIGHT_PER_FLOOR"
+    }
+  ]
+}
+```
 
-### Shipment Create
+## 14. Main Files
 
-`ShipmentService.createShipment()`:
+- [schema.prisma](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/prisma/schema.prisma)
+- [charge.service.ts](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/charge/charge.service.ts)
+- [create-charge.dto.ts](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/charge/dto/create-charge.dto.ts)
+- [rate-master.service.ts](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/rate/rate-master.service.ts)
+- [create-rate-master.dto.ts](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/rate/dto/create-rate-master.dto.ts)
+- [rate-engine.service.ts](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/billing/pricing/rate-engine.service.ts)
+- [shipment.service.ts](/Users/ankitkumarpatel/workSpace/sbexpresscargo-backend/src/transaction/shipment/shipment.service.ts)
 
-1. validates shipment input
-2. resolves chargeable weight
-3. resolves route and zones
-4. calls `RateEngineService.calculateRate()`
-5. stores shipment and charge snapshot
+## 15. Migrations Added In This Billing Refactor
 
-### Shipment Repricing
+- `20260421110000_extend_rate_condition_calculation_base`
+- `20260421133000_add_route_and_oda_rate_slabs`
+- `20260421151500_link_rate_config_to_charge_master`
+- `20260421173000_trim_charge_master_fields`
 
-`ShipmentService.calculateShipmentPricing()`:
+## 16. Final Mental Model
 
-1. loads existing shipment
-2. resolves route and weights
-3. loads active rate master
-4. recomputes billing
-5. replaces stored shipment charge rows
-6. updates shipment totals
+Use this model in frontend:
 
-## Why The Snapshot Matters
+- `Charge Master`
+  what charge exists and in what order it should run
 
-This design keeps billing stable.
+- `Rate Master`
+  how a customer is billed for route, ODA, charges, and conditions
 
-Once a shipment is billed:
+- `Shipment Pricing`
+  applies the active contract on real shipment inputs
 
-- invoice totals do not change because a rate master was edited later
-- audit is easier
-- finance sees the exact rows used at creation time
-
-## Summary
-
-Billing in this project is driven by rate masters, but shipments store the final computed output.
-
-The order is:
-
-`RateMaster setup` -> `RateEngine calculation` -> `ShipmentCharge snapshot` -> `Invoice/Pricing read`
-
-That is the core billing architecture for this codebase.
+- `ShipmentCharge`
+  the final stored billing rows used by invoice and history screens

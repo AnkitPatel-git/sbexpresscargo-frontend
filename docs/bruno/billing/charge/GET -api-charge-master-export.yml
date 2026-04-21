@@ -12,36 +12,30 @@ http:
       disabled: true
   params:
     - name: page
-      value: "0"
+      value: "1"
       type: query
     - name: limit
-      value: "0"
+      value: "20"
       type: query
     - name: sortBy
-      value: string
+      value: code
       type: query
     - name: sortOrder
       value: asc
       type: query
     - name: search
-      value: string
+      value: FREIGHT
       type: query
     - name: code
-      value: string
+      value: CODE001
       type: query
     - name: name
-      value: string
+      value: Freight
       type: query
     - name: calculationBase
-      value: string
+      value: CHARGE_WEIGHT
       type: query
     - name: applyFuel
-      value: "true"
-      type: query
-    - name: applyTaxOnFuel
-      value: "true"
-      type: query
-    - name: applyTax
       value: "true"
       type: query
   auth: inherit

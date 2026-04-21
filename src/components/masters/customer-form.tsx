@@ -50,7 +50,6 @@ import { bankService } from '@/services/masters/bank-service'
 import { customerService } from '@/services/masters/customer-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { productService } from '@/services/masters/product-service'
-import { vendorService } from '@/services/masters/vendor-service'
 import {
     Customer,
     type CustomerFormData,
@@ -254,7 +253,6 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                         <TabsTrigger value="charges" className="rounded-full px-5 py-2">Other Charges</TabsTrigger>
                         <TabsTrigger value="volumetric" className="rounded-full px-5 py-2">Customer Volumetric</TabsTrigger>
                         <TabsTrigger value="kyc" className="rounded-full px-5 py-2">KYC Details</TabsTrigger>
-                        <TabsTrigger value="address" className="rounded-full px-5 py-2">Customer Address</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="personal" className="space-y-6">
@@ -736,7 +734,6 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<CustomerFuelSurcharge | null>(null)
     const [form, setForm] = useState<CustomerFuelSurchargeFormData>({
-        vendorId: 0,
         productId: 0,
         fuelChargeType: 'PERCENTAGE',
         fromDate: '',
@@ -747,11 +744,6 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
     const { data } = useQuery({
         queryKey: ['customer-fuel-surcharges', customerId],
         queryFn: () => customerService.getCustomerFuelSurcharges(customerId!),
-        enabled: !!customerId,
-    })
-    const { data: vendors } = useQuery({
-        queryKey: ['customer-tab-vendors'],
-        queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: 'vendorName', sortOrder: 'asc' }),
         enabled: !!customerId,
     })
     const { data: products } = useQuery({
@@ -770,7 +762,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
             queryClient.invalidateQueries({ queryKey: ['customer-fuel-surcharges', customerId] })
             setOpen(false)
             setEditing(null)
-            setForm({ vendorId: 0, productId: 0, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
+            setForm({ productId: 0, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
             toast.success(`Fuel surcharge ${editing ? 'updated' : 'added'} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -791,12 +783,11 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
             title="Fuel Surcharges"
             onAdd={() => {
                 setEditing(null)
-                setForm({ vendorId: 0, productId: 0, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
+                setForm({ productId: 0, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
                 setOpen(true)
             }}
-            columns={['Vendor', 'Product', 'Type', 'From Date', 'To Date', 'Percentage', 'Action']}
+            columns={['Product', 'Type', 'From Date', 'To Date', 'Percentage', 'Action']}
             rows={surchargeRows.map((item) => [
-                item.vendor?.vendorName ?? '-',
                 item.product?.productName ?? '-',
                 item.fuelChargeType,
                 formatDate(item.fromDate),
@@ -808,8 +799,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                     <Button type="button" variant="outline" size="sm" onClick={() => {
                         setEditing(item)
                         setForm({
-                            vendorId: item.vendorId,
-                            productId: item.productId,
+                            productId: item.productId ?? 0,
                             fuelChargeType: item.fuelChargeType,
                             fromDate: item.fromDate.split('T')[0] ?? '',
                             toDate: item.toDate.split('T')[0] ?? '',
@@ -829,7 +819,6 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                 saving={mutation.isPending}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect label="Vendor" value={String(form.vendorId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, vendorId: Number(v) }))} options={(vendors?.data ?? []).map((vendor) => ({ value: String(vendor.id), label: vendor.vendorName }))} />
                     <SimpleSelect label="Product" value={String(form.productId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))} options={(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName }))} />
                     <SimpleSelect label="Fuel Charge Type" value={form.fuelChargeType} onValueChange={(v) => setForm((prev) => ({ ...prev, fuelChargeType: v }))} options={[{ value: 'PERCENTAGE', label: 'PERCENTAGE' }, { value: 'FIXED', label: 'FIXED' }]} />
                     <SimpleInput label="Fuel Surcharge" type="number" value={String(form.fuelSurcharge)} onChange={(value) => setForm((prev) => ({ ...prev, fuelSurcharge: Number(value) }))} />
@@ -846,7 +835,6 @@ function CustomerOtherChargeTab({ customerId }: { customerId: number | null }) {
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<CustomerOtherCharge | null>(null)
     const [form, setForm] = useState<CustomerOtherChargeFormData>({
-        vendorId: 0,
         productId: 0,
         srNo: 1,
         chargeType: 'OTHER',
@@ -861,11 +849,6 @@ function CustomerOtherChargeTab({ customerId }: { customerId: number | null }) {
     const { data } = useQuery({
         queryKey: ['customer-other-charges', customerId],
         queryFn: () => customerService.getCustomerOtherCharges(customerId!),
-        enabled: !!customerId,
-    })
-    const { data: vendors } = useQuery({
-        queryKey: ['customer-tab-vendors'],
-        queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: 'vendorName', sortOrder: 'asc' }),
         enabled: !!customerId,
     })
     const { data: products } = useQuery({
@@ -883,7 +866,7 @@ function CustomerOtherChargeTab({ customerId }: { customerId: number | null }) {
             queryClient.invalidateQueries({ queryKey: ['customer-other-charges', customerId] })
             setOpen(false)
             setEditing(null)
-            setForm({ vendorId: 0, productId: 0, srNo: 1, chargeType: 'OTHER', fromDate: '', toDate: '', origin: '', destination: '', amount: 0, minimumValue: 0 })
+            setForm({ productId: 0, srNo: 1, chargeType: 'OTHER', fromDate: '', toDate: '', origin: '', destination: '', amount: 0, minimumValue: 0 })
             toast.success(`Other charge ${editing ? 'updated' : 'added'} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -900,11 +883,10 @@ function CustomerOtherChargeTab({ customerId }: { customerId: number | null }) {
     return (
         <CustomerChildTableCard
             title="Other Charges"
-            onAdd={() => { setEditing(null); setForm({ vendorId: 0, productId: 0, srNo: 1, chargeType: 'OTHER', fromDate: '', toDate: '', origin: '', destination: '', amount: 0, minimumValue: 0 }); setOpen(true) }}
-            columns={['Sr No', 'Vendor', 'Product', 'Type', 'Origin', 'Destination', 'Amount', 'Min Value', 'Action']}
+            onAdd={() => { setEditing(null); setForm({ productId: 0, srNo: 1, chargeType: 'OTHER', fromDate: '', toDate: '', origin: '', destination: '', amount: 0, minimumValue: 0 }); setOpen(true) }}
+            columns={['Sr No', 'Product', 'Type', 'Origin', 'Destination', 'Amount', 'Min Value', 'Action']}
             rows={otherChargeRows.map((item) => [
                 String(item.srNo),
-                item.vendor?.vendorName ?? '-',
                 item.product?.productName ?? '-',
                 item.chargeType,
                 item.origin,
@@ -917,8 +899,7 @@ function CustomerOtherChargeTab({ customerId }: { customerId: number | null }) {
                     <Button type="button" variant="outline" size="sm" onClick={() => {
                         setEditing(item)
                         setForm({
-                            vendorId: item.vendorId,
-                            productId: item.productId,
+                            productId: item.productId ?? 0,
                             srNo: item.srNo,
                             chargeType: item.chargeType,
                             fromDate: item.fromDate.split('T')[0] ?? '',
@@ -936,7 +917,6 @@ function CustomerOtherChargeTab({ customerId }: { customerId: number | null }) {
         >
             <CustomerEntityDialog open={open} onOpenChange={setOpen} title={editing ? 'Edit Other Charge' : 'Add Other Charge'} onSave={() => mutation.mutate(form)} saving={mutation.isPending}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect label="Vendor" value={String(form.vendorId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, vendorId: Number(v) }))} options={(vendors?.data ?? []).map((vendor) => ({ value: String(vendor.id), label: vendor.vendorName }))} />
                     <SimpleSelect label="Product" value={String(form.productId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))} options={(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName }))} />
                     <SimpleInput label="Sr No" type="number" value={String(form.srNo)} onChange={(value) => setForm((prev) => ({ ...prev, srNo: Number(value) }))} />
                     <SimpleSelect
@@ -961,15 +941,10 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<CustomerVolumetric | null>(null)
-    const [form, setForm] = useState<CustomerVolumetricFormData>({ vendorId: 0, productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 })
+    const [form, setForm] = useState<CustomerVolumetricFormData>({ productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 })
     const { data } = useQuery({
         queryKey: ['customer-volumetrics', customerId],
         queryFn: () => customerService.getCustomerVolumetrics(customerId!),
-        enabled: !!customerId,
-    })
-    const { data: vendors } = useQuery({
-        queryKey: ['customer-tab-vendors'],
-        queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: 'vendorName', sortOrder: 'asc' }),
         enabled: !!customerId,
     })
     const { data: products } = useQuery({
@@ -987,7 +962,7 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
             queryClient.invalidateQueries({ queryKey: ['customer-volumetrics', customerId] })
             setOpen(false)
             setEditing(null)
-            setForm({ vendorId: 0, productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 })
+            setForm({ productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 })
             toast.success(`Volumetric ${editing ? 'updated' : 'added'} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -1004,10 +979,9 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
     return (
         <CustomerChildTableCard
             title="Customer Volumetric"
-            onAdd={() => { setEditing(null); setForm({ vendorId: 0, productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 }); setOpen(true) }}
-            columns={['Vendor', 'Product', 'CM Divide', 'Inch Divide', 'CFT', 'Action']}
+            onAdd={() => { setEditing(null); setForm({ productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 }); setOpen(true) }}
+            columns={['Product', 'CM Divide', 'Inch Divide', 'CFT', 'Action']}
             rows={volumetricRows.map((item) => [
-                item.vendor?.vendorName ?? '-',
                 item.product?.productName ?? '-',
                 String(decimalToNumber(item.cmDivide)),
                 String(decimalToNumber(item.inchDivide)),
@@ -1018,8 +992,7 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
                     <Button type="button" variant="outline" size="sm" onClick={() => {
                         setEditing(item)
                         setForm({
-                            vendorId: item.vendorId,
-                            productId: item.productId,
+                            productId: item.productId ?? 0,
                             cmDivide: Number(decimalToNumber(item.cmDivide) || 0),
                             inchDivide: Number(decimalToNumber(item.inchDivide) || 0),
                             cft: Number(decimalToNumber(item.cft) || 0),
@@ -1032,7 +1005,6 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
         >
             <CustomerEntityDialog open={open} onOpenChange={setOpen} title={editing ? 'Edit Volumetric' : 'Add Volumetric'} onSave={() => mutation.mutate(form)} saving={mutation.isPending}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect label="Vendor" value={String(form.vendorId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, vendorId: Number(v) }))} options={(vendors?.data ?? []).map((vendor) => ({ value: String(vendor.id), label: vendor.vendorName }))} />
                     <SimpleSelect label="Product" value={String(form.productId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))} options={(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName }))} />
                     <SimpleInput label="CM Divide" type="number" value={String(form.cmDivide)} onChange={(value) => setForm((prev) => ({ ...prev, cmDivide: Number(value) }))} />
                     <SimpleInput label="Inch Divide" type="number" value={String(form.inchDivide)} onChange={(value) => setForm((prev) => ({ ...prev, inchDivide: Number(value) }))} />

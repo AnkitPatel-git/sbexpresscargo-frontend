@@ -22,7 +22,7 @@ request:
     - name: baseUrl
       value: http://localhost:3001
     - name: accessToken
-      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWRtaW5Ac3lzdGVtLmNvbSIsInJvbGVJZCI6MSwicm9sZUlkZW50aWZpZXIiOiJTVVBFUl9BRE1JTiIsInBsYXRmb3JtIjoicG9ydGFsIiwianRpIjoiYjkzNmFhMjItYmUyYy00N2RmLWI4OWEtZjFlZmVmOGMwZGQzIiwiaWF0IjoxNzc2MTE5MDM1LCJleHAiOjE3Nzg3MTEwMzV9.ShrhoIggKp-xYmjWhsLISu8ZOA2OS9E6fX-6pPW-fnQ
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWRtaW5Ac3lzdGVtLmNvbSIsInJvbGVJZCI6MSwicm9sZUlkZW50aWZpZXIiOiJTVVBFUl9BRE1JTiIsInBsYXRmb3JtIjoicG9ydGFsIiwianRpIjoiYWQxYmIzNmUtOTFhZS00YTc2LTg3YTktNDllNjk5MmRlMGRhIiwiaWF0IjoxNzc2NDU4Mzc4LCJleHAiOjE3NzkwNTAzNzh9.xSZFjsdjXcJVraCys0X8CvVTnvDMdy8gfjgFq0Ua3Uw
 
 docs:
   content: Generated from NestJS controllers and DTOs with backend folder hierarchy

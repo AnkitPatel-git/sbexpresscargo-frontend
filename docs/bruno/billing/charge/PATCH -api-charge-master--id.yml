@@ -22,18 +22,17 @@ http:
       {
         "code": "CODE001",
         "name": "Sample Name",
-        "chargeType": "FIXED",
-        "calculationBase": "Sample Value",
-        "chargeRate": 10,
+        "calculationBase": "FLAT",
         "applyFuel": true,
-        "applyTaxOnFuel": true,
-        "applyTax": true,
-        "hsnCode": "CODE001",
         "sequence": 1,
-        "multipleCharges": true,
         "version": 1
       }
   auth: inherit
+
+runtime:
+  variables:
+    - name: id
+      value: "1"
 
 settings:
   encodeUrl: true

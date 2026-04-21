@@ -208,61 +208,100 @@ examples:
               "fromZoneId": 1,
               "toZoneId": 2,
               "baseFreight": 1425000,
+              "fuelAmount": 142500,
               "totalAmount": 1617597.5,
               "totalCharges": 192597.5,
               "rows": [
                 {
                   "type": "RATE_CHARGE",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": null,
                   "name": "FOV",
                   "amount": 112.5,
                   "calculationBase": "SHIPMENT_VALUE",
-                  "isPercentage": true
+                  "isPercentage": true,
+                  "fuelApply": false,
+                  "fuelAmount": 0
                 },
                 {
                   "type": "RATE_CHARGE",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": null,
                   "name": "HANDLING",
                   "amount": 25,
                   "calculationBase": "FLAT",
-                  "isPercentage": false
+                  "isPercentage": false,
+                  "fuelApply": false,
+                  "fuelAmount": 0
                 },
                 {
                   "type": "RATE_CHARGE",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": null,
                   "name": "ECC",
                   "amount": 28500,
                   "calculationBase": "FREIGHT",
-                  "isPercentage": true
+                  "isPercentage": true,
+                  "fuelApply": true,
+                  "fuelAmount": 5700
                 },
                 {
                   "type": "RATE_CHARGE",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": null,
                   "name": "RAS",
                   "amount": 14250,
                   "calculationBase": "FREIGHT",
-                  "isPercentage": true
+                  "isPercentage": true,
+                  "fuelApply": true,
+                  "fuelAmount": 2850
                 },
                 {
                   "type": "RATE_CHARGE",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": null,
                   "name": "ODA",
                   "amount": 40,
                   "calculationBase": "FLAT",
-                  "isPercentage": false
+                  "isPercentage": false,
+                  "fuelApply": false,
+                  "fuelAmount": 0
                 },
                 {
                   "type": "RATE_CHARGE",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": null,
                   "name": "OTHER",
                   "amount": 15,
                   "calculationBase": "FLAT",
-                  "isPercentage": false
+                  "isPercentage": false,
+                  "fuelApply": false,
+                  "fuelAmount": 0
                 },
                 {
                   "type": "RATE_CHARGE",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": "FUEL",
                   "name": "FUEL",
                   "amount": 142500,
                   "calculationBase": "FREIGHT",
-                  "isPercentage": true
+                  "isPercentage": true,
+                  "fuelApply": false,
+                  "fuelAmount": 0
                 },
                 {
                   "type": "CONDITION",
-                  "name": "OTHER",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": null,
+                  "name": "FLOOR DELIVERY",
                   "amount": 30,
                   "field": "FLOOR_DELIVERY",
                   "operator": "EQ",
@@ -270,7 +309,10 @@ examples:
                 },
                 {
                   "type": "CONDITION",
-                  "name": "OTHER",
+                  "chargeId": null,
+                  "chargeCode": null,
+                  "chargeType": null,
+                  "name": "HIGH VALUE SURCHARGE",
                   "amount": 7125,
                   "field": "SHIPMENT_VALUE",
                   "operator": "GTE",
@@ -316,42 +358,63 @@ examples:
                 },
                 "chargesApplied": [
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "FOV",
                     "calculationBase": "SHIPMENT_VALUE",
                     "isPercentage": true,
                     "amount": 112.5
                   },
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "HANDLING",
                     "calculationBase": "FLAT",
                     "isPercentage": false,
                     "amount": 25
                   },
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "ECC",
                     "calculationBase": "FREIGHT",
                     "isPercentage": true,
                     "amount": 28500
                   },
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "RAS",
                     "calculationBase": "FREIGHT",
                     "isPercentage": true,
                     "amount": 14250
                   },
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "ODA",
                     "calculationBase": "FLAT",
                     "isPercentage": false,
                     "amount": 40
                   },
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "OTHER",
                     "calculationBase": "FLAT",
                     "isPercentage": false,
                     "amount": 15
                   },
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "FUEL",
                     "calculationBase": "FREIGHT",
                     "isPercentage": true,
@@ -360,6 +423,9 @@ examples:
                 ],
                 "conditionsApplied": [
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "FLOOR DELIVERY",
                     "field": "FLOOR_DELIVERY",
                     "operator": "EQ",
@@ -367,13 +433,17 @@ examples:
                     "amount": 30
                   },
                   {
+                    "chargeId": null,
+                    "chargeCode": null,
+                    "chargeType": null,
                     "name": "HIGH VALUE SURCHARGE",
                     "field": "SHIPMENT_VALUE",
                     "operator": "GTE",
                     "value": 40000,
                     "amount": 7125
                   }
-                ]
+                ],
+                "fuelAmount": 142500
               }
             }
           }

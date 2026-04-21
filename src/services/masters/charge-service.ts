@@ -1,175 +1,140 @@
-import { apiFetch } from '@/lib/api-fetch';
-import {
-    ChargeListResponse,
-    ChargeSingleResponse,
-    ChargeFormData,
-    ChargeByProductResponse,
-} from '@/types/masters/charge';
+import { apiFetch } from "@/lib/api-fetch";
+import type {
+  ChargeByProductResponse,
+  ChargeFormData,
+  ChargeListResponse,
+  ChargeSingleResponse,
+} from "@/types/masters/charge";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+export type ChargeListQueryParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  code?: string;
+  name?: string;
+  calculationBase?: string;
+  applyFuel?: boolean;
+};
+
+function authHeaders(includeJson = false) {
+  return {
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+  };
+}
+
+async function readErrorMessage(response: Response, fallback: string) {
+  try {
+    const err = await response.json();
+    return err?.message || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function parseFilename(response: Response, fallback: string) {
+  const cd = response.headers.get("content-disposition");
+  const match = cd?.match(/filename="?([^";\n]+)"?/i);
+  return match?.[1]?.trim() || fallback;
+}
+
+function appendChargeListQuery(queryParams: URLSearchParams, params?: ChargeListQueryParams, includePagination = true) {
+  if (includePagination) {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 20;
+    queryParams.append("page", String(page));
+    queryParams.append("limit", String(limit));
+  }
+  if (params?.search) queryParams.append("search", params.search);
+  queryParams.append("sortBy", params?.sortBy ?? "code");
+  queryParams.append("sortOrder", params?.sortOrder ?? "asc");
+  if (params?.code) queryParams.append("code", params.code);
+  if (params?.name) queryParams.append("name", params.name);
+  if (params?.calculationBase) queryParams.append("calculationBase", params.calculationBase);
+  if (typeof params?.applyFuel === "boolean") queryParams.append("applyFuel", String(params.applyFuel));
+}
 
 export const chargeService = {
-    async getCharges(params?: {
-        page?: number;
-        limit?: number;
-        search?: string;
-        sortBy?: string;
-        sortOrder?: 'asc' | 'desc';
-        code?: string;
-        name?: string;
-        calculationBase?: string;
-        applyFuel?: boolean;
-        applyTaxOnFuel?: boolean;
-        applyTax?: boolean;
-    }): Promise<ChargeListResponse> {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append('page', params.page.toString());
-        if (params?.limit) queryParams.append('limit', params.limit.toString());
-        queryParams.append('search', params?.search ?? '');
-        queryParams.append('sortBy', params?.sortBy ?? 'sequence');
-        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
-        if (params?.code) queryParams.append('code', params.code);
-        if (params?.name) queryParams.append('name', params.name);
-        if (params?.calculationBase) queryParams.append('calculationBase', params.calculationBase);
-        if (typeof params?.applyFuel === 'boolean') queryParams.append('applyFuel', String(params.applyFuel));
-        if (typeof params?.applyTaxOnFuel === 'boolean') queryParams.append('applyTaxOnFuel', String(params.applyTaxOnFuel));
-        if (typeof params?.applyTax === 'boolean') queryParams.append('applyTax', String(params.applyTax));
+  async getCharges(params?: ChargeListQueryParams): Promise<ChargeListResponse> {
+    const queryParams = new URLSearchParams();
+    appendChargeListQuery(queryParams, params, true);
+    const response = await apiFetch(`${API_URL}/charge-master?${queryParams.toString()}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to fetch charges"));
+    }
+    return response.json();
+  },
 
-        const response = await apiFetch(`${API_URL}/charge-master?${queryParams.toString()}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
+  async getChargesByProduct(productId: number): Promise<ChargeByProductResponse> {
+    const response = await apiFetch(`${API_URL}/charge-master/by-product/${productId}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to fetch charges for product"));
+    }
+    return response.json();
+  },
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch charges');
-        }
+  async getChargeById(id: number): Promise<ChargeSingleResponse> {
+    const response = await apiFetch(`${API_URL}/charge-master/${id}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to fetch charge"));
+    }
+    return response.json();
+  },
 
-        return response.json();
-    },
+  async createCharge(data: ChargeFormData): Promise<ChargeSingleResponse> {
+    const response = await apiFetch(`${API_URL}/charge-master`, {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to create charge"));
+    }
+    return response.json();
+  },
 
-    async getChargesByProduct(productId: number): Promise<ChargeByProductResponse> {
-        const response = await apiFetch(`${API_URL}/charge-master/by-product/${productId}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
+  async updateCharge(id: number, data: Partial<ChargeFormData> & { version: number }): Promise<ChargeSingleResponse> {
+    const response = await apiFetch(`${API_URL}/charge-master/${id}`, {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to update charge"));
+    }
+    return response.json();
+  },
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch charges for product');
-        }
+  async deleteCharge(id: number): Promise<{ success: boolean; message: string }> {
+    const response = await apiFetch(`${API_URL}/charge-master/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to delete charge"));
+    }
+    return response.json();
+  },
 
-        return response.json();
-    },
-
-    async getChargeById(id: number): Promise<ChargeSingleResponse> {
-        const response = await apiFetch(`${API_URL}/charge-master/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch charge');
-        }
-
-        return response.json();
-    },
-
-    async createCharge(data: ChargeFormData): Promise<ChargeSingleResponse> {
-        const response = await apiFetch(`${API_URL}/charge-master`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(data),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to create charge');
-        }
-
-        return response.json();
-    },
-
-    async updateCharge(
-        id: number,
-        data: Partial<ChargeFormData> & { version: number },
-    ): Promise<ChargeSingleResponse> {
-        const response = await apiFetch(`${API_URL}/charge-master/${id}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(data),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to update charge');
-        }
-
-        return response.json();
-    },
-
-    async deleteCharge(id: number): Promise<{ success: boolean; message: string }> {
-        const response = await apiFetch(`${API_URL}/charge-master/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to delete charge');
-        }
-
-        return response.json();
-    },
-
-    /** Bruno: `GET /charge-master/export` — CSV; optional list-style query params. */
-    async exportCharges(params?: {
-        search?: string;
-        sortBy?: string;
-        sortOrder?: 'asc' | 'desc';
-        code?: string;
-        name?: string;
-        calculationBase?: string;
-        applyFuel?: boolean;
-        applyTaxOnFuel?: boolean;
-        applyTax?: boolean;
-    }): Promise<{ blob: Blob; filename: string }> {
-        const queryParams = new URLSearchParams();
-        queryParams.append('search', params?.search ?? '');
-        queryParams.append('sortBy', params?.sortBy ?? 'sequence');
-        queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
-        if (params?.code) queryParams.append('code', params.code);
-        if (params?.name) queryParams.append('name', params.name);
-        if (params?.calculationBase) queryParams.append('calculationBase', params.calculationBase);
-        if (typeof params?.applyFuel === 'boolean') queryParams.append('applyFuel', String(params.applyFuel));
-        if (typeof params?.applyTaxOnFuel === 'boolean') queryParams.append('applyTaxOnFuel', String(params.applyTaxOnFuel));
-        if (typeof params?.applyTax === 'boolean') queryParams.append('applyTax', String(params.applyTax));
-
-        const response = await apiFetch(`${API_URL}/charge-master/export?${queryParams.toString()}`, {
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to export charges');
-        }
-
-        const cd = response.headers.get('content-disposition');
-        let filename = 'charges.csv';
-        const match = cd?.match(/filename="?([^";\n]+)"?/i);
-        if (match?.[1]) filename = match[1].trim();
-
-        const blob = await response.blob();
-        return { blob, filename };
-    },
+  async exportCharges(params?: ChargeListQueryParams): Promise<{ blob: Blob; filename: string }> {
+    const queryParams = new URLSearchParams();
+    appendChargeListQuery(queryParams, params, false);
+    const response = await apiFetch(`${API_URL}/charge-master/export?${queryParams.toString()}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to export charges"));
+    }
+    return { blob: await response.blob(), filename: parseFilename(response, "charges.csv") };
+  },
 };

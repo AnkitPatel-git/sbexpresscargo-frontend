@@ -17,10 +17,9 @@ import { rateService } from "@/services/masters/rate-service";
 import type { RateMaster } from "@/types/masters/rate";
 import { PermissionGuard } from "@/components/auth/permission-guard";
 
-function displayName(value?: { code?: string; name?: string } | { productCode?: string; productName?: string } | { vendorCode?: string; vendorName?: string } | null, fallback = "—") {
+function displayName(value?: { code?: string; name?: string } | { productCode?: string; productName?: string } | null, fallback = "—") {
   if (!value) return fallback;
   if ("productName" in value) return value.productName || value.productCode || fallback;
-  if ("vendorName" in value) return value.vendorName || value.vendorCode || fallback;
   if ("name" in value) {
     const namedValue = value as { name?: string; code?: string };
     return namedValue.name || namedValue.code || fallback;
@@ -40,8 +39,6 @@ export default function RateMasterPage() {
     fromDate: "",
     toDate: "",
     updateType: "",
-    paymentType: "",
-    zeroContract: "all",
   });
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -59,8 +56,6 @@ export default function RateMasterPage() {
     fromDate: appliedFilters.fromDate || undefined,
     toDate: appliedFilters.toDate || undefined,
     updateType: appliedFilters.updateType || undefined,
-    paymentType: appliedFilters.paymentType || undefined,
-    zeroContract: appliedFilters.zeroContract === "all" ? undefined : appliedFilters.zeroContract === "true",
     sortBy: "fromDate" as const,
     sortOrder: "desc" as const,
   };
@@ -70,8 +65,6 @@ export default function RateMasterPage() {
     fromDate: appliedFilters.fromDate || undefined,
     toDate: appliedFilters.toDate || undefined,
     updateType: appliedFilters.updateType || undefined,
-    paymentType: appliedFilters.paymentType || undefined,
-    zeroContract: appliedFilters.zeroContract === "all" ? undefined : appliedFilters.zeroContract === "true",
     sortBy: "fromDate" as const,
     sortOrder: "desc" as const,
   };
@@ -127,8 +120,6 @@ export default function RateMasterPage() {
       fromDate: "",
       toDate: "",
       updateType: "",
-      paymentType: "",
-      zeroContract: "all",
     };
     setDraftFilters(emptyFilters);
     setAppliedFilters(emptyFilters);
@@ -188,28 +179,6 @@ export default function RateMasterPage() {
                     onChange={(e) => setDraftFilters((prev) => ({ ...prev, toDate: e.target.value }))}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payment Type</label>
-                  <Input
-                    placeholder="Payment type"
-                    className="h-9 bg-background"
-                    value={draftFilters.paymentType}
-                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, paymentType: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Zero Contract</label>
-                  <Select value={draftFilters.zeroContract} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, zeroContract: value }))}>
-                    <SelectTrigger className="h-9 w-full bg-background">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="true">True</SelectItem>
-                      <SelectItem value="false">False</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               <DialogFooter className="gap-2 sm:gap-2">
                 <Button type="button" variant="outline" onClick={resetFilters}>
@@ -258,33 +227,30 @@ export default function RateMasterPage() {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
-        <Table className="min-w-[1120px] border-0">
+        <Table className="min-w-[960px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
               <TableHead className="font-semibold text-primary-foreground">ID</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Update type</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Service type</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Rate type</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Product</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Vendor</TableHead>
               <TableHead className="font-semibold text-primary-foreground">From</TableHead>
               <TableHead className="font-semibold text-primary-foreground">To</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Payment type</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Zero contract</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Flat rate</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                   Loading rates…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                   No rate masters found.
                 </TableCell>
               </TableRow>
@@ -293,15 +259,12 @@ export default function RateMasterPage() {
                 <TableRow key={row.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                   <TableCell className="font-medium">{row.id}</TableCell>
                   <TableCell>{row.updateType}</TableCell>
-                  <TableCell>{row.serviceType || "—"}</TableCell>
                   <TableCell>{row.rateType || "—"}</TableCell>
                   <TableCell>{displayName(row.customer)}</TableCell>
                   <TableCell>{displayName(row.product)}</TableCell>
-                  <TableCell>{displayName(row.vendor)}</TableCell>
                   <TableCell>{row.fromDate?.slice(0, 10)}</TableCell>
                   <TableCell>{row.toDate?.slice(0, 10)}</TableCell>
-                  <TableCell>{row.paymentType || "—"}</TableCell>
-                  <TableCell>{row.zeroContract ? "Yes" : "No"}</TableCell>
+                  <TableCell>{row.flatRate != null ? String(row.flatRate) : "—"}</TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => router.push(`/masters/rates/${row.id}/edit`)}>

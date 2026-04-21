@@ -12,34 +12,28 @@ http:
       disabled: true
   params:
     - name: page
-      value: "0"
+      value: "1"
       type: query
     - name: limit
-      value: "0"
+      value: "20"
       type: query
     - name: sortBy
-      value: string
+      value: fromDate
       type: query
     - name: sortOrder
-      value: asc
+      value: desc
       type: query
     - name: search
-      value: string
+      value: AWB
       type: query
     - name: updateType
-      value: string
+      value: AWB_ENTRY_RATE
       type: query
     - name: fromDate
-      value: string
+      value: 2026-01-01
       type: query
     - name: toDate
-      value: string
-      type: query
-    - name: paymentType
-      value: string
-      type: query
-    - name: zeroContract
-      value: "true"
+      value: 2026-12-31
       type: query
   auth: inherit
 

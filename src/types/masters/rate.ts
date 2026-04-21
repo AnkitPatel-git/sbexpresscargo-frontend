@@ -1,6 +1,8 @@
-/** Rate Master — Bruno `docs/bruno/billing/rate/*`. */
+/** Rate Master — `docs/ratemaster.md`, `docs/bruno/billing/rate/*`. */
 
 export type RateUpdateType = "AWB_ENTRY_RATE" | "VENDOR_RATE" | "TAX_FUEL" | "VENDOR_OBC_RATE" | string;
+
+export type RateTypeValue = "ZONE_MATRIX" | "DISTANCE_MATRIX" | "FLAT" | string;
 
 export interface RateZoneRef {
   id: number;
@@ -53,6 +55,35 @@ export interface RateDistanceSlab extends RateDistanceSlabPayload {
   weightSlabs: RateWeightSlab[];
 }
 
+/** Nested weights on route / ODA slabs (API may include ids). */
+export interface RateRouteSlabWeight extends RateWeightSlabPayload {
+  id?: number;
+  routeRateSlabId?: number;
+  odaRateSlabId?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
+}
+
+export interface RateRouteSlabPayload {
+  fromZoneId?: number;
+  toZoneId?: number;
+  minKm?: number;
+  maxKm?: number;
+  weightSlabs: RateWeightSlabPayload[];
+}
+
+export interface RateRouteRateSlab extends RateRouteSlabPayload {
+  id: number;
+  rateMasterId: number;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
+  weightSlabs: RateRouteSlabWeight[];
+  fromZone?: RateZoneRef | null;
+  toZone?: RateZoneRef | null;
+}
+
 export interface RateChargeSlabPayload {
   minValue: number;
   maxValue: number;
@@ -67,14 +98,22 @@ export interface RateChargeSlab extends RateChargeSlabPayload {
   deletedAt?: string | null;
 }
 
+export interface RateChargeRef {
+  id: number;
+  code?: string;
+  name?: string;
+  calculationBase?: string;
+}
+
 export interface RateChargePayload {
-  name: string;
-  calculationBase: string;
+  chargeId?: number;
+  name?: string;
+  calculationBase?: string;
   value: number;
-  isPercentage: boolean;
-  minValue: number;
-  maxValue: number;
-  sequence: number;
+  isPercentage?: boolean;
+  minValue?: number;
+  maxValue?: number;
+  sequence?: number;
   chargeSlabs?: RateChargeSlabPayload[];
 }
 
@@ -85,16 +124,19 @@ export interface RateCharge extends RateChargePayload {
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;
+  charge?: RateChargeRef | null;
   chargeSlabs: RateChargeSlab[];
 }
 
 export interface RateConditionPayload {
+  chargeId?: number;
   field: string;
   operator: string;
   value: number;
-  chargeName: string;
+  chargeName?: string;
   chargeAmount: number;
-  isPercentage: boolean;
+  calculationBase?: string;
+  isPercentage?: boolean;
 }
 
 export interface RateCondition extends RateConditionPayload {
@@ -103,6 +145,7 @@ export interface RateCondition extends RateConditionPayload {
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;
+  charge?: RateChargeRef | null;
 }
 
 export interface RateCustomerRef {
@@ -117,33 +160,16 @@ export interface RateProductRef {
   productName?: string;
 }
 
-export interface RateVendorRef {
-  id: number;
-  vendorCode?: string;
-  vendorName?: string;
-}
-
-export interface RateServiceCenterRef {
-  id: number;
-  code?: string;
-  name?: string;
-  subName?: string | null;
-}
-
 export interface RateMaster {
   id: number;
   version: number;
   updateType: RateUpdateType;
-  serviceType?: string | null;
-  rateType?: string | null;
+  rateType?: RateTypeValue | null;
   fromDate: string;
   toDate: string;
   customerId?: number | null;
   productId?: number | null;
-  vendorId?: number | null;
-  serviceCenterId?: number | null;
-  paymentType?: string | null;
-  zeroContract: boolean;
+  flatRate?: number | null;
   weightUnitStep?: number | null;
   createdAt?: string;
   updatedAt?: string;
@@ -153,10 +179,10 @@ export interface RateMaster {
   deletedById?: number | null;
   customer?: RateCustomerRef | null;
   product?: RateProductRef | null;
-  vendor?: RateVendorRef | null;
-  serviceCenter?: RateServiceCenterRef | null;
   zoneRates?: RateZoneRate[];
   distanceSlabs?: RateDistanceSlab[];
+  routeRateSlabs?: RateRouteRateSlab[];
+  odaRateSlabs?: RateRouteRateSlab[];
   rateCharges?: RateCharge[];
   rateConditions?: RateCondition[];
 }
@@ -174,19 +200,57 @@ export interface RateMasterSingleResponse {
   data: RateMaster;
 }
 
+export interface RateMasterReviewHeader {
+  id: number;
+  version: number;
+  updateType?: RateUpdateType;
+  rateType?: RateTypeValue;
+  fromDate?: string;
+  toDate?: string;
+  customerId?: number;
+  productId?: number;
+  flatRate?: number | null;
+  weightUnitStep?: number | null;
+}
+
+export interface RateMasterReviewMeta {
+  zones?: RateZoneRef[];
+  conditionFields?: string[];
+  conditionOperators?: string[];
+  calculationBases?: string[];
+}
+
+export interface RateMasterReviewData {
+  id: number;
+  header: RateMasterReviewHeader;
+  zoneMatrix: RateZoneRatePayload[];
+  distanceWeightMatrix: RateDistanceSlabPayload[];
+  routeWeightRules: RateRouteSlabPayload[];
+  odaWeightRules: RateRouteSlabPayload[];
+  conditionRows: RateConditionPayload[];
+  meta?: RateMasterReviewMeta;
+  notes?: Record<string, unknown>;
+}
+
+export interface RateMasterReviewResponse {
+  success: boolean;
+  message?: string;
+  data: RateMasterReviewData;
+}
+
 export interface CreateRateMasterPayload {
   updateType: string;
   fromDate: string;
   toDate: string;
   customerId: number;
-  serviceType: string;
-  rateType: string;
   productId: number;
-  vendorId?: number;
-  paymentType: string;
-  zeroContract: boolean;
+  rateType?: string;
+  flatRate?: number;
+  weightUnitStep?: number;
   zoneRates?: RateZoneRatePayload[];
   distanceSlabs?: RateDistanceSlabPayload[];
+  rateSlabs?: RateRouteSlabPayload[];
+  odaRateSlabs?: RateRouteSlabPayload[];
   rateCharges?: RateChargePayload[];
   rateConditions?: RateConditionPayload[];
 }
@@ -194,6 +258,16 @@ export interface CreateRateMasterPayload {
 export type UpdateRateMasterPayload = Partial<CreateRateMasterPayload> & {
   version: number;
 };
+
+export interface UpdateRateMasterReviewPayload {
+  header: Omit<RateMasterReviewHeader, "id">;
+  zoneMatrix?: RateZoneRatePayload[];
+  distanceWeightMatrix?: RateDistanceSlabPayload[];
+  routeWeightRules?: RateRouteSlabPayload[];
+  odaWeightRules?: RateRouteSlabPayload[];
+  conditionRows?: RateConditionPayload[];
+  notes?: Record<string, unknown>;
+}
 
 export interface RateChildListResponse<T> {
   success: boolean;

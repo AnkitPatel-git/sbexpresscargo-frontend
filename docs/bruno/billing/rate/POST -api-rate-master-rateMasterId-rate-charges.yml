@@ -134,6 +134,7 @@ examples:
             "data": {
               "id": 8,
               "rateMasterId": 1,
+              "chargeId": null,
               "name": "FUEL",
               "calculationBase": "CHARGE_WEIGHT",
               "value": 5,
@@ -145,6 +146,7 @@ examples:
               "createdAt": "2026-04-15T06:12:25.891Z",
               "updatedAt": "2026-04-15T06:12:25.891Z",
               "deletedAt": null,
+              "charge": null,
               "chargeSlabs": [
                 {
                   "id": 1,

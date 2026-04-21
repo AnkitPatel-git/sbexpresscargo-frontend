@@ -20,11 +20,8 @@ http:
         "fromDate": "2026-04-13T00:00:00.000Z",
         "toDate": "2026-12-31T23:59:59.000Z",
         "customerId": 1,
-        "serviceType": "EXPRESS",
-        "rateType": "ZONE_MATRIX",
         "productId": 1,
-        "paymentType": "TO_PAY",
-        "zeroContract": false,
+        "rateType": "ZONE_MATRIX",
         "zoneRates": [
           {
             "fromZoneId": 1,
@@ -97,6 +94,7 @@ http:
             "value": 1,
             "chargeName": "FLOOR DELIVERY",
             "chargeAmount": 30,
+            "calculationBase": "FLAT",
             "isPercentage": false
           },
           {
@@ -105,6 +103,7 @@ http:
             "value": 40000,
             "chargeName": "HIGH VALUE SURCHARGE",
             "chargeAmount": 0.5,
+            "calculationBase": "SHIPMENT_VALUE",
             "isPercentage": true
           }
         ]
@@ -136,11 +135,8 @@ examples:
             "fromDate": "2026-04-13T00:00:00.000Z",
             "toDate": "2026-12-31T23:59:59.000Z",
             "customerId": 1,
-            "serviceType": "EXPRESS",
-            "rateType": "ZONE_MATRIX",
             "productId": 1,
-            "paymentType": "TO_PAY",
-            "zeroContract": false,
+            "rateType": "ZONE_MATRIX",
             "zoneRates": [
               {
                 "fromZoneId": 1,
@@ -168,7 +164,6 @@ examples:
         data: |-
           {
             "success": true,
-            "message": "Rate master created successfully",
             "data": {
               "id": 10,
               "updateType": "AWB_ENTRY_RATE",
@@ -176,111 +171,56 @@ examples:
               "toDate": "2026-12-31T23:59:59.000Z",
               "version": 1,
               "customerId": 1,
-              "serviceType": "EXPRESS",
-              "rateType": "ZONE_MATRIX",
               "productId": 1,
-              "vendorId": null,
-              "paymentType": "TO_PAY",
-              "zeroContract": false,
+              "rateType": "ZONE_MATRIX",
               "flatRate": null,
               "weightUnitStep": null,
+              "customer": {
+                "id": 1,
+                "code": "CUST-001",
+                "name": "Sample Customer"
+              },
+              "product": {
+                "id": 1,
+                "productCode": "CODE001",
+                "productName": "SURFACE"
+              },
               "zoneRates": [
                 {
                   "id": 1,
-                  "rateMasterId": 1,
+                  "rateMasterId": 10,
                   "fromZoneId": 1,
                   "toZoneId": 2,
-                  "rate": 50
+                  "rate": 50,
+                  "createdAt": "2026-04-14T23:03:28.709Z",
+                  "updatedAt": "2026-04-14T23:03:28.709Z",
+                  "deletedAt": null
                 }
               ],
               "distanceSlabs": [],
+              "routeRateSlabs": [],
+              "odaRateSlabs": [],
               "rateCharges": [
                 {
                   "id": 1,
-                  "rateMasterId": 1,
-                  "name": "FOV",
-                  "calculationBase": "SHIPMENT_VALUE",
-                  "value": 0.25,
-                  "isPercentage": true,
-                  "sequence": 1
-                },
-                {
-                  "id": 2,
-                  "rateMasterId": 1,
-                  "name": "HANDLING",
-                  "calculationBase": "FLAT",
-                  "value": 25,
-                  "isPercentage": false,
-                  "sequence": 2
-                },
-                {
-                  "id": 3,
-                  "rateMasterId": 1,
-                  "name": "ECC",
-                  "calculationBase": "FREIGHT",
-                  "value": 2,
-                  "isPercentage": true,
-                  "sequence": 3
-                },
-                {
-                  "id": 4,
-                  "rateMasterId": 1,
-                  "name": "RAS",
-                  "calculationBase": "FREIGHT",
-                  "value": 1,
-                  "isPercentage": true,
-                  "sequence": 4
-                },
-                {
-                  "id": 5,
-                  "rateMasterId": 1,
-                  "name": "ODA",
-                  "calculationBase": "FLAT",
-                  "value": 40,
-                  "isPercentage": false,
-                  "sequence": 5
-                },
-                {
-                  "id": 6,
-                  "rateMasterId": 1,
-                  "name": "OTHER",
-                  "calculationBase": "FLAT",
-                  "value": 15,
-                  "isPercentage": false,
-                  "sequence": 6
-                },
-                {
-                  "id": 7,
-                  "rateMasterId": 1,
+                  "rateMasterId": 10,
+                  "chargeId": null,
                   "name": "FUEL",
                   "calculationBase": "FREIGHT",
                   "value": 10,
                   "isPercentage": true,
-                  "sequence": 7
+                  "minValue": null,
+                  "maxValue": null,
+                  "weightStep": null,
+                  "sequence": 1,
+                  "createdAt": "2026-04-14T23:03:28.716Z",
+                  "updatedAt": "2026-04-14T23:03:28.716Z",
+                  "deletedAt": null,
+                  "charge": null,
+                  "chargeSlabs": []
                 }
               ],
-              "rateConditions": [
-                {
-                  "id": 1,
-                  "rateMasterId": 1,
-                  "field": "FLOOR_DELIVERY",
-                  "operator": "EQ",
-                  "value": 1,
-                  "chargeName": "FLOOR DELIVERY",
-                  "chargeAmount": 30,
-                  "isPercentage": false
-                },
-                {
-                  "id": 2,
-                  "rateMasterId": 1,
-                  "field": "SHIPMENT_VALUE",
-                  "operator": "GTE",
-                  "value": 40000,
-                  "chargeName": "HIGH VALUE SURCHARGE",
-                  "chargeAmount": 0.5,
-                  "isPercentage": true
-                }
-              ],
+              "rateConditions": [],
               "createdAt": "2026-04-14T23:03:28.697Z",
               "updatedAt": "2026-04-14T23:03:28.697Z",
               "createdById": 1,
