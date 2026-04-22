@@ -1,0 +1,45 @@
+info:
+  name: PUT /api/shipper-master/:id
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/shipper-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "shipperCode": "CODE001",
+        "shipperName": "Sample Name",
+        "contactPerson": "Sample Value",
+        "address1": "Sample address line",
+        "address2": "Sample address line",
+        "pinCodeId": 1,
+        "telephone": "9876543210",
+        "email": "ops@example.com",
+        "mobile": "9876543210",
+        "aadhaarNo": "Sample Value",
+        "panNo": "ABCDE1234F",
+        "bankId": 1,
+        "bankAccount": "Sample Value",
+        "bankIfsc": "HDFC0000123",
+        "firmType": "Sample Value"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

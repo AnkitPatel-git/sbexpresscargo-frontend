@@ -1,0 +1,36 @@
+info:
+  name: PATCH /api/product-master/:id
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/product-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "productCode": "CODE001",
+        "productName": "SURFACE",
+        "productType": "cargo",
+        "fuelCharge": true,
+        "status": "ACTIVE",
+        "version": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,36 @@
+info:
+  name: PUT /api/rate-master/:rateMasterId/zone-rates/:id
+  type: http
+  seq: 10
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/rate-master/{{rateMasterId}}/zone-rates/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: rateMasterId
+      value: "1"
+      type: path
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "fromZoneId": 1,
+        "toZoneId": 2,
+        "rate": 12
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

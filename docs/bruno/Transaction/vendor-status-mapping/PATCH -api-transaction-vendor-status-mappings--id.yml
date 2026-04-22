@@ -1,0 +1,36 @@
+info:
+  name: PATCH /api/transaction/vendor-status-mappings/:id
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/transaction/vendor-status-mappings/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "externalStatus": "Sample Value",
+        "normalizedStatus": "Sample Value",
+        "internalStatus": "Sample Value",
+        "priority": 1,
+        "isTerminal": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

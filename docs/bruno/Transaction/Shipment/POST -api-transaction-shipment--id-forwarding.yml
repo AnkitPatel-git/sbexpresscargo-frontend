@@ -1,0 +1,67 @@
+info:
+  name: POST /api/transaction/shipment/:id/forwarding
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/shipment/{{id}}/forwarding"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "version": 1,
+        "forwardingAwb": "AWB100001",
+        "deliveryVendorId": 1,
+        "deliveryServiceMapId": 1,
+        "vendorWeight": 10,
+        "vendorAmount": 10,
+        "vendorInvoice": "Sample Value",
+        "contractCharges": 1,
+        "otherCharges": 1,
+        "subTotal": 1,
+        "totalFuel": 1,
+        "igst": 1,
+        "cgst": 1,
+        "sgst": 1,
+        "totalAmount": 10,
+        "charges": [
+          {
+            "chargeId": 1,
+            "description": "Sample Value",
+            "rate": 10,
+            "amount": 10,
+            "fuelApply": true,
+            "fuelAmount": 10,
+            "taxApply": true,
+            "taxOnFuel": true,
+            "igst": 1,
+            "cgst": 1,
+            "sgst": 1,
+            "total": 1,
+            "chargeType": "FIXED"
+          }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: id
+      value: "1"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

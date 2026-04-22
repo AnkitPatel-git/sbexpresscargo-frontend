@@ -1,0 +1,231 @@
+info:
+  name: POST /api/rate-master
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: '{{baseUrl}}/api/rate-master'
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "updateType": "AWB_ENTRY_RATE",
+        "fromDate": "2026-04-13T00:00:00.000Z",
+        "toDate": "2026-12-31T23:59:59.000Z",
+        "customerId": 1,
+        "productId": 1,
+        "rateType": "ZONE_MATRIX",
+        "zoneRates": [
+          {
+            "fromZoneId": 1,
+            "toZoneId": 2,
+            "rate": 50
+          }
+        ],
+        "rateCharges": [
+          {
+            "name": "FOV",
+            "calculationBase": "SHIPMENT_VALUE",
+            "value": 0.25,
+            "isPercentage": true,
+            "sequence": 1,
+            "chargeSlabs": []
+          },
+          {
+            "name": "HANDLING",
+            "calculationBase": "FLAT",
+            "value": 25,
+            "isPercentage": false,
+            "sequence": 2,
+            "chargeSlabs": []
+          },
+          {
+            "name": "ECC",
+            "calculationBase": "FREIGHT",
+            "value": 2,
+            "isPercentage": true,
+            "sequence": 3,
+            "chargeSlabs": []
+          },
+          {
+            "name": "RAS",
+            "calculationBase": "FREIGHT",
+            "value": 1,
+            "isPercentage": true,
+            "sequence": 4,
+            "chargeSlabs": []
+          },
+          {
+            "name": "ODA",
+            "calculationBase": "FLAT",
+            "value": 40,
+            "isPercentage": false,
+            "sequence": 5,
+            "chargeSlabs": []
+          },
+          {
+            "name": "OTHER",
+            "calculationBase": "FLAT",
+            "value": 15,
+            "isPercentage": false,
+            "sequence": 6,
+            "chargeSlabs": []
+          },
+          {
+            "name": "FUEL",
+            "calculationBase": "FREIGHT",
+            "value": 10,
+            "isPercentage": true,
+            "sequence": 7,
+            "chargeSlabs": []
+          }
+        ],
+        "rateConditions": [
+          {
+            "field": "FLOOR_DELIVERY",
+            "operator": "EQ",
+            "value": 1,
+            "chargeName": "FLOOR DELIVERY",
+            "chargeAmount": 30,
+            "calculationBase": "FLAT",
+            "isPercentage": false
+          },
+          {
+            "field": "SHIPMENT_VALUE",
+            "operator": "GTE",
+            "value": 40000,
+            "chargeName": "HIGH VALUE SURCHARGE",
+            "chargeAmount": 0.5,
+            "calculationBase": "SHIPMENT_VALUE",
+            "isPercentage": true
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: dummy zone matrix rate
+    request:
+      url: '{{baseUrl}}/api/rate-master'
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      body:
+        type: json
+        data: |-
+          {
+            "updateType": "AWB_ENTRY_RATE",
+            "fromDate": "2026-04-13T00:00:00.000Z",
+            "toDate": "2026-12-31T23:59:59.000Z",
+            "customerId": 1,
+            "productId": 1,
+            "rateType": "ZONE_MATRIX",
+            "zoneRates": [
+              {
+                "fromZoneId": 1,
+                "toZoneId": 2,
+                "rate": 50
+              }
+            ],
+            "rateCharges": [
+              {
+                "name": "FUEL",
+                "calculationBase": "FREIGHT",
+                "value": 10,
+                "isPercentage": true,
+                "sequence": 1,
+                "chargeSlabs": []
+              }
+            ],
+            "rateConditions": []
+          }
+    response:
+      status: 201
+      statusText: Created
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 10,
+              "updateType": "AWB_ENTRY_RATE",
+              "fromDate": "2026-04-13T00:00:00.000Z",
+              "toDate": "2026-12-31T23:59:59.000Z",
+              "version": 1,
+              "customerId": 1,
+              "productId": 1,
+              "rateType": "ZONE_MATRIX",
+              "flatRate": null,
+              "weightUnitStep": null,
+              "customer": {
+                "id": 1,
+                "code": "CUST-001",
+                "name": "Sample Customer"
+              },
+              "product": {
+                "id": 1,
+                "productCode": "CODE001",
+                "productName": "SURFACE"
+              },
+              "zoneRates": [
+                {
+                  "id": 1,
+                  "rateMasterId": 10,
+                  "fromZoneId": 1,
+                  "toZoneId": 2,
+                  "rate": 50,
+                  "createdAt": "2026-04-14T23:03:28.709Z",
+                  "updatedAt": "2026-04-14T23:03:28.709Z",
+                  "deletedAt": null
+                }
+              ],
+              "distanceSlabs": [],
+              "routeRateSlabs": [],
+              "odaRateSlabs": [],
+              "rateCharges": [
+                {
+                  "id": 1,
+                  "rateMasterId": 10,
+                  "chargeId": null,
+                  "name": "FUEL",
+                  "calculationBase": "FREIGHT",
+                  "value": 10,
+                  "isPercentage": true,
+                  "minValue": null,
+                  "maxValue": null,
+                  "weightStep": null,
+                  "sequence": 1,
+                  "createdAt": "2026-04-14T23:03:28.716Z",
+                  "updatedAt": "2026-04-14T23:03:28.716Z",
+                  "deletedAt": null,
+                  "charge": null,
+                  "chargeSlabs": []
+                }
+              ],
+              "rateConditions": [],
+              "createdAt": "2026-04-14T23:03:28.697Z",
+              "updatedAt": "2026-04-14T23:03:28.697Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null
+            }
+          }

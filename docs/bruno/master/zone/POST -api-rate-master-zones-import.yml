@@ -1,0 +1,73 @@
+info:
+  name: POST /api/rate-master/zones/import
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: '{{baseUrl}}/api/rate-master/zones/import'
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "zones": [
+          {
+            "name": "West Zone",
+            "code": "CODE002",
+            "countryId": 1,
+            "zoneType": "DOMESTIC"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: west zone import
+    request:
+      url: '{{baseUrl}}/api/rate-master/zones/import'
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      body:
+        type: json
+        data: |-
+          {
+            "zones": [
+              {
+                "name": "West Zone",
+                "code": "CODE002",
+                "countryId": 1,
+                "zoneType": "DOMESTIC"
+              }
+            ]
+          }
+    response:
+      status: 200
+      statusText: OK
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Zones import completed",
+            "data": {
+              "created": 1,
+              "updated": 0
+            }
+          }

@@ -6,9 +6,6 @@ export interface Product {
     productName: string;
     version: number;
     productType: 'DOMESTIC' | 'INTERNATIONAL' | 'LOCAL' | string;
-    fuelCharge: boolean;
-    gstReverse: boolean;
-    docType: 'DOX' | 'NDOX' | string;
     status: 'ACTIVE' | 'INACTIVE' | string;
     createdAt: string;
     updatedAt: string;
@@ -22,9 +19,6 @@ export interface ProductFormData {
     productCode: string;
     productName: string;
     productType: string;
-    fuelCharge: boolean;
-    gstReverse: boolean;
-    docType: string;
     status: string;
     /** Required on PATCH (Bruno); omit on POST. */
     version?: number;

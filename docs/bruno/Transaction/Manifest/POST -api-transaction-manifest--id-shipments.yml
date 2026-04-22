@@ -1,0 +1,34 @@
+info:
+  name: POST /api/transaction/manifest/:id/shipments
+  type: http
+  seq: 19
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/manifest/{{id}}/shipments"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "shipmentIds": [
+          1
+        ],
+        "version": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

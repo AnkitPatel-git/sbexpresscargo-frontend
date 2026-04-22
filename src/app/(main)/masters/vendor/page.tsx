@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, Loader2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Loader2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Table,
     TableBody,
@@ -37,17 +38,31 @@ import { useDebounce } from "@/hooks/use-debounce"
 export default function VendorPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const [search, setSearch] = useState("")
-    const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({ code: "", name: "", origin: "", status: "" })
+    const defaultFilters = { search: "", vendorCode: "", vendorName: "", address: "", telephone: "" }
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
+    useEffect(() => {
+        if (filtersOpen) setDraftFilters(appliedFilters)
+    }, [appliedFilters, filtersOpen])
+
     const { data, isLoading } = useQuery({
-        queryKey: ["vendors", page, debouncedSearch],
-        queryFn: () => vendorService.getVendors({ page, limit, search: debouncedSearch }),
+        queryKey: ["vendors", page, debouncedSearch, appliedFilters.vendorCode, appliedFilters.vendorName, appliedFilters.address, appliedFilters.telephone],
+        queryFn: () => vendorService.getVendors({
+            page,
+            limit,
+            search: debouncedSearch,
+            vendorCode: appliedFilters.vendorCode || undefined,
+            vendorName: appliedFilters.vendorName || undefined,
+            address: appliedFilters.address || undefined,
+            telephone: appliedFilters.telephone || undefined,
+        }),
     })
 
     const deleteMutation = useMutation({
@@ -84,28 +99,52 @@ export default function VendorPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
-        data?.data.filter((vendor) => {
-            if (colFilters.code && !(vendor.vendorCode || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
-            if (colFilters.name && !(vendor.vendorName || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
-            if (colFilters.origin && !(vendor.origin || "").toLowerCase().includes(colFilters.origin.toLowerCase())) return false
-            if (colFilters.status && !(vendor.status || "").toLowerCase().includes(colFilters.status.toLowerCase())) return false
-            return true
-        }) ?? []
+    const rows = data?.data ?? []
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
-                    <PermissionGuard permission="master.vendor.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const blob = await vendorService.exportVendorsCsv(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "vendors.csv"; a.click(); URL.revokeObjectURL(url); } catch { toast.error("Failed to export vendors"); } }}><FileUp className="h-4 w-4" /></Button>
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Vendor Filters</DialogTitle>
+                                <DialogDescription>Filter the vendor list from this popup, then apply the filters.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.vendorCode} onChange={(e) => setDraftFilters((prev) => ({ ...prev, vendorCode: e.target.value }))} />
+                                <Input placeholder="Vendor Name" className="h-9 bg-background" value={draftFilters.vendorName} onChange={(e) => setDraftFilters((prev) => ({ ...prev, vendorName: e.target.value }))} />
+                                <Input placeholder="Address" className="h-9 bg-background" value={draftFilters.address} onChange={(e) => setDraftFilters((prev) => ({ ...prev, address: e.target.value }))} />
+                                <Input placeholder="Telephone" className="h-9 bg-background" value={draftFilters.telephone} onChange={(e) => setDraftFilters((prev) => ({ ...prev, telephone: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const { blob, filename } = await vendorService.exportVendors({ search: debouncedSearch, vendorCode: appliedFilters.vendorCode || undefined, vendorName: appliedFilters.vendorName || undefined, address: appliedFilters.address || undefined, telephone: appliedFilters.telephone || undefined }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url); } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to export vendors"); } }}><FileUp className="h-4 w-4" /></Button>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["vendors"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.vendor.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Search:</span>
-                    <Input placeholder="Search vendors..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
-                    <PermissionGuard permission="master.vendor.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><Plus className="mr-1 h-4 w-4" />Add Vendor</Button></PermissionGuard>
-                </div>
+                <PermissionGuard permission="master.vendor.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Vendor</Button></PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[980px] border-0">
@@ -113,32 +152,24 @@ export default function VendorPage() {
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground">Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Vendor Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Contact Person <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Origin <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Address <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Telephone <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground text-center">Status <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
-                        </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Vendor Name" className="h-8 border-border bg-background text-xs" value={colFilters.name} onChange={(e) => setColFilters((f) => ({ ...f, name: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Contact Person" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Origin" className="h-8 border-border bg-background text-xs" value={colFilters.origin} onChange={(e) => setColFilters((f) => ({ ...f, origin: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Status" className="h-8 border-border bg-background text-xs" value={colFilters.status} onChange={(e) => setColFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground"><span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Loading vendors...</span></TableCell></TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No vendors found.</TableCell></TableRow>
                         ) : (
-                            filteredRows.map((vendor: Vendor, index) => (
+                            rows.map((vendor: Vendor, index) => (
                                 <TableRow key={vendor.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{vendor.vendorCode}</TableCell>
                                     <TableCell className="font-medium text-foreground">{vendor.vendorName}</TableCell>
-                                    <TableCell className="text-foreground">{vendor.contactPerson}</TableCell>
-                                    <TableCell className="text-foreground">{vendor.origin || "-"}</TableCell>
+                                    <TableCell className="text-foreground">{vendor.address1 || "-"}</TableCell>
+                                    <TableCell className="text-foreground">{vendor.telephone || "-"}</TableCell>
                                     <TableCell className="text-center"><Badge variant={vendor.status === "ACTIVE" ? "success" : "secondary"}>{vendor.status === "ACTIVE" ? "Active" : "Inactive"}</Badge></TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">

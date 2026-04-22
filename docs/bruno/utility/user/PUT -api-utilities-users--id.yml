@@ -1,0 +1,52 @@
+info:
+  name: PUT /api/utilities/users/:id
+  type: http
+  seq: 11
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/utilities/users/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "username": "string",
+        "email": "string",
+        "roleId": 0,
+        "mobile": "string",
+        "profile": {
+          "userGroup": "string",
+          "userType": "string",
+          "origin": "string",
+          "serviceCenterId": 0,
+          "customerId": 0,
+          "groupName": "string",
+          "birthDate": "string",
+          "joiningDate": "string",
+          "applicationType": "string",
+          "allowChangingDate": true,
+          "addEntryOnManifest": true,
+          "globalManifest": true,
+          "allowChangingAwbNo": true,
+          "mobileAppLens": true,
+          "manifestBranch": true,
+          "weightType": "string"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

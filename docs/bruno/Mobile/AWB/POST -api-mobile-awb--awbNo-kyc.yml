@@ -1,0 +1,33 @@
+info:
+  name: POST /api/mobile/awb/:awbNo/kyc
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/mobile/awb/{{awbNo}}/kyc"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: awbNo
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "type": "string",
+        "entryType": "string",
+        "entryDate": "string"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

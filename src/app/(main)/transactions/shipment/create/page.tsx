@@ -6,9 +6,9 @@ export default function CreateShipmentPage() {
     return (
         <div className="space-y-4">
             <div className="rounded-md border border-border bg-card p-3">
-                <h1 className="text-base font-semibold tracking-tight">Shipment Entry</h1>
+                <h1 className="text-base font-semibold tracking-tight">Shiment Booking</h1>
                 <p className="text-xs text-muted-foreground">
-                    Create shipment using the latest shipment API payload fields.
+                    Create shiment booking using the latest shipment API payload fields.
                 </p>
             </div>
 

@@ -1,0 +1,42 @@
+info:
+  name: POST /api/transaction/drs/:id/start
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/drs/{{id}}/start"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "sample": "value",
+        "context": {
+          "pathParams": {
+            "id": "1"
+          },
+          "query": {}
+        }
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: id
+      value: "1"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,23 @@
+info:
+  name: GET /api/transaction/tracking/dead-letters
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/transaction/tracking/dead-letters"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: limit
+      value: string
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

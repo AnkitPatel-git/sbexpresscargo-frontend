@@ -158,7 +158,9 @@ export default function DashboardPage() {
                     <Combobox
                       options={serviceCenterOptions}
                       value={serviceCenterId}
-                      onChange={setServiceCenterId}
+                      onChange={(value) =>
+                        setServiceCenterId(value === "" ? undefined : typeof value === "number" ? value : Number(value))
+                      }
                       placeholder="All"
                       className="h-9 flex-1 border bg-background"
                     />

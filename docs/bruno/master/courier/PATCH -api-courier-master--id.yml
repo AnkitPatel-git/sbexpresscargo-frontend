@@ -1,0 +1,36 @@
+info:
+  name: PATCH /api/courier-master/:id
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/courier-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "code": "CODE001",
+        "userId": 1,
+        "serviceCenterId": 1,
+        "inActive": true,
+        "pickupCharge": 1,
+        "deliveryCharge": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

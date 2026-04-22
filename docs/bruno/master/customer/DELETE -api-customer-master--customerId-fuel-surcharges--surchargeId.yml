@@ -1,0 +1,26 @@
+info:
+  name: DELETE /api/customer-master/:customerId/fuel-surcharges/:surchargeId
+  type: http
+  seq: 1
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/customer-master/{{customerId}}/fuel-surcharges/{{surchargeId}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: customerId
+      value: "1"
+      type: path
+    - name: surchargeId
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

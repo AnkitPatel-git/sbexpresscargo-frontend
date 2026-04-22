@@ -1,0 +1,59 @@
+info:
+  name: GET /api/document/invoice
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/document/invoice"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: year
+      value: string
+      type: query
+    - name: fromDate
+      value: string
+      type: query
+    - name: toDate
+      value: string
+      type: query
+    - name: serviceCenterId
+      value: "0"
+      type: query
+    - name: productType
+      value: string
+      type: query
+    - name: customerId
+      value: "0"
+      type: query
+    - name: status
+      value: string
+      type: query
+    - name: invoiceNo
+      value: string
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

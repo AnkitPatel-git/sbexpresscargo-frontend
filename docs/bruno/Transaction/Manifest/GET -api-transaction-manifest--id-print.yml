@@ -1,0 +1,23 @@
+info:
+  name: GET /api/transaction/manifest/:id/print
+  type: http
+  seq: 8
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/transaction/manifest/{{id}}/print"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

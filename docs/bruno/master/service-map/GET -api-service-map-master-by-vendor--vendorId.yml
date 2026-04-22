@@ -1,0 +1,23 @@
+info:
+  name: GET /api/service-map-master/by-vendor/:vendorId
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/service-map-master/by-vendor/{{vendorId}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: vendorId
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

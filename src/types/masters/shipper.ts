@@ -1,101 +1,100 @@
-/** Shipper Master — Bruno `docs/bruno/Masters/Shipper Master/*`. */
+/** Shipper Master — Bruno `docs/bruno/master/shipper/*`. */
+
+export interface ShipperCountryRef {
+    id: number
+    code?: string
+    name?: string
+}
+
+export interface ShipperStateRef {
+    id: number
+    stateName: string
+    stateCode?: string
+    countryId?: number
+}
+
+export interface ShipperBankRef {
+    id: number
+    bankCode?: string
+    bankName: string
+    status?: string
+}
 
 export interface ShipperServiceablePincode {
-    id: number;
-    pinCode: string;
-    cityName: string;
+    id: number
+    countryId?: number
+    stateId?: number
+    pinCode: string
+    cityName: string
+    areaName?: string
+    serviceable?: boolean
+    oda?: boolean
 }
 
 export interface Shipper {
-    id: number;
-    areaId: number | null;
-    shipperCode: string;
-    shipperName: string;
-    shipperOrigin: string | null;
-    contactPerson: string | null;
-    address1: string | null;
-    address2: string | null;
-    pinCodeId: number | null;
-    countryId: number | null;
-    stateId: number | null;
-    zoneId: number | null;
-    telephone: string | null;
-    fax: string | null;
-    email: string | null;
-    mobile: string | null;
-    industry: string | null;
-    iecNo: string | null;
-    gstNo: string | null;
-    aadhaarNo: string | null;
-    panNo: string | null;
-    bankId: number | null;
-    bankAccount: string | null;
-    bankIfsc: string | null;
-    firmType: 'GOV' | 'NON_GOV' | null;
-    nfei: string | null;
-    lutNumber: string | null;
-    lutIssueDate: string | null;
-    lutTillDate: string | null;
-    /** Bruno optional string on create */
-    serviceCenter?: string | null;
-    /** List / legacy denormalized */
-    city?: string | null;
-    state?: string | null;
-    pinCode?: string | null;
-    serviceablePincode?: ShipperServiceablePincode | null;
-    createdAt: string;
-    updatedAt: string;
-    createdById: number | null;
-    updatedById: number | null;
-    deletedAt: string | null;
-    deletedById: number | null;
+    id: number
+    shipperCode: string
+    shipperName: string
+    contactPerson: string | null
+    address1: string | null
+    address2: string | null
+    pinCodeId: number | null
+    countryId: number | null
+    stateId: number | null
+    zoneId: number | null
+    telephone: string | null
+    email: string | null
+    mobile: string | null
+    aadhaarNo: string | null
+    panNo: string | null
+    bankId: number | null
+    bankAccount: string | null
+    bankIfsc: string | null
+    firmType: 'GOV' | 'NON_GOV' | string | null
+    createdAt?: string
+    updatedAt?: string
+    createdById?: number | null
+    updatedById?: number | null
+    deletedAt?: string | null
+    deletedById?: number | null
+    country?: ShipperCountryRef | null
+    state?: ShipperStateRef | null
+    bank?: ShipperBankRef | null
+    serviceablePincode?: ShipperServiceablePincode | null
 }
 
 export interface ShipperFormData {
-    shipperCode: string;
-    shipperName: string;
-    shipperOrigin?: string;
-    contactPerson?: string;
-    address1?: string;
-    address2?: string;
-    pinCodeId?: string | number;
-    areaId?: number;
-    city?: string;
-    state?: string;
-    industry?: string;
-    telephone?: string;
-    fax?: string;
-    email?: string;
-    mobile?: string;
-    iecNo?: string;
-    gstNo?: string;
-    aadhaarNo?: string;
-    panNo?: string;
-    serviceCenter?: string;
-    bankId?: number;
-    bankAccount?: string;
-    bankIfsc?: string;
-    firmType?: 'GOV' | 'NON_GOV';
-    nfei?: string;
-    lutNumber?: string;
-    lutIssueDate?: string;
-    lutTillDate?: string;
+    shipperCode?: string
+    shipperName: string
+    contactPerson?: string
+    address1?: string
+    address2?: string
+    pinCodeId?: number
+    telephone?: string
+    email?: string
+    mobile?: string
+    aadhaarNo?: string
+    panNo?: string
+    bankId?: number
+    bankAccount?: string
+    bankIfsc?: string
+    firmType?: 'GOV' | 'NON_GOV' | string
 }
 
 export interface ShipperListResponse {
-    success: boolean;
-    message?: string;
-    data: Shipper[];
+    success: boolean
+    message?: string
+    data: Shipper[]
     meta: {
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    };
+        total: number
+        page: number
+        limit: number
+        totalPages: number
+    }
 }
 
 export interface ShipperSingleResponse {
-    success: boolean;
-    message?: string;
-    data: Shipper;
+    success: boolean
+    message?: string
+    data: Shipper
 }

@@ -1,0 +1,44 @@
+info:
+  name: GET /api/utilities/roles
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/utilities/roles"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: name
+      value: string
+      type: query
+    - name: identifier
+      value: string
+      type: query
+    - name: permissionId
+      value: "0"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

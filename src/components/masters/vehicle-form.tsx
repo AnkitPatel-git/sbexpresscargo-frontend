@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -67,7 +67,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
     const isEdit = !!initialData
 
     const form = useForm<VehicleFormValues>({
-        resolver: zodResolver(vehicleSchema) as any,
+        resolver: zodResolver(vehicleSchema) as Resolver<VehicleFormValues>,
         defaultValues: {
             vehicleNo: "",
             vehicleType: "TRAILER",
@@ -99,13 +99,13 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                 ...data,
                 ownerName: data.ownerName || undefined,
                 driverName: data.driverName || undefined,
-                driverUserId: data.driverUserId || undefined,
-                capacityKg: data.capacityKg || undefined,
+                driverUserId: data.driverUserId ?? undefined,
+                capacityKg: data.capacityKg ?? undefined,
             }
             if (isEdit && initialData) {
-                return vehicleService.updateVehicle(initialData.id, payload as any)
+                return vehicleService.updateVehicle(initialData.id, payload)
             }
-            return vehicleService.createVehicle(payload as any)
+            return vehicleService.createVehicle(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["vehicles"] })
@@ -126,7 +126,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormSection
                         title={
@@ -141,7 +141,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                     >
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="vehicleNo"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Vehicle Number*">
@@ -152,7 +152,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                                 )}
                             />
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="vehicleType"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Vehicle Type*">
@@ -173,7 +173,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                             />
                         </div>
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="capacityKg"
                             render={({ field }) => (
                                 <FloatingFormItem label="Capacity (kg)">
@@ -184,7 +184,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                             )}
                         />
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="status"
                             render={({ field }) => (
                                 <FloatingFormItem label="Status">
@@ -216,7 +216,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                         contentClassName="space-y-4"
                     >
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="ownerName"
                             render={({ field }) => (
                                 <FloatingFormItem label="Owner Name">
@@ -227,7 +227,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                             )}
                         />
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="driverName"
                             render={({ field }) => (
                                 <FloatingFormItem label="Driver Name">
@@ -238,7 +238,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                             )}
                         />
                         <FormField
-                            control={form.control as any}
+                            control={form.control}
                             name="driverUserId"
                             render={({ field }) => (
                                 <FloatingFormItem label="Driver User ID">

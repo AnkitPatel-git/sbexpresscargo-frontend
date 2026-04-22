@@ -37,28 +37,18 @@ import { Button } from "@/components/ui/button"
 import { FormSection } from "@/components/ui/form-section"
 import { contentService } from '@/services/masters/content-service'
 import { countryService } from '@/services/masters/country-service'
-import { vendorService } from '@/services/masters/vendor-service'
-import { Content, type ContentVendorRef } from '@/types/masters/content'
+import { Content } from '@/types/masters/content'
+import type { Country } from '@/types/masters/country'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const contentSchema = z.object({
     contentCode: optionalMasterCode(2),
     contentName: z.string().min(3, "Content name must be at least 3 characters"),
     hsnCode: z.string().min(4, "HSN code must be at least 4 characters"),
-    vendorId: z.number().nullable().optional(),
     countryId: z.number().nullable().optional(),
-    vendor: z.string().optional(),
     country: z.string().optional(),
     additionalField: z.string().optional(),
     clearanceCethNo: z.string().optional(),
-    notificationSubType: z.string().optional(),
-    notificationSubType1: z.string().optional(),
-    notificationNo: z.string().optional(),
-    srNo: z.string().optional(),
-    igstNotification: z.string().optional(),
-    igstSrNo: z.string().optional(),
-    igstcNotification: z.string().optional(),
-    igstcSrNo: z.string().optional(),
 })
 
 type ContentFormValues = z.infer<typeof contentSchema>
@@ -68,7 +58,6 @@ interface ContentFormProps {
 }
 
 export function ContentForm({ initialData }: ContentFormProps) {
-    const [vendorOpen, setVendorOpen] = useState(false)
     const [countryOpen, setCountryOpen] = useState(false)
     const router = useRouter()
     const queryClient = useQueryClient()
@@ -79,13 +68,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
         queryFn: () => countryService.getCountries({ limit: 100 }),
     })
 
-    const vendorsQuery = useQuery({
-        queryKey: ['vendors-list'],
-        queryFn: () => vendorService.getVendors({ limit: 100 }),
-    })
-
     const countriesData = countriesQuery.data
-    const vendorsData = vendorsQuery.data
 
     const form = useForm<ContentFormValues>({
         resolver: zodResolver(contentSchema) as Resolver<ContentFormValues>,
@@ -93,32 +76,15 @@ export function ContentForm({ initialData }: ContentFormProps) {
             contentCode: '',
             contentName: '',
             hsnCode: '',
-            vendorId: null,
             countryId: null,
-            vendor: '',
             country: '',
             additionalField: '',
             clearanceCethNo: '',
-            notificationSubType: '',
-            notificationSubType1: '',
-            notificationNo: '',
-            srNo: '',
-            igstNotification: '',
-            igstSrNo: '',
-            igstcNotification: '',
-            igstcSrNo: '',
         }
     })
 
     useEffect(() => {
         if (initialData) {
-            const vendorName =
-                typeof initialData.vendor === 'object' && initialData.vendor !== null
-                    ? (initialData.vendor as ContentVendorRef).vendorName ??
-                      (initialData.vendor as ContentVendorRef).name ??
-                      ''
-                    : initialData.vendor || ''
-
             const countryName =
                 typeof initialData.country === 'object' && initialData.country !== null
                     ? initialData.country.name
@@ -128,29 +94,17 @@ export function ContentForm({ initialData }: ContentFormProps) {
                 contentCode: initialData.contentCode,
                 contentName: initialData.contentName,
                 hsnCode: initialData.hsnCode ?? '',
-                vendorId: initialData.vendorId,
                 countryId: initialData.countryId,
-                vendor: vendorName,
                 country: countryName,
                 additionalField: initialData.additionalField || '',
                 clearanceCethNo: initialData.clearanceCethNo || '',
-                notificationSubType: initialData.notificationSubType || '',
-                notificationSubType1: initialData.notificationSubType1 || '',
-                notificationNo: initialData.notificationNo || '',
-                srNo: initialData.srNo || '',
-                igstNotification: initialData.igstNotification || '',
-                igstSrNo: initialData.igstSrNo || '',
-                igstcNotification: initialData.igstcNotification || '',
-                igstcSrNo: initialData.igstcSrNo || '',
             })
         }
     }, [initialData, form])
 
     const mutation = useMutation({
         mutationFn: (data: ContentFormValues) => {
-            // Sanitize payload: remove display-only string fields
-            // The backend rejects 'vendor' and 'country' strings for updates
-            const { vendor, country, ...rest } = data as any;
+            const { country, ...rest } = data
             const payload = omitEmptyCodeFields(rest, ['contentCode']);
             if (isEdit && initialData) {
                 return contentService.updateContent(initialData.id, payload)
@@ -232,70 +186,6 @@ export function ContentForm({ initialData }: ContentFormProps) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
-                                name="vendor"
-                                render={({ field }) => (
-                                    <FloatingFormItem label="Vendor">
-                                        <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        className={cn(
-                                                            FLOATING_INNER_COMBO,
-                                                            !field.value && "text-muted-foreground"
-                                                        )}
-                                                        disabled={vendorsQuery.isLoading}
-                                                    >
-                                                        <span className="truncate">
-                                                            {field.value
-                                                                ? vendorsData?.data?.find(
-                                                                    (vendor: any) => vendor.vendorName === field.value
-                                                                )?.vendorName || field.value
-                                                                : vendorsQuery.isLoading ? "Loading..." : "Select vendor"}
-                                                        </span>
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-[300px] p-0" align="start">
-                                                <Command>
-                                                    <CommandInput placeholder="Search vendor..." />
-                                                    <CommandList>
-                                                        <CommandEmpty>No vendor found.</CommandEmpty>
-                                                        <CommandGroup>
-                                                            {Array.isArray(vendorsData?.data) && vendorsData.data.map((vendor: any) => (
-                                                                <CommandItem
-                                                                    key={vendor.id}
-                                                                    value={vendor.vendorName}
-                                                                    onSelect={() => {
-                                                                        form.setValue("vendor", vendor.vendorName)
-                                                                        form.setValue("vendorId", vendor.id)
-                                                                        setVendorOpen(false)
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            vendor.vendorName === field.value
-                                                                                ? "opacity-100"
-                                                                                : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {vendor.vendorName} ({vendor.vendorCode})
-                                                                </CommandItem>
-                                                            ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
-                                    </FloatingFormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
                                 name="country"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Country">
@@ -314,7 +204,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                                         <span className="truncate">
                                                             {field.value
                                                                 ? countriesData?.data?.find(
-                                                                    (country: any) => country.name === field.value
+                                                                    (country: Country) => country.name === field.value
                                                                 )?.name || field.value
                                                                 : countriesQuery.isLoading ? "Loading..." : "Select country"}
                                                         </span>
@@ -328,7 +218,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                                     <CommandList>
                                                         <CommandEmpty>No country found.</CommandEmpty>
                                                         <CommandGroup>
-                                                            {Array.isArray(countriesData?.data) && countriesData.data.map((country: any) => (
+                                                            {Array.isArray(countriesData?.data) && countriesData.data.map((country: Country) => (
                                                                 <CommandItem
                                                                     key={country.id}
                                                                     value={country.name}
@@ -359,119 +249,18 @@ export function ContentForm({ initialData }: ContentFormProps) {
                             />
                         </div>
 
-                        <div className="space-y-4 border-t pt-4">
-                            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Notification Details</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="notificationNo"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Notification No">
-                                            <FormControl>
-                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="srNo"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Sr No">
-                                            <FormControl>
-                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="notificationSubType"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Sub Type">
-                                            <FormControl>
-                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="notificationSubType1"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Sub Type 1">
-                                            <FormControl>
-                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="clearanceCethNo"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Clearance CETH No">
                                         <FormControl>
-                                            <Input {...field} className={FLOATING_INNER_CONTROL} />
+                                            <Input placeholder="Optional CETH number" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}
                             />
-                        </div>
-
-                        <div className="space-y-4 border-t pt-4">
-                            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">IGST Details</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="igstNotification"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="IGST Notification">
-                                            <FormControl>
-                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="igstSrNo"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="IGST Sr No">
-                                            <FormControl>
-                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="igstcNotification"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="IGSTC Notification">
-                                            <FormControl>
-                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="igstcSrNo"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="IGSTC Sr No">
-                                            <FormControl>
-                                                <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                            </div>
                         </div>
 
                         <div className="flex justify-end gap-3 pt-6">

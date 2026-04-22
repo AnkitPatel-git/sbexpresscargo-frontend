@@ -1,0 +1,38 @@
+info:
+  name: PATCH /api/mobile/awb/:awbNo/receipt
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/mobile/awb/{{awbNo}}/receipt"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: awbNo
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "receiptNo": "string",
+        "receiptDate": "string",
+        "amount": 0,
+        "receiptType": "string",
+        "referenceNo": "string",
+        "bankId": 0,
+        "isCod": true,
+        "codAmount": 0
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

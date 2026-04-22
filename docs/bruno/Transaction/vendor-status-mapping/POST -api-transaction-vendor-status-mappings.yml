@@ -1,0 +1,32 @@
+info:
+  name: POST /api/transaction/vendor-status-mappings
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/vendor-status-mappings"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "externalStatus": "Sample Value",
+        "normalizedStatus": "Sample Value",
+        "internalStatus": "Sample Value",
+        "priority": 1,
+        "isTerminal": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

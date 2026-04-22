@@ -1,0 +1,53 @@
+info:
+  name: PUT /api/local-branch-master/:id
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/local-branch-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "branchCode": "CODE001",
+        "companyName": "ABCDE1234F",
+        "name": "Sample Name",
+        "address1": "Sample address line",
+        "address2": "Sample address line",
+        "pinCodeId": 1,
+        "serviceCenterId": 1,
+        "telephone": "9876543210",
+        "email": "ops@example.com",
+        "panNo": "ABCDE1234F",
+        "gstNo": "27ABCDE1234F1Z5",
+        "companyLogo": "ABCDE1234F",
+        "signatoryLogo": "Sample Value",
+        "terms": [
+          "Sample Value"
+        ],
+        "lastInvoiceNo": 1,
+        "invoicePrefix": "Sample Value",
+        "invoiceSuffix": "Sample Value",
+        "lastFreeFormInvoiceNo": 1,
+        "freeFormPrefix": "Sample Value",
+        "freeFormSuffix": "Sample Value",
+        "rcpLastNo": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,29 @@
+info:
+  name: POST /api/mobile/pod/upload
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/mobile/pod/upload"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "awbNo": "string",
+        "receiverName": "string",
+        "remark": "string"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

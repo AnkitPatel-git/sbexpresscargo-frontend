@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Table,
     TableBody,
@@ -16,14 +17,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -52,23 +45,25 @@ function SortArrows() {
 export default function ServiceCentersPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const [search, setSearch] = useState("")
-    const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({
-        code: "",
-        name: "",
-        subName: "",
-        city: "",
-        state: "",
-        telephone: "",
-    })
+    const defaultFilters = { search: "", code: "", name: "", subName: "" }
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const debouncedCode = useDebounce(appliedFilters.code, 400)
+    const debouncedName = useDebounce(appliedFilters.name, 400)
+    const debouncedSubName = useDebounce(appliedFilters.subName, 400)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
+    useEffect(() => {
+        if (filtersOpen) setDraftFilters(appliedFilters)
+    }, [appliedFilters, filtersOpen])
+
     const { data, isLoading } = useQuery({
-        queryKey: ["service-centers", page, debouncedSearch],
+        queryKey: ["service-centers", page, debouncedSearch, debouncedCode, debouncedName, debouncedSubName],
         queryFn: () =>
             serviceCenterService.getServiceCenters({
                 page,
@@ -76,6 +71,9 @@ export default function ServiceCentersPage() {
                 search: debouncedSearch,
                 sortBy: "code",
                 sortOrder: "asc",
+                code: debouncedCode || undefined,
+                name: debouncedName || undefined,
+                subName: debouncedSubName || undefined,
             }),
     })
 
@@ -88,6 +86,9 @@ export default function ServiceCentersPage() {
                 search: debouncedSearch,
                 sortBy: "code",
                 sortOrder: "asc",
+                code: debouncedCode || undefined,
+                name: debouncedName || undefined,
+                subName: debouncedSubName || undefined,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
@@ -137,21 +138,49 @@ export default function ServiceCentersPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
-        data?.data.filter((sc) => {
-            if (colFilters.code && !(sc.code || "").toLowerCase().includes(colFilters.code.toLowerCase())) return false
-            if (colFilters.name && !(sc.name || "").toLowerCase().includes(colFilters.name.toLowerCase())) return false
-            if (colFilters.subName && !(sc.subName || "").toLowerCase().includes(colFilters.subName.toLowerCase())) return false
-            if (colFilters.city && !(sc.destination || "").toLowerCase().includes(colFilters.city.toLowerCase())) return false
-            if (colFilters.state && !(sc.state || "").toLowerCase().includes(colFilters.state.toLowerCase())) return false
-            if (colFilters.telephone && !(sc.telephone || "").toLowerCase().includes(colFilters.telephone.toLowerCase())) return false
-            return true
-        }) ?? []
+    const rows = data?.data ?? []
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Service Center Filters</DialogTitle>
+                                <DialogDescription>Filter the service center list from this popup, then apply the filters.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
+                                <Input placeholder="SC Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
+                                <Input placeholder="Sub Name" className="h-9 bg-background" value={draftFilters.subName} onChange={(e) => setDraftFilters((prev) => ({ ...prev, subName: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-centers"], type: "active" })}>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                     <PermissionGuard permission="master.service_center.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
                             <FilePlus className="h-4 w-4" />
@@ -176,54 +205,45 @@ export default function ServiceCentersPage() {
                 </div>
                 <PermissionGuard permission="master.service_center.create">
                     <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Service Center">
-                        <Plus className="mr-1 h-4 w-4" /> Add Service Center
+                        <FilePlus className="mr-1 h-4 w-4" /> Add Service Center
                     </Button>
                 </PermissionGuard>
             </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Search:</span>
-                <Input placeholder="Search service centers..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[1150px] border-0">
+                <Table className="min-w-[1250px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Code <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">SC Name <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Sub Name <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Pin Code <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">City <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Telephone <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Email <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
-                        </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="SC Name" className="h-8 border-border bg-background text-xs" value={colFilters.name} onChange={(e) => setColFilters((f) => ({ ...f, name: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Sub Name" className="h-8 border-border bg-background text-xs" value={colFilters.subName} onChange={(e) => setColFilters((f) => ({ ...f, subName: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="City" className="h-8 border-border bg-background text-xs" value={colFilters.city} onChange={(e) => setColFilters((f) => ({ ...f, city: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="State" className="h-8 border-border bg-background text-xs" value={colFilters.state} onChange={(e) => setColFilters((f) => ({ ...f, state: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Telephone" className="h-8 border-border bg-background text-xs" value={colFilters.telephone} onChange={(e) => setColFilters((f) => ({ ...f, telephone: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading service centers...</TableCell>
+                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">Loading service centers...</TableCell>
                             </TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No service centers found.</TableCell>
+                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">No service centers found.</TableCell>
                             </TableRow>
                         ) : (
-                            filteredRows.map((sc, index) => (
+                            rows.map((sc, index) => (
                                 <TableRow key={sc.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{sc.code}</TableCell>
                                     <TableCell className="font-medium text-foreground">{sc.name}</TableCell>
                                     <TableCell className="text-foreground">{sc.subName}</TableCell>
-                                    <TableCell className="text-foreground">{sc.destination}</TableCell>
-                                    <TableCell className="text-foreground">{sc.state}</TableCell>
+                                    <TableCell className="text-foreground">{sc.serviceablePincode?.pinCode ?? "-"}</TableCell>
+                                    <TableCell className="text-foreground">{sc.serviceablePincode?.cityName ?? "-"}</TableCell>
+                                    <TableCell className="text-foreground">{sc.state?.stateName ?? "-"}</TableCell>
                                     <TableCell className="text-foreground">{sc.telephone}</TableCell>
+                                    <TableCell className="text-foreground">{sc.email}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
                                             <PermissionGuard permission="master.service_center.update">

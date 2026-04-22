@@ -1,0 +1,50 @@
+info:
+  name: POST /api/utilities/users
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/utilities/users"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "username": "string",
+        "email": "string",
+        "password": "string",
+        "roleId": 0,
+        "mobile": "string",
+        "status": "string",
+        "profile": {
+          "userGroup": "string",
+          "userType": "string",
+          "origin": "string",
+          "serviceCenter": "string",
+          "customer": "string",
+          "groupName": "string",
+          "birthDate": "string",
+          "joiningDate": "string",
+          "applicationType": "string",
+          "allowChangingDate": true,
+          "addEntryOnManifest": true,
+          "globalManifest": true,
+          "allowChangingAwbNo": true,
+          "mobileAppLens": true,
+          "manifestBranch": true,
+          "weightType": "string"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,28 @@
+info:
+  name: POST /api/utilities/permissions/assign
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/utilities/permissions/assign"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "roleId": 0,
+        "permissionId": 0
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,41 @@
+info:
+  name: PUT /api/utilities/serviceable-pincodes/:id
+  type: http
+  seq: 8
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/utilities/serviceable-pincodes/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "countryId": 1,
+        "countryCode": "CODE001",
+        "stateId": 1,
+        "zoneIds": [
+          1
+        ],
+        "pinCode": "400001",
+        "cityName": "Sample Name",
+        "areaName": "Sample Name",
+        "serviceable": true,
+        "oda": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

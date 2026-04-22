@@ -1,0 +1,38 @@
+info:
+  name: PATCH /api/customer-master/:customerId/volumetrics/:volumetricId
+  type: http
+  seq: 20
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/customer-master/{{customerId}}/volumetrics/{{volumetricId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: customerId
+      value: "1"
+      type: path
+    - name: volumetricId
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "productId": 1,
+        "cmDivide": 1,
+        "inchDivide": 1,
+        "cft": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

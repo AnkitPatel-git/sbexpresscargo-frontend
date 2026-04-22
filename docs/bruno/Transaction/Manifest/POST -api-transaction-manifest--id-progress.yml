@@ -1,0 +1,36 @@
+info:
+  name: POST /api/transaction/manifest/:id/progress
+  type: http
+  seq: 18
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/manifest/{{id}}/progress"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "bagNo": "Sample Value",
+        "progressDate": "2026-04-13T10:00:00.000Z",
+        "progressTime": "Sample Value",
+        "serviceCenter": "Sample Value",
+        "serviceCenterId": 1,
+        "exceptionId": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

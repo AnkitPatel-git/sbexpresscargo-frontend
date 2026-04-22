@@ -1,0 +1,56 @@
+info:
+  name: GET /api/transaction/manifest/view
+  type: http
+  seq: 14
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/transaction/manifest/view"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: manifestType
+      value: string
+      type: query
+    - name: dateFrom
+      value: string
+      type: query
+    - name: dateTo
+      value: string
+      type: query
+    - name: origin
+      value: string
+      type: query
+    - name: destination
+      value: string
+      type: query
+    - name: vendor
+      value: string
+      type: query
+    - name: searchBy
+      value: cd_no
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

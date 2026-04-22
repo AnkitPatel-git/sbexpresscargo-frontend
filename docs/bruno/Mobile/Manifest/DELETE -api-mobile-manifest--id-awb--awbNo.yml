@@ -1,0 +1,26 @@
+info:
+  name: DELETE /api/mobile/manifest/:id/awb/:awbNo
+  type: http
+  seq: 1
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/mobile/manifest/{{id}}/awb/{{awbNo}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+    - name: awbNo
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

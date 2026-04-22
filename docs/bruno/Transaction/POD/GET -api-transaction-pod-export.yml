@@ -1,0 +1,23 @@
+info:
+  name: GET /api/transaction/pod/export
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/transaction/pod/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: awbNos
+      value: string
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

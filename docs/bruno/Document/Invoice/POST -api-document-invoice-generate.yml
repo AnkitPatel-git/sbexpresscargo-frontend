@@ -1,0 +1,35 @@
+info:
+  name: POST /api/document/invoice/generate
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/document/invoice/generate"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "year": "string",
+        "fromDate": "string",
+        "toDate": "string",
+        "productType": "string",
+        "serviceCenterId": 0,
+        "billingType": "string",
+        "registerType": "string",
+        "customerId": 0,
+        "showAwb": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

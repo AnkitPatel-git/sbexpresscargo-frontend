@@ -1,7 +1,15 @@
+export interface VendorBankRef {
+    id: number;
+    bankCode?: string;
+    bankName: string;
+    status?: 'ACTIVE' | 'INACTIVE' | string;
+}
+
 export interface Vendor {
     id: number;
     vendorCode: string;
     vendorName: string;
+    version?: number;
     contactPerson: string;
     address1: string;
     address2: string | null;
@@ -9,28 +17,27 @@ export interface Vendor {
     countryId: number | null;
     stateId: number | null;
     zoneId: number | null;
+    bankId: number | null;
+    bankAccount: string | null;
+    bankIfsc: string | null;
     telephone: string;
-    fax: string | null;
     email: string;
     mobile: string;
     website: string | null;
     gstNo: string | null;
-    mode: string | null;
-    fuelHead: string | null;
     currency: string | null;
     origin: string | null;
     vendorZip: string | null;
     status: 'ACTIVE' | 'INACTIVE';
     global: boolean;
-    gstType: string | null;
     volumetricRound: number | null;
-    version?: number;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
     updatedById: number | null;
     deletedAt: string | null;
     deletedById: number | null;
+    bank?: VendorBankRef | null;
 }
 
 export interface VendorFormData {
@@ -39,23 +46,22 @@ export interface VendorFormData {
     contactPerson: string;
     address1: string;
     address2?: string;
-    /** Bruno create accepts pin code string or numeric id string */
     pinCodeId?: string | number;
+    bankId?: number;
+    bankAccount?: string;
+    bankIfsc?: string;
     telephone: string;
-    fax?: string;
     email: string;
     mobile: string;
     website?: string;
     gstNo?: string;
-    mode?: string;
-    fuelHead?: string;
     currency?: string;
     origin?: string;
     vendorZip?: string;
     status: 'ACTIVE' | 'INACTIVE';
     global?: boolean;
-    gstType?: string;
     volumetricRound?: number;
+    version?: number;
 }
 
 export interface VendorListResponse {

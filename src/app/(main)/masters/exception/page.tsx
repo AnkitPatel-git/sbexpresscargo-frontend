@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, Check, X, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Check, X, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Table,
     TableBody,
@@ -37,13 +38,19 @@ import { useDebounce } from "@/hooks/use-debounce"
 export default function ExceptionPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const [search, setSearch] = useState("")
-    const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({ code: "", name: "", type: "" })
+    const defaultFilters = { search: "", code: "", name: "" }
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
+
+    useEffect(() => {
+        if (filtersOpen) setDraftFilters(appliedFilters)
+    }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
         queryKey: ["exceptions", page, debouncedSearch],
@@ -63,9 +70,11 @@ export default function ExceptionPage() {
         setExporting(true)
         try {
             const { blob, filename } = await exceptionService.exportExceptions({
-                search: debouncedSearch,
+                search: appliedFilters.search,
                 sortBy: "code",
                 sortOrder: "asc",
+                code: appliedFilters.code,
+                name: appliedFilters.name,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
@@ -115,18 +124,53 @@ export default function ExceptionPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
-        data?.data.filter((exception) => {
-            if (colFilters.code && !exception.code.toLowerCase().includes(colFilters.code.toLowerCase())) return false
-            if (colFilters.name && !exception.name.toLowerCase().includes(colFilters.name.toLowerCase())) return false
-            if (colFilters.type && !exception.type.toLowerCase().includes(colFilters.type.toLowerCase())) return false
+    const rows =
+        data?.data.filter((exception: ExceptionMaster) => {
+            if (appliedFilters.code && !exception.code.toLowerCase().includes(appliedFilters.code.toLowerCase())) return false
+            if (appliedFilters.name && !exception.name.toLowerCase().includes(appliedFilters.name.toLowerCase())) return false
             return true
         }) ?? []
+
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Exception Filters</DialogTitle>
+                                <DialogDescription>Filter exceptions from this popup, then apply the selection.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
+                                <Input placeholder="Exception Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["exceptions"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                     <PermissionGuard permission="master.exception.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
                     </PermissionGuard>
@@ -145,13 +189,9 @@ export default function ExceptionPage() {
                     </PermissionGuard>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["exceptions"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Search:</span>
-                    <Input placeholder="Search exceptions..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
-                    <PermissionGuard permission="master.exception.create">
-                        <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><Plus className="mr-1 h-4 w-4" />Add Exception</Button>
-                    </PermissionGuard>
-                </div>
+                <PermissionGuard permission="master.exception.create">
+                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Exception</Button>
+                </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[920px] border-0">
@@ -164,22 +204,14 @@ export default function ExceptionPage() {
                             <TableHead className="text-center font-semibold text-primary-foreground">Mobile</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Code" className="h-8 border-border bg-background text-xs" value={colFilters.code} onChange={(e) => setColFilters((f) => ({ ...f, code: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Exception Name" className="h-8 border-border bg-background text-xs" value={colFilters.name} onChange={(e) => setColFilters((f) => ({ ...f, name: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Type" className="h-8 border-border bg-background text-xs" value={colFilters.type} onChange={(e) => setColFilters((f) => ({ ...f, type: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2" />
-                            <TableHead className="p-2" />
-                            <TableHead className="p-2" />
-                        </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Loading exceptions...</TableCell></TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No exceptions found.</TableCell></TableRow>
                         ) : (
-                            filteredRows.map((exception: ExceptionMaster, index) => (
+                            rows.map((exception: ExceptionMaster, index) => (
                                 <TableRow key={exception.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{exception.code}</TableCell>
                                     <TableCell className="font-medium text-foreground">{exception.name}</TableCell>

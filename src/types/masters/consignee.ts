@@ -1,95 +1,89 @@
-/** Consignee Master — Bruno `docs/bruno/Masters/Consignee Master/*`. */
+/** Consignee Master — Bruno `docs/bruno/master/consignee/*`. */
 
-/** Nested pincode on GET-by-id */
-export interface ConsigneeServiceablePincode {
-    id: number;
-    pinCode: string;
-    cityName: string;
+export interface ConsigneeCountryRef {
+    id: number
+    code?: string
+    name?: string
 }
 
-/** Bruno list example includes joined `area` */
-export interface ConsigneeAreaRef {
-    id: number;
-    areaName: string;
+export interface ConsigneeStateRef {
+    id: number
+    stateName: string
+    stateCode?: string
+    countryId?: number
+}
+
+export interface ConsigneeStateMasterRef {
+    id: number
+    stateName: string
+    stateCode?: string
+    countryId?: number
+    gstAlias?: string
+    unionTerritory?: boolean
+}
+
+export interface ConsigneeServiceablePincode {
+    id: number
+    countryId?: number
+    stateId?: number
+    pinCode: string
+    cityName: string
+    areaName?: string
+    serviceable?: boolean
+    oda?: boolean
 }
 
 export interface Consignee {
-    id: number;
-    areaId: number | null;
-    area?: ConsigneeAreaRef | null;
-    code: string;
-    name: string;
-    destination: string | null;
-    contactPerson: string | null;
-    address1: string | null;
-    address2: string | null;
-    pinCodeId: number | null;
-    countryId: number | null;
-    stateId: number | null;
-    telephone: string | null;
-    fax: string | null;
-    email: string | null;
-    mobile: string | null;
-    serviceCenterId: number | null;
-    serviceCenter?: {
-        id: number;
-        code: string;
-        name: string;
-    };
-    industry: string | null;
-    eori: string | null;
-    vat: string | null;
-    /** List / legacy denormalized fields */
-    city?: string | null;
-    state?: string | null;
-    pinCode?: string | null;
-    serviceablePincode?: ConsigneeServiceablePincode | null;
-    /** Present on full GET / create response; list rows may omit */
-    createdAt?: string;
-    updatedAt?: string;
-    createdById?: number | null;
-    updatedById?: number | null;
-    deletedAt?: string | null;
-    deletedById?: number | null;
+    id: number
+    code: string
+    name: string
+    contactPerson: string | null
+    address1: string | null
+    address2: string | null
+    pinCodeId: number | null
+    countryId: number | null
+    stateId: number | null
+    telephone: string | null
+    email: string | null
+    mobile: string | null
+    createdAt?: string
+    updatedAt?: string
+    createdById?: number | null
+    updatedById?: number | null
+    deletedAt?: string | null
+    deletedById?: number | null
+    country?: ConsigneeCountryRef | null
+    stateMaster?: ConsigneeStateMasterRef | null
+    state?: ConsigneeStateRef | null
+    serviceablePincode?: ConsigneeServiceablePincode | null
 }
 
 export interface ConsigneeFormData {
-    code?: string;
-    name: string;
-    destination?: string;
-    contactPerson?: string;
-    address1?: string;
-    address2?: string;
-    /** Bruno: string pin or id */
-    pinCodeId?: string | number;
-    areaId?: number;
-    city?: string;
-    state?: string;
-    industry?: string;
-    telephone?: string;
-    fax?: string;
-    email?: string;
-    mobile?: string;
-    serviceCenterCode?: string;
-    serviceCenterId?: number;
-    eori?: string;
-    vat?: string;
+    code?: string
+    name: string
+    contactPerson?: string
+    address1?: string
+    address2?: string
+    pinCodeId?: number
+    telephone?: string
+    email?: string
+    mobile?: string
 }
 
 export interface ConsigneeListResponse {
-    success: boolean;
-    message?: string;
-    data: Consignee[];
+    success: boolean
+    message?: string
+    data: Consignee[]
     meta: {
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    };
+        total: number
+        page: number
+        limit: number
+        totalPages: number
+    }
 }
 
 export interface ConsigneeSingleResponse {
-    success: boolean;
-    message?: string;
-    data: Consignee;
+    success: boolean
+    message?: string
+    data: Consignee
 }

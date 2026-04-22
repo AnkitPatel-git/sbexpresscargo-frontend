@@ -1,0 +1,48 @@
+info:
+  name: PUT /api/transaction/manifest/inscan/:id
+  type: http
+  seq: 21
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/transaction/manifest/inscan/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "bagOrManifestAwbNo": "AWB100001",
+        "inscanDate": "2026-04-13T10:00:00.000Z",
+        "inscanTime": "Sample Value",
+        "serviceCenter": "Sample Value",
+        "serviceCenterId": 1,
+        "manifestId": 1,
+        "bagNo": "Sample Value",
+        "items": [
+          {
+            "manifestNo": "Sample Value",
+            "bagNo": "Sample Value",
+            "awbNo": "AWB100001",
+            "pieces": 1,
+            "weight": 10,
+            "manifestItemId": 1,
+            "shipmentId": 1
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

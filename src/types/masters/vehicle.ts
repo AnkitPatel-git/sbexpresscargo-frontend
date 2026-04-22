@@ -15,6 +15,12 @@ export interface VehicleDriver {
     email: string;
 }
 
+export interface VehicleDecimalValue {
+    s?: number;
+    e?: number;
+    d?: number[];
+}
+
 export interface Vehicle {
     id: number;
     vehicleNo: string;
@@ -22,7 +28,7 @@ export interface Vehicle {
     ownerName: string | null;
     driverName: string | null;
     driverUserId: number | null;
-    capacityKg: string | null;
+    capacityKg: number | null;
     status: 'ACTIVE' | 'INACTIVE';
     createdAt: string;
     updatedAt: string;

@@ -10,6 +10,10 @@ export const localBranchService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        branchCode?: string;
+        companyName?: string;
+        name?: string;
+        serviceCenterId?: number;
     }): Promise<LocalBranchListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -17,6 +21,10 @@ export const localBranchService = {
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'branchCode');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.branchCode) queryParams.append('branchCode', params.branchCode);
+        if (params?.companyName) queryParams.append('companyName', params.companyName);
+        if (params?.name) queryParams.append('name', params.name);
+        if (params?.serviceCenterId) queryParams.append('serviceCenterId', params.serviceCenterId.toString());
 
         const response = await apiFetch(`${API_URL}/local-branch-master?${queryParams.toString()}`, {
             headers: {
@@ -102,11 +110,19 @@ export const localBranchService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        branchCode?: string;
+        companyName?: string;
+        name?: string;
+        serviceCenterId?: number;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'branchCode');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.branchCode) queryParams.append('branchCode', params.branchCode);
+        if (params?.companyName) queryParams.append('companyName', params.companyName);
+        if (params?.name) queryParams.append('name', params.name);
+        if (params?.serviceCenterId) queryParams.append('serviceCenterId', params.serviceCenterId.toString());
 
         const response = await apiFetch(`${API_URL}/local-branch-master/export?${queryParams.toString()}`, {
             headers: {

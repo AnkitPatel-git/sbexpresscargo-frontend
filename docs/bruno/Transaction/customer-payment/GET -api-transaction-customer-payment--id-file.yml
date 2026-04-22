@@ -1,0 +1,23 @@
+info:
+  name: GET /api/transaction/customer-payment/:id/file
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/transaction/customer-payment/{{id}}/file"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

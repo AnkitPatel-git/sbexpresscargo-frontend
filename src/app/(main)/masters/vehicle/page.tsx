@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, Loader2, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Loader2, RefreshCw, FilePlus, Filter, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Table,
     TableBody,
@@ -32,19 +33,42 @@ import { cn } from "@/lib/utils"
 import { vehicleService } from "@/services/masters/vehicle-service"
 import { Vehicle } from "@/types/masters/vehicle"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { useDebounce } from "@/hooks/use-debounce"
 
 export default function VehiclePage() {
     const router = useRouter()
     const queryClient = useQueryClient()
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({ vehicleNo: "", vehicleType: "", ownerName: "", status: "" })
+    const defaultFilters = { search: "", vehicleNo: "", vehicleType: "", status: "", driverUserId: "" }
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const debouncedVehicleNo = useDebounce(appliedFilters.vehicleNo, 500)
+    const debouncedVehicleType = useDebounce(appliedFilters.vehicleType, 500)
+    const debouncedStatus = useDebounce(appliedFilters.status, 500)
+    const debouncedDriverUserId = useDebounce(appliedFilters.driverUserId, 500)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
+    useEffect(() => {
+        if (filtersOpen) setDraftFilters(appliedFilters)
+    }, [appliedFilters, filtersOpen])
+
     const { data, isLoading } = useQuery({
-        queryKey: ["vehicles", page],
-        queryFn: () => vehicleService.getVehicles({ page, limit }),
+        queryKey: ["vehicles", page, debouncedSearch, debouncedVehicleNo, debouncedVehicleType, debouncedStatus, debouncedDriverUserId],
+        queryFn: () => vehicleService.getVehicles({
+            page,
+            limit,
+            search: debouncedSearch,
+            sortBy: "vehicleNo",
+            sortOrder: "asc",
+            vehicleNo: debouncedVehicleNo,
+            vehicleType: debouncedVehicleType,
+            status: debouncedStatus,
+            driverUserId: debouncedDriverUserId ? Number(debouncedDriverUserId) : undefined,
+        }),
     })
 
     const deleteMutation = useMutation({
@@ -81,25 +105,53 @@ export default function VehiclePage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
-        data?.data.filter((v) => {
-            if (colFilters.vehicleNo && !(v.vehicleNo || "").toLowerCase().includes(colFilters.vehicleNo.toLowerCase())) return false
-            if (colFilters.vehicleType && !(v.vehicleType || "").toLowerCase().includes(colFilters.vehicleType.toLowerCase())) return false
-            if (colFilters.ownerName && !(v.ownerName || "").toLowerCase().includes(colFilters.ownerName.toLowerCase())) return false
-            if (colFilters.status && !(v.status || "").toLowerCase().includes(colFilters.status.toLowerCase())) return false
-            return true
-        }) ?? []
+    const rows = data?.data ?? []
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Vehicle Filters</DialogTitle>
+                                <DialogDescription>Filter the vehicle list from this popup, then apply the filters.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <Input placeholder="Vehicle No" className="h-9 bg-background" value={draftFilters.vehicleNo} onChange={(e) => setDraftFilters((prev) => ({ ...prev, vehicleNo: e.target.value }))} />
+                                <Input placeholder="Type" className="h-9 bg-background" value={draftFilters.vehicleType} onChange={(e) => setDraftFilters((prev) => ({ ...prev, vehicleType: e.target.value }))} />
+                                <Input placeholder="Driver User ID" className="h-9 bg-background" value={draftFilters.driverUserId} onChange={(e) => setDraftFilters((prev) => ({ ...prev, driverUserId: e.target.value }))} />
+                                <Input placeholder="Status" className="h-9 bg-background" value={draftFilters.status} onChange={(e) => setDraftFilters((prev) => ({ ...prev, status: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["vehicles"], type: "active" })}>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                     <PermissionGuard permission="master.vehicle.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["vehicles"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <PermissionGuard permission="master.vehicle.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><Plus className="mr-1 h-4 w-4" />Add Vehicle</Button></PermissionGuard>
-                </div>
+                <PermissionGuard permission="master.vehicle.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Vehicle</Button></PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[980px] border-0">
@@ -113,29 +165,20 @@ export default function VehiclePage() {
                             <TableHead className="font-semibold text-primary-foreground text-center">Status <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Vehicle No" className="h-8 border-border bg-background text-xs" value={colFilters.vehicleNo} onChange={(e) => setColFilters((f) => ({ ...f, vehicleNo: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Type" className="h-8 border-border bg-background text-xs" value={colFilters.vehicleType} onChange={(e) => setColFilters((f) => ({ ...f, vehicleType: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Owner" className="h-8 border-border bg-background text-xs" value={colFilters.ownerName} onChange={(e) => setColFilters((f) => ({ ...f, ownerName: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Driver" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2" />
-                            <TableHead className="p-2"><Input placeholder="Status" className="h-8 border-border bg-background text-xs" value={colFilters.status} onChange={(e) => setColFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2" />
-                        </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground"><span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Loading vehicles...</span></TableCell></TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No vehicles found.</TableCell></TableRow>
                         ) : (
-                            filteredRows.map((vehicle: Vehicle, index) => (
+                            rows.map((vehicle: Vehicle, index) => (
                                 <TableRow key={vehicle.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{vehicle.vehicleNo}</TableCell>
                                     <TableCell className="text-foreground">{vehicle.vehicleType.replace(/_/g, ' ')}</TableCell>
                                     <TableCell className="text-foreground">{vehicle.ownerName || '-'}</TableCell>
                                     <TableCell className="text-foreground">{vehicle.driverName || '-'}</TableCell>
-                                    <TableCell className="text-foreground">{vehicle.capacityKg || '-'}</TableCell>
+                                    <TableCell className="text-foreground">{vehicle.capacityKg ?? '-'}</TableCell>
                                     <TableCell className="text-center"><Badge variant={vehicle.status === "ACTIVE" ? "success" : "secondary"}>{vehicle.status === "ACTIVE" ? "Active" : "Inactive"}</Badge></TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">

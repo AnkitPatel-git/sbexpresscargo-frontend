@@ -1,4 +1,3 @@
-export type VendorIntegrationMode = 'B2B' | 'B2C' | 'API';
 export type VendorConfigEnvironment = 'SANDBOX' | 'PRODUCTION';
 
 export interface VendorConfigVendor {
@@ -13,10 +12,16 @@ export interface VendorConfigCustomer {
     name: string;
 }
 
+export interface VendorConfigServiceMap {
+    id: number;
+    serviceType: string;
+    vendorLink: string | null;
+}
+
 export interface VendorConfig {
     id: number;
     vendorId: number;
-    mode: VendorIntegrationMode;
+    serviceMapId: number;
     environment: VendorConfigEnvironment;
     customerId: number | null;
     apiKey: string | null;
@@ -27,13 +32,14 @@ export interface VendorConfig {
     updatedAt: string;
     deletedAt: string | null;
     deletedById: number | null;
-    vendor: VendorConfigVendor;
+    vendor: VendorConfigVendor | null;
+    serviceMap: VendorConfigServiceMap | null;
     customer: VendorConfigCustomer | null;
 }
 
 export interface VendorConfigFormData {
     vendorId: number;
-    mode: VendorIntegrationMode;
+    serviceMapId: number;
     environment: VendorConfigEnvironment;
     customerId?: number | null;
     apiKey?: string;

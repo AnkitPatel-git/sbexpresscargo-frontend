@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Plus, Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
     Table,
     TableBody,
@@ -54,17 +55,26 @@ function SortArrows() {
 export default function StatesPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const [search, setSearch] = useState("")
-    const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const defaultFilters = {
+        search: "",
         stateName: "",
         country: "",
         gstAlias: "",
-    })
+    }
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
+
+    useEffect(() => {
+        if (filtersOpen) {
+            setDraftFilters(appliedFilters)
+        }
+    }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
         queryKey: ["states", page, debouncedSearch],
@@ -107,41 +117,70 @@ export default function StatesPage() {
     const to = Math.min(page * limit, total)
     const filteredRows =
         data?.data.filter((state: State) => {
-            if (colFilters.stateName && !state.stateName.toLowerCase().includes(colFilters.stateName.toLowerCase())) return false
+            if (appliedFilters.stateName && !state.stateName.toLowerCase().includes(appliedFilters.stateName.toLowerCase())) return false
             if (
-                colFilters.country &&
-                !(state.country?.name || "").toLowerCase().includes(colFilters.country.toLowerCase())
+                appliedFilters.country &&
+                !(state.country?.name || "").toLowerCase().includes(appliedFilters.country.toLowerCase())
             )
                 return false
-            if (colFilters.gstAlias && !(state.gstAlias || "").toLowerCase().includes(colFilters.gstAlias.toLowerCase())) return false
+            if (appliedFilters.gstAlias && !(state.gstAlias || "").toLowerCase().includes(appliedFilters.gstAlias.toLowerCase())) return false
             return true
         }) ?? []
+
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>State Filters</DialogTitle>
+                                <DialogDescription>Refine the state list from this popup, then apply the filters.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                <Input placeholder="State Name" className="h-9 bg-background" value={draftFilters.stateName} onChange={(e) => setDraftFilters((prev) => ({ ...prev, stateName: e.target.value }))} />
+                                <Input placeholder="Country" className="h-9 bg-background" value={draftFilters.country} onChange={(e) => setDraftFilters((prev) => ({ ...prev, country: e.target.value }))} />
+                                <Input placeholder="GST Alias" className="h-9 bg-background" value={draftFilters.gstAlias} onChange={(e) => setDraftFilters((prev) => ({ ...prev, gstAlias: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["states"], type: "active" })}>
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
                     <PermissionGuard permission="master.state.create">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
                             <FilePlus className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Import">
-                        <FileUp className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["states"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
-                </div>
+                    </div>
                 <PermissionGuard permission="master.state.create">
                     <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add State">
-                        <Plus className="mr-1 h-4 w-4" /> Add State
+                        <FilePlus className="mr-1 h-4 w-4" /> Add State
                     </Button>
                 </PermissionGuard>
-            </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Search:</span>
-                <Input placeholder="Search states..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[860px] border-0">
@@ -152,13 +191,6 @@ export default function StatesPage() {
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">GST Alias <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">UT <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
-                        </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="State Name" className="h-8 border-border bg-background text-xs" value={colFilters.stateName} onChange={(e) => setColFilters((f) => ({ ...f, stateName: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Country" className="h-8 border-border bg-background text-xs" value={colFilters.country} onChange={(e) => setColFilters((f) => ({ ...f, country: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="GST Alias" className="h-8 border-border bg-background text-xs" value={colFilters.gstAlias} onChange={(e) => setColFilters((f) => ({ ...f, gstAlias: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="UT" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>

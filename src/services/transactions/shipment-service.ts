@@ -1,222 +1,236 @@
-import { apiFetch } from '@/lib/api-fetch';
-import { Shipment, ShipmentListResponse, ShipmentSingleResponse, ShipmentFormValues } from '@/types/transactions/shipment';
+import { apiFetch } from "@/lib/api-fetch";
+import type {
+  ApiEnvelope,
+  ShipmentCalculateResponse,
+  ShipmentFormPayload,
+  ShipmentListQueryParams,
+  ShipmentListResponse,
+  ShipmentSingleResponse,
+} from "@/types/transactions/shipment";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+function authHeaders(includeJson = false) {
+  return {
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+  };
+}
+
+function appendListFilters(queryParams: URLSearchParams, params?: ShipmentListQueryParams) {
+  queryParams.append("page", String(params?.page ?? 1));
+  queryParams.append("limit", String(params?.limit ?? 20));
+  queryParams.append("sortBy", params?.sortBy ?? "id");
+  queryParams.append("sortOrder", params?.sortOrder ?? "desc");
+  queryParams.append("search", params?.search ?? "");
+  if (params?.awbNo) queryParams.append("awbNo", params.awbNo);
+  if (params?.ewaybillNumber) queryParams.append("ewaybillNumber", params.ewaybillNumber);
+  if (params?.clientName) queryParams.append("clientName", params.clientName);
+  if (params?.origin) queryParams.append("origin", params.origin);
+  if (params?.destination) queryParams.append("destination", params.destination);
+  if (params?.bookDateFrom) queryParams.append("bookDateFrom", params.bookDateFrom);
+  if (params?.bookDateTo) queryParams.append("bookDateTo", params.bookDateTo);
+  if (params?.paymentType) queryParams.append("paymentType", params.paymentType);
+}
+
+async function readError(response: Response, fallback: string) {
+  try {
+    const err = await response.json();
+    return err?.message || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function requestJson<T>(url: string, init?: RequestInit, fallbackError = "Request failed"): Promise<T> {
+  const response = await apiFetch(url, init);
+  if (!response.ok) {
+    throw new Error(await readError(response, fallbackError));
+  }
+  return response.json() as Promise<T>;
+}
+
+function parseFilename(response: Response, fallback: string) {
+  const cd = response.headers.get("content-disposition");
+  const match = cd?.match(/filename="?([^";\n]+)"?/i);
+  return match?.[1]?.trim() || fallback;
+}
 
 export const shipmentService = {
-    getShipments: async (params?: { 
-        page?: number; 
-        limit?: number; 
-        search?: string; 
-        sortBy?: string; 
-        sortOrder?: string;
-    }): Promise<ShipmentListResponse> => {
-        // Bruno: .../shipment?page=1&limit=20&sortBy=id&sortOrder=desc&search=
-        const queryParams = new URLSearchParams({
-            page: String(params?.page ?? 1),
-            limit: String(params?.limit ?? 20),
-            sortBy: params?.sortBy ?? 'id',
-            sortOrder: params?.sortOrder ?? 'desc',
-            search: params?.search ?? '',
-        });
+  async getShipments(params?: ShipmentListQueryParams): Promise<ShipmentListResponse> {
+    const queryParams = new URLSearchParams();
+    appendListFilters(queryParams, params);
+    return requestJson(`${API_URL}/transaction/shipment?${queryParams.toString()}`, { headers: authHeaders() }, "Failed to fetch shipments");
+  },
 
-        const response = await apiFetch(`${API_URL}/transaction/shipment?${queryParams.toString()}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to fetch shipments');
-        }
-        return response.json();
+  async getShipmentById(id: number): Promise<ShipmentSingleResponse> {
+    return requestJson(`${API_URL}/transaction/shipment/${id}`, { headers: authHeaders() }, "Failed to fetch shipment");
+  },
+
+  async createShipment(data: ShipmentFormPayload): Promise<ShipmentSingleResponse> {
+    return requestJson(
+      `${API_URL}/transaction/shipment`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify(data),
+      },
+      "Failed to create shipment",
+    );
+  },
+
+  async updateShipment(id: number, data: ShipmentFormPayload): Promise<ShipmentSingleResponse> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/${id}`,
+      {
+        method: "PATCH",
+        headers: authHeaders(true),
+        body: JSON.stringify(data),
+      },
+      "Failed to update shipment",
+    );
+  },
+
+  async calculateCharges(data: Omit<ShipmentFormPayload, "oda">): Promise<ApiEnvelope<ShipmentCalculateResponse>> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/calculate-charges`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify(data),
+      },
+      "Failed to calculate charges",
+    );
+  },
+
+  async downloadPiecesTemplate(): Promise<{ blob: Blob; filename: string }> {
+    const response = await apiFetch(`${API_URL}/transaction/shipment/pieces-template`, { headers: authHeaders() });
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to download pieces template"));
+    }
+    return { blob: await response.blob(), filename: parseFilename(response, "shipment-pieces-template.csv") };
+  },
+
+  async exportShipmentsCsv(params?: ShipmentListQueryParams): Promise<{ blob: Blob; filename: string }> {
+    const queryParams = new URLSearchParams();
+    appendListFilters(queryParams, params);
+    const response = await apiFetch(`${API_URL}/transaction/shipment/export?${queryParams.toString()}`, { headers: authHeaders() });
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to export shipments"));
+    }
+    return { blob: await response.blob(), filename: parseFilename(response, "shipments.csv") };
+  },
+
+  async saveForwarding(
+    shipmentId: number,
+    data: {
+      version: number;
+      forwardingAwb?: string;
+      deliveryVendorId?: number;
+      deliveryServiceMapId?: number;
+      vendorWeight?: number;
+      vendorAmount?: number;
+      vendorInvoice?: string;
+      contractCharges?: number;
+      otherCharges?: number;
+      subTotal?: number;
+      totalFuel?: number;
+      igst?: number;
+      cgst?: number;
+      sgst?: number;
+      totalAmount?: number;
+      charges?: Array<{
+        chargeId: number;
+        description?: string;
+        rate?: number;
+        amount?: number;
+        fuelApply?: boolean;
+        fuelAmount?: number;
+        taxApply?: boolean;
+        taxOnFuel?: boolean;
+        igst?: number;
+        cgst?: number;
+        sgst?: number;
+        total?: number;
+        chargeType?: string;
+      }>;
     },
+  ): Promise<ApiEnvelope<unknown>> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/${shipmentId}/forwarding`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify(data),
+      },
+      "Failed to save forwarding details",
+    );
+  },
 
-    getShipmentById: async (id: number): Promise<ShipmentSingleResponse> => {
-        const response = await apiFetch(`${API_URL}/transaction/shipment/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch shipment');
-        }
-        return response.json();
+  async upsertForwarding(
+    shipmentId: number,
+    data: {
+      version: number;
+      forwardingAwb?: string;
+      deliveryVendorId?: number;
+      deliveryServiceMapId?: number;
+      totalAmount?: number;
     },
+  ): Promise<ApiEnvelope<unknown>> {
+    return shipmentService.saveForwarding(shipmentId, data);
+  },
 
-    createShipment: async (data: ShipmentFormValues): Promise<ShipmentSingleResponse> => {
-        const response = await apiFetch(`${API_URL}/transaction/shipment`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to create shipment');
-        }
-        return response.json();
+  async uploadKyc(
+    shipmentId: number,
+    payload: {
+      type: string;
+      entryType?: string;
+      entryDate?: string;
     },
+  ): Promise<ApiEnvelope<unknown>> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/${shipmentId}/kyc`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify({
+          type: payload.type,
+          entryType: payload.entryType,
+          entryDate: payload.entryDate,
+        }),
+      },
+      "Failed to upload KYC",
+    );
+  },
 
-    updateShipment: async (id: number, data: ShipmentFormValues): Promise<ShipmentSingleResponse> => {
-        if (!data.version) {
-            throw new Error('Shipment version is required for update')
-        }
-        const response = await apiFetch(`${API_URL}/transaction/shipment/${id}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to update shipment');
-        }
-        return response.json();
+  async addPod(shipmentId: number, data: string): Promise<ApiEnvelope<unknown>> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/${shipmentId}/pod`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify(data),
+      },
+      "Failed to add POD",
+    );
+  },
+
+  async updateShipmentStatus(
+    shipmentId: number,
+    data: {
+      status: string;
+      version: number;
+      reason?: string;
     },
-
-    downloadPiecesTemplate: async (): Promise<Blob> => {
-        const response = await apiFetch(`${API_URL}/transaction/shipment/pieces-template`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-        if (!response.ok) {
-            throw new Error('Failed to download pieces template');
-        }
-        return response.blob();
-    },
-
-    exportShipmentsCsv: async (): Promise<Blob> => {
-        const response = await apiFetch(`${API_URL}/transaction/shipment/export`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-        if (!response.ok) {
-            throw new Error('Failed to export shipments');
-        }
-        return response.blob();
-    },
-
-    upsertForwarding: async (
-        shipmentId: number,
-        data: {
-            version: number
-            deliveryAwb?: string
-            forwardingAwb?: string
-            deliveryVendorId?: number
-            deliveryServiceMapId?: number
-            totalAmount?: number
-        }
-    ): Promise<any> => {
-        const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/forwarding`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to save forwarding details');
-        }
-        return response.json();
-    },
-
-    uploadKyc: async (
-        shipmentId: number,
-        payload: {
-            type: string
-            file: File
-            entryType?: string
-            entryDate?: string
-        }
-    ): Promise<any> => {
-        const formData = new FormData();
-        formData.append('type', payload.type);
-        formData.append('file', payload.file);
-        if (payload.entryType) formData.append('entryType', payload.entryType);
-        if (payload.entryDate) formData.append('entryDate', payload.entryDate);
-
-        const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/kyc`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: formData,
-        });
-        if (!response.ok) {
-            let message = 'Failed to upload KYC';
-            try {
-                const error = await response.json();
-                message = error.message || message;
-            } catch {
-                // ignore non-json response bodies
-            }
-            throw new Error(message);
-        }
-        return response.json();
-    },
-
-    listVendorMappings: async (shipmentId: number): Promise<any> => {
-        const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/vendor-mapping`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-        });
-        if (!response.ok) {
-            throw new Error('Failed to load vendor mappings');
-        }
-        return response.json();
-    },
-
-    upsertVendorMapping: async (
-        shipmentId: number,
-        data: {
-            version: number
-            vendorId: number
-            externalAwb?: string
-            externalOrderId?: string
-            status?: 'CREATED' | 'AWB_ASSIGNED' | 'FAILED' | 'RETRYING' | 'SYNCED'
-            requestPayload?: Record<string, unknown>
-            responsePayload?: Record<string, unknown>
-            errorMessage?: string
-        }
-    ): Promise<any> => {
-        const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/vendor-mapping`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to save vendor mapping');
-        }
-        return response.json();
-    },
-
-    addPod: async (shipmentId: number, data: { podFilePath: string; remark?: string }): Promise<any> => {
-        const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/pod`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to add POD');
-        }
-        return response.json();
-    },
+  ): Promise<ApiEnvelope<unknown>> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/${shipmentId}/status`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify(data),
+      },
+      "Failed to update shipment status",
+    );
+  },
 };

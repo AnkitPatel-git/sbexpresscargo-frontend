@@ -1,0 +1,34 @@
+info:
+  name: POST /api/transaction/undelivered-scan
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/undelivered-scan"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "scanDate": "2026-04-13T10:00:00.000Z",
+        "scanTime": "Sample Value",
+        "serviceCenterId": 1,
+        "items": [
+          {
+            "awbNo": "AWB100001"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

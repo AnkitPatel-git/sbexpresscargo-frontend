@@ -1,0 +1,50 @@
+info:
+  name: GET /api/transaction/vendor-status-mappings
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/transaction/vendor-status-mappings"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: vendorId
+      value: "0"
+      type: query
+    - name: externalStatus
+      value: string
+      type: query
+    - name: normalizedStatus
+      value: string
+      type: query
+    - name: internalStatus
+      value: string
+      type: query
+    - name: isTerminal
+      value: "true"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

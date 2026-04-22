@@ -1,5 +1,19 @@
 import { apiFetch } from '@/lib/api-fetch';
-import { CustomerListResponse, CustomerSingleResponse, CustomerFormData } from '@/types/masters/customer';
+import {
+    CustomerListResponse,
+    CustomerSingleResponse,
+    CustomerFormData,
+    CustomerChildListResponse,
+    CustomerChildSingleResponse,
+    CustomerFuelSurcharge,
+    CustomerFuelSurchargeFormData,
+    CustomerOtherCharge,
+    CustomerOtherChargeFormData,
+    CustomerVolumetric,
+    CustomerVolumetricFormData,
+    CustomerKycDocument,
+    CustomerKycDocumentFormData,
+} from '@/types/masters/customer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -10,6 +24,11 @@ export const customerService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        name?: string;
+        mobile?: string;
+        serviceCenterId?: number;
+        status?: string;
     }): Promise<CustomerListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -17,6 +36,11 @@ export const customerService = {
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'code');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.name) queryParams.append('name', params.name);
+        if (params?.mobile) queryParams.append('mobile', params.mobile);
+        if (params?.serviceCenterId) queryParams.append('serviceCenterId', String(params.serviceCenterId));
+        if (params?.status) queryParams.append('status', params.status);
 
         const response = await apiFetch(`${API_URL}/customer-master?${queryParams.toString()}`, {
             headers: {
@@ -114,18 +138,12 @@ export const customerService = {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
         });
         if (!response.ok) throw new Error('Failed to fetch KYC documents');
-        return response.json();
+        return response.json() as Promise<CustomerChildListResponse<CustomerKycDocument>>;
     },
 
     async addCustomerKycDocument(
         customerId: number,
-        body: {
-            docType: string;
-            documentNumber?: string;
-            fileUrl?: string;
-            expiryDate?: string;
-            verified?: boolean;
-        },
+        body: CustomerKycDocumentFormData,
     ) {
         const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents`, {
             method: 'POST',
@@ -139,16 +157,16 @@ export const customerService = {
             const error = await response.json();
             throw new Error(error.message || 'Failed to add KYC document');
         }
-        return response.json();
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerKycDocument>>;
     },
 
     async updateCustomerKycDocument(
         customerId: number,
         docId: number | string,
-        body: Partial<{ docType: string; documentNumber: string; fileUrl: string; expiryDate: string; verified: boolean }>,
+        body: Partial<CustomerKycDocumentFormData>,
     ) {
         const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents/${docId}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -159,7 +177,7 @@ export const customerService = {
             const error = await response.json();
             throw new Error(error.message || 'Failed to update KYC document');
         }
-        return response.json();
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerKycDocument>>;
     },
 
     async deleteCustomerKycDocument(customerId: number, docId: number | string) {
@@ -174,16 +192,182 @@ export const customerService = {
         return response.json();
     },
 
+    async getCustomerFuelSurcharges(customerId: number) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/fuel-surcharges`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch fuel surcharges');
+        return response.json() as Promise<CustomerChildListResponse<CustomerFuelSurcharge>>;
+    },
+
+    async addCustomerFuelSurcharge(customerId: number, body: CustomerFuelSurchargeFormData) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/fuel-surcharges`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add fuel surcharge');
+        }
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerFuelSurcharge>>;
+    },
+
+    async updateCustomerFuelSurcharge(customerId: number, surchargeId: number | string, body: CustomerFuelSurchargeFormData) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/fuel-surcharges/${surchargeId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update fuel surcharge');
+        }
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerFuelSurcharge>>;
+    },
+
+    async deleteCustomerFuelSurcharge(customerId: number, surchargeId: number | string) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/fuel-surcharges/${surchargeId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete fuel surcharge');
+        }
+        return response.json();
+    },
+
+    async getCustomerOtherCharges(customerId: number) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/other-charges`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch other charges');
+        return response.json() as Promise<CustomerChildListResponse<CustomerOtherCharge>>;
+    },
+
+    async addCustomerOtherCharge(customerId: number, body: CustomerOtherChargeFormData) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/other-charges`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add other charge');
+        }
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerOtherCharge>>;
+    },
+
+    async updateCustomerOtherCharge(customerId: number, chargeId: number | string, body: CustomerOtherChargeFormData) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/other-charges/${chargeId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update other charge');
+        }
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerOtherCharge>>;
+    },
+
+    async deleteCustomerOtherCharge(customerId: number, chargeId: number | string) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/other-charges/${chargeId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete other charge');
+        }
+        return response.json();
+    },
+
+    async getCustomerVolumetrics(customerId: number) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/volumetrics`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch volumetrics');
+        return response.json() as Promise<CustomerChildListResponse<CustomerVolumetric>>;
+    },
+
+    async addCustomerVolumetric(customerId: number, body: CustomerVolumetricFormData) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/volumetrics`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add volumetric');
+        }
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerVolumetric>>;
+    },
+
+    async updateCustomerVolumetric(customerId: number, volumetricId: number | string, body: CustomerVolumetricFormData) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/volumetrics/${volumetricId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update volumetric');
+        }
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerVolumetric>>;
+    },
+
+    async deleteCustomerVolumetric(customerId: number, volumetricId: number | string) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/volumetrics/${volumetricId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete volumetric');
+        }
+        return response.json();
+    },
+
     /** Bruno: `GET /customer-master/export` — CSV; optional list-style query params. */
     async exportCustomers(params?: {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        name?: string;
+        mobile?: string;
+        serviceCenterId?: number;
+        status?: string;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'code');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.name) queryParams.append('name', params.name);
+        if (params?.mobile) queryParams.append('mobile', params.mobile);
+        if (params?.serviceCenterId) queryParams.append('serviceCenterId', String(params.serviceCenterId));
+        if (params?.status) queryParams.append('status', params.status);
 
         const response = await apiFetch(`${API_URL}/customer-master/export?${queryParams.toString()}`, {
             headers: {

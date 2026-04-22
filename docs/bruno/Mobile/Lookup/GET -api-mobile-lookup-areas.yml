@@ -1,0 +1,38 @@
+info:
+  name: GET /api/mobile/lookup/areas
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/mobile/lookup/areas"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: limit
+      value: "0"
+      type: query
+    - name: sortBy
+      value: string
+      type: query
+    - name: sortOrder
+      value: asc
+      type: query
+    - name: search
+      value: string
+      type: query
+    - name: serviceCenterId
+      value: "0"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

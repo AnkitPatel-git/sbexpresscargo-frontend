@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { Resolver, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
@@ -32,6 +33,7 @@ import { FormSection } from "@/components/ui/form-section"
 import { Checkbox } from "@/components/ui/checkbox"
 
 import { vendorService } from "@/services/masters/vendor-service"
+import { bankService } from "@/services/masters/bank-service"
 import { Vendor } from "@/types/masters/vendor"
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
 
@@ -42,20 +44,19 @@ const vendorSchema = z.object({
     address1: z.string().min(5, "Address must be at least 5 characters"),
     address2: z.string().optional(),
     pinCodeId: z.string().optional().or(z.literal("")),
+    bankId: z.coerce.number().int().positive("Bank is required"),
+    bankAccount: z.string().min(1, "Bank account is required"),
+    bankIfsc: z.string().min(1, "Bank IFSC is required"),
     telephone: z.string().min(10, "Telephone must be at least 10 characters"),
-    fax: z.string().optional().or(z.literal("")),
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),
     gstNo: z.string().optional(),
-    mode: z.string().optional().or(z.literal("")),
-    fuelHead: z.string().optional().or(z.literal("")),
     currency: z.string().optional().or(z.literal("")),
     origin: z.string().optional().or(z.literal("")),
     vendorZip: z.string().optional().or(z.literal("")),
     status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
     global: z.boolean().default(false),
-    gstType: z.string().optional().or(z.literal("")),
     volumetricRound: z.coerce.number().optional(),
 })
 
@@ -69,9 +70,13 @@ export function VendorForm({ initialData }: VendorFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
+    const { data: banksResponse } = useQuery({
+        queryKey: ["vendor-form-banks"],
+        queryFn: () => bankService.getBanks({ page: 1, limit: 100, sortBy: "bankName", sortOrder: "asc" }),
+    })
 
     const form = useForm<VendorFormValues>({
-        resolver: zodResolver(vendorSchema) as any,
+        resolver: zodResolver(vendorSchema) as Resolver<VendorFormValues>,
         defaultValues: {
             vendorCode: "",
             vendorName: "",
@@ -79,20 +84,19 @@ export function VendorForm({ initialData }: VendorFormProps) {
             address1: "",
             address2: "",
             pinCodeId: "",
+            bankId: 0,
+            bankAccount: "",
+            bankIfsc: "",
             telephone: "",
-            fax: "",
             email: "",
             mobile: "",
             website: "",
             gstNo: "",
-            mode: "",
-            fuelHead: "",
             currency: "",
             origin: "",
             vendorZip: "",
             status: "ACTIVE",
             global: false,
-            gstType: "",
             volumetricRound: undefined,
         },
     })
@@ -106,20 +110,19 @@ export function VendorForm({ initialData }: VendorFormProps) {
                 address1: initialData.address1,
                 address2: initialData.address2 || "",
                 pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : "",
+                bankId: initialData.bankId ?? 0,
+                bankAccount: initialData.bankAccount || "",
+                bankIfsc: initialData.bankIfsc || "",
                 telephone: initialData.telephone,
-                fax: initialData.fax || "",
                 email: initialData.email,
                 mobile: initialData.mobile,
                 website: initialData.website || "",
                 gstNo: initialData.gstNo || "",
-                mode: initialData.mode || "",
-                fuelHead: initialData.fuelHead || "",
                 currency: initialData.currency || "",
                 origin: initialData.origin || "",
                 vendorZip: initialData.vendorZip || "",
                 status: initialData.status,
                 global: initialData.global ?? false,
-                gstType: initialData.gstType || "",
                 volumetricRound: initialData.volumetricRound ?? undefined,
             })
         }
@@ -129,9 +132,9 @@ export function VendorForm({ initialData }: VendorFormProps) {
         mutationFn: (data: VendorFormValues) => {
             const payload = omitEmptyCodeFields(data, ["vendorCode"]) as VendorFormValues
             if (isEdit && initialData) {
-                return vendorService.updateVendor(initialData.id, { ...payload, version: initialData.version ?? 1 } as any)
+                return vendorService.updateVendor(initialData.id, { ...payload, version: initialData.version ?? 1 })
             }
-            return vendorService.createVendor(payload as any)
+            return vendorService.createVendor(payload)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["vendors"] })
@@ -152,7 +155,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Section 1: Basic Information */}
                     <FormSection
@@ -168,7 +171,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                     >
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="vendorCode"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Vendor Code (optional)">
@@ -179,7 +182,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     )}
                                 />
                                 <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="vendorName"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Vendor Name*">
@@ -191,7 +194,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 />
                             </div>
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="contactPerson"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Contact Person*">
@@ -202,7 +205,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 )}
                             />
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="status"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Status">
@@ -236,7 +239,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                     >
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="mobile"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Mobile*">
@@ -247,7 +250,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     )}
                                 />
                                 <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="email"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Email Address*">
@@ -260,7 +263,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="telephone"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Telephone*">
@@ -270,20 +273,10 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                         </FloatingFormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control as any}
-                                    name="fax"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Fax">
-                                            <FormControl>
-                                                <Input placeholder="Optional" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
+                                <div />
                             </div>
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="website"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Website">
@@ -308,7 +301,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                         contentClassName="space-y-4"
                     >
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="address1"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Address Line 1*">
@@ -319,7 +312,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 )}
                             />
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="address2"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Address Line 2">
@@ -331,7 +324,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                             />
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="pinCodeId"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Pin Code ID">
@@ -342,7 +335,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     )}
                                 />
                                 <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="vendorZip"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Vendor Zip">
@@ -354,7 +347,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 />
                             </div>
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="gstNo"
                                 render={({ field }) => (
                                     <FloatingFormItem label="GST Number">
@@ -380,31 +373,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                     >
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
-                                    control={form.control as any}
-                                    name="mode"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Mode">
-                                            <FormControl>
-                                                <Input placeholder="e.g. AIR" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control as any}
-                                    name="fuelHead"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Fuel Head">
-                                            <FormControl>
-                                                <Input placeholder="e.g. ADVANCED" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="currency"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Currency">
@@ -415,7 +384,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     )}
                                 />
                                 <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="origin"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Origin">
@@ -428,18 +397,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
-                                    control={form.control as any}
-                                    name="gstType"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="GST Type">
-                                            <FormControl>
-                                                <Input placeholder="e.g. FORWARD" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control as any}
+                                    control={form.control}
                                     name="volumetricRound"
                                     render={({ field }) => (
                                         <FloatingFormItem label="Volumetric Round">
@@ -451,7 +409,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 />
                             </div>
                             <FormField
-                                control={form.control as any}
+                                control={form.control}
                                 name="global"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Global">
@@ -466,19 +424,66 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     </FloatingFormItem>
                                 )}
                             />
+                            <div className="grid grid-cols-1 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="bankId"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Bank">
+                                            <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
+                                                <FormControl>
+                                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                        <SelectValue placeholder="Select bank" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {banksResponse?.data?.map((bank) => (
+                                                        <SelectItem key={bank.id} value={String(bank.id)}>
+                                                            {bank.bankName}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="bankAccount"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Bank Account">
+                                                <FormControl>
+                                                    <Input placeholder="Account number" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="bankIfsc"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Bank IFSC">
+                                                <FormControl>
+                                                    <Input placeholder="IFSC code" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
                     </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6">
                     <Button
                         type="button"
-                        variant="outline"
+                        variant="expressDanger"
                         onClick={() => router.push("/masters/vendor")}
-                        className="border-slate-200 text-slate-600 hover:bg-slate-50"
                     >
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={mutation.isPending} className="bg-primary hover:bg-primary/90 text-white px-8">
+                    <Button type="submit" variant="success" disabled={mutation.isPending} className="px-8">
                         {mutation.isPending ? (
                             <div className="flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin" />

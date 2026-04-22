@@ -10,6 +10,9 @@ export const courierService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        userId?: number;
+        serviceCenterId?: number;
     }): Promise<CourierListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -17,6 +20,9 @@ export const courierService = {
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'code');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.userId) queryParams.append('userId', String(params.userId));
+        if (params?.serviceCenterId) queryParams.append('serviceCenterId', String(params.serviceCenterId));
 
         const response = await apiFetch(`${API_URL}/courier-master?${queryParams.toString()}`, {
             headers: {
@@ -102,11 +108,17 @@ export const courierService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        userId?: number;
+        serviceCenterId?: number;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'code');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.userId) queryParams.append('userId', String(params.userId));
+        if (params?.serviceCenterId) queryParams.append('serviceCenterId', String(params.serviceCenterId));
 
         const response = await apiFetch(`${API_URL}/courier-master/export?${queryParams.toString()}`, {
             headers: {

@@ -1,0 +1,33 @@
+info:
+  name: POST /api/transaction/customer-payment
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/customer-payment"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "date": "2026-04-13T10:00:00.000Z",
+        "paidDate": "2026-04-13T10:00:00.000Z",
+        "amount": 10,
+        "remark": "Sample note",
+        "customerId": 1,
+        "invoiceNo": "Sample Value",
+        "approved": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

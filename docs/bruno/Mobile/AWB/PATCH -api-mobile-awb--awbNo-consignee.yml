@@ -1,0 +1,39 @@
+info:
+  name: PATCH /api/mobile/awb/:awbNo/consignee
+  type: http
+  seq: 2
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/mobile/awb/{{awbNo}}/consignee"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: awbNo
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "consigneeName": "string",
+        "address1": "string",
+        "address2": "string",
+        "city": "string",
+        "state": "string",
+        "telephone": "string",
+        "mobile": "string",
+        "email": "string",
+        "buyerOtherThanConsignee": "string"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

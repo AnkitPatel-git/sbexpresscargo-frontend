@@ -1,0 +1,26 @@
+info:
+  name: GET /api/customer-master/:customerId/other-charges/:chargeId
+  type: http
+  seq: 11
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/customer-master/{{customerId}}/other-charges/{{chargeId}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: customerId
+      value: "1"
+      type: path
+    - name: chargeId
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

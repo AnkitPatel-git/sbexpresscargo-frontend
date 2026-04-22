@@ -1,12 +1,12 @@
-/** Customer Master — Bruno `docs/bruno/Masters/Customer Master/*`. */
+/** Customer Master — Bruno `docs/bruno/master/customer/*`. */
 
-/** Matches GET-by-id nested `serviceablePincode` */
 export interface CustomerMasterPincode {
     id: number;
     countryId: number;
     stateId: number;
     pinCode: string;
     cityName: string;
+    areaName?: string;
     serviceable: boolean;
     oda: boolean;
     createdAt: string;
@@ -21,35 +21,32 @@ export interface CustomerCountryRef {
     id: number;
     code: string;
     name: string;
-    weightUnit: string;
-    currency: string;
-    isdCode: string;
-    createdAt: string;
-    updatedAt: string;
-    createdById: number | null;
-    updatedById: number | null;
-    deletedAt: string | null;
-    deletedById: number | null;
+    weightUnit?: string;
+    currency?: string;
+    isdCode?: string;
 }
 
 export interface CustomerStateRef {
     id: number;
     stateName: string;
-    countryId: number;
-    gstAlias: string;
-    unionTerritory: boolean;
-    createdAt: string;
-    updatedAt: string;
-    createdById: number | null;
-    updatedById: number | null;
-    deletedAt: string | null;
-    deletedById: number | null;
+    stateCode?: string;
+    countryId?: number;
+    gstAlias?: string;
+    unionTerritory?: boolean;
 }
 
 export interface CustomerServiceCenterRef {
     id: number;
     code: string;
     name: string;
+    subName?: string | null;
+}
+
+export interface CustomerBankRef {
+    id: number;
+    bankCode: string;
+    bankName: string;
+    status?: string;
 }
 
 export interface Customer {
@@ -63,24 +60,23 @@ export interface Customer {
     pinCodeId: number | null;
     countryId: number | null;
     stateId: number | null;
+    bankId: number | null;
+    bankAccount: string | null;
+    bankIfsc: string | null;
     telephone: string | null;
     email: string | null;
     mobile: string | null;
-    faxNo: string | null;
-    billingState: string | null;
     serviceCenterId: number | null;
-    startDate: string | null;
+    serviceStartDate: string | null;
     status: 'ACTIVE' | 'INACTIVE';
     origin: string | null;
     gstNo: string | null;
     aadhaarNo: string | null;
     dobOnAadhaar: string | null;
-    passportNo: string | null;
     panNo: string | null;
-    tanNo: string | null;
     invoiceFormat: string | null;
-    customerType: 'CUSTOMER' | 'VENDOR' | 'AGENT' | null;
-    registerType: 'REGISTERED' | 'UNREGISTERED' | null;
+    customerType: 'INDIVIDUAL' | 'CORPORATE' | string | null;
+    registerType: 'REGISTERED' | 'UNREGISTERED' | string | null;
     signatureFile: string | null;
     logoFile: string | null;
     createdAt: string;
@@ -91,50 +87,35 @@ export interface Customer {
     deletedById: number | null;
     serviceablePincode?: CustomerMasterPincode | null;
     country?: CustomerCountryRef | null;
-    stateMaster?: CustomerStateRef | null;
+    state?: CustomerStateRef | null;
     serviceCenter?: CustomerServiceCenterRef | null;
-    emails?: unknown[];
-    contacts?: unknown[];
-    kycDocuments?: unknown[];
-    fuelSurcharges?: unknown[];
-    otherCharges?: unknown[];
-    volumetrics?: unknown[];
-    /** Some list responses still denormalize city */
-    city?: string | null;
-    state?: string | null;
+    bank?: CustomerBankRef | null;
 }
 
-/** Bruno Customer Master – Create / Update body (subset; many optional) */
 export interface CustomerFormData {
     code?: string;
     name: string;
     contactPerson?: string;
     address1?: string;
     address2?: string;
-    pinCodeId?: string | number;
+    pinCodeId?: number;
+    serviceCenterId?: number;
+    bankId?: number;
+    bankAccount?: string;
+    bankIfsc?: string;
     telephone?: string;
     email?: string;
-    city?: string;
-    state?: string;
     mobile?: string;
-    faxNo?: string;
-    billingState?: string;
-    /** Bruno create uses string code/name e.g. "VASAI" */
-    serviceCenter?: string;
-    serviceCenterId?: number;
-    startDate?: string;
     serviceStartDate?: string;
     status?: 'ACTIVE' | 'INACTIVE';
     origin?: string;
     gstNo?: string;
     aadhaarNo?: string;
     dobOnAadhaar?: string;
-    passportNo?: string;
     panNo?: string;
-    tanNo?: string;
     invoiceFormat?: string;
-    customerType?: 'CUSTOMER' | 'VENDOR' | 'AGENT';
-    registerType?: 'REGISTERED' | 'UNREGISTERED';
+    customerType?: 'INDIVIDUAL' | 'CORPORATE' | string;
+    registerType?: 'REGISTERED' | 'UNREGISTERED' | string;
     signatureFile?: string;
     logoFile?: string;
     createDefaultShipper?: boolean;
@@ -157,4 +138,105 @@ export interface CustomerSingleResponse {
     success: boolean;
     message?: string;
     data: Customer;
+}
+
+export interface CustomerProductRef {
+    id: number;
+    productCode: string;
+    productName: string;
+}
+
+export interface CustomerFuelSurcharge {
+    id: number;
+    customerId: number;
+    productId: number | null;
+    fuelChargeType: string;
+    fromDate: string;
+    toDate: string;
+    fuelSurcharge: number | string | { s?: number; e?: number; d?: number[] };
+    product?: CustomerProductRef | null;
+}
+
+export interface CustomerFuelSurchargeFormData {
+    productId?: number;
+    fuelChargeType: string;
+    fromDate: string;
+    toDate: string;
+    fuelSurcharge: number;
+}
+
+export interface CustomerOtherCharge {
+    id: number;
+    customerId: number;
+    productId: number | null;
+    srNo: number;
+    chargeType: string;
+    fromDate: string;
+    toDate: string;
+    origin: string;
+    destination: string;
+    amount: number | string | { s?: number; e?: number; d?: number[] };
+    minimumValue: number | string | { s?: number; e?: number; d?: number[] };
+    product?: CustomerProductRef | null;
+}
+
+export interface CustomerOtherChargeFormData {
+    productId?: number;
+    srNo: number;
+    chargeType: string;
+    fromDate: string;
+    toDate: string;
+    origin: string;
+    destination: string;
+    amount: number;
+    minimumValue: number;
+}
+
+export interface CustomerVolumetric {
+    id: number;
+    customerId: number;
+    productId: number | null;
+    cmDivide: number | string | { s?: number; e?: number; d?: number[] };
+    inchDivide: number | string | { s?: number; e?: number; d?: number[] };
+    cft: number | string | { s?: number; e?: number; d?: number[] };
+    product?: CustomerProductRef | null;
+}
+
+export interface CustomerVolumetricFormData {
+    productId?: number;
+    cmDivide: number;
+    inchDivide: number;
+    cft: number;
+}
+
+export interface CustomerKycDocument {
+    id: number;
+    customerId: number;
+    docType: string;
+    filePath: string;
+    fileName: string;
+    documentNumber?: string | null;
+    expiryDate?: string | null;
+    verified?: boolean;
+}
+
+export interface CustomerKycDocumentFormData {
+    docType: string;
+    filePath: string;
+    fileName: string;
+    documentNumber?: string;
+    expiryDate?: string;
+    verified?: boolean;
+}
+
+export interface CustomerChildListResponse<T> {
+    success: boolean;
+    message?: string;
+    data: T[];
+}
+
+export interface CustomerChildSingleResponse<T> {
+    success: boolean;
+    message?: string;
+    data: T;
 }

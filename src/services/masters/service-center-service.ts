@@ -10,6 +10,9 @@ export const serviceCenterService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        name?: string;
+        subName?: string;
     }): Promise<ServiceCenterListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -17,6 +20,9 @@ export const serviceCenterService = {
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'code');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.name) queryParams.append('name', params.name);
+        if (params?.subName) queryParams.append('subName', params.subName);
 
         const response = await apiFetch(`${API_URL}/service-center-master?${queryParams.toString()}`, {
             headers: {
@@ -102,11 +108,17 @@ export const serviceCenterService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        code?: string;
+        name?: string;
+        subName?: string;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
         queryParams.append('search', params?.search ?? '');
         queryParams.append('sortBy', params?.sortBy ?? 'code');
         queryParams.append('sortOrder', params?.sortOrder ?? 'asc');
+        if (params?.code) queryParams.append('code', params.code);
+        if (params?.name) queryParams.append('name', params.name);
+        if (params?.subName) queryParams.append('subName', params.subName);
 
         const response = await apiFetch(`${API_URL}/service-center-master/export?${queryParams.toString()}`, {
             headers: {

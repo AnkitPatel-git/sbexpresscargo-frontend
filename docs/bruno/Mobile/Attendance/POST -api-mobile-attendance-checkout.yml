@@ -1,0 +1,30 @@
+info:
+  name: POST /api/mobile/attendance/checkout
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/mobile/attendance/checkout"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "lat": "string",
+        "lng": "string",
+        "address": "string",
+        "deviceTime": "string"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

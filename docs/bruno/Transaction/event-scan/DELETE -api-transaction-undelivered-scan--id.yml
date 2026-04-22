@@ -1,0 +1,23 @@
+info:
+  name: DELETE /api/transaction/undelivered-scan/:id
+  type: http
+  seq: 2
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/transaction/undelivered-scan/{{id}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

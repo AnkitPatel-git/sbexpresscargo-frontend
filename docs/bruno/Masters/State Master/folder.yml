@@ -1,7 +1,0 @@
-info:
-  name: State Master
-  type: folder
-  seq: 3
-
-request:
-  auth: inherit

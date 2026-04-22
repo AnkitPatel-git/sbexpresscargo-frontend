@@ -1,0 +1,143 @@
+info:
+  name: POST /api/rate-master/zone-mappings
+  type: http
+  seq: 11
+
+http:
+  method: POST
+  url: '{{baseUrl}}/api/rate-master/zone-mappings'
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  body:
+    type: json
+    data: |-
+      {
+        "serviceablePincodeId": 2,
+        "zoneId": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: '{{baseUrl}}/api/rate-master/zone-mappings'
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      body:
+        type: json
+        data: |-
+          {
+            "serviceablePincodeId": 2,
+            "zoneId": 1
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: '0'
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: 'true'
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: '93'
+        - name: etag
+          value: W/"5d-v2pVG02QqoxU2c54lu86JBCUqSg"
+        - name: date
+          value: Mon, 13 Apr 2026 08:16:34 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "Zone mapping already exists for this pincode and zone",
+            "data": {}
+          }
+  - name: dummy success
+    request:
+      url: '{{baseUrl}}/api/rate-master/zone-mappings'
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      body:
+        type: json
+        data: |-
+          {
+            "serviceablePincodeId": 2,
+            "zoneId": 2
+          }
+    response:
+      status: 201
+      statusText: Created
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Zone mapping created successfully",
+            "data": {
+              "id": 2,
+              "serviceablePincodeId": 2,
+              "zoneId": 2,
+              "serviceablePincode": {
+                "id": 2,
+                "pinCode": "452001",
+                "cityName": "Indore",
+                "areaName": "Indore City"
+              },
+              "zone": {
+                "id": 2,
+                "code": "CODE002",
+                "name": "West Zone",
+                "zoneType": "DOMESTIC"
+              }
+            }
+          }

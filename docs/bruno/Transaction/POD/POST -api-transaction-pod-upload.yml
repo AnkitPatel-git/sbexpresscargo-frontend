@@ -1,0 +1,31 @@
+info:
+  name: POST /api/transaction/pod/upload
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/transaction/pod/upload"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "sample": "value",
+        "context": {
+          "pathParams": {},
+          "query": {}
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

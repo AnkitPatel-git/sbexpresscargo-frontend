@@ -16,34 +16,15 @@ export interface ContentCountryRef {
     deletedById?: number | null;
 }
 
-/** Nested vendor when API includes it (shape may vary). */
-export interface ContentVendorRef {
-    id: number;
-    vendorName?: string;
-    name?: string;
-    code?: string;
-}
-
 export interface Content {
     id: number;
     contentCode: string;
     contentName: string;
     hsnCode?: string | null;
-    vendorId: number | null;
     countryId: number | null;
-    /** Denormalized string or joined object from API */
-    vendor?: string | ContentVendorRef | null;
     country?: string | ContentCountryRef | null;
     additionalField?: string | null;
     clearanceCethNo?: string | null;
-    notificationSubType?: string | null;
-    notificationSubType1?: string | null;
-    notificationNo?: string | null;
-    srNo?: string | null;
-    igstNotification?: string | null;
-    igstSrNo?: string | null;
-    igstcNotification?: string | null;
-    igstcSrNo?: string | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -57,18 +38,9 @@ export interface ContentFormData {
     contentCode?: string;
     contentName: string;
     hsnCode?: string;
-    vendorId?: number | null;
     countryId?: number | null;
     additionalField?: string;
     clearanceCethNo?: string;
-    notificationSubType?: string;
-    notificationSubType1?: string;
-    notificationNo?: string;
-    srNo?: string;
-    igstNotification?: string;
-    igstSrNo?: string;
-    igstcNotification?: string;
-    igstcSrNo?: string;
 }
 
 export interface ContentListResponse {

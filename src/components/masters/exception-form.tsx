@@ -1,6 +1,6 @@
 "use client"
 
-import { useForm, Resolver } from 'react-hook-form'
+import { useForm, Resolver, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -85,10 +85,10 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
         mutation.mutate(data)
     }
 
-    const onInvalid = (errors: any) => {
+    const onInvalid = (errors: FieldErrors<ExceptionFormValues>) => {
         console.error("Form Validation Errors:", errors)
         const errorMessages = Object.entries(errors)
-            .map(([field, error]: [string, any]) => `${field}: ${error.message}`)
+            .map(([field, error]) => `${field}: ${error?.message ?? "Invalid value"}`)
             .join(", ")
         toast.error(`Validation Error: ${errorMessages || "Please check the form"}`)
     }

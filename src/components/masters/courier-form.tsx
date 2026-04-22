@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -33,6 +33,7 @@ import { serviceCenterService } from '@/services/masters/service-center-service'
 import { userService } from '@/services/user-service'
 import { Courier, type CourierFormData } from '@/types/masters/courier'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
+import { useDebounce } from '@/hooks/use-debounce'
 
 const courierSchema = z.object({
     code: optionalMasterCode(2),
@@ -60,18 +61,68 @@ export function CourierForm({ initialData }: CourierFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
+    const [userSearch, setUserSearch] = useState('')
+    const [serviceCenterSearch, setServiceCenterSearch] = useState('')
+
+    const debouncedUserSearch = useDebounce(userSearch, 400)
+    const debouncedServiceCenterSearch = useDebounce(serviceCenterSearch, 400)
 
     const { data: usersResp } = useQuery({
-        queryKey: ['users-for-courier'],
-        queryFn: () => userService.listUsers({ page: 1, limit: 200, status: 'ACTIVE' }),
+        queryKey: ['users-for-courier', debouncedUserSearch],
+        queryFn: () => userService.listUsers({ page: 1, limit: 100, status: 'ACTIVE', search: debouncedUserSearch }),
     })
 
     const { data: scData } = useQuery({
-        queryKey: ['service-centers-list-courier'],
-        queryFn: () => serviceCenterService.getServiceCenters({ limit: 200 }),
+        queryKey: ['service-centers-list-courier', debouncedServiceCenterSearch],
+        queryFn: () => serviceCenterService.getServiceCenters({
+            page: 1,
+            limit: 100,
+            search: debouncedServiceCenterSearch,
+        }),
     })
 
-    const users = (usersResp?.data ?? []) as { id: number; username: string; email?: string }[]
+    const users = useMemo(() => {
+        const list = [...((usersResp?.data ?? []) as { id: number; username: string; email?: string }[])]
+        if (initialData?.user && !list.some((user) => user.id === initialData.userId)) {
+            list.unshift({
+                id: initialData.user.id,
+                username: initialData.user.username,
+                email: initialData.user.email ?? undefined,
+            })
+        }
+        return list
+    }, [initialData, usersResp?.data])
+
+    const serviceCenters = useMemo(() => {
+        const list = [...(scData?.data ?? [])]
+        if (initialData?.serviceCenter && !list.some((serviceCenter) => serviceCenter.id === initialData.serviceCenterId)) {
+            list.unshift({
+                ...initialData.serviceCenter,
+                subName: initialData.serviceCenter.subName ?? null,
+                address1: '',
+                address2: '',
+                telephone: '',
+                email: '',
+                pinCodeId: 0,
+                countryId: 0,
+                stateId: 0,
+                companyLogo: '',
+                signatoryLogo: '',
+                version: 0,
+                localBranchId: null,
+                createdAt: '',
+                updatedAt: '',
+                createdById: null,
+                updatedById: null,
+                deletedAt: null,
+                deletedById: null,
+                serviceablePincode: null,
+                state: null,
+                terms: [],
+            })
+        }
+        return list
+    }, [initialData, scData?.data])
 
     const form = useForm<CourierFormValues>({
         resolver: zodResolver(courierSchema) as Resolver<CourierFormValues>,
@@ -158,24 +209,33 @@ export function CourierForm({ initialData }: CourierFormProps) {
                             name="userId"
                             render={({ field }) => (
                                 <FloatingFormItem label={<>Linked user <span className="text-red-500">*</span></>}>
-                                    <Select
-                                        disabled={isEdit}
-                                        onValueChange={(v) => field.onChange(Number(v))}
-                                        value={field.value ? String(field.value) : ''}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select user" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {users.map((u) => (
-                                                <SelectItem key={u.id} value={String(u.id)}>
-                                                    {u.username}{u.email ? ` (${u.email})` : ''}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="space-y-2">
+                                        <Input
+                                            placeholder="Search user from DB"
+                                            className={FLOATING_INNER_CONTROL}
+                                            value={userSearch}
+                                            onChange={(e) => setUserSearch(e.target.value)}
+                                            disabled={isEdit}
+                                        />
+                                        <Select
+                                            disabled={isEdit}
+                                            onValueChange={(v) => field.onChange(Number(v))}
+                                            value={field.value ? String(field.value) : ''}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                    <SelectValue placeholder="Select user" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {users.map((u) => (
+                                                    <SelectItem key={u.id} value={String(u.id)}>
+                                                        {u.username}{u.email ? ` (${u.email})` : ''}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </FloatingFormItem>
                             )}
                         />
@@ -184,24 +244,32 @@ export function CourierForm({ initialData }: CourierFormProps) {
                             name="serviceCenterId"
                             render={({ field }) => (
                                 <FloatingFormItem label="Service center (optional)">
-                                    <Select
-                                        onValueChange={(v) => field.onChange(v === '__none__' ? undefined : Number(v))}
-                                        value={field.value ? String(field.value) : '__none__'}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="None" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="__none__">None</SelectItem>
-                                            {scData?.data?.map((sc) => (
-                                                <SelectItem key={sc.id} value={String(sc.id)}>
-                                                    {sc.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="space-y-2">
+                                        <Input
+                                            placeholder="Search service center from DB"
+                                            className={FLOATING_INNER_CONTROL}
+                                            value={serviceCenterSearch}
+                                            onChange={(e) => setServiceCenterSearch(e.target.value)}
+                                        />
+                                        <Select
+                                            onValueChange={(v) => field.onChange(v === '__none__' ? undefined : Number(v))}
+                                            value={field.value ? String(field.value) : '__none__'}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                    <SelectValue placeholder="None" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="__none__">None</SelectItem>
+                                                {serviceCenters.map((sc) => (
+                                                    <SelectItem key={sc.id} value={String(sc.id)}>
+                                                        {sc.code} - {sc.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </FloatingFormItem>
                             )}
                         />

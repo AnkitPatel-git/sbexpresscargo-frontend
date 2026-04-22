@@ -16,6 +16,12 @@ export interface Courier {
     deliveryCharge: string | number;
     serviceCenterId: number | null;
     user?: CourierUserRef | null;
+    serviceCenter?: {
+        id: number;
+        code: string;
+        name: string;
+        subName?: string | null;
+    } | null;
     createdAt?: string;
     updatedAt?: string;
     createdById?: number | null;

@@ -1,0 +1,57 @@
+info:
+  name: PATCH /api/customer-master/:id
+  type: http
+  seq: 21
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/customer-master/{{id}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: id
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "code": "CODE001",
+        "name": "Sample Name",
+        "contactPerson": "Sample Value",
+        "address1": "Sample address line",
+        "address2": "Sample address line",
+        "pinCodeId": 1,
+        "serviceCenterId": 1,
+        "bankId": 1,
+        "bankAccount": "1234567890123456",
+        "bankIfsc": "HDFC0000123",
+        "telephone": "9876543210",
+        "email": "ops@example.com",
+        "mobile": "9876543210",
+        "serviceStartDate": "2026-04-13T10:00:00.000Z",
+        "status": "ACTIVE",
+        "origin": "Sample Value",
+        "gstNo": "27ABCDE1234F1Z5",
+        "aadhaarNo": "Sample Value",
+        "dobOnAadhaar": "Sample Value",
+        "panNo": "ABCDE1234F",
+        "invoiceFormat": "2026-04-13T10:00:00.000Z",
+        "customerType": "CORPORATE",
+        "registerType": "Sample Value",
+        "signatureFile": "Sample Value",
+        "logoFile": "Sample Value",
+        "createDefaultShipper": true,
+        "version": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

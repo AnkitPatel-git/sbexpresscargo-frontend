@@ -1,0 +1,7 @@
+info:
+  name: receiptExpenses
+  type: folder
+  seq: 6
+
+request:
+  auth: inherit

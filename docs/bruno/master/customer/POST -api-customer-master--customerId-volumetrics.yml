@@ -1,0 +1,207 @@
+info:
+  name: POST /api/customer-master/:customerId/volumetrics
+  type: http
+  seq: 26
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/customer-master/{{customerId}}/volumetrics"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: customerId
+      value: "1"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "vendorId": 1,
+        "productId": 1,
+        "cmDivide": 1,
+        "inchDivide": 1,
+        "cft": 1
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: customerId
+      value: "1"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: example
+    request:
+      url: "{{baseUrl}}/api/customer-master/{{customerId}}/volumetrics"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+          disabled: true
+      params:
+        - name: customerId
+          value: "1"
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "vendorId": 1,
+            "productId": 1,
+            "cmDivide": 1,
+            "inchDivide": 1,
+            "cft": 1
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-security-policy
+          value: "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+        - name: cross-origin-opener-policy
+          value: same-origin
+        - name: cross-origin-resource-policy
+          value: same-origin
+        - name: origin-agent-cluster
+          value: ?1
+        - name: referrer-policy
+          value: no-referrer
+        - name: strict-transport-security
+          value: max-age=31536000; includeSubDomains
+        - name: x-content-type-options
+          value: nosniff
+        - name: x-dns-prefetch-control
+          value: off
+        - name: x-download-options
+          value: noopen
+        - name: x-frame-options
+          value: SAMEORIGIN
+        - name: x-permitted-cross-domain-policies
+          value: none
+        - name: x-xss-protection
+          value: "0"
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "1611"
+        - name: etag
+          value: W/"64b-pa/JNXcRNPXN773lQOyx1GYzAzE"
+        - name: date
+          value: Mon, 13 Apr 2026 21:15:32 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "data": {
+              "id": 1,
+              "customerId": 1,
+              "vendorId": 1,
+              "productId": 1,
+              "cmDivide": {
+                "s": 1,
+                "e": 0,
+                "d": [
+                  1
+                ]
+              },
+              "inchDivide": {
+                "s": 1,
+                "e": 0,
+                "d": [
+                  1
+                ]
+              },
+              "cft": {
+                "s": 1,
+                "e": 0,
+                "d": [
+                  1
+                ]
+              },
+              "createdAt": "2026-04-13T21:15:32.427Z",
+              "updatedAt": "2026-04-13T21:15:32.427Z",
+              "createdById": 1,
+              "updatedById": null,
+              "deletedAt": null,
+              "deletedById": null,
+              "vendor": {
+                "id": 1,
+                "vendorCode": "CODE001",
+                "vendorName": "Sample Name"
+              },
+              "product": {
+                "id": 1,
+                "productCode": "CODE001",
+                "productName": "SURFACE"
+              },
+              "customer": {
+                "id": 1,
+                "code": "CUST-IND-001",
+                "name": "Indore Pharma Distributors Pvt Ltd",
+                "version": 1,
+                "contactPerson": "Vikram Chouhan",
+                "address1": "Plot No. 8, Industrial Area, Sector-C, Sanwer Road",
+                "address2": "Near Pithampur Toll, Indore",
+                "pinCodeId": 1,
+                "countryId": 1,
+                "stateId": 1,
+                "bankId": 1,
+                "bankAccount": "50100123456789",
+                "bankIfsc": "HDFC0001452",
+                "telephone": "07314789600",
+                "mobile": "9826123456",
+                "serviceCenterId": 1,
+                "serviceStartDate": "2025-04-01T00:00:00.000Z",
+                "status": "ACTIVE",
+                "origin": "Indore",
+                "gstNo": "23AACCI4567K1Z4",
+                "aadhaarNo": "3456 7890 1234",
+                "dobOnAadhaar": "1985-06-15T00:00:00.000Z",
+                "panNo": "AACCI4567K",
+                "invoiceFormat": "STANDARD",
+                "customerType": "INDIVIDUAL",
+                "registerType": "REGISTERED",
+                "signatureFile": "signatures/cust-ind-001-sign.png",
+                "logoFile": "logos/cust-ind-001-logo.png",
+                "createdAt": "2026-04-13T20:57:59.357Z",
+                "updatedAt": "2026-04-13T20:57:59.357Z",
+                "createdById": 1,
+                "updatedById": null,
+                "deletedAt": null,
+                "deletedById": null
+              },
+              "createdBy": {
+                "id": 1,
+                "username": "admin",
+                "email": "admin@system.com",
+                "roleId": 1,
+                "mobile": null,
+                "status": "ACTIVE",
+                "createdAt": "2026-04-13T10:25:37.962Z",
+                "updatedAt": "2026-04-13T10:25:37.962Z"
+              },
+              "updatedBy": null,
+              "deletedBy": null
+            }
+          }
