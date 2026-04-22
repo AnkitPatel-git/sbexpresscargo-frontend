@@ -46,14 +46,14 @@ const pincodeSchema = z.object({
     cityName: z.string().min(1, "City Name is required"),
     areaName: z.string().min(1, "Area Name is required"),
     serviceable: z.boolean(),
-    oda: z.boolean(),
+    edl: z.boolean(),
     productId: z.number().int().min(0),
     odaEdlDistanceKm: z
         .string()
         .optional()
         .refine(
             (s) => !s?.trim() || (!Number.isNaN(Number(s)) && Number(s) >= 0),
-            { message: 'ODA/EDL distance must be a number ≥ 0' },
+            { message: 'EDL distance must be a number ≥ 0' },
         ),
     tatWorkingDays: z
         .string()
@@ -129,7 +129,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             cityName: initialData?.cityName ?? '',
             areaName: initialData?.areaName ?? '',
             serviceable: initialData?.serviceable ?? true,
-            oda: initialData?.oda ?? false,
+            edl: Boolean(initialData?.edl) || Boolean(initialData?.oda),
             productId: initialData?.productId ?? 0,
             odaEdlDistanceKm: formatDistanceInitial(initialData?.odaEdlDistanceKm),
             tatWorkingDays: initialData?.tatWorkingDays != null ? String(initialData.tatWorkingDays) : '',
@@ -293,7 +293,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             cityName: initialData.cityName ?? '',
             areaName: initialData.areaName ?? '',
             serviceable: initialData.serviceable ?? true,
-            oda: initialData.oda ?? false,
+            edl: Boolean(initialData.edl) || Boolean(initialData.oda),
             productId: initialData.productId ?? 0,
             odaEdlDistanceKm: formatDistanceInitial(initialData.odaEdlDistanceKm),
             tatWorkingDays: initialData.tatWorkingDays != null ? String(initialData.tatWorkingDays) : '',
@@ -321,7 +321,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                 cityName: data.cityName,
                 areaName: data.areaName,
                 serviceable: data.serviceable,
-                oda: data.oda,
+                edl: data.edl,
             }
             if (data.productId > 0) {
                 payload.productId = data.productId
@@ -606,7 +606,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="odaEdlDistanceKm"
                         render={({ field }) => (
-                            <FloatingFormItem label="ODA / EDL distance (km)">
+                            <FloatingFormItem label="EDL distance (km)">
                                 <FormControl>
                                     <Input
                                         type="text"
@@ -761,9 +761,9 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
 
                         <FormField
                             control={form.control}
-                            name="oda"
+                            name="edl"
                             render={({ field }) => (
-                                <FloatingFormItem label="ODA" itemClassName="flex-1">
+                                <FloatingFormItem label="EDL (extended delivery)" itemClassName="flex-1">
                                     <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                         <FormControl>
                                             <Checkbox

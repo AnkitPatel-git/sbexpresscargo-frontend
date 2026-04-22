@@ -20,7 +20,8 @@ export interface ServiceablePincode {
     cityName: string;
     areaName: string;
     serviceable: boolean;
-    oda: boolean;
+    oda?: boolean;
+    edl?: boolean;
     productId?: number | null;
     odaEdlDistanceKm?: number | string | null;
     tatWorkingDays?: number | null;
@@ -54,7 +55,7 @@ export interface ServiceablePincodeFormData {
     cityName: string;
     areaName: string;
     serviceable: boolean;
-    oda: boolean;
+    edl: boolean;
     productId?: number | null;
     odaEdlDistanceKm?: number | null;
     tatWorkingDays?: number | null;

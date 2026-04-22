@@ -91,7 +91,7 @@ export const shipmentService = {
     );
   },
 
-  async calculateCharges(data: Omit<ShipmentFormPayload, "oda">): Promise<ApiEnvelope<ShipmentCalculateResponse>> {
+  async calculateCharges(data: ShipmentFormPayload): Promise<ApiEnvelope<ShipmentCalculateResponse>> {
     return requestJson(
       `${API_URL}/transaction/shipment/calculate-charges`,
       {
