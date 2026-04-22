@@ -181,7 +181,7 @@ export default function ServiceablePincodesPage() {
                 <Input placeholder="Search pincodes..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[1100px] border-0">
+                <Table className="min-w-[1400px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Pin Code <SortArrows /></span></TableHead>
@@ -190,6 +190,10 @@ export default function ServiceablePincodesPage() {
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Country <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Zones <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Product <SortArrows /></span></TableHead>
+                            <TableHead className="text-right font-semibold text-primary-foreground"><span className="inline-flex items-center">ODA/EDL km <SortArrows /></span></TableHead>
+                            <TableHead className="text-right font-semibold text-primary-foreground"><span className="inline-flex items-center">TAT days <SortArrows /></span></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Embargo <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Serviceable <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">ODA <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
@@ -201,6 +205,10 @@ export default function ServiceablePincodesPage() {
                             <TableHead className="p-2"><Input placeholder="Country Code" className="h-8 border-border bg-background text-xs" value={colFilters.countryCode} onChange={(e) => setColFilters((f) => ({ ...f, countryCode: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="State" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Zones" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Product" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="km" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="TAT" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Embargo" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Serviceable" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2"><Input placeholder="ODA" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2" />
@@ -209,11 +217,11 @@ export default function ServiceablePincodesPage() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">Loading pincodes...</TableCell>
+                                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">Loading pincodes...</TableCell>
                             </TableRow>
                         ) : rows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">No pincodes found.</TableCell>
+                                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">No pincodes found.</TableCell>
                             </TableRow>
                         ) : (
                             rows.map((pincode: ServiceablePincode, index) => (
@@ -225,6 +233,28 @@ export default function ServiceablePincodesPage() {
                                     <TableCell className="text-foreground">{pincode.state?.stateName || '-'}</TableCell>
                                     <TableCell className="text-foreground">
                                         {(pincode.zones ?? []).map((z) => z.code).join(', ') || '-'}
+                                    </TableCell>
+                                    <TableCell className="text-foreground text-sm">
+                                        {pincode.product?.productCode
+                                            ? `${pincode.product.productName} (${pincode.product.productCode})`
+                                            : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-foreground text-sm">
+                                        {pincode.odaEdlDistanceKm != null && pincode.odaEdlDistanceKm !== ''
+                                            ? String(pincode.odaEdlDistanceKm)
+                                            : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-foreground text-sm">
+                                        {pincode.tatWorkingDays != null ? String(pincode.tatWorkingDays) : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <div className="flex justify-center">
+                                            {pincode.embargo ? (
+                                                <div className="bg-amber-100 p-1 rounded-full"><Check className="h-3 w-3 text-amber-700" /></div>
+                                            ) : (
+                                                <div className="bg-gray-100 p-1 rounded-full"><X className="h-3 w-3 text-gray-400" /></div>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center">

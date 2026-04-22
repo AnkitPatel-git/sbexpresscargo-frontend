@@ -142,5 +142,5 @@ examples:
       body:
         type: text
         data: |
-          countryId,stateId,zoneIds,pinCode,cityName,areaName,serviceable,oda,countryCode,countryName,stateName,zoneCodes,zoneNames
-          1,1,1,452001,Indore,Indore City,true,false,IN,India,MADHYA PRADESH,CODE001,East Zone
+          countryId,stateId,zoneIds,pinCode,cityName,areaName,serviceable,oda,productId,productCode,productName,odaEdlDistanceKm,tatWorkingDays,embargo,countryCode,countryName,stateName,zoneCodes,zoneNames
+          1,1,1,452001,Indore,Indore City,true,false,1,AIR,Air Express,15.5,2,false,IN,India,MADHYA PRADESH,CODE001,East Zone
