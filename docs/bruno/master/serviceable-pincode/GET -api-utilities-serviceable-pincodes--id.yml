@@ -98,6 +98,15 @@ examples:
               "areaName": "Indore City",
               "serviceable": true,
               "oda": false,
+              "productId": 1,
+              "odaEdlDistanceKm": "15.5",
+              "tatWorkingDays": 2,
+              "embargo": false,
+              "product": {
+                "id": 1,
+                "productCode": "AIR",
+                "productName": "Air Express"
+              },
               "createdAt": "2026-04-13T08:14:23.670Z",
               "updatedAt": "2026-04-13T08:14:23.670Z",
               "createdById": 1,

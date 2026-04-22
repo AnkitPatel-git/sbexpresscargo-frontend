@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, Check, X, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Plus, Edit, Trash2, Check, X, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown, Download } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -26,11 +26,20 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
 import { serviceablePincodeService } from "@/services/utilities/serviceable-pincode-service"
 import { ServiceablePincode } from "@/types/utilities/serviceable-pincode"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { useAuth } from "@/context/auth-context"
 import { useDebounce } from "@/hooks/use-debounce"
 
 function SortArrows() {
@@ -45,6 +54,7 @@ function SortArrows() {
 export default function ServiceablePincodesPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
+    const { hasPermission } = useAuth()
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
@@ -62,6 +72,16 @@ export default function ServiceablePincodesPage() {
     const debouncedCountryCode = useDebounce(colFilters.countryCode, 400)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
+    const [importOpen, setImportOpen] = useState(false)
+    const [importFile, setImportFile] = useState<File | null>(null)
+    const [importSummary, setImportSummary] = useState<{
+        created: number
+        failed: number
+        failures: Array<{ row: number; message: string }>
+        successes: Array<{ row: number; pinCode: string }>
+    } | null>(null)
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+    const importFileInputRef = useRef<HTMLInputElement>(null)
 
     const { data, isLoading } = useQuery({
         queryKey: ["serviceable-pincodes", page, debouncedSearch, debouncedPinCode, debouncedCityName, debouncedAreaName, debouncedCountryCode],
@@ -120,6 +140,74 @@ export default function ServiceablePincodesPage() {
         },
     })
 
+    const importMutation = useMutation({
+        mutationFn: (file: File) => serviceablePincodeService.importServiceablePincodesFromExcel(file),
+        onSuccess: (result) => {
+            queryClient.invalidateQueries({ queryKey: ["serviceable-pincodes"] })
+            setImportSummary(result)
+            if (result.failed === 0) {
+                const ok = result.successes ?? []
+                const sample = ok.slice(0, 8).map((s) => s.pinCode).join(", ")
+                const suffix = sample ? ` (${sample}${ok.length > 8 ? ", …" : ""})` : ""
+                toast.success(`Import completed: ${result.created} row(s) created${suffix}`)
+                setImportOpen(false)
+                setImportFile(null)
+                if (importFileInputRef.current) importFileInputRef.current.value = ""
+            } else {
+                toast.message("Import finished with some errors", {
+                    description: `${result.created} created, ${result.failed} failed. See the dialog for details.`,
+                })
+            }
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Import failed")
+        },
+    })
+
+    async function handleDownloadImportTemplate() {
+        setDownloadingTemplate(true)
+        try {
+            const { blob, filename } = await serviceablePincodeService.downloadImportTemplate()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Template downloaded")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to download template")
+        } finally {
+            setDownloadingTemplate(false)
+        }
+    }
+
+    function onImportDialogOpenChange(open: boolean) {
+        setImportOpen(open)
+        if (!open) {
+            setImportFile(null)
+            setImportSummary(null)
+            if (importFileInputRef.current) importFileInputRef.current.value = ""
+        }
+    }
+
+    function onPickImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+        const f = e.target.files?.[0]
+        if (!f) {
+            setImportFile(null)
+            return
+        }
+        const lower = f.name.toLowerCase()
+        if (!lower.endsWith(".xlsx") && !lower.endsWith(".xls")) {
+            toast.error("Only .xlsx or .xls files are allowed")
+            e.target.value = ""
+            setImportFile(null)
+            return
+        }
+        setImportFile(f)
+        setImportSummary(null)
+    }
+
     const handleCreate = () => {
         router.push("/utilities/serviceable-pincodes/create")
     }
@@ -148,12 +236,23 @@ export default function ServiceablePincodesPage() {
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
-                    <PermissionGuard permission="master.serviceable_pincode.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
+                    <PermissionGuard permission="utility.serviceable_pincode.create">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Import from Excel"
+                            onClick={() => {
+                                setImportSummary(null)
+                                setImportFile(null)
+                                setImportOpen(true)
+                            }}
+                        >
                             <FilePlus className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <PermissionGuard permission="master.serviceable_pincode.read">
+                    <PermissionGuard permission="utility.serviceable_pincode.read">
                         <Button
                             type="button"
                             variant="ghost"
@@ -170,7 +269,7 @@ export default function ServiceablePincodesPage() {
                         <RefreshCw className="h-4 w-4" />
                     </Button>
                 </div>
-                <PermissionGuard permission="master.serviceable_pincode.create">
+                <PermissionGuard permission="utility.serviceable_pincode.create">
                     <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Pincode">
                         <Plus className="mr-1 h-4 w-4" /> Add Pincode
                     </Button>
@@ -181,7 +280,7 @@ export default function ServiceablePincodesPage() {
                 <Input placeholder="Search pincodes..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[1100px] border-0">
+                <Table className="min-w-[1500px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Pin Code <SortArrows /></span></TableHead>
@@ -190,8 +289,12 @@ export default function ServiceablePincodesPage() {
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Country <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Zones <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Product <SortArrows /></span></TableHead>
+                            <TableHead className="text-right font-semibold text-primary-foreground"><span className="inline-flex items-center">EDL km <SortArrows /></span></TableHead>
+                            <TableHead className="text-right font-semibold text-primary-foreground"><span className="inline-flex items-center">TAT days <SortArrows /></span></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Embargo <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Serviceable <SortArrows /></span></TableHead>
-                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">ODA <SortArrows /></span></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">EDL <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                         <TableRow className="border-b border-border bg-card hover:bg-card">
@@ -201,19 +304,23 @@ export default function ServiceablePincodesPage() {
                             <TableHead className="p-2"><Input placeholder="Country Code" className="h-8 border-border bg-background text-xs" value={colFilters.countryCode} onChange={(e) => setColFilters((f) => ({ ...f, countryCode: e.target.value }))} /></TableHead>
                             <TableHead className="p-2"><Input placeholder="State" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Zones" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Product" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="km" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="TAT" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="Embargo" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2"><Input placeholder="Serviceable" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="ODA" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                            <TableHead className="p-2"><Input placeholder="EDL" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                             <TableHead className="p-2" />
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">Loading pincodes...</TableCell>
+                                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">Loading pincodes...</TableCell>
                             </TableRow>
                         ) : rows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">No pincodes found.</TableCell>
+                                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">No pincodes found.</TableCell>
                             </TableRow>
                         ) : (
                             rows.map((pincode: ServiceablePincode, index) => (
@@ -226,6 +333,28 @@ export default function ServiceablePincodesPage() {
                                     <TableCell className="text-foreground">
                                         {(pincode.zones ?? []).map((z) => z.code).join(', ') || '-'}
                                     </TableCell>
+                                    <TableCell className="text-foreground text-sm">
+                                        {pincode.product?.productCode
+                                            ? `${pincode.product.productName} (${pincode.product.productCode})`
+                                            : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-foreground text-sm">
+                                        {pincode.odaEdlDistanceKm != null && pincode.odaEdlDistanceKm !== ''
+                                            ? String(pincode.odaEdlDistanceKm)
+                                            : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-foreground text-sm">
+                                        {pincode.tatWorkingDays != null ? String(pincode.tatWorkingDays) : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <div className="flex justify-center">
+                                            {pincode.embargo ? (
+                                                <div className="bg-amber-100 p-1 rounded-full"><Check className="h-3 w-3 text-amber-700" /></div>
+                                            ) : (
+                                                <div className="bg-gray-100 p-1 rounded-full"><X className="h-3 w-3 text-gray-400" /></div>
+                                            )}
+                                        </div>
+                                    </TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center">
                                             {pincode.serviceable ? (
@@ -237,7 +366,7 @@ export default function ServiceablePincodesPage() {
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center">
-                                            {pincode.oda ? (
+                                            {pincode.edl || pincode.oda ? (
                                                 <div className="bg-amber-100 p-1 rounded-full"><Check className="h-3 w-3 text-amber-600" /></div>
                                             ) : (
                                                 <div className="bg-gray-100 p-1 rounded-full"><X className="h-3 w-3 text-gray-400" /></div>
@@ -246,12 +375,12 @@ export default function ServiceablePincodesPage() {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
-                                            <PermissionGuard permission="master.serviceable_pincode.update">
+                                            <PermissionGuard permission="utility.serviceable_pincode.update">
                                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" title="Edit" onClick={() => handleEdit(pincode.id)}>
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
                                             </PermissionGuard>
-                                            <PermissionGuard permission="master.serviceable_pincode.delete">
+                                            <PermissionGuard permission="utility.serviceable_pincode.delete">
                                                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" title="Delete" onClick={() => handleDeleteRequest(pincode.id)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -274,6 +403,103 @@ export default function ServiceablePincodesPage() {
                     <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data?.meta?.totalPages || 1)} onClick={() => setPage(data?.meta?.totalPages ?? 1)} title="Last">»</Button>
                 </div>
             </div>
+
+            <Dialog open={importOpen} onOpenChange={onImportDialogOpenChange}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Import serviceable pincodes</DialogTitle>
+                        <DialogDescription>
+                            Download the Excel template (sheet &quot;Pincodes&quot;). Use country and state names, zone codes (multiple allowed with | or comma), and Yes/No for serviceable / EDL / embargo. Then upload a .xlsx or .xls file; the result shows how many rows succeeded and any per-row errors.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-4 py-2">
+                        {hasPermission("utility.serviceable_pincode.read") ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-center gap-2"
+                                disabled={downloadingTemplate}
+                                onClick={() => void handleDownloadImportTemplate()}
+                            >
+                                <Download className="h-4 w-4" />
+                                {downloadingTemplate ? "Downloading…" : "Download Excel template"}
+                            </Button>
+                        ) : (
+                            <p className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-center text-xs text-muted-foreground">
+                                Download template requires <span className="font-mono">utility.serviceable_pincode.read</span>.
+                            </p>
+                        )}
+                        <div className="space-y-2">
+                            <input
+                                ref={importFileInputRef}
+                                type="file"
+                                accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                className="hidden"
+                                onChange={onPickImportFile}
+                            />
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                className="w-full"
+                                onClick={() => importFileInputRef.current?.click()}
+                            >
+                                {importFile ? `Selected: ${importFile.name}` : "Choose Excel file (.xlsx / .xls)"}
+                            </Button>
+                        </div>
+                        {importSummary && (importSummary.created > 0 || importSummary.failed > 0) && (
+                            <div className="max-h-52 space-y-3 overflow-y-auto rounded-md border border-border bg-muted/40 p-3 text-sm">
+                                <p className="font-medium text-foreground">
+                                    {importSummary.created} added · {importSummary.failed} failed
+                                </p>
+                                {importSummary.created > 0 && (
+                                    <div>
+                                        <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Successful rows</p>
+                                        <ul className="list-inside list-disc space-y-0.5 text-muted-foreground">
+                                            {(importSummary.successes ?? []).slice(0, 40).map((s) => (
+                                                <li key={`ok-${s.row}-${s.pinCode}`}>
+                                                    Row {s.row}: {s.pinCode}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        {(importSummary.successes ?? []).length > 40 && (
+                                            <p className="mt-1 text-xs text-muted-foreground">Showing first 40 successful rows.</p>
+                                        )}
+                                    </div>
+                                )}
+                                {importSummary.failed > 0 && (
+                                    <div>
+                                        <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Errors</p>
+                                        <ul className="list-inside list-disc space-y-0.5 text-muted-foreground">
+                                            {importSummary.failures.slice(0, 50).map((f) => (
+                                                <li key={`${f.row}-${f.message}`}>
+                                                    Row {f.row}: {f.message}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        {importSummary.failures.length > 50 && (
+                                            <p className="mt-1 text-xs text-muted-foreground">Showing first 50 errors.</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button type="button" variant="outline" onClick={() => onImportDialogOpenChange(false)}>
+                            Close
+                        </Button>
+                        <PermissionGuard permission="utility.serviceable_pincode.create">
+                            <Button
+                                type="button"
+                                disabled={!importFile || importMutation.isPending}
+                                onClick={() => importFile && importMutation.mutate(importFile)}
+                            >
+                                {importMutation.isPending ? "Importing…" : "Upload & import"}
+                            </Button>
+                        </PermissionGuard>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>

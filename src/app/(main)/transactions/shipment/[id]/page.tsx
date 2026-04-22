@@ -52,6 +52,11 @@ function buildCalculationPayload(shipment: Shipment) {
     floorDelivery: shipment.floorDelivery ?? false,
     floorCount: shipment.floorCount ?? undefined,
     km: shipment.km ?? undefined,
+    isEdl: shipment.isEdl ?? false,
+    odaEdlDistanceKm:
+      shipment.odaEdlDistanceKm != null && shipment.odaEdlDistanceKm !== ""
+        ? Number(shipment.odaEdlDistanceKm)
+        : undefined,
     commercial: shipment.commercial ?? false,
     paymentType: shipment.paymentType,
     instruction: shipment.instruction || undefined,
@@ -230,6 +235,8 @@ export default function ShipmentDetailsPage() {
           <p><span className="text-muted-foreground">Booking Value:</span> {fallbackText(shipment.shipmentTotalValue)}</p>
           <p><span className="text-muted-foreground">Commercial:</span> {shipment.commercial ? "Yes" : "No"}</p>
           <p><span className="text-muted-foreground">Reverse Pickup:</span> {shipment.reversePickup ? "Yes" : "No"}</p>
+          <p><span className="text-muted-foreground">EDL charges:</span> {shipment.isEdl ? "Yes" : "No"}</p>
+          <p><span className="text-muted-foreground">EDL distance (km):</span> {fallbackText(shipment.odaEdlDistanceKm)}</p>
           <p><span className="text-muted-foreground">Floor Delivery:</span> {shipment.floorDelivery ? "Yes" : "No"}</p>
         </FormSection>
       </div>

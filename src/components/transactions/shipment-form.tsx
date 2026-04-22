@@ -244,8 +244,11 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         volumetricWeight: shipmentRef?.volumetricWeight || 0,
         chargeWeight: shipmentRef?.chargeWeight || 0,
         km: shipmentRef?.km || 0,
+        isEdl: Boolean(shipmentRef?.isEdl) || Boolean(shipmentRef?.oda),
+        odaEdlDistanceKm: shipmentRef?.odaEdlDistanceKm != null
+            ? Number(shipmentRef.odaEdlDistanceKm)
+            : 0,
         commercial: shipmentRef?.commercial || false,
-        oda: shipmentRef?.oda || false,
         medicalCharges: shipmentRef?.medicalCharges ?? 0,
         paymentType: shipmentRef?.paymentType || 'CREDIT',
         instruction: shipmentRef?.instruction || '',
@@ -302,8 +305,9 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         floorDelivery: Boolean(values.floorDelivery),
         floorCount: normalizeNumberValue(values.floorCount),
         km: normalizeNumberValue(values.km),
+        isEdl: Boolean(values.isEdl),
+        odaEdlDistanceKm: normalizeNumberValue(values.odaEdlDistanceKm),
         commercial: Boolean(values.commercial),
-        oda: Boolean(values.oda),
         paymentType: values.paymentType?.trim() || undefined,
         instruction: values.instruction?.trim() || undefined,
         serviceCenterId: normalizePositiveNumberValue(values.serviceCenterId),
@@ -322,8 +326,8 @@ const normalizeShipmentUpdatePayload = (values: ShipmentFormValues): ShipmentFor
     return payload
 }
 
-const normalizeShipmentCalculatePayload = (values: ShipmentFormValues): Omit<ShipmentFormValues, 'oda'> => {
-    const { serviceMapId: _serviceMapId, oda: _oda, ...payload } = normalizeShipmentPayload(values)
+const normalizeShipmentCalculatePayload = (values: ShipmentFormValues): ShipmentFormValues => {
+    const { serviceMapId: _serviceMapId, ...payload } = normalizeShipmentPayload(values)
     return payload
 }
 
@@ -529,6 +533,8 @@ type ShipmentFormSource = Shipment & {
     volumetricWeight?: number | null
     chargeWeight?: number | null
     km?: number | null
+    isEdl?: boolean | null
+    odaEdlDistanceKm?: number | string | null
     commercial?: boolean | null
     oda?: boolean | null
     medicalCharges?: number | null
@@ -1898,6 +1904,38 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         value={numberInputValue(field.value)}
                                                         onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
                                                         disabled
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="isEdl"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="EDL charges">
+                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                                    <FormControl>
+                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                    </FormControl>
+                                                </div>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="odaEdlDistanceKm"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="EDL distance (km)">
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        {...field}
+                                                        value={numberInputValue(field.value)}
+                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>

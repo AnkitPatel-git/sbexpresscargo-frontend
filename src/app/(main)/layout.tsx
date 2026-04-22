@@ -140,7 +140,7 @@ const MASTER_GROUP_ITEMS = {
       href: "/utilities/serviceable-pincodes",
       label: "Serviceable Pincode",
       icon: Search,
-      permission: "master.serviceable_pincode.read",
+      permission: "utility.serviceable_pincode.read",
     },
     {
       href: "/masters/contents",

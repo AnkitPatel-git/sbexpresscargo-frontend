@@ -154,6 +154,15 @@ examples:
                 "areaName": "Indore City",
                 "serviceable": true,
                 "oda": false,
+                "productId": 1,
+                "odaEdlDistanceKm": "15.5",
+                "tatWorkingDays": 2,
+                "embargo": false,
+                "product": {
+                  "id": 1,
+                  "productCode": "AIR",
+                  "productName": "Air Express"
+                },
                 "country": {
                   "id": 1,
                   "code": "IN",

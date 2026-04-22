@@ -26,7 +26,11 @@ http:
         "cityName": "Indore",
         "areaName": "Indore City",
         "serviceable": true,
-        "oda": false
+        "oda": false,
+        "productId": 1,
+        "odaEdlDistanceKm": 15.5,
+        "tatWorkingDays": 2,
+        "embargo": false
       }
   auth: inherit
 
@@ -61,7 +65,11 @@ examples:
             "cityName": "Indore",
             "areaName": "Indore City",
             "serviceable": true,
-            "oda": false
+            "oda": false,
+            "productId": 1,
+            "odaEdlDistanceKm": 15.5,
+            "tatWorkingDays": 2,
+            "embargo": false
           }
     response:
       status: 201
@@ -121,12 +129,21 @@ examples:
               "areaName": "Indore City",
               "serviceable": true,
               "oda": false,
+              "productId": 1,
+              "odaEdlDistanceKm": "15.5",
+              "tatWorkingDays": 2,
+              "embargo": false,
               "createdAt": "2026-04-13T08:14:23.670Z",
               "updatedAt": "2026-04-13T08:14:23.670Z",
               "createdById": 1,
               "updatedById": null,
               "deletedAt": null,
               "deletedById": null,
+              "product": {
+                "id": 1,
+                "productCode": "AIR",
+                "productName": "Air Express"
+              },
               "serviceablePincodeZones": [
                 {
                   "id": 1,
@@ -186,7 +203,8 @@ examples:
             "cityName": "Bhopal",
             "areaName": "MP Nagar",
             "serviceable": true,
-            "oda": false
+            "oda": false,
+            "tatWorkingDays": 3
           }
     response:
       status: 201
@@ -205,6 +223,11 @@ examples:
               "areaName": "MP Nagar",
               "serviceable": true,
               "oda": false,
+              "productId": null,
+              "odaEdlDistanceKm": null,
+              "tatWorkingDays": 3,
+              "embargo": null,
+              "product": null,
               "serviceablePincodeZones": [
                 {
                   "id": 3,
@@ -246,7 +269,11 @@ examples:
             "cityName": "Indore",
             "areaName": "Indore City",
             "serviceable": true,
-            "oda": false
+            "oda": false,
+            "productId": 1,
+            "odaEdlDistanceKm": 20,
+            "tatWorkingDays": 1,
+            "embargo": true
           }
     response:
       status: 201
@@ -306,6 +333,15 @@ examples:
               "areaName": "Indore City",
               "serviceable": true,
               "oda": false,
+              "productId": 1,
+              "odaEdlDistanceKm": "20",
+              "tatWorkingDays": 1,
+              "embargo": true,
+              "product": {
+                "id": 1,
+                "productCode": "AIR",
+                "productName": "Air Express"
+              },
               "createdAt": "2026-04-13T09:12:17.453Z",
               "updatedAt": "2026-04-13T09:12:17.453Z",
               "createdById": 1,

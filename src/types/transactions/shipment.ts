@@ -129,6 +129,8 @@ export const shipmentSchema = z.object({
   volumetricWeight: z.number().optional(),
   chargeWeight: z.number().optional(),
   km: z.number().optional(),
+  isEdl: z.boolean().default(false),
+  odaEdlDistanceKm: z.number().optional(),
   commercial: z.boolean().default(false),
   paymentType: z.string().optional(),
   currency: z.string().optional(),
@@ -148,7 +150,6 @@ export const shipmentSchema = z.object({
   cgst: z.number().optional(),
   sgst: z.number().optional(),
   totalAmount: z.number().optional(),
-  oda: z.boolean().default(false),
   medicalCharges: z.number().optional(),
   manifestNo: z.string().optional(),
   manifestDate: z.string().optional(),
@@ -359,6 +360,10 @@ export interface Shipment {
   destination?: string | null;
   pieces?: number | null;
   km?: number | null;
+  isEdl?: boolean;
+  /** @deprecated Ignored for new bookings; merged into `isEdl` when loading legacy data. */
+  oda?: boolean;
+  odaEdlDistanceKm?: number | string | null;
   commercial?: boolean;
   instruction?: string | null;
   serviceCenterId?: number | null;

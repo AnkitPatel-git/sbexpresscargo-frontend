@@ -32,6 +32,7 @@ import { serviceablePincodeService } from '@/services/utilities/serviceable-pinc
 import { countryService } from '@/services/masters/country-service'
 import { stateService } from '@/services/masters/state-service'
 import { zoneService } from '@/services/masters/zone-service'
+import { productService } from '@/services/masters/product-service'
 import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import { ServiceablePincode, type ServiceablePincodeFormData } from '@/types/utilities/serviceable-pincode'
@@ -45,7 +46,25 @@ const pincodeSchema = z.object({
     cityName: z.string().min(1, "City Name is required"),
     areaName: z.string().min(1, "Area Name is required"),
     serviceable: z.boolean(),
-    oda: z.boolean(),
+    edl: z.boolean(),
+    productId: z.number().int().min(0),
+    odaEdlDistanceKm: z
+        .string()
+        .optional()
+        .refine(
+            (s) => !s?.trim() || (!Number.isNaN(Number(s)) && Number(s) >= 0),
+            { message: 'EDL distance must be a number ≥ 0' },
+        ),
+    tatWorkingDays: z
+        .string()
+        .optional()
+        .refine(
+            (s) =>
+                !s?.trim() ||
+                (!Number.isNaN(Number(s)) && Number(s) >= 0 && Number.isInteger(Number(s))),
+            { message: 'TAT must be a whole number ≥ 0' },
+        ),
+    embargo: z.boolean().optional(),
 })
 
 type PincodeFormValues = z.infer<typeof pincodeSchema>
@@ -61,13 +80,16 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     const [countryOpen, setCountryOpen] = useState(false)
     const [stateOpen, setStateOpen] = useState(false)
     const [zoneOpen, setZoneOpen] = useState(false)
+    const [productOpen, setProductOpen] = useState(false)
     const [countrySearch, setCountrySearch] = useState('')
     const [stateSearch, setStateSearch] = useState('')
     const [zoneSearch, setZoneSearch] = useState('')
+    const [productSearch, setProductSearch] = useState('')
 
     const debouncedCountrySearch = useDebounce(countrySearch, 300)
     const debouncedStateSearch = useDebounce(stateSearch, 300)
     const debouncedZoneSearch = useDebounce(zoneSearch, 300)
+    const debouncedProductSearch = useDebounce(productSearch, 300)
 
     const { data: countriesData } = useQuery({
         queryKey: ['countries-list', debouncedCountrySearch],
@@ -82,6 +104,20 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         return initialData.zones?.map((z) => z.id) ?? []
     }, [initialData])
 
+    function formatDistanceInitial(value: unknown): string {
+        if (value == null || value === '') return ''
+        if (typeof value === 'number' || typeof value === 'string') return String(value)
+        if (value && typeof value === 'object' && 'd' in (value as { d?: number[] })) {
+            const decimal = value as { s?: number; e?: number; d?: number[] }
+            const digits = Array.isArray(decimal.d) ? decimal.d.join('') : ''
+            const exponent = decimal.e ?? 0
+            const sign = decimal.s === -1 ? '-' : ''
+            const parsed = Number(`${sign}${digits}e${exponent}`)
+            return Number.isFinite(parsed) ? String(parsed) : ''
+        }
+        return ''
+    }
+
     const form = useForm<PincodeFormValues>({
         resolver: zodResolver(pincodeSchema),
         defaultValues: {
@@ -93,7 +129,11 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             cityName: initialData?.cityName ?? '',
             areaName: initialData?.areaName ?? '',
             serviceable: initialData?.serviceable ?? true,
-            oda: initialData?.oda ?? false,
+            edl: Boolean(initialData?.edl) || Boolean(initialData?.oda),
+            productId: initialData?.productId ?? 0,
+            odaEdlDistanceKm: formatDistanceInitial(initialData?.odaEdlDistanceKm),
+            tatWorkingDays: initialData?.tatWorkingDays != null ? String(initialData.tatWorkingDays) : '',
+            embargo: initialData?.embargo ?? false,
         },
     })
 
@@ -128,12 +168,47 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         staleTime: 5 * 60 * 1000,
     })
 
+    const { data: productsData, isFetching: isProductsFetching } = useQuery({
+        queryKey: ['serviceable-pincode-products', debouncedProductSearch],
+        queryFn: () =>
+            productService.getProducts({
+                page: 1,
+                limit: 50,
+                search: debouncedProductSearch,
+                sortBy: 'productName',
+                sortOrder: 'asc',
+                status: 'ACTIVE',
+            }),
+        enabled: productOpen || !!initialData?.productId,
+        staleTime: 5 * 60 * 1000,
+    })
+
     const countryOptions = useMemo(() => countriesData?.data ?? [], [countriesData?.data])
     const stateOptions = useMemo(
         () => (statesData?.data ?? []).filter((state) => !selectedCountryId || state.countryId === selectedCountryId),
         [selectedCountryId, statesData?.data]
     )
     const zoneOptions = useMemo(() => zonesData?.data ?? [], [zonesData?.data])
+    const productOptions = useMemo(() => productsData?.data ?? [], [productsData?.data])
+
+    const selectedProductId = useWatch({
+        control: form.control,
+        name: 'productId',
+    })
+
+    const selectedProduct = useMemo(() => {
+        if (selectedProductId && productOptions.some((p) => p.id === selectedProductId)) {
+            return productOptions.find((p) => p.id === selectedProductId) ?? null
+        }
+        if (initialData?.productId === selectedProductId && initialData.product) {
+            return {
+                id: initialData.product.id,
+                productCode: initialData.product.productCode,
+                productName: initialData.product.productName,
+            }
+        }
+        return null
+    }, [initialData, productOptions, selectedProductId])
 
     const selectedCountry = useMemo(() => {
         if (countryOptions.length > 0) {
@@ -201,6 +276,31 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         if (!zoneOpen) setZoneSearch('')
     }, [zoneOpen])
 
+    useEffect(() => {
+        if (!productOpen) setProductSearch('')
+    }, [productOpen])
+
+    useEffect(() => {
+        if (!initialData) return
+        form.reset({
+            countryId: initialData.countryId ?? 0,
+            countryCode: initialData.country?.code ?? '',
+            stateId: initialData.stateId ?? 0,
+            zoneIds: initialData.zoneIds?.length
+                ? initialData.zoneIds
+                : initialData.zones?.map((z) => z.id) ?? [],
+            pinCode: initialData.pinCode ?? '',
+            cityName: initialData.cityName ?? '',
+            areaName: initialData.areaName ?? '',
+            serviceable: initialData.serviceable ?? true,
+            edl: Boolean(initialData.edl) || Boolean(initialData.oda),
+            productId: initialData.productId ?? 0,
+            odaEdlDistanceKm: formatDistanceInitial(initialData.odaEdlDistanceKm),
+            tatWorkingDays: initialData.tatWorkingDays != null ? String(initialData.tatWorkingDays) : '',
+            embargo: initialData.embargo ?? false,
+        })
+    }, [initialData])
+
     function toggleZone(zoneId: number) {
         const currentZoneIds = form.getValues('zoneIds')
         if (currentZoneIds.includes(zoneId)) {
@@ -221,7 +321,23 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                 cityName: data.cityName,
                 areaName: data.areaName,
                 serviceable: data.serviceable,
-                oda: data.oda,
+                edl: data.edl,
+            }
+            if (data.productId > 0) {
+                payload.productId = data.productId
+            } else if (isEdit) {
+                payload.productId = null
+            }
+            const odaKm = data.odaEdlDistanceKm?.trim()
+            if (odaKm) {
+                payload.odaEdlDistanceKm = Number(odaKm)
+            }
+            const tat = data.tatWorkingDays?.trim()
+            if (tat) {
+                payload.tatWorkingDays = Number(tat)
+            }
+            if (data.embargo !== undefined) {
+                payload.embargo = data.embargo
             }
 
             if (isEdit && initialData) {
@@ -414,6 +530,118 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
 
                     <FormField
                         control={form.control}
+                        name="productId"
+                        render={({ field }) => (
+                            <FloatingFormItem label="Mode / product">
+                                <Popover open={productOpen} onOpenChange={setProductOpen}>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                role="combobox"
+                                                className={cn(
+                                                    FLOATING_INNER_COMBO,
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <span className="truncate">
+                                                    {selectedProduct
+                                                        ? `${selectedProduct.productName} (${selectedProduct.productCode})`
+                                                        : "Optional — select product"}
+                                                </span>
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                                        <Command shouldFilter={false}>
+                                            <CommandInput
+                                                placeholder="Search product..."
+                                                value={productSearch}
+                                                onValueChange={setProductSearch}
+                                            />
+                                            <CommandList>
+                                                <CommandEmpty>No product found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    <CommandItem
+                                                        value="__none__"
+                                                        onSelect={() => {
+                                                            field.onChange(0)
+                                                            setProductOpen(false)
+                                                        }}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", field.value === 0 ? "opacity-100" : "opacity-0")} />
+                                                        None
+                                                    </CommandItem>
+                                                    {productOptions.map((product) => (
+                                                        <CommandItem
+                                                            key={product.id}
+                                                            value={`${product.productName} ${product.productCode}`}
+                                                            onSelect={() => {
+                                                                field.onChange(product.id)
+                                                                setProductOpen(false)
+                                                            }}
+                                                        >
+                                                            <Check className={cn("mr-2 h-4 w-4", product.id === field.value ? "opacity-100" : "opacity-0")} />
+                                                            {product.productName} ({product.productCode})
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                                {isProductsFetching ? (
+                                                    <div className="flex items-center justify-center p-3 text-sm text-muted-foreground">
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Loading products...
+                                                    </div>
+                                                ) : null}
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </FloatingFormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="odaEdlDistanceKm"
+                        render={({ field }) => (
+                            <FloatingFormItem label="EDL distance (km)">
+                                <FormControl>
+                                    <Input
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="Optional"
+                                        {...field}
+                                        value={field.value ?? ''}
+                                        className={FLOATING_INNER_CONTROL}
+                                    />
+                                </FormControl>
+                            </FloatingFormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="tatWorkingDays"
+                        render={({ field }) => (
+                            <FloatingFormItem label="TAT (working days)">
+                                <FormControl>
+                                    <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="Optional"
+                                        {...field}
+                                        value={field.value ?? ''}
+                                        className={FLOATING_INNER_CONTROL}
+                                    />
+                                </FormControl>
+                            </FloatingFormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
                         name="zoneIds"
                         render={({ field }) => (
                             <FloatingFormItem label="Zones">
@@ -496,7 +724,24 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         )}
                     />
 
-                    <div className="flex flex-col sm:flex-row gap-4 pt-2 md:col-span-2">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-4 pt-2 md:col-span-2">
+                        <FormField
+                            control={form.control}
+                            name="embargo"
+                            render={({ field }) => (
+                                <FloatingFormItem label="Embargo" itemClassName="flex-1 min-w-[140px]">
+                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                        <FormControl>
+                                            <Checkbox
+                                                checked={field.value ?? false}
+                                                onCheckedChange={(v) => field.onChange(Boolean(v))}
+                                            />
+                                        </FormControl>
+                                    </div>
+                                </FloatingFormItem>
+                            )}
+                        />
+
                         <FormField
                             control={form.control}
                             name="serviceable"
@@ -516,9 +761,9 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
 
                         <FormField
                             control={form.control}
-                            name="oda"
+                            name="edl"
                             render={({ field }) => (
-                                <FloatingFormItem label="ODA" itemClassName="flex-1">
+                                <FloatingFormItem label="EDL (extended delivery)" itemClassName="flex-1">
                                     <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                         <FormControl>
                                             <Checkbox

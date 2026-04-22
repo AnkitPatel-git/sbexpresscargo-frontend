@@ -30,7 +30,11 @@ http:
         "cityName": "Sample Name",
         "areaName": "Sample Name",
         "serviceable": true,
-        "oda": true
+        "oda": true,
+        "productId": 1,
+        "odaEdlDistanceKm": 18.25,
+        "tatWorkingDays": 4,
+        "embargo": false
       }
   auth: inherit
 
