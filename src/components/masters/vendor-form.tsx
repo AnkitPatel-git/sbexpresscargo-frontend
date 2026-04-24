@@ -34,7 +34,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 import { vendorService } from "@/services/masters/vendor-service"
 import { bankService } from "@/services/masters/bank-service"
-import { Vendor } from "@/types/masters/vendor"
+import { Vendor, VendorFormData } from "@/types/masters/vendor"
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
 import {
     getInitialPincode,
@@ -136,10 +136,10 @@ export function VendorForm({ initialData }: VendorFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: VendorFormValues) => {
-            const payload = {
+            const payload: VendorFormData = {
                 ...omitEmptyCodeFields(data, ["vendorCode"]),
                 pinCodeId: normalizeOptionalPincode(data.pinCodeId),
-            } as VendorFormValues
+            }
             if (isEdit && initialData) {
                 return vendorService.updateVendor(initialData.id, { ...payload, version: initialData.version ?? 1 })
             }
