@@ -296,7 +296,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                 render={({ field }) => (
                                     <FloatingFormItem label="GST Number">
                                         <FormControl>
-                                            <Input {...field} placeholder="15-digit GSTIN" className={FLOATING_INNER_CONTROL} />
+                                            <Input {...field} value={field.value || ''} placeholder="15-digit GSTIN" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}
