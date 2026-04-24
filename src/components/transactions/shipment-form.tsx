@@ -116,6 +116,13 @@ type KycRow = {
     entryDate: string
 }
 
+const generateKycRowId = () => {
+    if (typeof globalThis.crypto?.randomUUID === "function") {
+        return globalThis.crypto.randomUUID()
+    }
+    return `kyc-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 const normalizeNumberValue = (value: unknown): number | undefined => {
     if (typeof value === "number" && Number.isFinite(value)) return value
     if (typeof value === "string" && value.trim()) {
@@ -623,7 +630,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
     })
     const [kycRows, setKycRows] = useState<KycRow[]>([
-        { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
+        { id: generateKycRowId(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
     ])
     const existingKycDocuments: ShipmentKycDocument[] = initialData?.kycDocuments || []
     const [chargePreview, setChargePreview] = useState<ShipmentCalculateResponse | null>(null)
@@ -1325,7 +1332,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const addKycRow = () => {
         setKycRows((prev) => [
             ...prev,
-            { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
+            { id: generateKycRowId(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
         ])
     }
 
