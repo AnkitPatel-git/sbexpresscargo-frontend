@@ -16,12 +16,16 @@ export interface Product {
 }
 
 export interface ProductFormData {
-    productCode: string;
+    productCode?: string;
     productName: string;
     productType: string;
     status: string;
-    /** Required on PATCH (Bruno); omit on POST. */
+    /** Required on update; omit on create. */
     version?: number;
+}
+
+export type ProductUpdateData = Partial<Omit<ProductFormData, 'version'>> & {
+    version: number;
 }
 
 export interface ProductListResponse {

@@ -5,6 +5,15 @@ export interface VendorBankRef {
     status?: 'ACTIVE' | 'INACTIVE' | string;
 }
 
+export interface VendorServiceablePincodeRef {
+    id: number;
+    pinCode: string;
+    cityName: string;
+    areaName?: string;
+    serviceable?: boolean;
+    oda?: boolean;
+}
+
 export interface Vendor {
     id: number;
     vendorCode: string;
@@ -38,6 +47,7 @@ export interface Vendor {
     deletedAt: string | null;
     deletedById: number | null;
     bank?: VendorBankRef | null;
+    serviceablePincode?: VendorServiceablePincodeRef | null;
 }
 
 export interface VendorFormData {
@@ -46,7 +56,7 @@ export interface VendorFormData {
     contactPerson: string;
     address1: string;
     address2?: string;
-    pinCodeId?: string | number;
+    pinCodeId?: string;
     bankId?: number;
     bankAccount?: string;
     bankIfsc?: string;

@@ -71,14 +71,8 @@ export interface Customer {
     status: 'ACTIVE' | 'INACTIVE';
     origin: string | null;
     gstNo: string | null;
-    aadhaarNo: string | null;
-    dobOnAadhaar: string | null;
-    panNo: string | null;
-    invoiceFormat: string | null;
     customerType: 'INDIVIDUAL' | 'CORPORATE' | string | null;
     registerType: 'REGISTERED' | 'UNREGISTERED' | string | null;
-    signatureFile: string | null;
-    logoFile: string | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -98,7 +92,7 @@ export interface CustomerFormData {
     contactPerson?: string;
     address1?: string;
     address2?: string;
-    pinCodeId?: number;
+    pinCodeId?: string | number;
     serviceCenterId?: number;
     bankId?: number;
     bankAccount?: string;
@@ -110,14 +104,8 @@ export interface CustomerFormData {
     status?: 'ACTIVE' | 'INACTIVE';
     origin?: string;
     gstNo?: string;
-    aadhaarNo?: string;
-    dobOnAadhaar?: string;
-    panNo?: string;
-    invoiceFormat?: string;
     customerType?: 'INDIVIDUAL' | 'CORPORATE' | string;
     registerType?: 'REGISTERED' | 'UNREGISTERED' | string;
-    signatureFile?: string;
-    logoFile?: string;
     createDefaultShipper?: boolean;
     version?: number;
 }

@@ -63,6 +63,11 @@ import {
     type CustomerVolumetricFormData,
 } from '@/types/masters/customer'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
+import {
+    getInitialPincode,
+    normalizePincodeInput,
+    requiredPincodeField,
+} from '@/lib/pincode-field'
 
 const customerSchema = z.object({
     code: optionalMasterCode(2),
@@ -70,26 +75,20 @@ const customerSchema = z.object({
     contactPerson: z.string().min(3, "Contact person is required"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
     address2: z.string().optional().or(z.literal("")),
-    pinCodeId: z.coerce.number().int().positive("Pin code is required"),
+    pinCodeId: requiredPincodeField(),
     serviceCenterId: z.coerce.number().int().positive("Service center is required"),
     bankId: z.coerce.number().int().positive("Bank is required"),
     bankAccount: z.string().min(1, "Bank account is required"),
     bankIfsc: z.string().min(1, "Bank IFSC is required"),
-    telephone: z.string().min(10, "Telephone must be at least 10 characters"),
+    telephone: z.string().optional().or(z.literal("")),
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
     serviceStartDate: z.string().min(1, "Service start date is required"),
     status: z.enum(['ACTIVE', 'INACTIVE']),
     origin: z.string().optional().or(z.literal("")),
-    gstNo: z.string().min(15, "GST Number must be 15 characters"),
-    aadhaarNo: z.string().optional().or(z.literal("")),
-    dobOnAadhaar: z.string().optional().or(z.literal("")),
-    panNo: z.string().optional().or(z.literal("")),
-    invoiceFormat: z.string().optional().or(z.literal("")),
+    gstNo: z.string().optional().or(z.literal("")),
     customerType: z.enum(['INDIVIDUAL', 'CORPORATE']),
     registerType: z.enum(['REGISTERED', 'UNREGISTERED']),
-    signatureFile: z.string().optional().or(z.literal("")),
-    logoFile: z.string().optional().or(z.literal("")),
     createDefaultShipper: z.boolean().default(false),
 })
 
@@ -115,6 +114,8 @@ const CUSTOMER_OTHER_CHARGE_TYPES = [
     'FLAT',
     'OTHER',
 ] as const
+
+const ALL_PRODUCTS_OPTION_VALUE = '__ALL_PRODUCTS__'
 
 export function CustomerForm({ initialData }: CustomerFormProps) {
     const router = useRouter()
@@ -151,7 +152,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             contactPerson: '',
             address1: '',
             address2: '',
-            pinCodeId: 0,
+            pinCodeId: '',
             serviceCenterId: 0,
             bankId: 0,
             bankAccount: '',
@@ -163,14 +164,8 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             status: 'ACTIVE',
             origin: '',
             gstNo: '',
-            aadhaarNo: '',
-            dobOnAadhaar: '',
-            panNo: '',
-            invoiceFormat: '',
             customerType: 'INDIVIDUAL',
             registerType: 'REGISTERED',
-            signatureFile: '',
-            logoFile: '',
             createDefaultShipper: false,
         },
     })
@@ -184,7 +179,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             contactPerson: initialData.contactPerson || '',
             address1: initialData.address1 || '',
             address2: initialData.address2 || '',
-            pinCodeId: initialData.pinCodeId ?? 0,
+            pinCodeId: getInitialPincode(initialData),
             serviceCenterId: initialData.serviceCenterId ?? 0,
             bankId: initialData.bankId ?? 0,
             bankAccount: initialData.bankAccount || '',
@@ -196,14 +191,8 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             status: initialData.status || 'ACTIVE',
             origin: initialData.origin || '',
             gstNo: initialData.gstNo || '',
-            aadhaarNo: initialData.aadhaarNo || '',
-            dobOnAadhaar: initialData.dobOnAadhaar ? initialData.dobOnAadhaar.split('T')[0] : '',
-            panNo: initialData.panNo || '',
-            invoiceFormat: initialData.invoiceFormat || '',
             customerType: (initialData.customerType as 'INDIVIDUAL' | 'CORPORATE') || 'INDIVIDUAL',
             registerType: (initialData.registerType as 'REGISTERED' | 'UNREGISTERED') || 'REGISTERED',
-            signatureFile: initialData.signatureFile || '',
-            logoFile: initialData.logoFile || '',
             createDefaultShipper: false,
         })
     }, [initialData, form])
@@ -382,9 +371,17 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="pinCodeId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Pin Code ID">
+                                        <FloatingFormItem label="Pin Code">
                                             <FormControl>
-                                                <Input type="number" {...field} value={field.value || ''} onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))} placeholder="Pin code id" className={FLOATING_INNER_CONTROL} />
+                                                <Input
+                                                    {...field}
+                                                    value={field.value || ''}
+                                                    inputMode="numeric"
+                                                    maxLength={6}
+                                                    onChange={(event) => field.onChange(normalizePincodeInput(event.target.value))}
+                                                    placeholder="6-digit pincode"
+                                                    className={FLOATING_INNER_CONTROL}
+                                                />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -430,79 +427,6 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                         </FloatingFormItem>
                                     )}
                                 />
-                            </FormSection>
-
-                            <FormSection title="Identification" contentClassName="space-y-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="aadhaarNo"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Aadhaar">
-                                                <FormControl>
-                                                    <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="dobOnAadhaar"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="DOB on Aadhaar">
-                                                <FormControl>
-                                                    <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="panNo"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="PAN">
-                                                <FormControl>
-                                                    <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="invoiceFormat"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Invoice Format">
-                                                <FormControl>
-                                                    <Input {...field} placeholder="e.g. STANDARD" className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="signatureFile"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Signature File URL">
-                                                <FormControl>
-                                                    <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="logoFile"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Logo File URL">
-                                                <FormControl>
-                                                    <Input {...field} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                </div>
                             </FormSection>
 
                             <FormSection title="Account" contentClassName="space-y-4">
@@ -734,7 +658,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<CustomerFuelSurcharge | null>(null)
     const [form, setForm] = useState<CustomerFuelSurchargeFormData>({
-        productId: 0,
+        productId: undefined,
         fuelChargeType: 'PERCENTAGE',
         fromDate: '',
         toDate: '',
@@ -762,7 +686,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
             queryClient.invalidateQueries({ queryKey: ['customer-fuel-surcharges', customerId] })
             setOpen(false)
             setEditing(null)
-            setForm({ productId: 0, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
+            setForm({ productId: undefined, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
             toast.success(`Fuel surcharge ${editing ? 'updated' : 'added'} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -783,12 +707,12 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
             title="Fuel Surcharges"
             onAdd={() => {
                 setEditing(null)
-                setForm({ productId: 0, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
+                setForm({ productId: undefined, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
                 setOpen(true)
             }}
             columns={['Product', 'Type', 'From Date', 'To Date', 'Percentage', 'Action']}
             rows={surchargeRows.map((item) => [
-                item.product?.productName ?? '-',
+                item.product?.productName ?? 'All Products',
                 item.fuelChargeType,
                 formatDate(item.fromDate),
                 formatDate(item.toDate),
@@ -799,7 +723,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                     <Button type="button" variant="outline" size="sm" onClick={() => {
                         setEditing(item)
                         setForm({
-                            productId: item.productId ?? 0,
+                            productId: item.productId ?? undefined,
                             fuelChargeType: item.fuelChargeType,
                             fromDate: item.fromDate.split('T')[0] ?? '',
                             toDate: item.toDate.split('T')[0] ?? '',
@@ -819,12 +743,30 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                 saving={mutation.isPending}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect label="Product" value={String(form.productId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))} options={(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName }))} />
+                    <SimpleSelect
+                        label="Product"
+                        value={form.productId != null ? String(form.productId) : editing ? '' : ALL_PRODUCTS_OPTION_VALUE}
+                        onValueChange={(value) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                productId: value === ALL_PRODUCTS_OPTION_VALUE ? undefined : Number(value),
+                            }))
+                        }
+                        options={[
+                            ...(!editing ? [{ value: ALL_PRODUCTS_OPTION_VALUE, label: 'All Products' }] : []),
+                            ...(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName })),
+                        ]}
+                    />
                     <SimpleSelect label="Fuel Charge Type" value={form.fuelChargeType} onValueChange={(v) => setForm((prev) => ({ ...prev, fuelChargeType: v }))} options={[{ value: 'PERCENTAGE', label: 'PERCENTAGE' }, { value: 'FIXED', label: 'FIXED' }]} />
                     <SimpleInput label="Fuel Surcharge" type="number" value={String(form.fuelSurcharge)} onChange={(value) => setForm((prev) => ({ ...prev, fuelSurcharge: Number(value) }))} />
                     <SimpleInput label="From Date" type="date" value={form.fromDate} onChange={(value) => setForm((prev) => ({ ...prev, fromDate: value }))} />
                     <SimpleInput label="To Date" type="date" value={form.toDate} onChange={(value) => setForm((prev) => ({ ...prev, toDate: value }))} />
                 </div>
+                {!editing ? (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                        Leave Product as All Products to create the same fuel surcharge for every product.
+                    </p>
+                ) : null}
             </CustomerEntityDialog>
         </CustomerChildTableCard>
     )

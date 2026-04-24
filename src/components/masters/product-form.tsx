@@ -27,12 +27,16 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { productService } from '@/services/masters/product-service'
-import { Product, type ProductFormData } from '@/types/masters/product'
+import {
+    Product,
+    type ProductFormData,
+    type ProductUpdateData,
+} from '@/types/masters/product'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const productSchema = z.object({
     productCode: optionalMasterCode(2),
-    productName: z.string().min(3, "Product name must be at least 3 characters"),
+    productName: z.string().trim().min(3, "Product name must be at least 3 characters"),
     productType: z.string().min(1, "Product type is required"),
     status: z.string().min(1, "Status is required"),
 })
@@ -71,9 +75,12 @@ export function ProductForm({ initialData }: ProductFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: ProductFormValues) => {
-            const payload = omitEmptyCodeFields(data, ['productCode']) as ProductFormValues
+            const payload = omitEmptyCodeFields({
+                ...data,
+                productName: data.productName.trim(),
+            }, ['productCode']) as ProductFormValues
             if (isEdit && initialData) {
-                const updateBody: Partial<ProductFormData> = {
+                const updateBody: ProductUpdateData = {
                     ...payload,
                     version: initialData.version ?? 1,
                 }
@@ -109,9 +116,8 @@ export function ProductForm({ initialData }: ProductFormProps) {
                             <FloatingFormItem label="Product Code (optional)">
                                 <FormControl>
                                     <Input
-                                        placeholder="Leave blank to auto-generate"
+                                        placeholder={isEdit ? "Enter product code" : "Leave blank to auto-generate"}
                                         {...field}
-                                        disabled={isEdit}
                                         className={FLOATING_INNER_CONTROL}
                                     />
                                 </FormControl>

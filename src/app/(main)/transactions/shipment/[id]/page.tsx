@@ -120,9 +120,9 @@ export default function ShipmentDetailsPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipment", id] });
-      toast.success("Shiment booking status updated");
+      toast.success("Shipment booking status updated");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to update shiment booking status"),
+    onError: (error: Error) => toast.error(error.message || "Failed to update shipment booking status"),
   });
 
   const podMutation = useMutation({
@@ -167,7 +167,7 @@ export default function ShipmentDetailsPage() {
   if (!shipment?.id) {
     return (
       <div className="flex h-[400px] items-center justify-center">
-        <p className="text-muted-foreground">Shiment booking not found.</p>
+        <p className="text-muted-foreground">Shipment booking not found.</p>
       </div>
     );
   }
@@ -176,7 +176,7 @@ export default function ShipmentDetailsPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card p-3">
         <div>
-          <h1 className="text-base font-semibold tracking-tight">Shiment Booking Details</h1>
+          <h1 className="text-base font-semibold tracking-tight">Shipment Booking Details</h1>
           <p className="text-xs text-muted-foreground">AWB: {shipment.awbNo}</p>
         </div>
         <div className="flex items-center gap-2">

@@ -19,17 +19,7 @@ export interface LocalBranch {
     telephone: string | null;
     email: string;
     panNo?: string;
-    gstNo: string;
-    companyLogo?: string | null;
-    signatoryLogo?: string | null;
-    terms?: string[];
-    lastInvoiceNo?: number;
-    invoicePrefix?: string;
-    invoiceSuffix?: string;
-    lastFreeFormInvoiceNo?: number;
-    freeFormPrefix?: string;
-    freeFormSuffix?: string;
-    rcpLastNo?: number;
+    gstNo: string | null;
     country?: {
         id: number;
         code: string;
@@ -62,22 +52,12 @@ export interface LocalBranchFormData {
     name: string;
     address1: string;
     address2?: string | null | undefined;
-    pinCodeId?: string | number;
+    pinCodeId?: string;
     serviceCenterId: number;
-    telephone: string;
+    telephone?: string | null | undefined;
     email: string;
     panNo?: string | null | undefined;
-    gstNo: string;
-    companyLogo?: string | null | undefined;
-    signatoryLogo?: string | null | undefined;
-    terms?: string[] | null | undefined;
-    lastInvoiceNo?: number | null | undefined;
-    invoicePrefix?: string | null | undefined;
-    invoiceSuffix?: string | null | undefined;
-    lastFreeFormInvoiceNo?: number | null | undefined;
-    freeFormPrefix?: string | null | undefined;
-    freeFormSuffix?: string | null | undefined;
-    rcpLastNo?: number | null | undefined;
+    gstNo?: string | null | undefined;
 }
 
 export interface LocalBranchListResponse {

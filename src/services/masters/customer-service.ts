@@ -213,7 +213,7 @@ export const customerService = {
             const error = await response.json();
             throw new Error(error.message || 'Failed to add fuel surcharge');
         }
-        return response.json() as Promise<CustomerChildSingleResponse<CustomerFuelSurcharge>>;
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerFuelSurcharge | CustomerFuelSurcharge[]>>;
     },
 
     async updateCustomerFuelSurcharge(customerId: number, surchargeId: number | string, body: CustomerFuelSurchargeFormData) {

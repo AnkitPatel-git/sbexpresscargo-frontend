@@ -27,7 +27,7 @@ export default function EditShipmentPage() {
     if (!shipmentResponse?.data) {
         return (
             <div className="flex h-[400px] items-center justify-center">
-                <p className="text-muted-foreground">Shiment booking not found.</p>
+                <p className="text-muted-foreground">Shipment booking not found.</p>
             </div>
         )
     }
@@ -35,7 +35,7 @@ export default function EditShipmentPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Edit Shiment Booking</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Edit Shipment Booking</h1>
                 <p className="text-muted-foreground">
                     Update details for AWB: {shipmentResponse.data.awbNo}
                 </p>

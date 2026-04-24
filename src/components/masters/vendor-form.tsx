@@ -36,6 +36,12 @@ import { vendorService } from "@/services/masters/vendor-service"
 import { bankService } from "@/services/masters/bank-service"
 import { Vendor } from "@/types/masters/vendor"
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
+import {
+    getInitialPincode,
+    normalizeOptionalPincode,
+    normalizePincodeInput,
+    optionalPincodeField,
+} from "@/lib/pincode-field"
 
 const vendorSchema = z.object({
     vendorCode: optionalMasterCode(2),
@@ -43,7 +49,7 @@ const vendorSchema = z.object({
     contactPerson: z.string().min(3, "Contact person is required"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
     address2: z.string().optional(),
-    pinCodeId: z.string().optional().or(z.literal("")),
+    pinCodeId: optionalPincodeField(),
     bankId: z.coerce.number().int().positive("Bank is required"),
     bankAccount: z.string().min(1, "Bank account is required"),
     bankIfsc: z.string().min(1, "Bank IFSC is required"),
@@ -109,7 +115,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                 contactPerson: initialData.contactPerson,
                 address1: initialData.address1,
                 address2: initialData.address2 || "",
-                pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : "",
+                pinCodeId: getInitialPincode(initialData),
                 bankId: initialData.bankId ?? 0,
                 bankAccount: initialData.bankAccount || "",
                 bankIfsc: initialData.bankIfsc || "",
@@ -130,7 +136,10 @@ export function VendorForm({ initialData }: VendorFormProps) {
 
     const mutation = useMutation({
         mutationFn: (data: VendorFormValues) => {
-            const payload = omitEmptyCodeFields(data, ["vendorCode"]) as VendorFormValues
+            const payload = {
+                ...omitEmptyCodeFields(data, ["vendorCode"]),
+                pinCodeId: normalizeOptionalPincode(data.pinCodeId),
+            } as VendorFormValues
             if (isEdit && initialData) {
                 return vendorService.updateVendor(initialData.id, { ...payload, version: initialData.version ?? 1 })
             }
@@ -327,9 +336,17 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control}
                                     name="pinCodeId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Pin Code ID">
+                                        <FloatingFormItem label="Pin Code">
                                             <FormControl>
-                                                <Input placeholder="e.g. 486001" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                                <Input
+                                                    placeholder="e.g. 486001"
+                                                    {...field}
+                                                    value={field.value || ""}
+                                                    inputMode="numeric"
+                                                    maxLength={6}
+                                                    className={FLOATING_INNER_CONTROL}
+                                                    onChange={(event) => field.onChange(normalizePincodeInput(event.target.value))}
+                                                />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}

@@ -78,8 +78,8 @@ const headerNavItems = [
   { href: "/masters/states", label: "State Master" },
   { href: "/masters/contents", label: "Content Master" },
   { href: "/masters/banks", label: "Bank Master" },
-  { href: "/masters/local-branches", label: "Local Branch Master" },
   { href: "/masters/service-centers", label: "Service Center Master" },
+  { href: "/masters/local-branches", label: "Local Branch Master" },
   { href: "/masters/customers", label: "Customer Master" },
   { href: "/masters/rates", label: "Rate Master" },
   { href: "/masters/consignee", label: "Consignee Master" },
@@ -91,7 +91,7 @@ const headerNavItems = [
   { href: "/masters/vehicle", label: "Vehicle Master" },
   { href: "/masters/courier", label: "Courier Master" },
   { href: "/masters/vendor-config", label: "Vendor Config Master" },
-  { href: "/transactions/shipment", label: "Shiment Booking" },
+  { href: "/transactions/shipment", label: "Shipment Booking" },
   { href: "/transactions/manifest", label: "Manifest" },
   { href: "/transactions/drs", label: "DRS" },
   { href: "/transactions/tracking", label: "Tracking" },
@@ -155,16 +155,16 @@ const MASTER_GROUP_ITEMS = {
       permission: "master.bank.read",
     },
     {
-      href: "/masters/local-branches",
-      label: "Local Branch",
-      icon: MapPin,
-      permission: "master.local_branch.read",
-    },
-    {
       href: "/masters/service-centers",
       label: "Service Center",
       icon: Settings,
       permission: "master.service_center.read",
+    },
+    {
+      href: "/masters/local-branches",
+      label: "Local Branch",
+      icon: MapPin,
+      permission: "master.local_branch.read",
     },
     {
       href: "/masters/charge",
@@ -901,7 +901,7 @@ const SidebarContent = ({
                 active={isActive("/transactions/shipment")}
                 icon={Package}
               >
-                Shiment Booking
+                Shipment Booking
               </LinkItem>
             </PermissionGuard>
             <PermissionGuard permission="transaction.manifest.read">
@@ -986,7 +986,7 @@ const SidebarContent = ({
                     showTextOverride
                     inFlyout
                   >
-                    Shiment Booking
+                    Shipment Booking
                   </LinkItem>
                 </PermissionGuard>
                 <PermissionGuard permission="transaction.manifest.read">
@@ -1719,7 +1719,7 @@ export default function DashboardLayout({
               {[
                 {
                   icon: Truck,
-                  label: "Shiment Booking",
+                  label: "Shipment Booking",
                   href: "/transactions/shipment",
                 },
                 { icon: BarChart3, label: "Analytics", href: "/dashboard" },

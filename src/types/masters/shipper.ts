@@ -69,7 +69,7 @@ export interface ShipperFormData {
     contactPerson?: string
     address1?: string
     address2?: string
-    pinCodeId?: number
+    pinCodeId?: string
     telephone?: string
     email?: string
     mobile?: string
