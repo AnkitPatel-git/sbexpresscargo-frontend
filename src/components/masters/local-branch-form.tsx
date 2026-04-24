@@ -31,13 +31,17 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { FormSection } from "@/components/ui/form-section"
-import { Textarea } from "@/components/ui/textarea"
 import { localBranchService } from '@/services/masters/local-branch-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { LocalBranch, type LocalBranchFormData } from '@/types/masters/local-branch'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
+import {
+    getInitialPincode,
+    normalizePincodeInput,
+    requiredPincodeField,
+} from '@/lib/pincode-field'
 
 const localBranchSchema = z.object({
     branchCode: optionalMasterCode(2),
@@ -45,22 +49,12 @@ const localBranchSchema = z.object({
     name: z.string().min(3, "Branch name must be at least 3 characters"),
     address1: z.string().min(5, "Address must be at least 5 characters"),
     address2: z.string().optional().nullable(),
-    pinCodeId: z.string().min(1, "Pin code id or code is required"),
+    pinCodeId: requiredPincodeField(),
     serviceCenterId: z.number().min(1, "Service Center is required"),
-    telephone: z.string().min(10, "Telephone must be at least 10 characters"),
+    telephone: z.string().optional().nullable(),
     email: z.string().email("Invalid email address"),
     panNo: z.string().optional().nullable(),
-    gstNo: z.string().min(15, "GST No must be 15 characters"),
-    companyLogo: z.string().optional().nullable(),
-    signatoryLogo: z.string().optional().nullable(),
-    termsText: z.string().optional(),
-    lastInvoiceNo: z.coerce.number().optional().nullable(),
-    invoicePrefix: z.string().optional().nullable(),
-    invoiceSuffix: z.string().optional().nullable(),
-    lastFreeFormInvoiceNo: z.coerce.number().optional().nullable(),
-    freeFormPrefix: z.string().optional().nullable(),
-    freeFormSuffix: z.string().optional().nullable(),
-    rcpLastNo: z.coerce.number().optional().nullable(),
+    gstNo: z.string().optional().nullable(),
 })
 
 type LocalBranchFormValues = z.infer<typeof localBranchSchema>
@@ -97,22 +91,12 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
             name: initialData?.name || '',
             address1: initialData?.address1 || '',
             address2: initialData?.address2 || '',
-            pinCodeId: initialData?.pinCodeId != null ? String(initialData.pinCodeId) : '',
+            pinCodeId: getInitialPincode(initialData),
             serviceCenterId: initialData?.serviceCenterId || 0,
             telephone: initialData?.telephone || '',
             email: initialData?.email || '',
             panNo: initialData?.panNo || '',
             gstNo: initialData?.gstNo || '',
-            companyLogo: initialData?.companyLogo || '',
-            signatoryLogo: initialData?.signatoryLogo || '',
-            termsText: initialData?.terms?.join('\n') || '',
-            lastInvoiceNo: initialData?.lastInvoiceNo ?? undefined,
-            invoicePrefix: initialData?.invoicePrefix || '',
-            invoiceSuffix: initialData?.invoiceSuffix || '',
-            lastFreeFormInvoiceNo: initialData?.lastFreeFormInvoiceNo ?? undefined,
-            freeFormPrefix: initialData?.freeFormPrefix || '',
-            freeFormSuffix: initialData?.freeFormSuffix || '',
-            rcpLastNo: initialData?.rcpLastNo ?? undefined,
         }
     })
 
@@ -124,22 +108,12 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
             name: initialData.name,
             address1: initialData.address1,
             address2: initialData.address2 || '',
-            pinCodeId: initialData.pinCodeId != null ? String(initialData.pinCodeId) : '',
+            pinCodeId: getInitialPincode(initialData),
             serviceCenterId: initialData.serviceCenterId || 0,
             telephone: initialData.telephone || '',
             email: initialData.email,
             panNo: initialData.panNo || '',
-            gstNo: initialData.gstNo,
-            companyLogo: initialData.companyLogo || '',
-            signatoryLogo: initialData.signatoryLogo || '',
-            termsText: initialData.terms?.join('\n') || '',
-            lastInvoiceNo: initialData.lastInvoiceNo ?? undefined,
-            invoicePrefix: initialData.invoicePrefix || '',
-            invoiceSuffix: initialData.invoiceSuffix || '',
-            lastFreeFormInvoiceNo: initialData.lastFreeFormInvoiceNo ?? undefined,
-            freeFormPrefix: initialData.freeFormPrefix || '',
-            freeFormSuffix: initialData.freeFormSuffix || '',
-            rcpLastNo: initialData.rcpLastNo ?? undefined,
+            gstNo: initialData.gstNo || '',
         })
     }, [initialData, form])
 
@@ -159,15 +133,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
 
     const mutation = useMutation({
         mutationFn: (values: LocalBranchFormValues) => {
-            const terms = values.termsText
-                ? values.termsText.split('\n').map((term) => term.trim()).filter(Boolean)
-                : []
-
-            const { termsText, ...rest } = values
-            const payload = omitEmptyCodeFields({
-                ...rest,
-                terms,
-            }, ['branchCode']) as LocalBranchFormData
+            const payload = omitEmptyCodeFields(values, ['branchCode']) as LocalBranchFormData
 
             return isEdit
                 ? localBranchService.updateLocalBranch(initialData!.id, payload)
@@ -380,138 +346,23 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                             control={form.control}
                             name="pinCodeId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Pin Code (id or code)" itemClassName="md:col-span-2">
+                                <FloatingFormItem label="Pin Code" itemClassName="md:col-span-2">
                                     <FormControl>
-                                        <Input {...field} placeholder="452001 or id" className={FLOATING_INNER_CONTROL} />
+                                        <Input
+                                            {...field}
+                                            value={field.value || ''}
+                                            inputMode="numeric"
+                                            maxLength={6}
+                                            placeholder="452001"
+                                            className={FLOATING_INNER_CONTROL}
+                                            onChange={(event) => field.onChange(normalizePincodeInput(event.target.value))}
+                                        />
                                     </FormControl>
                                 </FloatingFormItem>
                             )}
                         />
                     </FormSection>
 
-                    <FormSection
-                        className="lg:col-span-2"
-                        title="Terms & Invoice Series"
-                        contentClassName="grid grid-cols-1 md:grid-cols-2 gap-4"
-                    >
-                        <FormField
-                            control={form.control}
-                            name="termsText"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Terms (one per line)" itemClassName="md:col-span-2">
-                                    <FormControl>
-                                        <Textarea {...field} value={field.value || ''} placeholder="Enter one term per line" className="min-h-28" />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="invoicePrefix"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Invoice Prefix">
-                                    <FormControl>
-                                        <Input {...field} value={field.value || ''} placeholder="INV-" className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="lastInvoiceNo"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Last Invoice No">
-                                    <FormControl>
-                                        <Input type="number" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="invoiceSuffix"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Invoice Suffix">
-                                    <FormControl>
-                                        <Input {...field} value={field.value || ''} placeholder="-24" className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="freeFormPrefix"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Free Form Prefix">
-                                    <FormControl>
-                                        <Input {...field} value={field.value || ''} placeholder="FF-" className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="lastFreeFormInvoiceNo"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Last Free-form Invoice No">
-                                    <FormControl>
-                                        <Input type="number" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="freeFormSuffix"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Free Form Suffix">
-                                    <FormControl>
-                                        <Input {...field} value={field.value || ''} placeholder="-24" className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="rcpLastNo"
-                            render={({ field }) => (
-                                <FloatingFormItem label="RCP Last No">
-                                    <FormControl>
-                                        <Input type="number" {...field} value={field.value ?? ''} className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                    </FormSection>
-
-                    <FormSection
-                        className="lg:col-span-2"
-                        title="Logos"
-                        contentClassName="grid grid-cols-1 md:grid-cols-2 gap-4"
-                    >
-                        <FormField
-                            control={form.control}
-                            name="companyLogo"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Company Logo">
-                                    <FormControl>
-                                        <Input {...field} value={field.value || ''} placeholder="logos/company/example.png" className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="signatoryLogo"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Signatory Logo">
-                                    <FormControl>
-                                        <Input {...field} value={field.value || ''} placeholder="logos/signatory/example.png" className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                    </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">

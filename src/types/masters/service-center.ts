@@ -34,18 +34,8 @@ export interface ServiceCenter {
     pinCodeId: number | null;
     countryId: number | null;
     stateId: number | null;
-    companyLogo: string | null;
-    signatoryLogo: string | null;
     gstNo?: string | null;
     panNo?: string | null;
-    terms?: string[] | null;
-    lastInvoicePrefix?: string | null;
-    lastInvoiceNo?: number | null;
-    lastInvoiceSuffix?: string | null;
-    freeFormPrefix?: string | null;
-    lastFreeFormInvoiceNo?: number | null;
-    freeFormSuffix?: string | null;
-    rcpLastNo?: number | null;
     version: number;
     localBranchId: number | null;
     country?: ServiceCenterCountryRef | null;
@@ -70,17 +60,7 @@ export interface ServiceCenterFormData {
     email?: string | null;
     gstNo?: string | null;
     panNo?: string | null;
-    pinCodeId?: string | number | null;
-    companyLogo?: string | null;
-    signatoryLogo?: string | null;
-    terms?: string[] | null;
-    lastInvoicePrefix?: string | null;
-    lastInvoiceNo?: number | null;
-    lastInvoiceSuffix?: string | null;
-    freeFormPrefix?: string | null;
-    lastFreeFormInvoiceNo?: number | null;
-    freeFormSuffix?: string | null;
-    rcpLastNo?: number | null;
+    pinCodeId?: string | null;
     version?: number;
 }
 

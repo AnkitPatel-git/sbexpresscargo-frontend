@@ -415,6 +415,11 @@ const parseOptionalNumberInput = (value: string) => {
     return Number.isFinite(next) ? next : undefined
 }
 
+const sanitizeArray = <T,>(value: Array<T | null | undefined> | null | undefined): T[] => {
+    if (!Array.isArray(value)) return []
+    return value.filter((item): item is T => item != null)
+}
+
 function normalizeMasterSelectId(value: unknown): number {
     if (value === '' || value === undefined || value === null) return 0
     if (typeof value === 'number' && value > 0) return value
@@ -720,10 +725,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         staleTime: 5 * 60 * 1000,
     })
 
-    const shipperPincodeOptions = shipperPincodeOptionsData?.data ?? []
-    const consigneePincodeOptions = consigneePincodeOptionsData?.data ?? []
-    const contentOptions = contentsQuery.data?.data ?? []
-    const serviceCenterOptions = serviceCentersData?.data ?? []
+    const shipperPincodeOptions = sanitizeArray(shipperPincodeOptionsData?.data)
+    const consigneePincodeOptions = sanitizeArray(consigneePincodeOptionsData?.data)
+    const contentOptions = sanitizeArray(contentsQuery.data?.data)
+    const serviceCenterOptions = sanitizeArray(serviceCentersData?.data)
+    const customerOptions = sanitizeArray(customersData?.data)
+    const shipperOptions = sanitizeArray(shippersData?.data)
+    const consigneeOptions = sanitizeArray(consigneesData?.data)
+    const productOptions = sanitizeArray(productsData?.data)
+    const vendorOptions = sanitizeArray(vendorsData?.data)
+    const masterChargeOptions = sanitizeArray(masterChargesData?.data)
     const form = useForm<ShipmentFormValues>({
         resolver: zodResolver(shipmentSchema) as Resolver<ShipmentFormValues>,
         defaultValues: buildShipmentFormValues(initialData),
@@ -853,10 +864,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     const applySelectedPincode = (scope: 'shipper' | 'consignee', pinCode: string) => {
         const selected = (scope === 'shipper' ? shipperPincodeOptions : consigneePincodeOptions).find((item) => item.pinCode === pinCode)
+        const selectedZones = sanitizeArray(selected?.zones)
         if (scope === 'shipper') {
             form.setValue('shipper.pinCode', pinCode, { shouldDirty: true, shouldValidate: true })
             form.setValue('shipper.pinCodeId', selected?.id, { shouldDirty: true, shouldValidate: true })
-            form.setValue('fromZoneId', selected?.zones?.length === 1 ? selected.zones[0].id : 0, { shouldDirty: false, shouldValidate: false })
+            form.setValue('fromZoneId', selectedZones.length === 1 ? selectedZones[0].id : 0, { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.city', selected?.areaName || selected?.cityName || '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.state', selected?.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
@@ -867,7 +879,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
         form.setValue('consignee.pinCode', pinCode, { shouldDirty: true, shouldValidate: true })
         form.setValue('consignee.pinCodeId', selected?.id, { shouldDirty: true, shouldValidate: true })
-        form.setValue('toZoneId', selected?.zones?.length === 1 ? selected.zones[0].id : 0, { shouldDirty: false, shouldValidate: false })
+        form.setValue('toZoneId', selectedZones.length === 1 ? selectedZones[0].id : 0, { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.city', selected?.areaName || selected?.cityName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.state', selected?.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
@@ -902,8 +914,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const consigneePincodeSource = normalizeMasterSelectId(watchedConsigneeId) > 0
         ? consigneePincodeData?.data?.[0] ?? null
         : selectedConsigneePincode ?? consigneePincodeData?.data?.[0] ?? null
-    const shipperZoneOptions = useMemo(() => shipperPincodeSource?.zones ?? [], [shipperPincodeSource])
-    const consigneeZoneOptions = useMemo(() => consigneePincodeSource?.zones ?? [], [consigneePincodeSource])
+    const shipperZoneOptions = useMemo(() => sanitizeArray(shipperPincodeSource?.zones), [shipperPincodeSource])
+    const consigneeZoneOptions = useMemo(() => sanitizeArray(consigneePincodeSource?.zones), [consigneePincodeSource])
 
     useEffect(() => {
         const shipperPin = (watchedShipperPinCode || '').trim()
@@ -988,7 +1000,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             setSelectedShipperPincode(lookup)
         }
         form.setValue('shipper.pinCodeId', lookup.id, { shouldDirty: false, shouldValidate: false })
-        form.setValue('fromZoneId', lookup.zones?.length === 1 ? lookup.zones[0].id : form.getValues('fromZoneId'), { shouldDirty: false, shouldValidate: false })
+        const lookupZones = sanitizeArray(lookup.zones)
+        form.setValue('fromZoneId', lookupZones.length === 1 ? lookupZones[0].id : form.getValues('fromZoneId'), { shouldDirty: false, shouldValidate: false })
         form.setValue('shipper.city', lookup.areaName || lookup.cityName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('shipper.state', lookup.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('shipper.country', lookup.country?.name || '', { shouldDirty: false, shouldValidate: false })
@@ -1025,7 +1038,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             setSelectedConsigneePincode(lookup)
         }
         form.setValue('consignee.pinCodeId', lookup.id, { shouldDirty: false, shouldValidate: false })
-        form.setValue('toZoneId', lookup.zones?.length === 1 ? lookup.zones[0].id : form.getValues('toZoneId'), { shouldDirty: false, shouldValidate: false })
+        const lookupZones = sanitizeArray(lookup.zones)
+        form.setValue('toZoneId', lookupZones.length === 1 ? lookupZones[0].id : form.getValues('toZoneId'), { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.city', lookup.areaName || lookup.cityName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.state', lookup.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.country', lookup.country?.name || '', { shouldDirty: false, shouldValidate: false })
@@ -1208,17 +1222,17 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 setIsAwbStepComplete(true)
                 setActiveTab('forwarding')
             }
-            toast.success(`Shiment booking ${isEdit || savedShipment ? 'updated' : 'created'} successfully`)
+            toast.success(`Shipment booking ${isEdit || savedShipment ? 'updated' : 'created'} successfully`)
         },
         onError: (error: unknown) => {
-            toast.error(getErrorMessage(error, `Failed to ${isEdit || savedShipment ? 'update' : 'create'} shiment booking`))
+            toast.error(getErrorMessage(error, `Failed to ${isEdit || savedShipment ? 'update' : 'create'} shipment booking`))
         }
     })
 
     const forwardingMutation = useMutation({
         mutationFn: async () => {
             if (!savedShipment?.id || !savedShipment.version) {
-                throw new Error('Please create shiment booking first')
+                throw new Error('Please create shipment booking first')
             }
             return shipmentService.upsertForwarding(savedShipment.id, {
                 version: Number(savedShipment.version),
@@ -1242,7 +1256,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const kycMutation = useMutation({
         mutationFn: async () => {
             if (!savedShipment?.id) {
-                throw new Error('Please create shiment booking first')
+                throw new Error('Please create shipment booking first')
             }
             for (const row of kycRows) {
                 await shipmentService.uploadKyc(savedShipment.id, {
@@ -1254,7 +1268,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['shipments'] })
-            toast.success('Shiment booking process completed')
+            toast.success('Shipment booking process completed')
             router.push('/transactions/shipment')
         },
         onError: (error: unknown) => {
@@ -1301,7 +1315,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         setForwardingForm((prev) => ({ ...prev, ...patch }))
     }
 
-    const forwardingServiceOptions = (serviceMapsData?.data || [])
+    const forwardingServiceOptions = sanitizeArray(serviceMapsData?.data)
         .filter((sm) => sm.vendorId === forwardingForm.deliveryVendorId)
         .map((sm) => ({
             label: `${sm.serviceType} (${sm.id})`,
@@ -1448,7 +1462,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <FloatingFormItem label={<>Client Name <span className="text-red-500">*</span></>} itemClassName="md:col-span-1">
                                                 <FormControl>
                                                     <Combobox
-                                                        options={customersData?.data?.map((c) => ({ label: c.name, value: c.id })) || []}
+                                                        options={customerOptions.map((c) => ({ label: c.name, value: c.id }))}
                                                         value={field.value}
                                                         onChange={field.onChange}
                                                         placeholder="Select customer"
@@ -1485,7 +1499,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <FloatingFormItem label="Shipper Master" itemClassName="flex-1">
                                                     <FormControl>
                                                         <Combobox
-                                                            options={shippersData?.data?.map((s) => ({ label: s.shipperName, value: s.id })) || []}
+                                                            options={shipperOptions.map((s) => ({ label: s.shipperName, value: s.id }))}
                                                             value={field.value}
                                                             onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
                                                             placeholder="Select shipper"
@@ -1664,7 +1678,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <FloatingFormItem label="Consignee Master" itemClassName="flex-1">
                                                     <FormControl>
                                                         <Combobox
-                                                            options={consigneesData?.data?.map((c) => ({ label: c.name, value: c.id })) || []}
+                                                            options={consigneeOptions.map((c) => ({ label: c.name, value: c.id }))}
                                                             value={field.value}
                                                             onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
                                                             placeholder="Select consignee"
@@ -1842,7 +1856,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         <FloatingFormItem label={<>Product <span className="text-red-500">*</span></>}>
                                             <FormControl>
                                                 <Combobox
-                                                    options={productsData?.data?.map((p) => ({ label: p.productName, value: p.id })) || []}
+                                                    options={productOptions.map((p) => ({ label: p.productName, value: p.id }))}
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="Select product"
@@ -2395,7 +2409,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     <TableRow key={field.id}>
                                         <TableCell className="w-[200px]">
                                             <Combobox
-                                                options={masterChargesData?.data?.map(mc => ({ label: mc.name, value: mc.id })) || []}
+                                                options={masterChargeOptions.map((mc) => ({ label: mc.name, value: mc.id }))}
                                                 value={form.watch(`charges.${index}.chargeId`)}
                                                 onChange={(val) => form.setValue(`charges.${index}.chargeId`, val as number)}
                                                 placeholder="Select Charge"
@@ -2478,7 +2492,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 </FloatingFormItem>
                                 <FloatingFormItem label={<>Vendor <span className="text-red-500">*</span></>}>
                                     <Combobox
-                                        options={vendorsData?.data?.map((v) => ({ label: v.vendorName, value: v.id })) || []}
+                                        options={vendorOptions.map((v) => ({ label: v.vendorName, value: v.id }))}
                                         value={forwardingForm.deliveryVendorId}
                                         onChange={(val) =>
                                             updateForwardingForm({
@@ -2593,7 +2607,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     />
                                 </FloatingFormItem>
                             </div>
-                            <p className="pt-2 text-xs text-muted-foreground">Forwarding details are saved after shiment booking save/update.</p>
+                            <p className="pt-2 text-xs text-muted-foreground">Forwarding details are saved after shipment booking save/update.</p>
                         </OutlinedFormSection>
                     </TabsContent>
 
@@ -2688,7 +2702,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     </TableBody>
                                 </Table>
                             </div>
-                            <p className="pt-2 text-xs text-muted-foreground">KYC files are uploaded after shiment booking save/update using AWB number.</p>
+                            <p className="pt-2 text-xs text-muted-foreground">KYC files are uploaded after shipment booking save/update using AWB number.</p>
                         </OutlinedFormSection>
                     </TabsContent>
                 </Tabs>

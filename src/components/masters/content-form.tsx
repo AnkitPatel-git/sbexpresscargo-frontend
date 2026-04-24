@@ -43,8 +43,11 @@ import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schem
 
 const contentSchema = z.object({
     contentCode: optionalMasterCode(2),
-    contentName: z.string().min(3, "Content name must be at least 3 characters"),
-    hsnCode: z.string().min(4, "HSN code must be at least 4 characters"),
+    contentName: z.string().trim().min(3, "Content name must be at least 3 characters"),
+    hsnCode: z.string().trim().refine(
+        (value) => value.length === 0 || value.length >= 4,
+        { message: "HSN code must be at least 4 characters when provided" },
+    ),
     countryId: z.number().nullable().optional(),
     country: z.string().optional(),
     additionalField: z.string().optional(),
@@ -163,7 +166,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
                                 control={form.control}
                                 name="hsnCode"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="HSN Code">
+                                    <FloatingFormItem label="HSN Code (optional)">
                                         <FormControl>
                                             <Input placeholder="e.g. 8517" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>

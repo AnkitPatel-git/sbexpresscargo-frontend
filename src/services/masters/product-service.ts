@@ -1,5 +1,10 @@
 import { apiFetch } from '@/lib/api-fetch';
-import { ProductListResponse, ProductSingleResponse, ProductFormData } from '@/types/masters/product';
+import {
+    ProductListResponse,
+    ProductSingleResponse,
+    ProductFormData,
+    ProductUpdateData,
+} from '@/types/masters/product';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -71,7 +76,7 @@ export const productService = {
         return response.json();
     },
 
-    async updateProduct(id: number, data: Partial<ProductFormData>): Promise<ProductSingleResponse> {
+    async updateProduct(id: number, data: ProductUpdateData): Promise<ProductSingleResponse> {
         const response = await apiFetch(`${API_URL}/product-master/${id}`, {
             method: 'PATCH',
             headers: {

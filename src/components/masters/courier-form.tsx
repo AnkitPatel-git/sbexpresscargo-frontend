@@ -106,8 +106,8 @@ export function CourierForm({ initialData }: CourierFormProps) {
                 pinCodeId: 0,
                 countryId: 0,
                 stateId: 0,
-                companyLogo: '',
-                signatoryLogo: '',
+                gstNo: null,
+                panNo: null,
                 version: 0,
                 localBranchId: null,
                 createdAt: '',
@@ -118,7 +118,6 @@ export function CourierForm({ initialData }: CourierFormProps) {
                 deletedById: null,
                 serviceablePincode: null,
                 state: null,
-                terms: [],
             })
         }
         return list

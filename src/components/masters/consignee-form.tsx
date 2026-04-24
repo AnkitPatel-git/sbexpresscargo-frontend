@@ -22,6 +22,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { FormSection } from "@/components/ui/form-section"
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
+import {
+    getInitialPincode,
+    normalizePincodeInput,
+    requiredPincodeField,
+} from '@/lib/pincode-field'
 import { consigneeService } from '@/services/masters/consignee-service'
 import { Consignee, ConsigneeFormData } from '@/types/masters/consignee'
 
@@ -31,7 +36,7 @@ const consigneeSchema = z.object({
     contactPerson: z.string().optional().or(z.literal("")),
     address1: z.string().optional().or(z.literal("")),
     address2: z.string().optional().or(z.literal("")),
-    pinCodeId: z.coerce.number().int().positive("Pin code is required"),
+    pinCodeId: requiredPincodeField(),
     telephone: z.string().optional().or(z.literal("")),
     email: z.string().email("Invalid email address").or(z.literal("")),
     mobile: z.string().optional().or(z.literal("")),
@@ -56,7 +61,7 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
             contactPerson: '',
             address1: '',
             address2: '',
-            pinCodeId: 0,
+            pinCodeId: '',
             telephone: '',
             email: '',
             mobile: '',
@@ -72,7 +77,7 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
             contactPerson: initialData.contactPerson || '',
             address1: initialData.address1 || '',
             address2: initialData.address2 || '',
-            pinCodeId: initialData.pinCodeId ?? 0,
+            pinCodeId: getInitialPincode(initialData),
             telephone: initialData.telephone || '',
             email: initialData.email || '',
             mobile: initialData.mobile || '',
@@ -209,10 +214,11 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                 <FloatingFormItem label="Pin Code">
                                     <FormControl>
                                         <Input
-                                            type="number"
                                             {...field}
                                             value={field.value || ''}
-                                            onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                                            inputMode="numeric"
+                                            maxLength={6}
+                                            onChange={(event) => field.onChange(normalizePincodeInput(event.target.value))}
                                             placeholder="Pin code"
                                             className={FLOATING_INNER_CONTROL}
                                         />

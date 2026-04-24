@@ -37,7 +37,7 @@ export interface Content {
 export interface ContentFormData {
     contentCode?: string;
     contentName: string;
-    hsnCode?: string;
+    hsnCode?: string | null;
     countryId?: number | null;
     additionalField?: string;
     clearanceCethNo?: string;
