@@ -59,7 +59,6 @@ import { FormSection } from "@/components/ui/form-section"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
 import {
     Table,
     TableBody,
@@ -79,7 +78,6 @@ import { productService } from '@/services/masters/product-service'
 import { vendorService } from '@/services/masters/vendor-service'
 import { serviceMapService } from '@/services/masters/service-map-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
-import { chargeService } from '@/services/masters/charge-service'
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
 import { pincodeDistanceService } from '@/services/utilities/pincode-distance-service'
 import { shipmentSchema, ShipmentFormValues, Shipment, ShipmentCalculateResponse, ShipmentKycDocument } from '@/types/transactions/shipment'
@@ -114,6 +112,13 @@ type KycRow = {
     type: string
     entryType: string
     entryDate: string
+}
+
+const generateKycRowId = () => {
+    if (typeof globalThis.crypto?.randomUUID === "function") {
+        return globalThis.crypto.randomUUID()
+    }
+    return `kyc-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 const normalizeNumberValue = (value: unknown): number | undefined => {
@@ -157,25 +162,6 @@ const normalizePieceRows = (rows?: ShipmentFormValues['piecesRows']): NonNullabl
         items: (row.items && row.items.length > 0 ? row.items : [createEmptyPieceItem()]).map((item) => normalizePieceItem(item as Partial<PieceItemForm> & Record<string, unknown>)),
     }))
 }
-
-const normalizeCharge = (charge: NonNullable<ShipmentFormValues['charges']>[number] & Record<string, unknown>): NonNullable<ShipmentFormValues['charges']>[number] => ({
-    chargeId: normalizeNumberValue(charge.chargeId) || 0,
-    description: strOrEmpty(charge.description),
-    rate: normalizeNumberValue(charge.rate),
-    amount: normalizeNumberValue(charge.amount),
-    fuelApply: Boolean(charge.fuelApply),
-    fuelAmount: normalizeNumberValue(charge.fuelAmount),
-    taxApply: Boolean(charge.taxApply),
-    taxOnFuel: Boolean(charge.taxOnFuel),
-    igst: normalizeNumberValue(charge.igst),
-    cgst: normalizeNumberValue(charge.cgst),
-    sgst: normalizeNumberValue(charge.sgst),
-    total: normalizeNumberValue(charge.total),
-    chargeType: strOrEmpty(charge.chargeType),
-})
-
-const normalizeCharges = (charges?: ShipmentFormValues['charges']) =>
-    (charges || []).map((charge) => normalizeCharge(charge as NonNullable<ShipmentFormValues['charges']>[number] & Record<string, unknown>))
 
 const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues => {
     const shipmentRef = shipment as ShipmentFormSource | null
@@ -256,7 +242,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         isCod: shipmentRef?.isCod || false,
         codAmount: shipmentRef?.codAmount || 0,
         piecesRows: normalizePieceRows(shipmentRef?.piecesRows),
-        charges: normalizeCharges(shipmentRef?.charges),
+        charges: [],
     }
 }
 
@@ -315,7 +301,6 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         isCod: Boolean(values.isCod),
         codAmount: normalizeNumberValue(values.codAmount),
         piecesRows: normalizePieceRows(values.piecesRows).filter((row) => Number(row.pieces || 0) > 0),
-        charges: (values.charges || []).map((charge) => normalizeCharge(charge as NonNullable<ShipmentFormValues['charges']>[number] & Record<string, unknown>)).filter((charge) => Number(charge.chargeId || 0) > 0),
     }
 
     return payload
@@ -331,7 +316,7 @@ const normalizeShipmentCalculatePayload = (values: ShipmentFormValues): Shipment
     return payload
 }
 
-const normalizeForwardingPayload = (values: ForwardingRow, charges?: ShipmentFormValues['charges']) => ({
+const normalizeForwardingPayload = (values: ForwardingRow) => ({
     forwardingAwb: values.forwardingAwb?.trim() || undefined,
     deliveryVendorId: normalizePositiveNumberValue(values.deliveryVendorId),
     deliveryServiceMapId: normalizePositiveNumberValue(values.deliveryServiceMapId),
@@ -346,8 +331,27 @@ const normalizeForwardingPayload = (values: ForwardingRow, charges?: ShipmentFor
     cgst: normalizeNumberValue(values.cgst),
     sgst: normalizeNumberValue(values.sgst),
     totalAmount: normalizeNumberValue(values.totalAmount),
-    charges: normalizeCharges(charges).filter((charge) => Number(charge.chargeId || 0) > 0),
 })
+
+const buildPreviewFromSavedShipment = (shipment?: Shipment | null): ShipmentCalculateResponse | null => {
+    if (!shipment) return null
+    const rows = (shipment.charges || []).map((row) => ({
+        type: 'RATE_CHARGE' as const,
+        name: row.description || row.chargeType || `Charge ${row.chargeId || ''}`.trim(),
+        amount: Number(row.amount) || 0,
+        calculationBase: undefined,
+        isPercentage: false,
+    }))
+    return {
+        rateMasterId: shipment.rateMasterId ?? undefined,
+        fromZoneId: shipment.fromZoneId ?? undefined,
+        toZoneId: shipment.toZoneId ?? undefined,
+        baseFreight: shipment.baseFreight != null ? Number(shipment.baseFreight) : undefined,
+        totalAmount: shipment.totalAmount != null ? Number(shipment.totalAmount) : undefined,
+        totalCharges: rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
+        rows,
+    }
+}
 
 const toDateInputValue = (value?: string | null, fallback = new Date().toISOString().split('T')[0]) => {
     return value?.split('T')[0] || fallback
@@ -418,6 +422,12 @@ const parseOptionalNumberInput = (value: string) => {
 const sanitizeArray = <T,>(value: Array<T | null | undefined> | null | undefined): T[] => {
     if (!Array.isArray(value)) return []
     return value.filter((item): item is T => item != null)
+}
+
+const toSafeOptionLabel = (value: unknown, fallback: string) => {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+    return fallback
 }
 
 function normalizeMasterSelectId(value: unknown): number {
@@ -623,7 +633,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
     })
     const [kycRows, setKycRows] = useState<KycRow[]>([
-        { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
+        { id: generateKycRowId(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
     ])
     const existingKycDocuments: ShipmentKycDocument[] = initialData?.kycDocuments || []
     const [chargePreview, setChargePreview] = useState<ShipmentCalculateResponse | null>(null)
@@ -634,7 +644,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const [productSearch, setProductSearch] = useState('')
     const [vendorSearch, setVendorSearch] = useState('')
     const [serviceMapSearch, setServiceMapSearch] = useState('')
-    const [chargeSearch, setChargeSearch] = useState('')
     const [serviceCenterSearch, setServiceCenterSearch] = useState('')
     const [piecesCsvName, setPiecesCsvName] = useState('No file chosen')
     const [shipperPincodeSearch, setShipperPincodeSearch] = useState('')
@@ -643,6 +652,28 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const [selectedConsigneePincode, setSelectedConsigneePincode] = useState<ServiceablePincode | null>(null)
     const [suppressShipperErrors, setSuppressShipperErrors] = useState(false)
     const [suppressConsigneeErrors, setSuppressConsigneeErrors] = useState(false)
+    const chargePreviewRows = useMemo(() => {
+        if (!chargePreview) return []
+        const baseRow = typeof chargePreview.baseFreight === 'number'
+            ? [{
+                type: 'BASE' as const,
+                name: 'Base Freight',
+                amount: chargePreview.baseFreight,
+                calculationBase: 'BASE_FREIGHT',
+                fuelApply: chargePreview.baseFreightFuelApply === true,
+            }]
+            : []
+        const sortedRows = [...(chargePreview.rows || [])].sort((a, b) => {
+            const isFuelA = /(?:\bFUEL\b)/i.test(`${a.name || ''} ${(a as { chargeType?: string }).chargeType || ''}`)
+            const isFuelB = /(?:\bFUEL\b)/i.test(`${b.name || ''} ${(b as { chargeType?: string }).chargeType || ''}`)
+            if (isFuelA !== isFuelB) return isFuelA ? 1 : -1
+            const isEdlA = /(?:\bEDL\b|ODA)/i.test(`${a.name || ''} ${(a as { chargeType?: string }).chargeType || ''}`)
+            const isEdlB = /(?:\bEDL\b|ODA)/i.test(`${b.name || ''} ${(b as { chargeType?: string }).chargeType || ''}`)
+            if (isEdlA === isEdlB) return 0
+            return isEdlA ? -1 : 1
+        })
+        return [...baseRow, ...sortedRows]
+    }, [chargePreview])
 
     const debouncedCustomerSearch = useDebounce(customerSearch.trim(), 300)
     const debouncedShipperSearch = useDebounce(shipperSearch.trim(), 300)
@@ -651,7 +682,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const debouncedProductSearch = useDebounce(productSearch.trim(), 300)
     const debouncedVendorSearch = useDebounce(vendorSearch.trim(), 300)
     const debouncedServiceMapSearch = useDebounce(serviceMapSearch.trim(), 300)
-    const debouncedChargeSearch = useDebounce(chargeSearch.trim(), 300)
     const debouncedServiceCenterSearch = useDebounce(serviceCenterSearch.trim(), 300)
     const debouncedShipperPincodeSearch = useDebounce(shipperPincodeSearch.trim(), 300)
     const debouncedConsigneePincodeSearch = useDebounce(consigneePincodeSearch.trim(), 300)
@@ -687,10 +717,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         queryFn: () => serviceMapService.getServiceMaps({ limit: 10, search: debouncedServiceMapSearch || undefined, vendorId: forwardingForm.deliveryVendorId || undefined }),
     })
 
-    const { data: masterChargesData } = useQuery({
-        queryKey: ['master-charges-list', debouncedChargeSearch],
-        queryFn: () => chargeService.getCharges({ limit: 10, search: debouncedChargeSearch || undefined }),
-    })
 
     const contentsQuery = useQuery({
         queryKey: ['shipment-content-options', debouncedContentSearch],
@@ -734,7 +760,68 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const consigneeOptions = sanitizeArray(consigneesData?.data)
     const productOptions = sanitizeArray(productsData?.data)
     const vendorOptions = sanitizeArray(vendorsData?.data)
-    const masterChargeOptions = sanitizeArray(masterChargesData?.data)
+    const customerComboboxOptions = customerOptions
+        .map((customer) => {
+            const value = normalizeMasterSelectId(customer.id)
+            if (value <= 0) return null
+            return {
+                label: toSafeOptionLabel(customer.name, `Customer #${value}`),
+                value,
+            }
+        })
+        .filter((option): option is { label: string; value: number } => option != null)
+    const shipperComboboxOptions = shipperOptions
+        .map((shipper) => {
+            const value = normalizeMasterSelectId(shipper.id)
+            if (value <= 0) return null
+            return {
+                label: toSafeOptionLabel(shipper.shipperName, `Shipper #${value}`),
+                value,
+            }
+        })
+        .filter((option): option is { label: string; value: number } => option != null)
+    const consigneeComboboxOptions = consigneeOptions
+        .map((consignee) => {
+            const value = normalizeMasterSelectId(consignee.id)
+            if (value <= 0) return null
+            return {
+                label: toSafeOptionLabel(consignee.name, `Consignee #${value}`),
+                value,
+            }
+        })
+        .filter((option): option is { label: string; value: number } => option != null)
+    const productComboboxOptions = productOptions
+        .map((product) => {
+            const value = normalizeMasterSelectId(product.id)
+            if (value <= 0) return null
+            return {
+                label: toSafeOptionLabel(product.productName, `Product #${value}`),
+                value,
+            }
+        })
+        .filter((option): option is { label: string; value: number } => option != null)
+    const serviceCenterComboboxOptions = serviceCenterOptions
+        .map((serviceCenter) => {
+            const value = normalizeMasterSelectId(serviceCenter.id)
+            if (value <= 0) return null
+            const code = toSafeOptionLabel(serviceCenter.code, '')
+            const name = toSafeOptionLabel(serviceCenter.name, '')
+            return {
+                label: code && name ? `${code} - ${name}` : code || name || `Service Center #${value}`,
+                value,
+            }
+        })
+        .filter((option): option is { label: string; value: number } => option != null)
+    const vendorComboboxOptions = vendorOptions
+        .map((vendor) => {
+            const value = normalizeMasterSelectId(vendor.id)
+            if (value <= 0) return null
+            return {
+                label: toSafeOptionLabel(vendor.vendorName, `Vendor #${value}`),
+                value,
+            }
+        })
+        .filter((option): option is { label: string; value: number } => option != null)
     const form = useForm<ShipmentFormValues>({
         resolver: zodResolver(shipmentSchema) as Resolver<ShipmentFormValues>,
         defaultValues: buildShipmentFormValues(initialData),
@@ -745,10 +832,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         name: "piecesRows"
     })
 
-    const { fields: chargeFields, append: appendCharge, remove: removeCharge } = useFieldArray({
-        control: form.control,
-        name: "charges"
-    })
 
     const addPieceItem = (pieceIndex: number) => {
         const currentItems = form.getValues(`piecesRows.${pieceIndex}.items`) || []
@@ -796,14 +879,93 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     const watchedShipperId = form.watch('shipperId')
     const watchedConsigneeId = form.watch('consigneeId')
+    const watchedCustomerId = form.watch('customerId')
+    const watchedProductId = form.watch('productId')
+    const watchedBookDate = form.watch('bookDate')
+    const watchedBookTime = form.watch('bookTime')
     const watchedFromZoneId = form.watch('fromZoneId')
     const watchedToZoneId = form.watch('toZoneId')
     const watchedFloorDelivery = form.watch('floorDelivery')
+    const watchedFloorCount = form.watch('floorCount')
     const watchedIsCod = form.watch('isCod')
+    const watchedReversePickup = form.watch('reversePickup')
+    const watchedAppointmentDelivery = form.watch('appointmentDelivery')
+    const watchedShipmentTotalValue = form.watch('shipmentTotalValue')
+    const watchedKm = form.watch('km')
+    const watchedIsEdl = form.watch('isEdl')
+    const watchedOdaEdlDistanceKm = form.watch('odaEdlDistanceKm')
+    const watchedPiecesRowsForPricing = form.watch('piecesRows')
     const watchedShipperPinCode = form.watch('shipper.pinCode')
     const watchedConsigneePinCode = form.watch('consignee.pinCode')
     const debouncedShipperPinCode = useDebounce((watchedShipperPinCode || '').trim(), 400)
     const debouncedConsigneePinCode = useDebounce((watchedConsigneePinCode || '').trim(), 400)
+    const autoPricingTriggerKey = useMemo(
+        () =>
+            JSON.stringify({
+                customerId: watchedCustomerId,
+                productId: watchedProductId,
+                bookDate: watchedBookDate,
+                bookTime: watchedBookTime,
+                fromZoneId: watchedFromZoneId,
+                toZoneId: watchedToZoneId,
+                reversePickup: watchedReversePickup,
+                appointmentDelivery: watchedAppointmentDelivery,
+                floorDelivery: watchedFloorDelivery,
+                floorCount: watchedFloorCount,
+                shipmentTotalValue: watchedShipmentTotalValue,
+                km: watchedKm,
+                isEdl: watchedIsEdl,
+                odaEdlDistanceKm: watchedOdaEdlDistanceKm,
+                piecesRows: watchedPiecesRowsForPricing,
+                shipperId: watchedShipperId,
+                consigneeId: watchedConsigneeId,
+                shipperPinCode: watchedShipperPinCode,
+                consigneePinCode: watchedConsigneePinCode,
+            }),
+        [
+            watchedCustomerId,
+            watchedProductId,
+            watchedBookDate,
+            watchedBookTime,
+            watchedFromZoneId,
+            watchedToZoneId,
+            watchedReversePickup,
+            watchedAppointmentDelivery,
+            watchedFloorDelivery,
+            watchedFloorCount,
+            watchedShipmentTotalValue,
+            watchedKm,
+            watchedIsEdl,
+            watchedOdaEdlDistanceKm,
+            watchedPiecesRowsForPricing,
+            watchedShipperId,
+            watchedConsigneeId,
+            watchedShipperPinCode,
+            watchedConsigneePinCode,
+        ],
+    )
+    const debouncedAutoPricingTriggerKey = useDebounce(autoPricingTriggerKey, 650)
+
+    useEffect(() => {
+        if (!isEdit || !savedShipment?.id) return
+        if (!normalizeMasterSelectId(watchedCustomerId) || !normalizeMasterSelectId(watchedProductId)) return
+        if (!(normalizeMasterSelectId(watchedShipperId) > 0 || (watchedShipperPinCode || '').trim())) return
+        if (!(normalizeMasterSelectId(watchedConsigneeId) > 0 || (watchedConsigneePinCode || '').trim())) return
+        let cancelled = false
+        ;(async () => {
+            try {
+                const response = await shipmentService.calculateCharges(normalizeShipmentCalculatePayload(form.getValues()))
+                if (!cancelled) {
+                    setChargePreview(response.data)
+                }
+            } catch {
+                // Silent in auto mode; explicit Calculate button shows toast.
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [debouncedAutoPricingTriggerKey, isEdit, savedShipment?.id, watchedCustomerId, watchedProductId, watchedShipperId, watchedConsigneeId, watchedShipperPinCode, watchedConsigneePinCode, form])
 
     const prevShipperIdRef = useRef<number>(0)
     const prevConsigneeIdRef = useRef<number>(0)
@@ -916,6 +1078,26 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         : selectedConsigneePincode ?? consigneePincodeData?.data?.[0] ?? null
     const shipperZoneOptions = useMemo(() => sanitizeArray(shipperPincodeSource?.zones), [shipperPincodeSource])
     const consigneeZoneOptions = useMemo(() => sanitizeArray(consigneePincodeSource?.zones), [consigneePincodeSource])
+    const shipperZoneComboboxOptions = shipperZoneOptions
+        .map((zone) => {
+            const value = normalizeMasterSelectId(zone.id)
+            if (value <= 0) return null
+            return {
+                label: toSafeOptionLabel(zone.name || zone.code, `Zone #${value}`),
+                value,
+            }
+        })
+        .filter((option): option is { label: string; value: number } => option != null)
+    const consigneeZoneComboboxOptions = consigneeZoneOptions
+        .map((zone) => {
+            const value = normalizeMasterSelectId(zone.id)
+            if (value <= 0) return null
+            return {
+                label: toSafeOptionLabel(zone.name || zone.code, `Zone #${value}`),
+                value,
+            }
+        })
+        .filter((option): option is { label: string; value: number } => option != null)
 
     useEffect(() => {
         const shipperPin = (watchedShipperPinCode || '').trim()
@@ -1107,101 +1289,61 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     // 1. Piece Volumetric weight and Row Totals
     const watchedPiecesRows = form.watch('piecesRows')
+    const weightCalcKey = useDebounce(
+        JSON.stringify({
+            customerId: watchedCustomerId,
+            productId: watchedProductId,
+            piecesRows: watchedPiecesRows,
+        }),
+        250,
+    )
     useEffect(() => {
-        if (!watchedPiecesRows || watchedPiecesRows.length === 0) return;
-        
-        let totalPcs = 0;
-        let totalActualWeight = 0;
-        let totalVolWeight = 0;
+        if (!watchedPiecesRows || watchedPiecesRows.length === 0) return
+        const customerId = normalizeMasterSelectId(form.getValues('customerId'))
+        const productId = normalizeMasterSelectId(form.getValues('productId'))
+        if (customerId <= 0 || productId <= 0) return
 
-        watchedPiecesRows.forEach((row, index) => {
-            const pcs = Number(row.pieces) || 0;
-            const weightPerPc = Number(row.actualWeight) || 0;
-            const l = Number(row.length) || 0;
-            const w = Number(row.width) || 0;
-            const h = Number(row.height) || 0;
+        let cancelled = false
+        ;(async () => {
+            try {
+                const response = await shipmentService.calculateWeight({
+                    customerId,
+                    productId,
+                    piecesRows: watchedPiecesRows.map((row) => ({
+                        actualWeight: Number(row.actualWeight) || 0,
+                        pieces: Number(row.pieces) || 0,
+                        length: Number(row.length) || 0,
+                        width: Number(row.width) || 0,
+                        height: Number(row.height) || 0,
+                        items: (row.items || []).map((item) => ({
+                            totalValue: Number(item.totalValue) || 0,
+                        })),
+                    })),
+                })
+                if (cancelled) return
 
-            totalPcs += pcs;
-            totalActualWeight += weightPerPc * pcs;
+                const rows = response.data?.rows || []
+                rows.forEach((row, index) => {
+                    form.setValue(`piecesRows.${index}.volumetricWeight`, row.volumetricWeight, { shouldValidate: true })
+                    form.setValue(`piecesRows.${index}.chargeWeight`, row.chargeWeight, { shouldValidate: true })
+                })
 
-            if (l > 0 && w > 0 && h > 0) {
-                const volWeight = (l * w * h / 5000) * pcs;
-                const roundedVolWeight = parseFloat(volWeight.toFixed(2));
-                const currentVolValue = Number(row.volumetricWeight) || 0;
-                
-                if (Math.abs(currentVolValue - roundedVolWeight) > 0.001) {
-                    form.setValue(`piecesRows.${index}.volumetricWeight`, roundedVolWeight, { shouldValidate: true });
-                }
-                totalVolWeight += roundedVolWeight;
-            } else {
-                totalVolWeight += Number(row.volumetricWeight) || 0;
+                const totalPcs = watchedPiecesRows.reduce((sum, row) => sum + (Number(row.pieces) || 0), 0)
+                const totalActualWeight = rows.reduce((sum, row) => sum + (Number(row.actualWeight) || 0), 0)
+                form.setValue('pieces', totalPcs, { shouldValidate: true })
+                form.setValue('actualWeight', Number(totalActualWeight.toFixed(2)), { shouldValidate: true })
+                form.setValue('volumetricWeight', response.data?.shipmentVolumetricWeight || 0, { shouldValidate: true })
+                form.setValue('chargeWeight', response.data?.shipmentChargeWeight || 0, { shouldValidate: true })
+                form.setValue('shipmentTotalValue', response.data?.bookingTotalValue || 0, { shouldValidate: true })
+            } catch {
+                // Ignore while user is typing; backend validation will still run on calculate/create.
             }
-        });
+        })()
 
-        // Update main shipment weights
-        if (totalPcs > 0 && form.getValues('pieces') !== totalPcs) {
-            form.setValue('pieces', totalPcs, { shouldValidate: true });
+        return () => {
+            cancelled = true
         }
-        if (totalActualWeight > 0 && Math.abs((form.getValues('actualWeight') || 0) - totalActualWeight) > 0.001) {
-            form.setValue('actualWeight', parseFloat(totalActualWeight.toFixed(2)), { shouldValidate: true });
-        }
-        if (totalVolWeight > 0 && Math.abs((form.getValues('volumetricWeight') || 0) - totalVolWeight) > 0.001) {
-            form.setValue('volumetricWeight', parseFloat(totalVolWeight.toFixed(2)), { shouldValidate: true });
-        }
-
-        const currentActual = totalActualWeight;
-        const currentVol = totalVolWeight;
-        const chargeWeight = Math.max(currentActual, currentVol);
-        if (Math.abs((form.getValues('chargeWeight') || 0) - chargeWeight) > 0.001) {
-            form.setValue('chargeWeight', parseFloat(chargeWeight.toFixed(2)), { shouldValidate: true });
-        }
-    }, [watchedPiecesRows, form]);
-
-    // 2. Charges Row Total and Grand Totals
-    const watchedCharges = form.watch('charges')
-    useEffect(() => {
-        if (!watchedCharges || watchedCharges.length === 0) return;
-
-        let grandSubTotal = 0;
-        let grandTotalFuel = 0;
-        let grandTotalTax = 0;
-        let grandTotalAmount = 0;
-
-        watchedCharges.forEach((charge, index) => {
-            const amount = Number(charge.amount) || 0;
-            if (amount === 0) return;
-
-            const fuelApply = charge.fuelApply || false;
-            const taxApply = charge.taxApply || false;
-
-            const fuelAmount = fuelApply ? amount * 0.1 : 0;
-            const taxableAmount = amount + fuelAmount;
-            const taxAmount = taxApply ? taxableAmount * 0.18 : 0;
-            const total = taxableAmount + taxAmount;
-
-            const roundedTotal = parseFloat(total.toFixed(2));
-            const currentTotalValue = Number(charge.total) || 0;
-
-            if (Math.abs(currentTotalValue - roundedTotal) > 0.01) {
-                form.setValue(`charges.${index}.total`, roundedTotal, { shouldValidate: true });
-            }
-
-            grandSubTotal += amount;
-            grandTotalFuel += fuelAmount;
-            grandTotalTax += taxAmount;
-            grandTotalAmount += total;
-        });
-
-        if (Math.abs((form.getValues('subTotal') || 0) - grandSubTotal) > 0.01) {
-            form.setValue('subTotal', parseFloat(grandSubTotal.toFixed(2)), { shouldValidate: true });
-        }
-        if (Math.abs((form.getValues('totalFuel') || 0) - grandTotalFuel) > 0.01) {
-            form.setValue('totalFuel', parseFloat(grandTotalFuel.toFixed(2)), { shouldValidate: true });
-        }
-        if (Math.abs((form.getValues('totalAmount') || 0) - grandTotalAmount) > 0.01) {
-            form.setValue('totalAmount', parseFloat(grandTotalAmount.toFixed(2)), { shouldValidate: true });
-        }
-    }, [watchedCharges, form]);
+    }, [form, watchedPiecesRows, weightCalcKey]);
 
     // --- End Calculations ---
 
@@ -1236,7 +1378,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             }
             return shipmentService.upsertForwarding(savedShipment.id, {
                 version: Number(savedShipment.version),
-                ...normalizeForwardingPayload(forwardingForm, form.getValues('charges')),
+                ...normalizeForwardingPayload(forwardingForm),
             })
         },
         onSuccess: (response) => {
@@ -1325,7 +1467,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const addKycRow = () => {
         setKycRows((prev) => [
             ...prev,
-            { id: crypto.randomUUID(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
+            { id: generateKycRowId(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
         ])
     }
 
@@ -1462,7 +1604,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <FloatingFormItem label={<>Client Name <span className="text-red-500">*</span></>} itemClassName="md:col-span-1">
                                                 <FormControl>
                                                     <Combobox
-                                                        options={customerOptions.map((c) => ({ label: c.name, value: c.id }))}
+                                                        options={customerComboboxOptions}
                                                         value={field.value}
                                                         onChange={field.onChange}
                                                         placeholder="Select customer"
@@ -1499,7 +1641,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <FloatingFormItem label="Shipper Master" itemClassName="flex-1">
                                                     <FormControl>
                                                         <Combobox
-                                                            options={shipperOptions.map((s) => ({ label: s.shipperName, value: s.id }))}
+                                                            options={shipperComboboxOptions}
                                                             value={field.value}
                                                             onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
                                                             placeholder="Select shipper"
@@ -1621,7 +1763,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("From Zone", true)}>
                                                     <FormControl>
                                                         <Combobox
-                                                            options={shipperZoneOptions.map((zone) => ({ label: zone.name || zone.code, value: zone.id }))}
+                                                            options={shipperZoneComboboxOptions}
                                                             value={field.value}
                                                             onChange={(value) => field.onChange(normalizeMasterSelectId(value))}
                                                             placeholder={shipperZoneOptions.length > 0 ? "Select zone" : "Select pincode first"}
@@ -1678,7 +1820,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <FloatingFormItem label="Consignee Master" itemClassName="flex-1">
                                                     <FormControl>
                                                         <Combobox
-                                                            options={consigneeOptions.map((c) => ({ label: c.name, value: c.id }))}
+                                                            options={consigneeComboboxOptions}
                                                             value={field.value}
                                                             onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
                                                             placeholder="Select consignee"
@@ -1800,7 +1942,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("To Zone", true)}>
                                                     <FormControl>
                                                         <Combobox
-                                                            options={consigneeZoneOptions.map((zone) => ({ label: zone.name || zone.code, value: zone.id }))}
+                                                            options={consigneeZoneComboboxOptions}
                                                             value={field.value}
                                                             onChange={(value) => field.onChange(normalizeMasterSelectId(value))}
                                                             placeholder={consigneeZoneOptions.length > 0 ? "Select zone" : "Select pincode first"}
@@ -1856,7 +1998,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         <FloatingFormItem label={<>Product <span className="text-red-500">*</span></>}>
                                             <FormControl>
                                                 <Combobox
-                                                    options={productOptions.map((p) => ({ label: p.productName, value: p.id }))}
+                                                    options={productComboboxOptions}
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     placeholder="Select product"
@@ -1929,7 +2071,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="isEdl"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="EDL charges">
+                                            <FloatingFormItem label="ODA/EDL charges">
                                                 <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                                     <FormControl>
                                                         <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
@@ -2074,10 +2216,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         <FloatingFormItem label="Service Center">
                                             <FormControl>
                                                 <Combobox
-                                                    options={serviceCenterOptions.map((sc) => ({
-                                                        label: `${sc.code} - ${sc.name}`,
-                                                        value: sc.id,
-                                                    }))}
+                                                    options={serviceCenterComboboxOptions}
                                                     value={field.value || 0}
                                                     onChange={(val) => field.onChange(normalizeMasterSelectId(val))}
                                                     placeholder="Select service center"
@@ -2182,19 +2321,40 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <Input type="number" {...form.register(`piecesRows.${index}.pieces` as const, { valueAsNumber: true })} className="h-8 w-16" />
                                             </TableCell>
                                             <TableCell>
-                                                <Input type="number" step="0.01" {...form.register(`piecesRows.${index}.actualWeight` as const, { valueAsNumber: true })} className="h-8 w-20" />
+                                                <div className="flex items-center gap-1">
+                                                    <Input type="number" step="0.01" {...form.register(`piecesRows.${index}.actualWeight` as const, { valueAsNumber: true })} className="h-8 w-20" />
+                                                    <span className="text-xs text-muted-foreground">kg</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Input type="number" {...form.register(`piecesRows.${index}.length` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                                <div className="flex items-center gap-1">
+                                                    <Input type="number" {...form.register(`piecesRows.${index}.length` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                                    <span className="text-xs text-muted-foreground">mm</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Input type="number" {...form.register(`piecesRows.${index}.width` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                                <div className="flex items-center gap-1">
+                                                    <Input type="number" {...form.register(`piecesRows.${index}.width` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                                    <span className="text-xs text-muted-foreground">mm</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Input type="number" {...form.register(`piecesRows.${index}.height` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                                <div className="flex items-center gap-1">
+                                                    <Input type="number" {...form.register(`piecesRows.${index}.height` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                                    <span className="text-xs text-muted-foreground">mm</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Input type="number" step="0.01" {...form.register(`piecesRows.${index}.volumetricWeight` as const, { valueAsNumber: true })} className="h-8 w-20" />
+                                                <div className="flex items-center gap-1">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        {...form.register(`piecesRows.${index}.volumetricWeight` as const, { valueAsNumber: true })}
+                                                        className="h-8 w-20"
+                                                        disabled
+                                                    />
+                                                    <span className="text-xs text-muted-foreground">kg</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <Button type="button" variant="ghost" size="sm" onClick={() => removePiece(index)} disabled={pieceFields.length <= 1}>
@@ -2381,76 +2541,38 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                         <Button type="button" variant="outline" size="sm" onClick={() => calculateMutation.mutate()} disabled={calculateMutation.isPending}>
                             <Calculator className="mr-2 h-4 w-4" /> Calculate Charges
                         </Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendCharge({ chargeId: 0, amount: 0, fuelApply: false, taxApply: false, taxOnFuel: false })}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Charge
-                        </Button>
                     </div>
                     <div className="overflow-hidden rounded-md border border-border/70 bg-muted/20">
                         <Table>
                             <TableHeader>
                                 <TableRow className="border-b-0 bg-primary hover:bg-primary">
-                                    <TableHead className="whitespace-nowrap text-primary-foreground first:rounded-tl-md">
-                                        Charge
-                                    </TableHead>
                                     <TableHead className="whitespace-nowrap text-primary-foreground">
-                                        Description
+                                        Charge
                                     </TableHead>
                                     <TableHead className="whitespace-nowrap text-primary-foreground">
                                         Amount
                                     </TableHead>
                                     <TableHead className="whitespace-nowrap text-primary-foreground">Fuel</TableHead>
-                                    <TableHead className="whitespace-nowrap text-primary-foreground">Tax</TableHead>
-                                    <TableHead className="whitespace-nowrap text-primary-foreground">Total</TableHead>
-                                    <TableHead className="w-[50px] text-primary-foreground last:rounded-tr-md" />
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {chargeFields.map((field, index) => (
-                                    <TableRow key={field.id}>
-                                        <TableCell className="w-[200px]">
-                                            <Combobox
-                                                options={masterChargeOptions.map((mc) => ({ label: mc.name, value: mc.id }))}
-                                                value={form.watch(`charges.${index}.chargeId`)}
-                                                onChange={(val) => form.setValue(`charges.${index}.chargeId`, val as number)}
-                                                placeholder="Select Charge"
-                                                searchPlaceholder="Search charge..."
-                                                searchValue={chargeSearch}
-                                                onSearchValueChange={setChargeSearch}
-                                                className="h-8"
-                                            />
-                                        </TableCell>
+                                {chargePreviewRows.map((row, index) => (
+                                    <TableRow key={`${row.type}-${row.name}-${index}`}>
+                                        <TableCell>{row.name}</TableCell>
+                                        <TableCell>{row.amount}</TableCell>
                                         <TableCell>
-                                            <Input {...form.register(`charges.${index}.description` as const)} placeholder="Notes" className="h-8" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input type="number" {...form.register(`charges.${index}.amount` as const, { valueAsNumber: true })} className="h-8 w-24" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Switch
-                                                checked={form.watch(`charges.${index}.fuelApply`)}
-                                                onCheckedChange={(val) => form.setValue(`charges.${index}.fuelApply`, val)}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Switch
-                                                checked={form.watch(`charges.${index}.taxApply`)}
-                                                onCheckedChange={(val) => form.setValue(`charges.${index}.taxApply`, val)}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input type="number" readOnly {...form.register(`charges.${index}.total` as const, { valueAsNumber: true })} className="h-8 w-24 bg-muted" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button type="button" variant="ghost" size="sm" onClick={() => removeCharge(index)}>
-                                                <Trash2 className="h-4 w-4 text-red-500" />
-                                            </Button>
+                                            {row.type === 'BASE'
+                                                ? 'Yes'
+                                                : (row as { fuelApply?: boolean }).fuelApply === true
+                                                    ? 'Yes'
+                                                    : 'No'}
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {chargeFields.length === 0 && (
+                                {chargePreviewRows.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
-                                            No charges added.
+                                        <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
+                                            No calculated charges yet. Click "Calculate Charges".
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -2460,20 +2582,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     {chargePreview && (
                         <div className="mt-3 rounded-md border border-border/70 bg-muted/20 p-3 text-sm">
                             <div className="flex flex-wrap gap-4">
-                                <p><span className="text-muted-foreground">Base Freight:</span> {chargePreview.baseFreight ?? "—"}</p>
-                                <p><span className="text-muted-foreground">Total Charges:</span> {chargePreview.totalCharges ?? "—"}</p>
                                 <p><span className="text-muted-foreground">Total Amount:</span> {chargePreview.totalAmount ?? "—"}</p>
                             </div>
-                            {chargePreview.rows?.length > 0 && (
-                                <div className="mt-3 grid gap-2 md:grid-cols-2">
-                                    {chargePreview.rows.map((row, index) => (
-                                        <div key={`${row.type}-${index}`} className="rounded border border-border bg-card p-2 text-xs">
-                                            <div className="font-medium">{row.name}</div>
-                                            <div className="text-muted-foreground">{row.type} | {row.amount}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     )}
                 </OutlinedFormSection>
@@ -2492,7 +2602,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 </FloatingFormItem>
                                 <FloatingFormItem label={<>Vendor <span className="text-red-500">*</span></>}>
                                     <Combobox
-                                        options={vendorOptions.map((v) => ({ label: v.vendorName, value: v.id }))}
+                                        options={vendorComboboxOptions}
                                         value={forwardingForm.deliveryVendorId}
                                         onChange={(val) =>
                                             updateForwardingForm({

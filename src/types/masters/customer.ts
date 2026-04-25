@@ -153,47 +153,16 @@ export interface CustomerFuelSurchargeFormData {
     fuelSurcharge: number;
 }
 
-export interface CustomerOtherCharge {
-    id: number;
-    customerId: number;
-    productId: number | null;
-    srNo: number;
-    chargeType: string;
-    fromDate: string;
-    toDate: string;
-    origin: string;
-    destination: string;
-    amount: number | string | { s?: number; e?: number; d?: number[] };
-    minimumValue: number | string | { s?: number; e?: number; d?: number[] };
-    product?: CustomerProductRef | null;
-}
-
-export interface CustomerOtherChargeFormData {
-    productId?: number;
-    srNo: number;
-    chargeType: string;
-    fromDate: string;
-    toDate: string;
-    origin: string;
-    destination: string;
-    amount: number;
-    minimumValue: number;
-}
-
 export interface CustomerVolumetric {
     id: number;
     customerId: number;
-    productId: number | null;
-    cmDivide: number | string | { s?: number; e?: number; d?: number[] };
-    inchDivide: number | string | { s?: number; e?: number; d?: number[] };
+    productId: number;
     cft: number | string | { s?: number; e?: number; d?: number[] };
     product?: CustomerProductRef | null;
 }
 
 export interface CustomerVolumetricFormData {
-    productId?: number;
-    cmDivide: number;
-    inchDivide: number;
+    productId: number;
     cft: number;
 }
 
@@ -201,8 +170,8 @@ export interface CustomerKycDocument {
     id: number;
     customerId: number;
     docType: string;
-    filePath: string;
-    fileName: string;
+    filePath: string | null;
+    fileName: string | null;
     documentNumber?: string | null;
     expiryDate?: string | null;
     verified?: boolean;
@@ -210,8 +179,7 @@ export interface CustomerKycDocument {
 
 export interface CustomerKycDocumentFormData {
     docType: string;
-    filePath: string;
-    fileName: string;
+    fileName?: string;
     documentNumber?: string;
     expiryDate?: string;
     verified?: boolean;

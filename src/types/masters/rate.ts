@@ -26,10 +26,14 @@ export interface RateZoneRate extends RateZoneRatePayload {
   toZone?: RateZoneRef | null;
 }
 
+export type RouteWeightSlabPricingMode = "FLAT" | "PER_KG";
+
 export interface RateWeightSlabPayload {
   minWeight: number;
   maxWeight: number;
   rate: number;
+  /** Route / ODA weight slabs only; distance matrix weight rows omit this. */
+  pricingMode?: RouteWeightSlabPricingMode;
 }
 
 export interface RateWeightSlab extends RateWeightSlabPayload {
@@ -88,6 +92,8 @@ export interface RateChargeSlabPayload {
   minValue: number;
   maxValue: number;
   rate: number;
+  /** FLAT = total for the band; PER_KG = rate × basis (weight / distance when applicable). */
+  pricingMode?: "FLAT" | "PER_KG";
 }
 
 export interface RateChargeSlab extends RateChargeSlabPayload {
@@ -109,6 +115,7 @@ export interface RateChargePayload {
   chargeId?: number;
   name?: string;
   calculationBase?: string;
+  applyPerPiece?: boolean;
   value: number;
   isPercentage?: boolean;
   minValue?: number;
@@ -129,11 +136,10 @@ export interface RateCharge extends RateChargePayload {
 }
 
 export interface RateConditionPayload {
-  chargeId?: number;
+  chargeId: number;
   field: string;
   operator: string;
   value: number;
-  chargeName?: string;
   chargeAmount: number;
   calculationBase?: string;
   isPercentage?: boolean;
@@ -142,6 +148,8 @@ export interface RateConditionPayload {
 export interface RateCondition extends RateConditionPayload {
   id: number;
   rateMasterId: number;
+  /** Denormalized from server; use `charge?.name` when `charge` is present. */
+  chargeName?: string;
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;

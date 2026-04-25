@@ -7,8 +7,6 @@ import {
     CustomerChildSingleResponse,
     CustomerFuelSurcharge,
     CustomerFuelSurchargeFormData,
-    CustomerOtherCharge,
-    CustomerOtherChargeFormData,
     CustomerVolumetric,
     CustomerVolumetricFormData,
     CustomerKycDocument,
@@ -144,14 +142,31 @@ export const customerService = {
     async addCustomerKycDocument(
         customerId: number,
         body: CustomerKycDocumentFormData,
+        file?: File | null,
     ) {
+        const fd = new FormData();
+        fd.append('docType', body.docType);
+        if (body.fileName?.trim()) {
+            fd.append('fileName', body.fileName.trim());
+        }
+        if (body.documentNumber?.trim()) {
+            fd.append('documentNumber', body.documentNumber.trim());
+        }
+        if (body.expiryDate?.trim()) {
+            fd.append('expiryDate', body.expiryDate.trim());
+        }
+        if (body.verified !== undefined) {
+            fd.append('verified', body.verified ? 'true' : 'false');
+        }
+        if (file) {
+            fd.append('file', file);
+        }
         const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
-            body: JSON.stringify(body),
+            body: fd,
         });
         if (!response.ok) {
             const error = await response.json();
@@ -164,14 +179,33 @@ export const customerService = {
         customerId: number,
         docId: number | string,
         body: Partial<CustomerKycDocumentFormData>,
+        file?: File | null,
     ) {
+        const fd = new FormData();
+        if (body.docType) {
+            fd.append('docType', body.docType);
+        }
+        if (body.fileName !== undefined) {
+            fd.append('fileName', body.fileName?.trim() ?? '');
+        }
+        if (body.documentNumber !== undefined) {
+            fd.append('documentNumber', body.documentNumber?.trim() ?? '');
+        }
+        if (body.expiryDate !== undefined) {
+            fd.append('expiryDate', body.expiryDate?.trim() ?? '');
+        }
+        if (body.verified !== undefined) {
+            fd.append('verified', body.verified ? 'true' : 'false');
+        }
+        if (file) {
+            fd.append('file', file);
+        }
         const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents/${docId}`, {
             method: 'PATCH',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },
-            body: JSON.stringify(body),
+            body: fd,
         });
         if (!response.ok) {
             const error = await response.json();
@@ -240,58 +274,6 @@ export const customerService = {
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.message || 'Failed to delete fuel surcharge');
-        }
-        return response.json();
-    },
-
-    async getCustomerOtherCharges(customerId: number) {
-        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/other-charges`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
-        });
-        if (!response.ok) throw new Error('Failed to fetch other charges');
-        return response.json() as Promise<CustomerChildListResponse<CustomerOtherCharge>>;
-    },
-
-    async addCustomerOtherCharge(customerId: number, body: CustomerOtherChargeFormData) {
-        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/other-charges`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to add other charge');
-        }
-        return response.json() as Promise<CustomerChildSingleResponse<CustomerOtherCharge>>;
-    },
-
-    async updateCustomerOtherCharge(customerId: number, chargeId: number | string, body: CustomerOtherChargeFormData) {
-        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/other-charges/${chargeId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to update other charge');
-        }
-        return response.json() as Promise<CustomerChildSingleResponse<CustomerOtherCharge>>;
-    },
-
-    async deleteCustomerOtherCharge(customerId: number, chargeId: number | string) {
-        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/other-charges/${chargeId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to delete other charge');
         }
         return response.json();
     },

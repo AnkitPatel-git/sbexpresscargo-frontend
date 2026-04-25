@@ -63,6 +63,11 @@ export default function CustomersPage() {
     const [appliedFilters, setAppliedFilters] = useState<CustomerFilters>(emptyFilters)
     const [draftFilters, setDraftFilters] = useState<CustomerFilters>(emptyFilters)
     const [deleteId, setDeleteId] = useState<number | null>(null)
+    const [isMounted, setIsMounted] = useState(false)
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
 
     useEffect(() => {
         if (filtersOpen) {
@@ -166,54 +171,60 @@ export default function CustomersPage() {
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 self-start rounded-md border border-border p-1 sm:self-auto">
-                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-                        <DialogTrigger asChild>
-                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
-                                <Filter className="h-4 w-4" />
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-xl">
-                            <DialogHeader>
-                                <DialogTitle>Customer Filters</DialogTitle>
-                                <DialogDescription>Apply customer filters from this popup and keep the table clean.</DialogDescription>
-                            </DialogHeader>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <Input placeholder="Search customers..." className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
-                                <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
-                                <Input placeholder="Customer Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
-                                <Input placeholder="Mobile" className="h-9 bg-background" value={draftFilters.mobile} onChange={(e) => setDraftFilters((prev) => ({ ...prev, mobile: e.target.value }))} />
-                                <div className="sm:col-span-2">
-                                    <Select value={draftFilters.serviceCenterId} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, serviceCenterId: value }))}>
+                    {isMounted ? (
+                        <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                            <DialogTrigger asChild>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                    <Filter className="h-4 w-4" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-xl">
+                                <DialogHeader>
+                                    <DialogTitle>Customer Filters</DialogTitle>
+                                    <DialogDescription>Apply customer filters from this popup and keep the table clean.</DialogDescription>
+                                </DialogHeader>
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <Input placeholder="Search customers..." className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
+                                    <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
+                                    <Input placeholder="Customer Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
+                                    <Input placeholder="Mobile" className="h-9 bg-background" value={draftFilters.mobile} onChange={(e) => setDraftFilters((prev) => ({ ...prev, mobile: e.target.value }))} />
+                                    <div className="sm:col-span-2">
+                                        <Select value={draftFilters.serviceCenterId} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, serviceCenterId: value }))}>
+                                            <SelectTrigger className="h-9 w-full bg-background">
+                                                <SelectValue placeholder="Service Center" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All service centers</SelectItem>
+                                                {(serviceCentersResponse?.data ?? []).map((serviceCenter) => (
+                                                    <SelectItem key={serviceCenter.id} value={String(serviceCenter.id)}>
+                                                        {serviceCenter.code} - {serviceCenter.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <Select value={draftFilters.status} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}>
                                         <SelectTrigger className="h-9 w-full bg-background">
-                                            <SelectValue placeholder="Service Center" />
+                                            <SelectValue placeholder="Status" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">All service centers</SelectItem>
-                                            {(serviceCentersResponse?.data ?? []).map((serviceCenter) => (
-                                                <SelectItem key={serviceCenter.id} value={String(serviceCenter.id)}>
-                                                    {serviceCenter.code} - {serviceCenter.name}
-                                                </SelectItem>
-                                            ))}
+                                            <SelectItem value="all">All statuses</SelectItem>
+                                            <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                                            <SelectItem value="INACTIVE">INACTIVE</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <Select value={draftFilters.status} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}>
-                                    <SelectTrigger className="h-9 w-full bg-background">
-                                        <SelectValue placeholder="Status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All statuses</SelectItem>
-                                        <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                                        <SelectItem value="INACTIVE">INACTIVE</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <DialogFooter className="gap-2 sm:gap-2">
-                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
-                                <Button type="button" onClick={applyFilters}>Apply</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                                <DialogFooter className="gap-2 sm:gap-2">
+                                    <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                    <Button type="button" onClick={applyFilters}>Apply</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    ) : (
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters" disabled>
+                            <Filter className="h-4 w-4" />
+                        </Button>
+                    )}
                     <PermissionGuard permission="master.customer.read">
                         <Button
                             type="button"

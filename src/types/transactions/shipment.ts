@@ -479,6 +479,7 @@ export interface ShipmentCalculateResponse {
   fromZoneId?: number;
   toZoneId?: number;
   baseFreight?: number;
+  baseFreightFuelApply?: boolean;
   totalAmount?: number;
   totalCharges?: number;
   rows: ShipmentCalculateRow[];
@@ -497,6 +498,22 @@ export interface ShipmentCalculateResponse {
     chargesApplied?: Array<{ name: string; amount: number; calculationBase?: string; isPercentage?: boolean }>;
     conditionsApplied?: Array<{ name: string; amount: number; field?: string; operator?: string; value?: number }>;
   };
+}
+
+export interface ShipmentWeightRowPreview {
+  pieces: number;
+  actualWeight: number;
+  volumetricWeight: number;
+  chargeWeight: number;
+  totalValue: number;
+}
+
+export interface ShipmentWeightPreviewResponse {
+  cft: number;
+  rows: ShipmentWeightRowPreview[];
+  shipmentVolumetricWeight: number;
+  shipmentChargeWeight: number;
+  bookingTotalValue: number;
 }
 
 export interface ApiEnvelope<T> {
