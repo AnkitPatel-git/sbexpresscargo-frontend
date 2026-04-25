@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm, Resolver, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -57,8 +57,6 @@ import {
     type CustomerFuelSurchargeFormData,
     type CustomerKycDocument,
     type CustomerKycDocumentFormData,
-    type CustomerOtherCharge,
-    type CustomerOtherChargeFormData,
     type CustomerVolumetric,
     type CustomerVolumetricFormData,
 } from '@/types/masters/customer'
@@ -101,18 +99,8 @@ interface CustomerFormProps {
 const CUSTOMER_TABS = [
     { value: "personal", label: "Personal Information" },
     { value: "fuel", label: "Fuel Surcharges" },
-    { value: "charges", label: "Other Charges" },
     { value: "volumetric", label: "Customer Volumetric" },
     { value: "kyc", label: "KYC Details" },
-] as const
-
-const CUSTOMER_OTHER_CHARGE_TYPES = [
-    'AIRWAYBILL',
-    'FREIGHT',
-    'FUEL',
-    'OBC',
-    'FLAT',
-    'OTHER',
 ] as const
 
 const ALL_PRODUCTS_OPTION_VALUE = '__ALL_PRODUCTS__'
@@ -239,7 +227,6 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                     <TabsList className="h-auto flex w-full flex-wrap justify-start rounded-full border border-border/60 bg-muted/40 p-2">
                         <TabsTrigger value="personal" className="rounded-full px-5 py-2">Personal Information</TabsTrigger>
                         <TabsTrigger value="fuel" className="rounded-full px-5 py-2">Fuel Surcharges</TabsTrigger>
-                        <TabsTrigger value="charges" className="rounded-full px-5 py-2">Other Charges</TabsTrigger>
                         <TabsTrigger value="volumetric" className="rounded-full px-5 py-2">Customer Volumetric</TabsTrigger>
                         <TabsTrigger value="kyc" className="rounded-full px-5 py-2">KYC Details</TabsTrigger>
                     </TabsList>
@@ -557,9 +544,6 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                     <TabsContent value="fuel" className="space-y-4">
                         <CustomerFuelSurchargeTab customerId={customerId} />
                     </TabsContent>
-                    <TabsContent value="charges" className="space-y-4">
-                        <CustomerOtherChargeTab customerId={customerId} />
-                    </TabsContent>
                     <TabsContent value="volumetric" className="space-y-4">
                         <CustomerVolumetricTab customerId={customerId} />
                     </TabsContent>
@@ -724,7 +708,8 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                         setEditing(item)
                         setForm({
                             productId: item.productId ?? undefined,
-                            fuelChargeType: item.fuelChargeType,
+                            fuelChargeType:
+                                item.fuelChargeType === 'FIXED' ? 'FLAT' : item.fuelChargeType,
                             fromDate: item.fromDate.split('T')[0] ?? '',
                             toDate: item.toDate.split('T')[0] ?? '',
                             fuelSurcharge: Number(decimalToNumber(item.fuelSurcharge) || 0),
@@ -757,7 +742,20 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                             ...(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName })),
                         ]}
                     />
-                    <SimpleSelect label="Fuel Charge Type" value={form.fuelChargeType} onValueChange={(v) => setForm((prev) => ({ ...prev, fuelChargeType: v }))} options={[{ value: 'PERCENTAGE', label: 'PERCENTAGE' }, { value: 'FIXED', label: 'FIXED' }]} />
+                    <SimpleSelect
+                        label="Fuel Charge Type"
+                        value={form.fuelChargeType}
+                        onValueChange={(v) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                fuelChargeType: v === 'FIXED' ? 'FLAT' : v,
+                            }))
+                        }
+                        options={[
+                            { value: 'PERCENTAGE', label: 'PERCENTAGE' },
+                            { value: 'FLAT', label: 'FLAT' },
+                        ]}
+                    />
                     <SimpleInput label="Fuel Surcharge" type="number" value={String(form.fuelSurcharge)} onChange={(value) => setForm((prev) => ({ ...prev, fuelSurcharge: Number(value) }))} />
                     <SimpleInput label="From Date" type="date" value={form.fromDate} onChange={(value) => setForm((prev) => ({ ...prev, fromDate: value }))} />
                     <SimpleInput label="To Date" type="date" value={form.toDate} onChange={(value) => setForm((prev) => ({ ...prev, toDate: value }))} />
@@ -772,118 +770,11 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
     )
 }
 
-function CustomerOtherChargeTab({ customerId }: { customerId: number | null }) {
-    const queryClient = useQueryClient()
-    const [open, setOpen] = useState(false)
-    const [editing, setEditing] = useState<CustomerOtherCharge | null>(null)
-    const [form, setForm] = useState<CustomerOtherChargeFormData>({
-        productId: 0,
-        srNo: 1,
-        chargeType: 'OTHER',
-        fromDate: '',
-        toDate: '',
-        origin: '',
-        destination: '',
-        amount: 0,
-        minimumValue: 0,
-    })
-
-    const { data } = useQuery({
-        queryKey: ['customer-other-charges', customerId],
-        queryFn: () => customerService.getCustomerOtherCharges(customerId!),
-        enabled: !!customerId,
-    })
-    const { data: products } = useQuery({
-        queryKey: ['customer-tab-products'],
-        queryFn: () => productService.getProducts({ page: 1, limit: 100, sortBy: 'productName', sortOrder: 'asc' }),
-        enabled: !!customerId,
-    })
-    const otherChargeRows = getChildRows<CustomerOtherCharge>(data)
-    const mutation = useMutation({
-        mutationFn: (payload: CustomerOtherChargeFormData) =>
-            editing
-                ? customerService.updateCustomerOtherCharge(customerId!, editing.id, payload)
-                : customerService.addCustomerOtherCharge(customerId!, payload),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['customer-other-charges', customerId] })
-            setOpen(false)
-            setEditing(null)
-            setForm({ productId: 0, srNo: 1, chargeType: 'OTHER', fromDate: '', toDate: '', origin: '', destination: '', amount: 0, minimumValue: 0 })
-            toast.success(`Other charge ${editing ? 'updated' : 'added'} successfully`)
-        },
-        onError: (error: Error) => toast.error(error.message),
-    })
-    const deleteMutation = useMutation({
-        mutationFn: (id: number) => customerService.deleteCustomerOtherCharge(customerId!, id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['customer-other-charges', customerId] })
-            toast.success('Other charge deleted successfully')
-        },
-        onError: (error: Error) => toast.error(error.message),
-    })
-    if (!customerId) return <DisabledCustomerTab title="Other Charges" />
-    return (
-        <CustomerChildTableCard
-            title="Other Charges"
-            onAdd={() => { setEditing(null); setForm({ productId: 0, srNo: 1, chargeType: 'OTHER', fromDate: '', toDate: '', origin: '', destination: '', amount: 0, minimumValue: 0 }); setOpen(true) }}
-            columns={['Sr No', 'Product', 'Type', 'Origin', 'Destination', 'Amount', 'Min Value', 'Action']}
-            rows={otherChargeRows.map((item) => [
-                String(item.srNo),
-                item.product?.productName ?? '-',
-                item.chargeType,
-                item.origin,
-                item.destination,
-                String(decimalToNumber(item.amount)),
-                String(decimalToNumber(item.minimumValue)),
-            ])}
-            actions={otherChargeRows.map((item) => (
-                <div className="flex gap-2" key={item.id}>
-                    <Button type="button" variant="outline" size="sm" onClick={() => {
-                        setEditing(item)
-                        setForm({
-                            productId: item.productId ?? 0,
-                            srNo: item.srNo,
-                            chargeType: item.chargeType,
-                            fromDate: item.fromDate.split('T')[0] ?? '',
-                            toDate: item.toDate.split('T')[0] ?? '',
-                            origin: item.origin,
-                            destination: item.destination,
-                            amount: Number(decimalToNumber(item.amount) || 0),
-                            minimumValue: Number(decimalToNumber(item.minimumValue) || 0),
-                        })
-                        setOpen(true)
-                    }}>Edit</Button>
-                    <Button type="button" variant="destructive" size="sm" onClick={() => deleteMutation.mutate(item.id)}>Delete</Button>
-                </div>
-            ))}
-        >
-            <CustomerEntityDialog open={open} onOpenChange={setOpen} title={editing ? 'Edit Other Charge' : 'Add Other Charge'} onSave={() => mutation.mutate(form)} saving={mutation.isPending}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect label="Product" value={String(form.productId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))} options={(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName }))} />
-                    <SimpleInput label="Sr No" type="number" value={String(form.srNo)} onChange={(value) => setForm((prev) => ({ ...prev, srNo: Number(value) }))} />
-                    <SimpleSelect
-                        label="Charge Type"
-                        value={form.chargeType}
-                        onValueChange={(v) => setForm((prev) => ({ ...prev, chargeType: v }))}
-                        options={CUSTOMER_OTHER_CHARGE_TYPES.map((type) => ({ value: type, label: type }))}
-                    />
-                    <SimpleInput label="From Date" type="date" value={form.fromDate} onChange={(value) => setForm((prev) => ({ ...prev, fromDate: value }))} />
-                    <SimpleInput label="To Date" type="date" value={form.toDate} onChange={(value) => setForm((prev) => ({ ...prev, toDate: value }))} />
-                    <SimpleInput label="Origin" value={form.origin} onChange={(value) => setForm((prev) => ({ ...prev, origin: value }))} />
-                    <SimpleInput label="Destination" value={form.destination} onChange={(value) => setForm((prev) => ({ ...prev, destination: value }))} />
-                    <SimpleInput label="Amount" type="number" value={String(form.amount)} onChange={(value) => setForm((prev) => ({ ...prev, amount: Number(value) }))} />
-                    <SimpleInput label="Minimum Value" type="number" value={String(form.minimumValue)} onChange={(value) => setForm((prev) => ({ ...prev, minimumValue: Number(value) }))} />
-                </div>
-            </CustomerEntityDialog>
-        </CustomerChildTableCard>
-    )
-}
-
 function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<CustomerVolumetric | null>(null)
-    const [form, setForm] = useState<CustomerVolumetricFormData>({ productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 })
+    const [form, setForm] = useState<CustomerVolumetricFormData>({ productId: 0, cft: 5000 })
     const { data } = useQuery({
         queryKey: ['customer-volumetrics', customerId],
         queryFn: () => customerService.getCustomerVolumetrics(customerId!),
@@ -895,6 +786,21 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
         enabled: !!customerId,
     })
     const volumetricRows = getChildRows<CustomerVolumetric>(data)
+    const productOptionsForAdd = useMemo(() => {
+        const all = products?.data ?? []
+        const taken = new Set(volumetricRows.map((r) => r.productId))
+        return all.filter((p) => !taken.has(p.id)).map((p) => ({ value: String(p.id), label: p.productName }))
+    }, [products?.data, volumetricRows])
+    const productOptionsForEdit = useMemo(() => {
+        const all = products?.data ?? []
+        if (!editing) return all.map((p) => ({ value: String(p.id), label: p.productName }))
+        const taken = new Set(
+            volumetricRows.filter((r) => r.id !== editing.id).map((r) => r.productId),
+        )
+        return all
+            .filter((p) => !taken.has(p.id) || p.id === editing.productId)
+            .map((p) => ({ value: String(p.id), label: p.productName }))
+    }, [products?.data, volumetricRows, editing])
     const mutation = useMutation({
         mutationFn: (payload: CustomerVolumetricFormData) =>
             editing
@@ -904,7 +810,7 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
             queryClient.invalidateQueries({ queryKey: ['customer-volumetrics', customerId] })
             setOpen(false)
             setEditing(null)
-            setForm({ productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 })
+            setForm({ productId: 0, cft: 5000 })
             toast.success(`Volumetric ${editing ? 'updated' : 'added'} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -918,15 +824,25 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
         onError: (error: Error) => toast.error(error.message),
     })
     if (!customerId) return <DisabledCustomerTab title="Customer Volumetric" />
+    const selectOptions = editing ? productOptionsForEdit : productOptionsForAdd
     return (
         <CustomerChildTableCard
             title="Customer Volumetric"
-            onAdd={() => { setEditing(null); setForm({ productId: 0, cmDivide: 0, inchDivide: 0, cft: 0 }); setOpen(true) }}
-            columns={['Product', 'CM Divide', 'Inch Divide', 'CFT', 'Action']}
+            onAdd={() => {
+                setEditing(null)
+                const all = products?.data ?? []
+                const taken = new Set(volumetricRows.map((r) => r.productId))
+                const first = all.find((p) => !taken.has(p.id))
+                if (!first) {
+                    toast.error('Each product can have only one row. All products already have a volumetric row, or add products in master first.')
+                    return
+                }
+                setForm({ productId: first.id, cft: 5000 })
+                setOpen(true)
+            }}
+            columns={['Product', 'CFT', 'Action']}
             rows={volumetricRows.map((item) => [
                 item.product?.productName ?? '-',
-                String(decimalToNumber(item.cmDivide)),
-                String(decimalToNumber(item.inchDivide)),
                 String(decimalToNumber(item.cft)),
             ])}
             actions={volumetricRows.map((item) => (
@@ -934,9 +850,7 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
                     <Button type="button" variant="outline" size="sm" onClick={() => {
                         setEditing(item)
                         setForm({
-                            productId: item.productId ?? 0,
-                            cmDivide: Number(decimalToNumber(item.cmDivide) || 0),
-                            inchDivide: Number(decimalToNumber(item.inchDivide) || 0),
+                            productId: item.productId,
                             cft: Number(decimalToNumber(item.cft) || 0),
                         })
                         setOpen(true)
@@ -945,11 +859,33 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
                 </div>
             ))}
         >
-            <CustomerEntityDialog open={open} onOpenChange={setOpen} title={editing ? 'Edit Volumetric' : 'Add Volumetric'} onSave={() => mutation.mutate(form)} saving={mutation.isPending}>
+            <CustomerEntityDialog
+                open={open}
+                onOpenChange={setOpen}
+                title={editing ? 'Edit Volumetric' : 'Add Volumetric'}
+                onSave={() => {
+                    if (!form.productId || form.productId < 1) {
+                        toast.error('Select a product')
+                        return
+                    }
+                    if (!Number.isFinite(form.cft) || form.cft <= 0) {
+                        toast.error('CFT must be greater than 0')
+                        return
+                    }
+                    mutation.mutate(form)
+                }}
+                saving={mutation.isPending}
+            >
+                <p className="mb-3 text-sm text-muted-foreground">
+                    One row per product. CFT is the divisor for volumetric weight (L×W×H / CFT); the default in billing when unset is 5000.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect label="Product" value={String(form.productId || '')} onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))} options={(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName }))} />
-                    <SimpleInput label="CM Divide" type="number" value={String(form.cmDivide)} onChange={(value) => setForm((prev) => ({ ...prev, cmDivide: Number(value) }))} />
-                    <SimpleInput label="Inch Divide" type="number" value={String(form.inchDivide)} onChange={(value) => setForm((prev) => ({ ...prev, inchDivide: Number(value) }))} />
+                    <SimpleSelect
+                        label="Product"
+                        value={String(form.productId || '')}
+                        onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))}
+                        options={selectOptions}
+                    />
                     <SimpleInput label="CFT" type="number" value={String(form.cft)} onChange={(value) => setForm((prev) => ({ ...prev, cft: Number(value) }))} />
                 </div>
             </CustomerEntityDialog>
@@ -957,13 +893,22 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
     )
 }
 
+const KYC_DOC_TYPE_OPTIONS = [
+    { value: 'AADHAAR', label: 'AADHAAR' },
+    { value: 'PAN', label: 'PAN' },
+    { value: 'GST', label: 'GST' },
+    { value: 'PASSPORT', label: 'PASSPORT' },
+    { value: 'VOTER_ID', label: 'VOTER ID' },
+] as const
+
 function CustomerKycTab({ customerId }: { customerId: number | null }) {
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
+    const [kycFile, setKycFile] = useState<File | null>(null)
+    const [fileInputKey, setFileInputKey] = useState(0)
     const [editing, setEditing] = useState<CustomerKycDocument | null>(null)
     const [form, setForm] = useState<CustomerKycDocumentFormData>({
         docType: 'AADHAAR',
-        filePath: '',
         fileName: '',
         documentNumber: '',
         expiryDate: '',
@@ -976,16 +921,18 @@ function CustomerKycTab({ customerId }: { customerId: number | null }) {
     })
     const kycRows = getChildRows<CustomerKycDocument>(data)
     const mutation = useMutation({
-        mutationFn: (payload: CustomerKycDocumentFormData) =>
+        mutationFn: (input: { form: CustomerKycDocumentFormData; file: File | null }) =>
             editing
-                ? customerService.updateCustomerKycDocument(customerId!, editing.id, payload)
-                : customerService.addCustomerKycDocument(customerId!, payload),
+                ? customerService.updateCustomerKycDocument(customerId!, editing.id, input.form, input.file)
+                : customerService.addCustomerKycDocument(customerId!, input.form, input.file),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customer-kyc-documents', customerId] })
             setOpen(false)
             setEditing(null)
-            setForm({ docType: 'AADHAAR', filePath: '', fileName: '', documentNumber: '', expiryDate: '', verified: false })
-            toast.success(`KYC document ${editing ? 'updated' : 'added'} successfully`)
+            setKycFile(null)
+            setFileInputKey((k) => k + 1)
+            setForm({ docType: 'AADHAAR', fileName: '', documentNumber: '', expiryDate: '', verified: false })
+            toast.success('KYC document saved successfully')
         },
         onError: (error: Error) => toast.error(error.message),
     })
@@ -1001,11 +948,17 @@ function CustomerKycTab({ customerId }: { customerId: number | null }) {
     return (
         <CustomerChildTableCard
             title="KYC Details"
-            onAdd={() => { setEditing(null); setForm({ docType: 'AADHAAR', filePath: '', fileName: '', documentNumber: '', expiryDate: '', verified: false }); setOpen(true) }}
-            columns={['Doc Type', 'File Name', 'Document Number', 'Expiry Date', 'Verified', 'Action']}
+            onAdd={() => {
+                setEditing(null)
+                setKycFile(null)
+                setFileInputKey((k) => k + 1)
+                setForm({ docType: 'AADHAAR', fileName: '', documentNumber: '', expiryDate: '', verified: false })
+                setOpen(true)
+            }}
+            columns={['Doc Type', 'File', 'Document Number', 'Expiry Date', 'Verified', 'Action']}
             rows={kycRows.map((item) => [
                 item.docType,
-                item.fileName,
+                item.fileName || item.filePath || '—',
                 item.documentNumber ?? '-',
                 item.expiryDate ? formatDate(item.expiryDate) : '-',
                 item.verified ? 'Yes' : 'No',
@@ -1014,10 +967,11 @@ function CustomerKycTab({ customerId }: { customerId: number | null }) {
                 <div className="flex gap-2" key={item.id}>
                     <Button type="button" variant="outline" size="sm" onClick={() => {
                         setEditing(item)
+                        setKycFile(null)
+                        setFileInputKey((k) => k + 1)
                         setForm({
                             docType: item.docType,
-                            filePath: item.filePath,
-                            fileName: item.fileName,
+                            fileName: item.fileName ?? '',
                             documentNumber: item.documentNumber ?? '',
                             expiryDate: item.expiryDate ? item.expiryDate.split('T')[0] : '',
                             verified: item.verified ?? false,
@@ -1028,11 +982,50 @@ function CustomerKycTab({ customerId }: { customerId: number | null }) {
                 </div>
             ))}
         >
-            <CustomerEntityDialog open={open} onOpenChange={setOpen} title={editing ? 'Edit KYC Document' : 'Add KYC Document'} onSave={() => mutation.mutate(form)} saving={mutation.isPending}>
+            <CustomerEntityDialog
+                open={open}
+                onOpenChange={setOpen}
+                title={editing ? 'Edit KYC Document' : 'Add KYC Document'}
+                onSave={() => mutation.mutate({ form, file: kycFile })}
+                saving={mutation.isPending}
+            >
+                <p className="mb-3 text-sm text-muted-foreground">
+                    Upload a document file if you have one. You can still save the row with only doc type and other details.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect label="Doc Type" value={form.docType} onValueChange={(v) => setForm((prev) => ({ ...prev, docType: v }))} options={[{ value: 'AADHAAR', label: 'AADHAAR' }, { value: 'AADHAR', label: 'AADHAR' }, { value: 'PAN', label: 'PAN' }, { value: 'GST', label: 'GST' }]} />
-                    <SimpleInput label="File Name" value={form.fileName} onChange={(value) => setForm((prev) => ({ ...prev, fileName: value }))} />
-                    <SimpleInput label="File Path" value={form.filePath} onChange={(value) => setForm((prev) => ({ ...prev, filePath: value }))} />
+                    <SimpleSelect
+                        label="Doc Type"
+                        value={form.docType}
+                        onValueChange={(v) => setForm((prev) => ({ ...prev, docType: v }))}
+                        options={[...KYC_DOC_TYPE_OPTIONS]}
+                    />
+                    <div className="space-y-2 md:col-span-2">
+                        <div className="text-sm font-medium">Document file (optional)</div>
+                        <Input
+                            key={fileInputKey}
+                            type="file"
+                            className={FLOATING_INNER_CONTROL}
+                            onChange={(e) => {
+                                const f = e.target.files?.[0] ?? null
+                                setKycFile(f)
+                                if (f) {
+                                    setForm((prev) => ({ ...prev, fileName: f.name }))
+                                }
+                            }}
+                        />
+                        {kycFile ? <p className="text-xs text-muted-foreground">Selected: {kycFile.name}</p> : null}
+                        {editing && (editing.fileName || editing.filePath) && !kycFile ? (
+                            <p className="text-xs text-muted-foreground">
+                                Current: {editing.fileName || editing.filePath}
+                                {'. '}Choose a new file to replace it.
+                            </p>
+                        ) : null}
+                    </div>
+                    <SimpleInput
+                        label="File name (optional)"
+                        value={form.fileName ?? ''}
+                        onChange={(value) => setForm((prev) => ({ ...prev, fileName: value }))}
+                    />
                     <SimpleInput label="Document Number" value={form.documentNumber ?? ''} onChange={(value) => setForm((prev) => ({ ...prev, documentNumber: value }))} />
                     <SimpleInput label="Expiry Date" type="date" value={form.expiryDate ?? ''} onChange={(value) => setForm((prev) => ({ ...prev, expiryDate: value }))} />
                     <div className="space-y-2">

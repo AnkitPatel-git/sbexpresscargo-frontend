@@ -37,7 +37,6 @@ export default function ChargePage() {
     search: "",
     code: "",
     name: "",
-    calculationBase: "",
     applyFuel: "all",
   });
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
@@ -57,7 +56,6 @@ export default function ChargePage() {
     sortOrder: "asc" as const,
     code: appliedFilters.code || undefined,
     name: appliedFilters.name || undefined,
-    calculationBase: appliedFilters.calculationBase || undefined,
     applyFuel: parseBooleanFilter(appliedFilters.applyFuel),
   };
 
@@ -67,7 +65,6 @@ export default function ChargePage() {
     sortOrder: "asc" as const,
     code: appliedFilters.code || undefined,
     name: appliedFilters.name || undefined,
-    calculationBase: appliedFilters.calculationBase || undefined,
     applyFuel: parseBooleanFilter(appliedFilters.applyFuel),
   };
 
@@ -110,7 +107,7 @@ export default function ChargePage() {
   const to = Math.min(page * limit, total);
   const rows = data?.data ?? [];
 
-  const defaultFilters = { search: "", code: "", name: "", calculationBase: "", applyFuel: "all" };
+  const defaultFilters = { search: "", code: "", name: "", applyFuel: "all" };
 
   const applyFilters = () => {
     setAppliedFilters(draftFilters);
@@ -164,15 +161,6 @@ export default function ChargePage() {
                     className="h-9 bg-background"
                     value={draftFilters.name}
                     onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Calculation base</label>
-                  <Input
-                    className="h-9 bg-background"
-                    placeholder="e.g. CHARGE_WEIGHT"
-                    value={draftFilters.calculationBase}
-                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, calculationBase: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-1 sm:col-span-2">
@@ -232,13 +220,12 @@ export default function ChargePage() {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
-        <Table className="min-w-[900px] border-0">
+        <Table className="min-w-[800px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
               <TableHead className="font-semibold text-primary-foreground">ID</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Code</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Name</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Calculation base</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Apply fuel</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Sequence</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Version</TableHead>
@@ -248,13 +235,13 @@ export default function ChargePage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Loading charges…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   No charges found.
                 </TableCell>
               </TableRow>
@@ -264,7 +251,6 @@ export default function ChargePage() {
                   <TableCell className="font-medium">{charge.id}</TableCell>
                   <TableCell className="font-medium text-foreground">{charge.code}</TableCell>
                   <TableCell className="text-foreground">{charge.name}</TableCell>
-                  <TableCell className="text-foreground">{charge.calculationBase}</TableCell>
                   <TableCell className="text-foreground">{charge.applyFuel ? "Yes" : "No"}</TableCell>
                   <TableCell className="text-center text-foreground">{charge.sequence}</TableCell>
                   <TableCell className="text-center text-foreground">{charge.version}</TableCell>

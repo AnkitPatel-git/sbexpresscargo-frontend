@@ -8,29 +8,17 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Form, FormControl, FormField } from "@/components/ui/form";
-import { FloatingFormItem, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item";
+import { FloatingFormItem, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { chargeService } from "@/services/masters/charge-service";
 import type { Charge, ChargeFormData } from "@/types/masters/charge";
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema";
 
-const CALC_BASES = ["CHARGE_WEIGHT", "FLAT", "ACTUAL_WEIGHT", "FREIGHT", "SHIPMENT_VALUE"] as const;
-type CalculationBaseField = (typeof CALC_BASES)[number];
-
-function normalizeCalculationBaseFromApi(raw: string | null | undefined): CalculationBaseField {
-  if (raw && (CALC_BASES as readonly string[]).includes(raw)) {
-    return raw as CalculationBaseField;
-  }
-  return "CHARGE_WEIGHT";
-}
-
 const chargeSchema = z.object({
   code: optionalMasterCode(2),
   name: z.string().min(1, "Name is required"),
-  calculationBase: z.enum(CALC_BASES),
   applyFuel: z.boolean(),
   sequence: z.coerce.number().min(1, "Sequence must be at least 1"),
 });
@@ -51,7 +39,6 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
     defaultValues: {
       code: "",
       name: "",
-      calculationBase: "CHARGE_WEIGHT",
       applyFuel: true,
       sequence: 1,
     },
@@ -59,7 +46,6 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
       ? {
           code: initialData.code,
           name: initialData.name,
-          calculationBase: normalizeCalculationBaseFromApi(initialData.calculationBase),
           applyFuel: initialData.applyFuel,
           sequence: initialData.sequence,
         }
@@ -73,7 +59,6 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
       const codeTrimmed = typeof payload.code === "string" ? payload.code.trim() : "";
       const body: ChargeFormData = {
         name: trimmedName,
-        calculationBase: payload.calculationBase,
         applyFuel: payload.applyFuel,
         sequence: payload.sequence,
       };
@@ -136,28 +121,6 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
                 <FormControl>
                   <Input placeholder="e.g. Freight Charge" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
-              </FloatingFormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="calculationBase"
-            render={({ field }) => (
-              <FloatingFormItem label="Calculation Base">
-                <Select key={field.value} onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                      <SelectValue placeholder="Select base" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="CHARGE_WEIGHT">CHARGE WEIGHT</SelectItem>
-                    <SelectItem value="FLAT">FLAT</SelectItem>
-                    <SelectItem value="ACTUAL_WEIGHT">ACTUAL WEIGHT</SelectItem>
-                    <SelectItem value="FREIGHT">FREIGHT</SelectItem>
-                    <SelectItem value="SHIPMENT_VALUE">SHIPMENT VALUE</SelectItem>
-                  </SelectContent>
-                </Select>
               </FloatingFormItem>
             )}
           />

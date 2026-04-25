@@ -6,6 +6,7 @@ import type {
   ShipmentListQueryParams,
   ShipmentListResponse,
   ShipmentSingleResponse,
+  ShipmentWeightPreviewResponse,
 } from "@/types/transactions/shipment";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -100,6 +101,29 @@ export const shipmentService = {
         body: JSON.stringify(data),
       },
       "Failed to calculate charges",
+    );
+  },
+
+  async calculateWeight(data: {
+    customerId: number;
+    productId: number;
+    piecesRows: Array<{
+      actualWeight?: number;
+      pieces?: number;
+      length?: number;
+      width?: number;
+      height?: number;
+      items?: Array<{ totalValue?: number }>;
+    }>;
+  }): Promise<ApiEnvelope<ShipmentWeightPreviewResponse>> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/calculate-weight`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify(data),
+      },
+      "Failed to calculate shipment weight",
     );
   },
 

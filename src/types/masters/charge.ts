@@ -27,7 +27,6 @@ export interface Charge {
 export interface ChargeFormData {
   code?: string;
   name: string;
-  calculationBase: ChargeCalculationBase;
   applyFuel: boolean;
   sequence: number;
 }

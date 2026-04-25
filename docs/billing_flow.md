@@ -226,6 +226,10 @@ not:
 - origin
 - destination
 
+**Same zone is allowed on base rate:** for **main freight** (`routeRateSlabs` / “base rate” rows), `fromZoneId` and `toZoneId` **may be equal**. That models pickup and delivery **inside the same zone** (e.g. local or intra-zone shipments). The matrix key is still the pair `(fromZoneId, toZoneId)`—a same-zone row such as `(3, 3)` is distinct from cross-zone rows like `(3, 4)`.
+
+Legacy **`zoneRates`** (zone matrix on older contracts) may still enforce `fromZoneId !== toZoneId` in the API; base rate slabs are the normal place to configure same-zone freight.
+
 ## 5. Main Freight Setup
 
 Main freight is driven by `routeRateSlabs`.
@@ -245,7 +249,7 @@ Each slab contains weight slabs:
 
 This supports:
 
-- zone to zone with weight slab
+- zone to zone with weight slab (including **same zone → same zone** when both zone ids match)
 - km to km with weight slab
 - zone to zone + km with weight slab
 
@@ -394,7 +398,7 @@ Overlapping contracts for the same customer and product are rejected when saving
 
 Base freight uses:
 
-1. `routeRateSlabs` if present
+1. `routeRateSlabs` if present (matching the resolved pickup/delivery zone pair, **including** when `fromZoneId === toZoneId` for same-zone movement)
 2. legacy `zoneRates` / `distanceSlabs` as fallback
 3. `flatRate` for flat contracts
 
@@ -537,6 +541,15 @@ for the rate master route matrix UI.
       "weightSlabs": [
         { "minWeight": 0, "maxWeight": 20, "rate": 180 },
         { "minWeight": 20.001, "maxWeight": 50, "rate": 260 }
+      ]
+    },
+    {
+      "fromZoneId": 2,
+      "toZoneId": 2,
+      "minKm": 0,
+      "maxKm": 50,
+      "weightSlabs": [
+        { "minWeight": 0, "maxWeight": 30, "rate": 90 }
       ]
     }
   ],

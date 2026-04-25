@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState, type ComponentProps, type Dispatch, type SetStateAction } from "react";
+import type { Charge } from "@/types/masters/charge";
 import { FieldErrors, Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteEntityList, useSelectContentInfiniteScroll } from "@/hooks/use-infinite-entity-list";
 import { useRouter } from "next/navigation";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { FloatingFormItem, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item";
 import { Form, FormControl, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -29,15 +32,15 @@ import type {
   RateCharge,
   RateConditionPayload,
   RateCondition,
-  RateDistanceSlabPayload,
-  RateDistanceSlab,
   RateMaster,
   RateRouteRateSlab,
   RateRouteSlabPayload,
-  RateZoneRate,
-  RateZoneRatePayload,
+  RateZoneRef,
   UpdateRateMasterPayload,
 } from "@/types/masters/rate";
+import type { Customer } from "@/types/masters/customer";
+import type { Product } from "@/types/masters/product";
+import type { Zone } from "@/types/masters/zone";
 
 const DEFAULT_RATE_UPDATE_TYPE = "AWB_ENTRY_RATE";
 
@@ -48,24 +51,15 @@ const rateMasterSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   rateType: z.string().optional().or(z.literal("")),
   flatRate: z.string().optional().or(z.literal("")),
-  weightUnitStep: z.string().optional().or(z.literal("")),
 });
 
 type RateMasterFormValues = z.infer<typeof rateMasterSchema>;
 
-type TabValue =
-  | "master"
-  | "zone-rates"
-  | "distance-slabs"
-  | "route-slabs"
-  | "oda-slabs"
-  | "rate-conditions";
+type TabValue = "master" | "route-slabs" | "oda-slabs" | "rate-conditions";
 
 const RATE_TABS: Array<{ value: TabValue; label: string }> = [
   { value: "master", label: "Master" },
-  { value: "zone-rates", label: "Zone matrix" },
-  { value: "distance-slabs", label: "Distance matrix" },
-  { value: "route-slabs", label: "AWB" },
+  { value: "route-slabs", label: "Base rate" },
   { value: "oda-slabs", label: "ODA / EDL" },
   { value: "rate-conditions", label: "Rate conditions" },
 ];
@@ -95,34 +89,21 @@ const CONDITION_FIELD_OPTIONS = [
   "DIMENSION_MAX",
   "WEIGHT",
   "CHARGEABLE_WEIGHT",
+  "TOTAL_DISTANCE",
   "SHIPMENT_VALUE",
   "REVERSE_PICKUP",
   "APPOINTMENT_DELIVERY",
   "FLOOR_DELIVERY",
   "FLOOR_COUNT",
-  "CFT",
 ] as const;
 
 const CONDITION_OPERATOR_OPTIONS = ["GT", "GTE", "LT", "LTE", "EQ"] as const;
-
-type ZoneRateDraft = {
-  id?: number;
-  fromZoneId: string;
-  toZoneId: string;
-  rate: string;
-};
 
 type WeightSlabDraft = {
   minWeight: string;
   maxWeight: string;
   rate: string;
-};
-
-type DistanceSlabDraft = {
-  id?: number;
-  minKm: string;
-  maxKm: string;
-  weightSlabs: WeightSlabDraft[];
+  pricingMode?: "FLAT" | "PER_KG";
 };
 
 type RouteSlabDraft = {
@@ -153,27 +134,85 @@ type RateChargeDraft = {
   chargeSlabs: ChargeSlabDraft[];
 };
 
+type ConditionRuleType = "threshold" | "slab";
+
+type ConditionSlabFormRow = {
+  minValue: string;
+  maxValue: string;
+  rate: string;
+  pricingMode: "FLAT" | "PER_KG";
+};
+
 type RateConditionDraft = {
   id?: number;
+  ruleType: ConditionRuleType;
   chargeId: string;
   field: string;
   operator: string;
   value: string;
-  chargeName: string;
   chargeAmount: string;
   calculationBase: string;
+  applyPerPiece: boolean;
   isPercentage: boolean;
+  slabs: ConditionSlabFormRow[];
 };
 
-type ZoneRateRow = Partial<RateZoneRate> & Pick<RateZoneRate, "fromZoneId" | "toZoneId" | "rate">;
-type DistanceSlabRow = Partial<RateDistanceSlab> & Pick<RateDistanceSlab, "minKm" | "maxKm" | "weightSlabs">;
 type RouteSlabRow = Partial<RateRouteRateSlab> & Pick<RateRouteRateSlab, "weightSlabs">;
 type RateChargeRow = Partial<RateCharge> &
   Pick<RateCharge, "value" | "isPercentage" | "chargeSlabs"> &
   Partial<Pick<RateCharge, "chargeId" | "name" | "calculationBase" | "minValue" | "maxValue" | "sequence">>;
 type RateConditionRow = Partial<RateCondition> &
   Pick<RateCondition, "field" | "operator" | "value" | "chargeAmount" | "isPercentage"> &
-  Partial<Pick<RateCondition, "chargeId" | "chargeName" | "calculationBase">>;
+  Partial<Pick<RateCondition, "chargeId" | "calculationBase">> & {
+    /** `slab` rows are UI-only until save; they map to `rateCharges` with charge slabs. */
+    ruleType?: ConditionRuleType;
+    slabs?: ConditionSlabFormRow[];
+    applyPerPiece?: boolean;
+    /** Set when this row was loaded from an existing rate charge (edit). */
+    rateChargeSourceId?: number;
+  };
+
+/** Zones linked on slabs (and initial API refs) are merged so selects stay valid when paged. */
+function collectExtraZoneRows(
+  initialData: RateMaster | null | undefined,
+  routeSlabs: RouteSlabRow[],
+  odaSlabs: RouteSlabRow[],
+): Zone[] {
+  const m = new Map<number, Zone>();
+  const add = (z: RateZoneRef | null | undefined) => {
+    if (!z || m.has(z.id)) return;
+    m.set(z.id, {
+      id: z.id,
+      name: z.name ?? "",
+      code: z.code ?? "",
+      countryId: null,
+      zoneType: "DOMESTIC",
+      createdAt: "",
+      updatedAt: "",
+      createdById: null,
+      updatedById: null,
+      deletedAt: null,
+      deletedById: null,
+    });
+  };
+  for (const s of initialData?.routeRateSlabs ?? []) {
+    add(s.fromZone);
+    add(s.toZone);
+  }
+  for (const s of initialData?.odaRateSlabs ?? []) {
+    add(s.fromZone);
+    add(s.toZone);
+  }
+  for (const s of routeSlabs) {
+    add(s.fromZone);
+    add(s.toZone);
+  }
+  for (const s of odaSlabs) {
+    add(s.fromZone);
+    add(s.toZone);
+  }
+  return Array.from(m.values());
+}
 
 interface RateFormProps {
   initialData?: RateMaster | null;
@@ -184,11 +223,10 @@ export function RateForm({ initialData }: RateFormProps) {
   const queryClient = useQueryClient();
   const isEdit = !!initialData;
   const [activeTab, setActiveTab] = useState<TabValue>("master");
-  const [zoneRates, setZoneRates] = useState<ZoneRateRow[]>([]);
-  const [distanceSlabs, setDistanceSlabs] = useState<DistanceSlabRow[]>([]);
   const [routeSlabs, setRouteSlabs] = useState<RouteSlabRow[]>([]);
   const [odaSlabs, setOdaSlabs] = useState<RouteSlabRow[]>([]);
   const [rateConditions, setRateConditions] = useState<RateConditionRow[]>([]);
+  const [rateCharges, setRateCharges] = useState<RateChargeRow[]>([]);
 
   const form = useForm<RateMasterFormValues>({
     resolver: zodResolver(rateMasterSchema) as Resolver<RateMasterFormValues>,
@@ -199,7 +237,6 @@ export function RateForm({ initialData }: RateFormProps) {
       productId: "",
       rateType: "",
       flatRate: "",
-      weightUnitStep: "",
     },
   });
 
@@ -212,13 +249,11 @@ export function RateForm({ initialData }: RateFormProps) {
         productId: "",
         rateType: "",
         flatRate: "",
-        weightUnitStep: "",
       });
-      setZoneRates([]);
-      setDistanceSlabs([]);
       setRouteSlabs([]);
       setOdaSlabs([]);
       setRateConditions([]);
+      setRateCharges([]);
       return;
     }
 
@@ -228,35 +263,148 @@ export function RateForm({ initialData }: RateFormProps) {
       customerId: initialData.customerId != null ? String(initialData.customerId) : "",
       rateType: initialData.rateType || "",
       flatRate: initialData.flatRate != null && initialData.flatRate !== undefined ? String(initialData.flatRate) : "",
-      weightUnitStep:
-        initialData.weightUnitStep != null && initialData.weightUnitStep !== undefined
-          ? String(initialData.weightUnitStep)
-          : "",
       productId: initialData.productId != null ? String(initialData.productId) : "",
     });
-    setZoneRates(initialData.zoneRates ?? []);
-    setDistanceSlabs(initialData.distanceSlabs ?? []);
     setRouteSlabs(initialData.routeRateSlabs ?? []);
     setOdaSlabs(initialData.odaRateSlabs ?? []);
-    setRateConditions(initialData.rateConditions ?? []);
+    const allCharges = initialData.rateCharges ?? [];
+    setRateCharges(allCharges.filter((rc) => (rc.chargeSlabs?.length ?? 0) === 0));
+    const slabRowsFromCharges: RateConditionRow[] = allCharges
+      .filter((rc) => (rc.chargeSlabs?.length ?? 0) > 0)
+      .map((rc) => ({
+        ruleType: "slab" as const,
+        chargeId: rc.chargeId,
+        field: "CHARGEABLE_WEIGHT",
+        operator: "GTE",
+        value: 0,
+        chargeAmount: 0,
+        calculationBase: rc.calculationBase ?? "CHARGE_WEIGHT",
+        applyPerPiece: Boolean((rc as { applyPerPiece?: boolean }).applyPerPiece),
+        isPercentage: false,
+        slabs: (rc.chargeSlabs ?? []).map((s) => ({
+          minValue: String(s.minValue),
+          maxValue: String(s.maxValue),
+          rate: String(s.rate),
+          pricingMode: (s as { pricingMode?: string }).pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
+        })),
+        rateChargeSourceId: rc.id,
+        charge: rc.charge,
+      }));
+    setRateConditions([...(initialData.rateConditions ?? []), ...slabRowsFromCharges]);
   }, [form, initialData]);
 
-  const { data: customerResponse } = useQuery({
+  const extraCustomerRows = useMemo((): Customer[] | undefined => {
+    const c = initialData?.customer;
+    if (!c) return undefined;
+    return [
+      {
+        id: c.id,
+        name: c.name ?? "",
+        code: c.code ?? "—",
+        version: 1,
+        contactPerson: null,
+        address1: null,
+        address2: null,
+        pinCodeId: null,
+        countryId: null,
+        stateId: null,
+        bankId: null,
+        bankAccount: null,
+        bankIfsc: null,
+        telephone: null,
+        email: null,
+        mobile: null,
+        serviceCenterId: null,
+        serviceStartDate: null,
+        status: "ACTIVE",
+        origin: null,
+        gstNo: null,
+        customerType: null,
+        registerType: null,
+        createdAt: "",
+        updatedAt: "",
+        createdById: null,
+        updatedById: null,
+        deletedAt: null,
+        deletedById: null,
+      } as Customer,
+    ];
+  }, [initialData?.customer]);
+
+  const extraProductRows = useMemo((): Product[] | undefined => {
+    const p = initialData?.product;
+    if (!p) return undefined;
+    return [
+      {
+        id: p.id,
+        productName: p.productName ?? "",
+        productCode: p.productCode ?? "",
+        version: 1,
+        productType: "DOMESTIC",
+        status: "ACTIVE",
+        createdAt: "",
+        updatedAt: "",
+        createdById: null,
+        updatedById: null,
+        deletedAt: null,
+        deletedById: null,
+      } as Product,
+    ];
+  }, [initialData?.product]);
+
+  const extraZoneRows = useMemo(
+    () => collectExtraZoneRows(initialData, routeSlabs, odaSlabs),
+    [initialData, routeSlabs, odaSlabs],
+  );
+
+  const {
+    rows: customerOptions,
+    fetchNextPage: fetchNextCustomers,
+    hasNextPage: hasNextCustomerPage,
+    isFetchingNextPage: isFetchingNextCustomerPage,
+  } = useInfiniteEntityList<Customer>({
     queryKey: ["rate-form-customers"],
-    queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
-  });
-  const { data: productResponse } = useQuery({
-    queryKey: ["rate-form-products"],
-    queryFn: () => productService.getProducts({ page: 1, limit: 100, sortBy: "productName", sortOrder: "asc" }),
-  });
-  const { data: zoneResponse } = useQuery({
-    queryKey: ["rate-form-zones"],
-    queryFn: () => zoneService.getZones({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
+    fetchPage: (page) => customerService.getCustomers({ page, limit: 10, sortBy: "name", sortOrder: "asc" }),
+    extraRows: extraCustomerRows,
   });
 
-  const customerOptions = useMemo(() => customerResponse?.data ?? [], [customerResponse]);
-  const productOptions = useMemo(() => productResponse?.data ?? [], [productResponse]);
-  const zoneOptions = useMemo(() => zoneResponse?.data ?? [], [zoneResponse]);
+  const {
+    rows: productOptions,
+    fetchNextPage: fetchNextProducts,
+    hasNextPage: hasNextProductPage,
+    isFetchingNextPage: isFetchingNextProductPage,
+  } = useInfiniteEntityList<Product>({
+    queryKey: ["rate-form-products"],
+    fetchPage: (page) => productService.getProducts({ page, limit: 10, sortBy: "productName", sortOrder: "asc" }),
+    extraRows: extraProductRows,
+  });
+
+  const {
+    rows: zoneOptions,
+    fetchNextPage: fetchNextZones,
+    hasNextPage: hasNextZonePage,
+    isFetchingNextPage: isFetchingNextZonePage,
+  } = useInfiniteEntityList<Zone>({
+    queryKey: ["rate-form-zones"],
+    fetchPage: (page) => zoneService.getZones({ page, limit: 10, sortBy: "name", sortOrder: "asc" }),
+    extraRows: extraZoneRows.length > 0 ? extraZoneRows : undefined,
+  });
+
+  const onCustomerSelectScroll = useSelectContentInfiniteScroll({
+    hasNextPage: hasNextCustomerPage,
+    isFetchingNextPage: isFetchingNextCustomerPage,
+    fetchNextPage: fetchNextCustomers,
+  });
+  const onProductSelectScroll = useSelectContentInfiniteScroll({
+    hasNextPage: hasNextProductPage,
+    isFetchingNextPage: isFetchingNextProductPage,
+    fetchNextPage: fetchNextProducts,
+  });
+  const onZoneSelectScroll = useSelectContentInfiniteScroll({
+    hasNextPage: hasNextZonePage,
+    isFetchingNextPage: isFetchingNextZonePage,
+    fetchNextPage: fetchNextZones,
+  });
 
   const zoneLabelById = useMemo(() => new Map(zoneOptions.map((item) => [item.id, `${item.code || item.id}${item.name ? ` - ${item.name}` : ""}`])), [zoneOptions]);
 
@@ -264,15 +412,7 @@ export function RateForm({ initialData }: RateFormProps) {
     mutationFn: async (values: RateMasterFormValues) => {
       const updateType =
         isEdit && initialData?.updateType ? initialData.updateType : DEFAULT_RATE_UPDATE_TYPE;
-      const payload = buildPayload(
-        updateType,
-        values,
-        zoneRates,
-        distanceSlabs,
-        routeSlabs,
-        odaSlabs,
-        rateConditions,
-      );
+      const payload = buildPayload(updateType, values, routeSlabs, odaSlabs, rateConditions, rateCharges);
       if (isEdit && initialData) {
         const updatePayload: UpdateRateMasterPayload = {
           ...payload,
@@ -361,12 +501,18 @@ export function RateForm({ initialData }: RateFormProps) {
                           <SelectValue placeholder="Select customer" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent
+                        className="max-h-72"
+                        onScroll={onCustomerSelectScroll}
+                      >
                         {customerOptions.map((customer) => (
                           <SelectItem key={customer.id} value={String(customer.id)}>
                             {customer.name || customer.code || `Customer ${customer.id}`}
                           </SelectItem>
                         ))}
+                        {isFetchingNextCustomerPage ? (
+                          <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+                        ) : null}
                       </SelectContent>
                     </Select>
                   </FloatingFormItem>
@@ -383,12 +529,18 @@ export function RateForm({ initialData }: RateFormProps) {
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent
+                        className="max-h-72"
+                        onScroll={onProductSelectScroll}
+                      >
                         {productOptions.map((product) => (
                           <SelectItem key={product.id} value={String(product.id)}>
                             {product.productName || product.productCode || `Product ${product.id}`}
                           </SelectItem>
                         ))}
+                        {isFetchingNextProductPage ? (
+                          <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+                        ) : null}
                       </SelectContent>
                     </Select>
                   </FloatingFormItem>
@@ -431,59 +583,36 @@ export function RateForm({ initialData }: RateFormProps) {
                   </FloatingFormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="weightUnitStep"
-                render={({ field }) => (
-                  <FloatingFormItem label="Weight step (optional)">
-                    <FormControl>
-                      <Input type="number" step="0.001" placeholder="Weight rounding step" {...field} className={FLOATING_INNER_CONTROL} />
-                    </FormControl>
-                  </FloatingFormItem>
-                )}
-              />
             </div>
-          </TabsContent>
-
-          <TabsContent value="zone-rates" className="space-y-4">
-            <ZoneRatesEditor
-              zoneRates={zoneRates}
-              setZoneRates={setZoneRates}
-              zoneLabelById={zoneLabelById}
-              zoneOptions={zoneOptions}
-              rateMasterId={initialData?.id}
-              isEdit={false}
-            />
-          </TabsContent>
-
-          <TabsContent value="distance-slabs" className="space-y-4">
-            <DistanceSlabsEditor
-              distanceSlabs={distanceSlabs}
-              setDistanceSlabs={setDistanceSlabs}
-              rateMasterId={initialData?.id}
-              isEdit={false}
-            />
           </TabsContent>
 
           <TabsContent value="route-slabs" className="space-y-4">
             <RouteSlabsEditor
-              title="AWB slabs (base freight)"
-              description="Match by From Zone, To Zone, and/or km band; each slab needs at least one weight slab."
+              title="Base rate"
+              description="Match by From Zone and To Zone; each slab needs at least one weight slab (Flat or Per kg)."
+              showKmBands={false}
               slabs={routeSlabs}
               setSlabs={setRouteSlabs}
               zoneLabelById={zoneLabelById}
               zoneOptions={zoneOptions}
+              zoneSelectContentProps={{ className: "max-h-72", onScroll: onZoneSelectScroll }}
+              isLoadingMoreZones={isFetchingNextZonePage}
             />
           </TabsContent>
 
           <TabsContent value="oda-slabs" className="space-y-4">
             <RouteSlabsEditor
               title="ODA / EDL slabs"
-              description="Out-of-delivery-area surcharge. Same structure as main freight slabs."
+              description="Each row is a km band (min and max km required) with weight slabs. Zones are not used."
+              showZones={false}
+              showKmBands
+              requireKmBands
               slabs={odaSlabs}
               setSlabs={setOdaSlabs}
               zoneLabelById={zoneLabelById}
               zoneOptions={zoneOptions}
+              zoneSelectContentProps={{ className: "max-h-72", onScroll: onZoneSelectScroll }}
+              isLoadingMoreZones={isFetchingNextZonePage}
             />
           </TabsContent>
 
@@ -492,7 +621,7 @@ export function RateForm({ initialData }: RateFormProps) {
               rateConditions={rateConditions}
               setRateConditions={setRateConditions}
               rateMasterId={initialData?.id}
-              isEdit={false}
+              isEdit={isEdit}
             />
           </TabsContent>
         </Tabs>
@@ -523,81 +652,101 @@ export function RateForm({ initialData }: RateFormProps) {
   );
 }
 
-function mapRouteSlabsForApi(rows: RouteSlabRow[]): RateRouteSlabPayload[] {
+function mapRouteSlabsForApi(rows: RouteSlabRow[], mode: "route" | "oda" = "route"): RateRouteSlabPayload[] {
   return rows.map((row) => {
     const { id: _id, rateMasterId: _rm, createdAt: _c, updatedAt: _u, deletedAt: _d, fromZone: _fz, toZone: _tz, weightSlabs, ...rest } = row;
     const ws = (weightSlabs || []).map((w) => ({
       minWeight: Number(w.minWeight),
       maxWeight: Number(w.maxWeight),
       rate: Number(w.rate),
+      pricingMode: (w as { pricingMode?: string }).pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
     }));
     const slab: RateRouteSlabPayload = { weightSlabs: ws };
-    if (rest.fromZoneId != null && rest.fromZoneId !== undefined) slab.fromZoneId = Number(rest.fromZoneId);
-    if (rest.toZoneId != null && rest.toZoneId !== undefined) slab.toZoneId = Number(rest.toZoneId);
+    if (mode === "route") {
+      if (rest.fromZoneId != null && rest.fromZoneId !== undefined) slab.fromZoneId = Number(rest.fromZoneId);
+      if (rest.toZoneId != null && rest.toZoneId !== undefined) slab.toZoneId = Number(rest.toZoneId);
+    }
     if (rest.minKm != null && rest.minKm !== undefined && Number.isFinite(Number(rest.minKm))) slab.minKm = Number(rest.minKm);
     if (rest.maxKm != null && rest.maxKm !== undefined && Number.isFinite(Number(rest.maxKm))) slab.maxKm = Number(rest.maxKm);
     return slab;
   });
 }
 
-function mapZoneRatesForApi(rows: ZoneRateRow[]): RateZoneRatePayload[] {
+function mapRateChargesForApi(rows: RateChargeRow[]): RateChargePayload[] {
   return rows
-    .map((row) => ({
-      fromZoneId: Number(row.fromZoneId),
-      toZoneId: Number(row.toZoneId),
-      rate: Number(row.rate),
-    }))
-    .filter(
-      (row) =>
-        Number.isFinite(row.fromZoneId) &&
-        Number.isFinite(row.toZoneId) &&
-        Number.isFinite(row.rate),
-    );
+    .map((row) => {
+      const chargeId = row.chargeId != null && Number.isFinite(Number(row.chargeId)) ? Number(row.chargeId) : undefined;
+      const name = typeof row.name === "string" ? row.name.trim() : "";
+      const calculationBase = typeof row.calculationBase === "string" ? row.calculationBase.trim() : "";
+      if (!chargeId && (!name || !calculationBase)) return null;
+      const value = Number(row.value);
+      if (!Number.isFinite(value)) return null;
+      const chargeSlabs = (row.chargeSlabs ?? [])
+        .map((s) => {
+          const minValue = Number((s as { minValue?: number | string }).minValue);
+          const maxValue = Number((s as { maxValue?: number | string }).maxValue);
+          const rate = Number((s as { rate?: number | string }).rate);
+          const pricingMode = (s as { pricingMode?: string }).pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const);
+          return { minValue, maxValue, rate, pricingMode };
+        })
+        .filter((s) => Number.isFinite(s.minValue) && Number.isFinite(s.maxValue) && Number.isFinite(s.rate));
+      const next: RateChargePayload = {
+        value,
+        isPercentage: Boolean(row.isPercentage),
+      };
+      if (chargeId) next.chargeId = chargeId;
+      if (name) next.name = name;
+      if (calculationBase) next.calculationBase = calculationBase;
+      if (row.minValue != null && Number.isFinite(Number(row.minValue))) next.minValue = Number(row.minValue);
+      if (row.maxValue != null && Number.isFinite(Number(row.maxValue))) next.maxValue = Number(row.maxValue);
+      if (row.sequence != null && Number.isFinite(Number(row.sequence))) next.sequence = Number(row.sequence);
+      if (chargeSlabs.length > 0) next.chargeSlabs = chargeSlabs;
+      return next;
+    })
+    .filter((row): row is RateChargePayload => row != null);
 }
 
-function mapDistanceSlabsForApi(rows: DistanceSlabRow[]): RateDistanceSlabPayload[] {
+function mapSlabConditionRulesToRateChargePayloads(rows: RateConditionRow[]): RateChargePayload[] {
   return rows
-    .map((row) => ({
-      minKm: Number(row.minKm),
-      maxKm: Number(row.maxKm),
-      weightSlabs: (row.weightSlabs ?? [])
-        .map((item) => ({
-          minWeight: Number(item.minWeight),
-          maxWeight: Number(item.maxWeight),
-          rate: Number(item.rate),
+    .filter((row) => row.ruleType === "slab")
+    .map((row) => {
+      const chargeId = row.chargeId != null && Number.isFinite(Number(row.chargeId)) ? Number(row.chargeId) : NaN;
+      if (!Number.isFinite(chargeId) || chargeId < 1) return null;
+      const slabs = (row.slabs ?? [])
+        .map((s) => ({
+          minValue: Number(s.minValue),
+          maxValue: Number(s.maxValue),
+          rate: Number(s.rate),
+          pricingMode: s.pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
         }))
-        .filter(
-          (item) =>
-            Number.isFinite(item.minWeight) &&
-            Number.isFinite(item.maxWeight) &&
-            Number.isFinite(item.rate),
-        ),
-    }))
-    .filter(
-      (row) =>
-        Number.isFinite(row.minKm) &&
-        Number.isFinite(row.maxKm) &&
-        row.weightSlabs.length > 0,
-    );
+        .filter((s) => Number.isFinite(s.minValue) && Number.isFinite(s.maxValue) && Number.isFinite(s.rate));
+      if (slabs.length === 0) return null;
+      const calculationBase = row.calculationBase?.trim() ?? "";
+      if (!calculationBase) return null;
+      const payload: RateChargePayload = {
+        chargeId,
+        calculationBase,
+        applyPerPiece: Boolean(row.applyPerPiece),
+        value: 0,
+        isPercentage: false,
+        chargeSlabs: slabs,
+      };
+      return payload;
+    })
+    .filter((row): row is RateChargePayload => row != null);
 }
 
 function buildPayload(
   updateType: string,
   values: RateMasterFormValues,
-  zoneRates: ZoneRateRow[],
-  distanceSlabs: DistanceSlabRow[],
   routeSlabs: RouteSlabRow[],
   odaSlabs: RouteSlabRow[],
   rateConditions: RateConditionRow[],
+  rateCharges: RateChargeRow[],
 ): CreateRateMasterPayload {
   const flatRaw = values.flatRate?.trim();
-  const weightStepRaw = values.weightUnitStep?.trim();
   const flatRate =
     flatRaw !== undefined && flatRaw !== "" && Number.isFinite(Number(flatRaw)) ? Number(flatRaw) : undefined;
-  const weightUnitStep =
-    weightStepRaw !== undefined && weightStepRaw !== "" && Number.isFinite(Number(weightStepRaw))
-      ? Number(weightStepRaw)
-      : undefined;
 
   const payload: CreateRateMasterPayload = {
     updateType,
@@ -605,29 +754,31 @@ function buildPayload(
     toDate: values.toDate,
     customerId: Number(values.customerId),
     productId: Number(values.productId),
-    zoneRates: mapZoneRatesForApi(zoneRates),
-    distanceSlabs: mapDistanceSlabsForApi(distanceSlabs),
-    rateSlabs: mapRouteSlabsForApi(routeSlabs),
-    odaRateSlabs: mapRouteSlabsForApi(odaSlabs),
-    rateConditions: rateConditions.map(({ id, rateMasterId, createdAt, updatedAt, deletedAt, charge, ...row }) => {
-      const next: RateConditionPayload = {
-        field: row.field,
-        operator: row.operator,
-        value: Number(row.value),
-        chargeAmount: Number(row.chargeAmount),
-      };
-      if (row.chargeId != null) next.chargeId = row.chargeId;
-      if (row.chargeName?.trim()) next.chargeName = row.chargeName.trim();
-      if (row.calculationBase?.trim()) next.calculationBase = row.calculationBase.trim();
-      if (row.isPercentage != null) next.isPercentage = row.isPercentage;
-      return next;
-    }),
+    zoneRates: [],
+    distanceSlabs: [],
+    rateSlabs: mapRouteSlabsForApi(routeSlabs, "route"),
+    odaRateSlabs: mapRouteSlabsForApi(odaSlabs, "oda"),
+    rateConditions: rateConditions
+      .filter((row) => row.chargeId != null && Number.isFinite(Number(row.chargeId)))
+      .map(({ id, rateMasterId, createdAt, updatedAt, deletedAt, charge, chargeName, ruleType, slabs, rateChargeSourceId, ...row }) => {
+        const next: RateConditionPayload = {
+          field: row.field!,
+          operator: row.operator!,
+          value: Number(row.value),
+          // Slab rules use this condition as gate; charge is applied from mapped rateCharges.
+          chargeAmount: ruleType === "slab" ? 0 : Number(row.chargeAmount),
+          chargeId: Number(row.chargeId),
+        };
+        if (row.calculationBase?.trim()) next.calculationBase = row.calculationBase.trim();
+        if (row.isPercentage != null) next.isPercentage = row.isPercentage;
+        return next;
+      }),
+    rateCharges: [...mapRateChargesForApi(rateCharges), ...mapSlabConditionRulesToRateChargePayloads(rateConditions)],
   };
 
   const rt = values.rateType?.trim();
   if (rt) payload.rateType = rt;
   if (flatRate !== undefined) payload.flatRate = flatRate;
-  if (weightUnitStep !== undefined) payload.weightUnitStep = weightUnitStep;
 
   return payload;
 }
@@ -635,24 +786,37 @@ function buildPayload(
 function RouteSlabsEditor({
   title,
   description,
+  showZones = true,
+  showKmBands = true,
+  requireKmBands = false,
   slabs,
   setSlabs,
   zoneLabelById,
   zoneOptions,
+  zoneSelectContentProps,
+  isLoadingMoreZones = false,
 }: {
   title: string;
   description: string;
+  /** When false (ODA/EDL), from/to zone inputs are hidden and zones are not saved on the row. */
+  showZones?: boolean;
+  /** When false (base rate), min/max km inputs are hidden and km is not saved on the row. */
+  showKmBands?: boolean;
+  /** When true (ODA/EDL), min and max km are required and max must be greater than min. */
+  requireKmBands?: boolean;
   slabs: RouteSlabRow[];
   setSlabs: Dispatch<SetStateAction<RouteSlabRow[]>>;
   zoneLabelById: Map<number, string>;
   zoneOptions: Array<{ id: number; code?: string; name?: string }>;
+  zoneSelectContentProps?: Pick<ComponentProps<typeof SelectContent>, "onScroll" | "className">;
+  isLoadingMoreZones?: boolean;
 }) {
   const [draft, setDraft] = useState<RouteSlabDraft>({
     fromZoneId: "",
     toZoneId: "",
     minKm: "",
     maxKm: "",
-    weightSlabs: [{ minWeight: "", maxWeight: "", rate: "" }],
+    weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -673,8 +837,9 @@ function RouteSlabsEditor({
               minWeight: String(item.minWeight),
               maxWeight: String(item.maxWeight),
               rate: String(item.rate),
+              pricingMode: (item as { pricingMode?: string }).pricingMode === "PER_KG" ? "PER_KG" : "FLAT",
             }))
-          : [{ minWeight: "", maxWeight: "", rate: "" }],
+          : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT" }],
     });
   }, [editingIndex, slabs]);
 
@@ -685,31 +850,58 @@ function RouteSlabsEditor({
       toZoneId: "",
       minKm: "",
       maxKm: "",
-      weightSlabs: [{ minWeight: "", maxWeight: "", rate: "" }],
+      weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT" }],
     });
     setEditingIndex(null);
   }
 
   function saveDraft() {
     const weightSlabs = draft.weightSlabs
-      .map((item) => ({ minWeight: Number(item.minWeight), maxWeight: Number(item.maxWeight), rate: Number(item.rate) }))
+      .map((item) => ({
+        minWeight: Number(item.minWeight),
+        maxWeight: Number(item.maxWeight),
+        rate: Number(item.rate),
+        pricingMode: item.pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
+      }))
       .filter((item) => Number.isFinite(item.minWeight) && Number.isFinite(item.maxWeight) && Number.isFinite(item.rate));
     if (weightSlabs.length === 0) return;
 
     const fromZoneId =
-      draft.fromZoneId && draft.fromZoneId !== "__none__" ? Number(draft.fromZoneId) : undefined;
-    const toZoneId = draft.toZoneId && draft.toZoneId !== "__none__" ? Number(draft.toZoneId) : undefined;
-    const minKmParsed = draft.minKm.trim() ? Number(draft.minKm) : undefined;
-    const maxKmParsed = draft.maxKm.trim() ? Number(draft.maxKm) : undefined;
+      showZones && draft.fromZoneId && draft.fromZoneId !== "__none__" ? Number(draft.fromZoneId) : undefined;
+    const toZoneId =
+      showZones && draft.toZoneId && draft.toZoneId !== "__none__" ? Number(draft.toZoneId) : undefined;
+    const minKmParsed = showKmBands && draft.minKm.trim() ? Number(draft.minKm) : undefined;
+    const maxKmParsed = showKmBands && draft.maxKm.trim() ? Number(draft.maxKm) : undefined;
+
+    if (requireKmBands) {
+      if (
+        minKmParsed === undefined ||
+        maxKmParsed === undefined ||
+        !Number.isFinite(minKmParsed) ||
+        !Number.isFinite(maxKmParsed) ||
+        maxKmParsed <= minKmParsed
+      ) {
+        toast.error("ODA / EDL: enter min km and max km (max must be greater than min).");
+        return;
+      }
+    }
 
     const next: RouteSlabRow = {
       weightSlabs,
       ...(draft.id != null ? { id: draft.id } : {}),
-      ...(fromZoneId !== undefined && Number.isFinite(fromZoneId) ? { fromZoneId } : {}),
-      ...(toZoneId !== undefined && Number.isFinite(toZoneId) ? { toZoneId } : {}),
-      ...(minKmParsed !== undefined && Number.isFinite(minKmParsed) ? { minKm: minKmParsed } : {}),
-      ...(maxKmParsed !== undefined && Number.isFinite(maxKmParsed) ? { maxKm: maxKmParsed } : {}),
+      ...(showZones && fromZoneId !== undefined && Number.isFinite(fromZoneId) ? { fromZoneId } : {}),
+      ...(showZones && toZoneId !== undefined && Number.isFinite(toZoneId) ? { toZoneId } : {}),
+      ...(showKmBands && minKmParsed !== undefined && Number.isFinite(minKmParsed) ? { minKm: minKmParsed } : {}),
+      ...(showKmBands && maxKmParsed !== undefined && Number.isFinite(maxKmParsed) ? { maxKm: maxKmParsed } : {}),
     };
+    if (!showKmBands) {
+      next.minKm = undefined;
+      next.maxKm = undefined;
+    }
+    if (!showZones) {
+      next.fromZoneId = undefined;
+      next.toZoneId = undefined;
+    }
 
     setSlabs((current) => {
       const copy = [...current];
@@ -732,14 +924,16 @@ function RouteSlabsEditor({
   function updateWeightSlab(index: number, field: keyof WeightSlabDraft, value: string) {
     setDraft((current) => ({
       ...current,
-      weightSlabs: current.weightSlabs.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)),
+      weightSlabs: current.weightSlabs.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: field === "pricingMode" ? (value as "FLAT" | "PER_KG") : value } : item,
+      ),
     }));
   }
 
   function addWeightRow() {
     setDraft((current) => ({
       ...current,
-      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "" }],
+      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT" }],
     }));
   }
 
@@ -750,15 +944,25 @@ function RouteSlabsEditor({
     }));
   }
 
-  const canSave = draft.weightSlabs.some(
-    (w) =>
-      w.minWeight.trim() &&
-      w.maxWeight.trim() &&
-      w.rate.trim() &&
-      Number.isFinite(Number(w.minWeight)) &&
-      Number.isFinite(Number(w.maxWeight)) &&
-      Number.isFinite(Number(w.rate)),
-  );
+  const kmInputsValid =
+    !requireKmBands ||
+    (draft.minKm.trim() !== "" &&
+      draft.maxKm.trim() !== "" &&
+      Number.isFinite(Number(draft.minKm)) &&
+      Number.isFinite(Number(draft.maxKm)) &&
+      Number(draft.maxKm) > Number(draft.minKm));
+
+  const canSave =
+    kmInputsValid &&
+    draft.weightSlabs.some(
+      (w) =>
+        w.minWeight.trim() &&
+        w.maxWeight.trim() &&
+        w.rate.trim() &&
+        Number.isFinite(Number(w.minWeight)) &&
+        Number.isFinite(Number(w.maxWeight)) &&
+        Number.isFinite(Number(w.rate)),
+    );
 
   return (
     <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
@@ -767,53 +971,80 @@ function RouteSlabsEditor({
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Select
-          value={draft.fromZoneId || "__none__"}
-          onValueChange={(value) => setDraft((current) => ({ ...current, fromZoneId: value === "__none__" ? "" : value }))}
-        >
-          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="From Zone" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">— From Zone —</SelectItem>
-            {zoneOptions.map((zone) => (
-              <SelectItem key={zone.id} value={String(zone.id)}>
-                {zone.code || zone.name || `Zone ${zone.id}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={draft.toZoneId || "__none__"}
-          onValueChange={(value) => setDraft((current) => ({ ...current, toZoneId: value === "__none__" ? "" : value }))}
-        >
-          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="To Zone" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">— To Zone —</SelectItem>
-            {zoneOptions.map((zone) => (
-              <SelectItem key={zone.id} value={String(zone.id)}>
-                {zone.code || zone.name || `Zone ${zone.id}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input
-          type="number"
-          placeholder="Min km (optional)"
-          className={FLOATING_INNER_CONTROL}
-          value={draft.minKm}
-          onChange={(e) => setDraft((current) => ({ ...current, minKm: e.target.value }))}
-        />
-        <Input
-          type="number"
-          placeholder="Max km (optional)"
-          className={FLOATING_INNER_CONTROL}
-          value={draft.maxKm}
-          onChange={(e) => setDraft((current) => ({ ...current, maxKm: e.target.value }))}
-        />
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-4",
+          showZones && showKmBands && "md:grid-cols-2 lg:grid-cols-4",
+          showZones && !showKmBands && "md:grid-cols-2",
+          !showZones && showKmBands && "md:grid-cols-2",
+        )}
+      >
+        {showZones ? (
+          <>
+            <Select
+              value={draft.fromZoneId || "__none__"}
+              onValueChange={(value) => setDraft((current) => ({ ...current, fromZoneId: value === "__none__" ? "" : value }))}
+            >
+              <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                <SelectValue placeholder="From Zone" />
+              </SelectTrigger>
+              <SelectContent
+                className={cn("max-h-60", zoneSelectContentProps?.className)}
+                onScroll={zoneSelectContentProps?.onScroll}
+              >
+                <SelectItem value="__none__">— From Zone —</SelectItem>
+                {zoneOptions.map((zone) => (
+                  <SelectItem key={zone.id} value={String(zone.id)}>
+                    {zone.code || zone.name || `Zone ${zone.id}`}
+                  </SelectItem>
+                ))}
+                {isLoadingMoreZones ? (
+                  <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+                ) : null}
+              </SelectContent>
+            </Select>
+            <Select
+              value={draft.toZoneId || "__none__"}
+              onValueChange={(value) => setDraft((current) => ({ ...current, toZoneId: value === "__none__" ? "" : value }))}
+            >
+              <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                <SelectValue placeholder="To Zone" />
+              </SelectTrigger>
+              <SelectContent
+                className={cn("max-h-60", zoneSelectContentProps?.className)}
+                onScroll={zoneSelectContentProps?.onScroll}
+              >
+                <SelectItem value="__none__">— To Zone —</SelectItem>
+                {zoneOptions.map((zone) => (
+                  <SelectItem key={zone.id} value={String(zone.id)}>
+                    {zone.code || zone.name || `Zone ${zone.id}`}
+                  </SelectItem>
+                ))}
+                {isLoadingMoreZones ? (
+                  <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+                ) : null}
+              </SelectContent>
+            </Select>
+          </>
+        ) : null}
+        {showKmBands ? (
+          <>
+            <Input
+              type="number"
+              placeholder={requireKmBands ? "Min km (required)" : "Min km (optional)"}
+              className={FLOATING_INNER_CONTROL}
+              value={draft.minKm}
+              onChange={(e) => setDraft((current) => ({ ...current, minKm: e.target.value }))}
+            />
+            <Input
+              type="number"
+              placeholder={requireKmBands ? "Max km (required)" : "Max km (optional)"}
+              className={FLOATING_INNER_CONTROL}
+              value={draft.maxKm}
+              onChange={(e) => setDraft((current) => ({ ...current, maxKm: e.target.value }))}
+            />
+          </>
+        ) : null}
       </div>
 
       <div className="rounded-md border border-border bg-background p-3">
@@ -826,7 +1057,7 @@ function RouteSlabsEditor({
         </div>
         <div className="space-y-3">
           {draft.weightSlabs.map((item, index) => (
-            <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
               <Input
                 type="number"
                 placeholder="Min weight"
@@ -841,10 +1072,22 @@ function RouteSlabsEditor({
                 value={item.maxWeight}
                 onChange={(e) => updateWeightSlab(index, "maxWeight", e.target.value)}
               />
+              <Select
+                value={item.pricingMode ?? "FLAT"}
+                onValueChange={(value) => updateWeightSlab(index, "pricingMode", value)}
+              >
+                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                  <SelectValue placeholder="Pricing" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FLAT">Flat</SelectItem>
+                  <SelectItem value="PER_KG">Per kg</SelectItem>
+                </SelectContent>
+              </Select>
               <Input
                 type="number"
                 step="0.01"
-                placeholder="Rate"
+                placeholder={item.pricingMode === "PER_KG" ? "Rate per kg" : "Total rate"}
                 className={FLOATING_INNER_CONTROL}
                 value={item.rate}
                 onChange={(e) => updateWeightSlab(index, "rate", e.target.value)}
@@ -880,9 +1123,15 @@ function RouteSlabsEditor({
         <Table>
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
-              <TableHead className="font-semibold text-primary-foreground">From Zone</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">To Zone</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Km</TableHead>
+              {showZones ? (
+                <>
+                  <TableHead className="font-semibold text-primary-foreground">From Zone</TableHead>
+                  <TableHead className="font-semibold text-primary-foreground">To Zone</TableHead>
+                </>
+              ) : null}
+              {showKmBands ? (
+                <TableHead className="font-semibold text-primary-foreground">Km</TableHead>
+              ) : null}
               <TableHead className="font-semibold text-primary-foreground">Weight slabs</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
@@ -890,20 +1139,29 @@ function RouteSlabsEditor({
           <TableBody>
             {slabs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={(showZones ? 2 : 0) + (showKmBands ? 1 : 0) + 2}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No slabs yet. Add at least one weight slab per row.
                 </TableCell>
               </TableRow>
             ) : (
               slabs.map((row, index) => (
                 <TableRow key={`${row.id ?? "new"}-${index}`} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
-                  <TableCell>
-                    {row.fromZoneId != null ? zoneLabelById.get(row.fromZoneId) || row.fromZoneId : "—"}
-                  </TableCell>
-                  <TableCell>{row.toZoneId != null ? zoneLabelById.get(row.toZoneId) || row.toZoneId : "—"}</TableCell>
-                  <TableCell>
-                    {row.minKm != null || row.maxKm != null ? `${row.minKm ?? "—"} – ${row.maxKm ?? "—"}` : "—"}
-                  </TableCell>
+                  {showZones ? (
+                    <>
+                      <TableCell>
+                        {row.fromZoneId != null ? zoneLabelById.get(row.fromZoneId) || row.fromZoneId : "—"}
+                      </TableCell>
+                      <TableCell>{row.toZoneId != null ? zoneLabelById.get(row.toZoneId) || row.toZoneId : "—"}</TableCell>
+                    </>
+                  ) : null}
+                  {showKmBands ? (
+                    <TableCell>
+                      {row.minKm != null || row.maxKm != null ? `${row.minKm ?? "—"} – ${row.maxKm ?? "—"}` : "—"}
+                    </TableCell>
+                  ) : null}
                   <TableCell>{row.weightSlabs?.length ?? 0}</TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
@@ -925,463 +1183,6 @@ function RouteSlabsEditor({
   );
 }
 
-function ZoneRatesEditor({
-  zoneRates,
-  setZoneRates,
-  zoneLabelById,
-  zoneOptions,
-  rateMasterId,
-  isEdit,
-}: {
-  zoneRates: ZoneRateRow[];
-  setZoneRates: Dispatch<SetStateAction<ZoneRateRow[]>>;
-  zoneLabelById: Map<number, string>;
-  zoneOptions: Array<{ id: number; code?: string; name?: string }>;
-  rateMasterId?: number;
-  isEdit: boolean;
-}) {
-  const [draft, setDraft] = useState<ZoneRateDraft>({ fromZoneId: "", toZoneId: "", rate: "" });
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const editingRowId = editingIndex === null ? undefined : zoneRates[editingIndex]?.id;
-  const { data: editingRowResponse } = useQuery({
-    queryKey: ["rate-zone-rate", rateMasterId, editingRowId],
-    queryFn: () => rateService.getZoneRateById(rateMasterId!, editingRowId!),
-    enabled: isEdit && Boolean(rateMasterId) && Boolean(editingRowId),
-  });
-  const createMutation = useMutation({
-    mutationFn: async (payload: RateZoneRatePayload) => {
-      if (!rateMasterId) {
-        throw new Error("Rate master id is required");
-      }
-      return rateService.createZoneRate(rateMasterId, payload);
-    },
-    onSuccess: (response) => {
-      setZoneRates((current) => [...current, response.data]);
-      toast.success("Zone rate added");
-      resetDraft();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to add zone rate");
-    },
-  });
-  const updateMutation = useMutation({
-    mutationFn: async ({ rowId, payload }: { rowId: number; payload: RateZoneRatePayload }) => {
-      if (!rateMasterId) {
-        throw new Error("Rate master id is required");
-      }
-      return rateService.updateZoneRate(rateMasterId, rowId, payload);
-    },
-    onSuccess: (response, variables) => {
-      setZoneRates((current) =>
-        current.map((row) =>
-          row.id === variables.rowId ? { ...response.data, id: response.data.id } : row,
-        ),
-      );
-      toast.success("Zone rate updated");
-      resetDraft();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update zone rate");
-    },
-  });
-  const deleteMutation = useMutation({
-    mutationFn: async ({ rowId }: { rowId: number; index: number }) => {
-      if (!rateMasterId) {
-        throw new Error("Rate master id is required");
-      }
-      return rateService.deleteZoneRate(rateMasterId, rowId);
-    },
-    onSuccess: (_, variables) => {
-      const { rowId, index } = variables;
-      setZoneRates((current) => current.filter((row) => row.id !== rowId));
-      toast.success("Zone rate deleted");
-      if (editingIndex === index) {
-        resetDraft();
-      } else if (editingIndex !== null && index < editingIndex) {
-        setEditingIndex((current) => (current === null ? current : current - 1));
-      }
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete zone rate");
-    },
-  });
-
-  useEffect(() => {
-    if (editingIndex === null) return;
-    const row = zoneRates[editingIndex];
-    if (!row) return;
-    const details = editingRowResponse?.data ?? row;
-    setDraft({
-      id: details.id,
-      fromZoneId: String(details.fromZoneId),
-      toZoneId: String(details.toZoneId),
-      rate: String(details.rate),
-    });
-  }, [editingIndex, editingRowResponse?.data, zoneRates]);
-
-  function resetDraft() {
-    setDraft({ fromZoneId: "", toZoneId: "", rate: "" });
-    setEditingIndex(null);
-  }
-
-  function saveDraft() {
-    if (!draft.fromZoneId.trim() || !draft.toZoneId.trim() || !draft.rate.trim()) return;
-    const fromZoneId = Number(draft.fromZoneId);
-    const toZoneId = Number(draft.toZoneId);
-    const rate = Number(draft.rate);
-    if (!Number.isFinite(fromZoneId) || !Number.isFinite(toZoneId) || !Number.isFinite(rate)) return;
-    if (fromZoneId <= 0 || toZoneId <= 0) return;
-    const next: ZoneRateRow = { id: draft.id, fromZoneId, toZoneId, rate };
-    if (isEdit && rateMasterId && draft.id) {
-      updateMutation.mutate({ rowId: draft.id, payload: { fromZoneId, toZoneId, rate } });
-      return;
-    }
-    if (isEdit && rateMasterId && !draft.id) {
-      createMutation.mutate({ fromZoneId, toZoneId, rate });
-      return;
-    }
-    setZoneRates((current) => {
-      const copy = [...current];
-      if (editingIndex === null) copy.push(next);
-      else copy[editingIndex] = next;
-      return copy;
-    });
-    resetDraft();
-  }
-
-  function removeRow(index: number) {
-    const row = zoneRates[index];
-    if (isEdit && rateMasterId && row?.id) {
-      deleteMutation.mutate({ rowId: row.id, index });
-      return;
-    }
-    setZoneRates((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    if (editingIndex === index) {
-      resetDraft();
-    } else if (editingIndex !== null && index < editingIndex) {
-      setEditingIndex((current) => (current === null ? current : current - 1));
-    }
-  }
-
-  const canSaveDraft =
-    draft.fromZoneId.trim().length > 0 &&
-    draft.toZoneId.trim().length > 0 &&
-    draft.rate.trim().length > 0 &&
-    Number(draft.fromZoneId) > 0 &&
-    Number(draft.toZoneId) > 0 &&
-    Number.isFinite(Number(draft.rate));
-
-  return (
-    <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Select key={draft.fromZoneId || "from"} value={draft.fromZoneId} onValueChange={(value) => setDraft((current) => ({ ...current, fromZoneId: value }))}>
-          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="From Zone" />
-          </SelectTrigger>
-          <SelectContent>
-            {zoneOptions.map((zone) => (
-              <SelectItem key={zone.id} value={String(zone.id)}>
-                {zone.code || zone.name || `Zone ${zone.id}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select key={draft.toZoneId || "to"} value={draft.toZoneId} onValueChange={(value) => setDraft((current) => ({ ...current, toZoneId: value }))}>
-          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="To Zone" />
-          </SelectTrigger>
-          <SelectContent>
-            {zoneOptions.map((zone) => (
-              <SelectItem key={zone.id} value={String(zone.id)}>
-                {zone.code || zone.name || `Zone ${zone.id}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input type="number" step="0.01" placeholder="Rate" className={FLOATING_INNER_CONTROL} value={draft.rate} onChange={(e) => setDraft((current) => ({ ...current, rate: e.target.value }))} />
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="success"
-            onClick={saveDraft}
-            disabled={createMutation.isPending || updateMutation.isPending || !canSaveDraft}
-          >
-            {editingIndex === null ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-            {editingIndex === null ? "Add" : "Update"}
-          </Button>
-          <Button type="button" variant="outline" onClick={resetDraft}>
-            Clear
-          </Button>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-md border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-0 bg-primary hover:bg-primary">
-              <TableHead className="font-semibold text-primary-foreground">From Zone</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">To Zone</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Rate</TableHead>
-              <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {zoneRates.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  No zone rates added yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              zoneRates.map((row, index) => (
-                <TableRow key={`${row.fromZoneId}-${row.toZoneId}-${index}`} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
-                  <TableCell>{zoneLabelById.get(row.fromZoneId) || row.fromZoneId}</TableCell>
-                  <TableCell>{zoneLabelById.get(row.toZoneId) || row.toZoneId}</TableCell>
-                  <TableCell>{row.rate}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-center gap-1">
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)]" onClick={() => setEditingIndex(index)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)} disabled={deleteMutation.isPending}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
-
-function DistanceSlabsEditor({
-  distanceSlabs,
-  setDistanceSlabs,
-  rateMasterId,
-  isEdit,
-}: {
-  distanceSlabs: DistanceSlabRow[];
-  setDistanceSlabs: Dispatch<SetStateAction<DistanceSlabRow[]>>;
-  rateMasterId?: number;
-  isEdit: boolean;
-}) {
-  const [draft, setDraft] = useState<DistanceSlabDraft>({ minKm: "", maxKm: "", weightSlabs: [{ minWeight: "", maxWeight: "", rate: "" }] });
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const editingRowId = editingIndex === null ? undefined : distanceSlabs[editingIndex]?.id;
-  const { data: editingRowResponse } = useQuery({
-    queryKey: ["rate-distance-slab", rateMasterId, editingRowId],
-    queryFn: () => rateService.getDistanceSlabById(rateMasterId!, editingRowId!),
-    enabled: isEdit && Boolean(rateMasterId) && Boolean(editingRowId),
-  });
-  const createMutation = useMutation({
-    mutationFn: async (payload: RateDistanceSlabPayload) => {
-      if (!rateMasterId) throw new Error("Rate master id is required");
-      return rateService.createDistanceSlab(rateMasterId, payload);
-    },
-    onSuccess: (response) => {
-      setDistanceSlabs((current) => [...current, response.data]);
-      toast.success("Distance slab added");
-      resetDraft();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to add distance slab");
-    },
-  });
-  const updateMutation = useMutation({
-    mutationFn: async ({ rowId, payload }: { rowId: number; payload: RateDistanceSlabPayload }) => {
-      if (!rateMasterId) throw new Error("Rate master id is required");
-      return rateService.updateDistanceSlab(rateMasterId, rowId, payload);
-    },
-    onSuccess: (response, variables) => {
-      setDistanceSlabs((current) => current.map((row) => (row.id === variables.rowId ? response.data : row)));
-      toast.success("Distance slab updated");
-      resetDraft();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update distance slab");
-    },
-  });
-  const deleteMutation = useMutation({
-    mutationFn: async ({ rowId }: { rowId: number; index: number }) => {
-      if (!rateMasterId) throw new Error("Rate master id is required");
-      return rateService.deleteDistanceSlab(rateMasterId, rowId);
-    },
-    onSuccess: (_, variables) => {
-      const { rowId, index } = variables;
-      setDistanceSlabs((current) => current.filter((row) => row.id !== rowId));
-      toast.success("Distance slab deleted");
-      if (editingIndex === index) {
-        resetDraft();
-      } else if (editingIndex !== null && index < editingIndex) {
-        setEditingIndex((current) => (current === null ? current : current - 1));
-      }
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete distance slab");
-    },
-  });
-
-  useEffect(() => {
-    if (editingIndex === null) return;
-    const row = distanceSlabs[editingIndex];
-    if (!row) return;
-    const details = editingRowResponse?.data ?? row;
-    setDraft({
-      id: details.id,
-      minKm: String(details.minKm),
-      maxKm: String(details.maxKm),
-      weightSlabs: (details.weightSlabs ?? []).map((item) => ({ minWeight: String(item.minWeight), maxWeight: String(item.maxWeight), rate: String(item.rate) })),
-    });
-  }, [editingIndex, editingRowResponse?.data, distanceSlabs]);
-
-  function resetDraft() {
-    setDraft({ id: undefined, minKm: "", maxKm: "", weightSlabs: [{ minWeight: "", maxWeight: "", rate: "" }] });
-    setEditingIndex(null);
-  }
-
-  function saveDraft() {
-    const minKm = Number(draft.minKm);
-    const maxKm = Number(draft.maxKm);
-    const weightSlabs = draft.weightSlabs
-      .map((item) => ({ minWeight: Number(item.minWeight), maxWeight: Number(item.maxWeight), rate: Number(item.rate) }))
-      .filter((item) => Number.isFinite(item.minWeight) && Number.isFinite(item.maxWeight) && Number.isFinite(item.rate));
-    if (!Number.isFinite(minKm) || !Number.isFinite(maxKm)) return;
-    if (weightSlabs.length === 0) return;
-    const next: RateDistanceSlabPayload = { minKm, maxKm, weightSlabs };
-    const editingRowId = distanceSlabs[editingIndex ?? -1]?.id ?? draft.id;
-    if (isEdit && rateMasterId && editingRowId) {
-      updateMutation.mutate({ rowId: editingRowId, payload: next });
-      return;
-    }
-    if (isEdit && rateMasterId) {
-      createMutation.mutate(next);
-      return;
-    }
-    setDistanceSlabs((current) => {
-      const copy = [...current];
-      if (editingIndex === null) copy.push({ ...next } as DistanceSlabRow);
-      else copy[editingIndex] = { ...(next as DistanceSlabRow) };
-      return copy;
-    });
-    resetDraft();
-  }
-
-  function removeRow(index: number) {
-    const row = distanceSlabs[index];
-    if (isEdit && rateMasterId && row?.id) {
-      deleteMutation.mutate({ rowId: row.id, index });
-      return;
-    }
-    setDistanceSlabs((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    if (editingIndex === index) {
-      resetDraft();
-    } else if (editingIndex !== null && index < editingIndex) {
-      setEditingIndex((current) => (current === null ? current : current - 1));
-    }
-  }
-
-  function updateWeightSlab(index: number, field: keyof WeightSlabDraft, value: string) {
-    setDraft((current) => ({
-      ...current,
-      weightSlabs: current.weightSlabs.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)),
-    }));
-  }
-
-  function addWeightRow() {
-    setDraft((current) => ({
-      ...current,
-      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "" }],
-    }));
-  }
-
-  function removeWeightRow(index: number) {
-    setDraft((current) => ({
-      ...current,
-      weightSlabs: current.weightSlabs.filter((_, itemIndex) => itemIndex !== index),
-    }));
-  }
-
-  return (
-    <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Input type="number" placeholder="Min km" className={FLOATING_INNER_CONTROL} value={draft.minKm} onChange={(e) => setDraft((current) => ({ ...current, minKm: e.target.value }))} />
-        <Input type="number" placeholder="Max km" className={FLOATING_INNER_CONTROL} value={draft.maxKm} onChange={(e) => setDraft((current) => ({ ...current, maxKm: e.target.value }))} />
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={addWeightRow}>
-            <Plus className="h-4 w-4" />
-            Add weight slab
-          </Button>
-          <Button type="button" variant="success" onClick={saveDraft} disabled={createMutation.isPending || updateMutation.isPending}>
-            {editingIndex === null ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-            {editingIndex === null ? "Add" : "Update"}
-          </Button>
-        </div>
-      </div>
-
-      <div className="rounded-md border border-border bg-background p-3">
-        <p className="mb-3 text-sm font-semibold text-foreground">Weight Slabs</p>
-        <div className="space-y-3">
-          {draft.weightSlabs.map((item, index) => (
-            <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <Input type="number" placeholder="Min weight" className={FLOATING_INNER_CONTROL} value={item.minWeight} onChange={(e) => updateWeightSlab(index, "minWeight", e.target.value)} />
-              <Input type="number" placeholder="Max weight" className={FLOATING_INNER_CONTROL} value={item.maxWeight} onChange={(e) => updateWeightSlab(index, "maxWeight", e.target.value)} />
-              <Input type="number" step="0.01" placeholder="Rate" className={FLOATING_INNER_CONTROL} value={item.rate} onChange={(e) => updateWeightSlab(index, "rate", e.target.value)} />
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeWeightRow(index)} disabled={draft.weightSlabs.length === 1}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-md border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-0 bg-primary hover:bg-primary">
-              <TableHead className="font-semibold text-primary-foreground">Min km</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Max km</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Weight slabs</TableHead>
-              <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {distanceSlabs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  No distance slabs added yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              distanceSlabs.map((row, index) => (
-                <TableRow key={`${row.minKm}-${row.maxKm}-${index}`} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
-                  <TableCell>{row.minKm}</TableCell>
-                  <TableCell>{row.maxKm}</TableCell>
-                  <TableCell>{row.weightSlabs.length}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-center gap-1">
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)]" onClick={() => setEditingIndex(index)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)} disabled={deleteMutation.isPending}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
 
 function RateChargesEditor({
   rateCharges,
@@ -1397,13 +1198,6 @@ function RateChargesEditor({
   /** Reserved for future filtering (e.g. charges-by-product); catalog lists full charge master. */
   productId?: string;
 }) {
-  const { data: chargeListResponse } = useQuery({
-    queryKey: ["rate-form-charge-master"],
-    queryFn: () => chargeService.getCharges({ page: 1, limit: 200, sortBy: "code", sortOrder: "asc" }),
-  });
-
-  const chargesForSelect = chargeListResponse?.data ?? [];
-
   const [draft, setDraft] = useState<RateChargeDraft>({
     id: undefined,
     chargeId: "",
@@ -1423,6 +1217,54 @@ function RateChargesEditor({
     queryFn: () => rateService.getRateChargeById(rateMasterId!, editingRowId!),
     enabled: isEdit && Boolean(rateMasterId) && Boolean(editingRowId),
   });
+
+  const extraChargeRowsForRateCharges = useMemo((): Charge[] | undefined => {
+    const m = new Map<number, Charge>();
+    const put = (ch: { id: number; code?: string; name?: string; calculationBase?: string } | null | undefined) => {
+      if (!ch) {
+        return;
+      }
+      if (m.has(ch.id)) {
+        return;
+      }
+      m.set(ch.id, {
+        id: ch.id,
+        code: ch.code ?? "",
+        name: ch.name ?? "",
+        calculationBase: (ch as { calculationBase?: string }).calculationBase ?? "FLAT",
+        applyFuel: false,
+        sequence: 0,
+      });
+    };
+    for (const row of rateCharges) {
+      put(row.charge);
+    }
+    put(editingRowResponse?.data?.charge);
+    return m.size > 0 ? Array.from(m.values()) : undefined;
+  }, [rateCharges, editingRowResponse?.data?.charge]);
+
+  const {
+    rows: chargesForSelectRaw,
+    fetchNextPage: fetchNextRateChargeMaster,
+    hasNextPage: hasNextRateChargeMasterPage,
+    isFetchingNextPage: isFetchingNextRateChargeMasterPage,
+  } = useInfiniteEntityList<Charge>({
+    queryKey: ["rate-form-charge-master", "sequence"],
+    fetchPage: (page) => chargeService.getCharges({ page, limit: 10, sortBy: "sequence", sortOrder: "asc" }),
+    extraRows: extraChargeRowsForRateCharges,
+  });
+
+  const chargesForSelect = useMemo(
+    () => [...chargesForSelectRaw].sort((a, b) => (a.code || a.name).localeCompare(b.code || b.name, undefined, { sensitivity: "base" })),
+    [chargesForSelectRaw],
+  );
+
+  const onRateChargeSelectScroll = useSelectContentInfiniteScroll({
+    hasNextPage: hasNextRateChargeMasterPage,
+    isFetchingNextPage: isFetchingNextRateChargeMasterPage,
+    fetchNextPage: fetchNextRateChargeMaster,
+  });
+
   const createMutation = useMutation({
     mutationFn: async (payload: RateChargePayload) => {
       if (!rateMasterId) throw new Error("Rate master id is required");
@@ -1603,13 +1445,16 @@ function RateChargesEditor({
           <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
             <SelectValue placeholder="Charge master" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-72" onScroll={onRateChargeSelectScroll}>
             <SelectItem value="__none__">— None (manual name) —</SelectItem>
             {chargesForSelect.map((ch) => (
               <SelectItem key={ch.id} value={String(ch.id)}>
                 {ch.code ? `${ch.code} — ${ch.name}` : ch.name}
               </SelectItem>
             ))}
+            {isFetchingNextRateChargeMasterPage ? (
+              <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+            ) : null}
           </SelectContent>
         </Select>
         <Input placeholder="Name (fallback label)" className={FLOATING_INNER_CONTROL} value={draft.name} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} />
@@ -1724,37 +1569,85 @@ function RateConditionsEditor({
   rateMasterId?: number;
   isEdit: boolean;
 }) {
-  const { data: conditionChargeList } = useQuery({
-    queryKey: ["rate-form-charge-master"],
-    queryFn: () => chargeService.getCharges({ page: 1, limit: 200, sortBy: "code", sortOrder: "asc" }),
-  });
-  const chargesForCondition = conditionChargeList?.data ?? [];
-
   const [draft, setDraft] = useState<RateConditionDraft>({
     id: undefined,
+    ruleType: "threshold",
     chargeId: "",
     field: "",
     operator: "",
     value: "",
-    chargeName: "",
     chargeAmount: "",
     calculationBase: "",
+    applyPerPiece: false,
     isPercentage: false,
+    slabs: [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const editingRowId = editingIndex === null ? undefined : rateConditions[editingIndex]?.id;
+  const editingRowSnapshot = editingIndex !== null ? rateConditions[editingIndex] : undefined;
+  const editingRowId =
+    editingIndex === null || editingRowSnapshot?.ruleType === "slab"
+      ? undefined
+      : (editingRowSnapshot?.id as number | undefined);
   const { data: editingRowResponse } = useQuery({
     queryKey: ["rate-condition", rateMasterId, editingRowId],
     queryFn: () => rateService.getRateConditionById(rateMasterId!, editingRowId!),
     enabled: isEdit && Boolean(rateMasterId) && Boolean(editingRowId),
   });
+
+  const extraChargeRowsForConditions = useMemo((): Charge[] | undefined => {
+    const m = new Map<number, Charge>();
+    const put = (ch: { id: number; code?: string; name?: string; calculationBase?: string } | null | undefined) => {
+      if (!ch) {
+        return;
+      }
+      if (m.has(ch.id)) {
+        return;
+      }
+      m.set(ch.id, {
+        id: ch.id,
+        code: ch.code ?? "",
+        name: ch.name ?? "",
+        calculationBase: (ch as { calculationBase?: string }).calculationBase ?? "FLAT",
+        applyFuel: false,
+        sequence: 0,
+      });
+    };
+    for (const row of rateConditions) {
+      put(row.charge);
+    }
+    put(editingRowResponse?.data?.charge);
+    return m.size > 0 ? Array.from(m.values()) : undefined;
+  }, [rateConditions, editingRowResponse?.data?.charge]);
+
+  const {
+    rows: conditionChargeOptions,
+    fetchNextPage: fetchNextConditionCharges,
+    hasNextPage: hasNextConditionChargePage,
+    isFetchingNextPage: isFetchingNextConditionChargePage,
+  } = useInfiniteEntityList<Charge>({
+    queryKey: ["rate-form-charge-master", "sequence"],
+    fetchPage: (page) => chargeService.getCharges({ page, limit: 10, sortBy: "sequence", sortOrder: "asc" }),
+    extraRows: extraChargeRowsForConditions,
+  });
+
+  const onConditionChargeSelectScroll = useSelectContentInfiniteScroll({
+    hasNextPage: hasNextConditionChargePage,
+    isFetchingNextPage: isFetchingNextConditionChargePage,
+    fetchNextPage: fetchNextConditionCharges,
+  });
+
+  const conditionChargeOptionsSorted = useMemo(
+    () => [...conditionChargeOptions].sort((a, b) => (a.code || a.name).localeCompare(b.code || b.name, undefined, { sensitivity: "base" })),
+    [conditionChargeOptions],
+  );
+
   const createMutation = useMutation({
     mutationFn: async (payload: RateConditionPayload) => {
       if (!rateMasterId) throw new Error("Rate master id is required");
       return rateService.createRateCondition(rateMasterId, payload);
     },
     onSuccess: (response) => {
-      setRateConditions((current) => [...current, response.data]);
+      setRateConditions((current) => [...current, { ...response.data, ruleType: "threshold" } as RateConditionRow]);
       toast.success("Rate condition added");
       resetDraft();
     },
@@ -1768,7 +1661,9 @@ function RateConditionsEditor({
       return rateService.updateRateCondition(rateMasterId, rowId, payload);
     },
     onSuccess: (response, variables) => {
-      setRateConditions((current) => current.map((row) => (row.id === variables.rowId ? response.data : row)));
+      setRateConditions((current) =>
+        current.map((row) => (row.id === variables.rowId ? ({ ...response.data, ruleType: "threshold" } as RateConditionRow) : row)),
+      );
       toast.success("Rate condition updated");
       resetDraft();
     },
@@ -1801,70 +1696,140 @@ function RateConditionsEditor({
     const row = rateConditions[editingIndex];
     if (!row) return;
     const details = editingRowResponse?.data ?? row;
+    const ruleType: ConditionRuleType = row.ruleType === "slab" ? "slab" : "threshold";
+    const slabsFromRow =
+      row.ruleType === "slab" && (row.slabs?.length ?? 0) > 0
+        ? (row.slabs ?? []).map((s) => ({
+            minValue: String(s.minValue),
+            maxValue: String(s.maxValue),
+            rate: String(s.rate),
+            pricingMode: s.pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
+          }))
+        : [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" as const }];
     setDraft({
       id: details.id,
+      ruleType,
       chargeId: details.chargeId != null ? String(details.chargeId) : "",
-      field: details.field,
-      operator: details.operator,
-      value: String(details.value),
-      chargeName: details.chargeName ?? "",
-      chargeAmount: String(details.chargeAmount),
+      field: details.field ?? "",
+      operator: details.operator ?? "",
+      value: String(details.value ?? ""),
+      chargeAmount: String(details.chargeAmount ?? ""),
       calculationBase: details.calculationBase ?? "",
+      applyPerPiece: Boolean((row as { applyPerPiece?: boolean }).applyPerPiece),
       isPercentage: Boolean(details.isPercentage),
+      slabs: slabsFromRow,
     });
   }, [editingIndex, editingRowResponse?.data, rateConditions]);
 
   function resetDraft() {
     setDraft({
       id: undefined,
+      ruleType: "threshold",
       chargeId: "",
       field: "",
       operator: "",
       value: "",
-      chargeName: "",
       chargeAmount: "",
       calculationBase: "",
+      applyPerPiece: false,
       isPercentage: false,
+      slabs: [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
     });
     setEditingIndex(null);
   }
 
   function onConditionChargeChange(chargeIdStr: string) {
     if (!chargeIdStr || chargeIdStr === "__none__") {
-      setDraft((c) => ({ ...c, chargeId: "" }));
+      setDraft((c) => ({ ...c, chargeId: "", calculationBase: "" }));
       return;
     }
-    const ch = chargesForCondition.find((x) => x.id === Number(chargeIdStr));
+    const ch = conditionChargeOptionsSorted.find((x) => x.id === Number(chargeIdStr));
     setDraft((c) => ({
       ...c,
       chargeId: chargeIdStr,
-      chargeName: ch?.name ?? c.chargeName,
-      calculationBase: ch?.calculationBase ?? c.calculationBase,
+      calculationBase: typeof ch?.calculationBase === "string" ? ch.calculationBase : c.calculationBase,
     }));
   }
 
   function saveDraft() {
-    const value = Number(draft.value);
-    const chargeAmount = Number(draft.chargeAmount);
-    if (!draft.field.trim() || !draft.operator.trim() || !Number.isFinite(value) || !Number.isFinite(chargeAmount)) return;
-    const chargeId = draft.chargeId && draft.chargeId !== "__none__" ? Number(draft.chargeId) : undefined;
-    if (!chargeId && !draft.chargeName.trim()) {
-      toast.error("Link a charge master row or enter a charge name for this condition");
+    const chargeId = draft.chargeId && draft.chargeId !== "__none__" ? Number(draft.chargeId) : NaN;
+    if (!Number.isFinite(chargeId) || chargeId < 1) {
+      toast.error("Select a charge from charge master");
       return;
     }
+
+    if (draft.ruleType === "slab") {
+      const parsedSlabs = draft.slabs
+        .map((s) => ({
+          minValue: Number(s.minValue),
+          maxValue: Number(s.maxValue),
+          rate: Number(s.rate),
+          pricingMode: s.pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
+        }))
+        .filter((s) => Number.isFinite(s.minValue) && Number.isFinite(s.maxValue) && Number.isFinite(s.rate));
+      if (parsedSlabs.length === 0) {
+        toast.error("Add at least one charge slab (min, max, rate)");
+        return;
+      }
+      if (!draft.calculationBase.trim()) {
+        toast.error("Select calculation base");
+        return;
+      }
+      const gateField = draft.field.trim() || "CHARGEABLE_WEIGHT";
+      const gateOperator = draft.operator.trim() || "GTE";
+      const gateValue = Number.isFinite(Number(draft.value)) ? Number(draft.value) : 0;
+      const ch = conditionChargeOptionsSorted.find((x) => x.id === chargeId);
+      const calcBase = draft.calculationBase.trim();
+      const nextRow: RateConditionRow = {
+        ruleType: "slab",
+        chargeId,
+        field: gateField,
+        operator: gateOperator,
+        value: gateValue,
+        chargeAmount: 0,
+        calculationBase: calcBase,
+        applyPerPiece: draft.applyPerPiece,
+        isPercentage: false,
+        slabs: parsedSlabs.map((s) => ({
+          minValue: String(s.minValue),
+          maxValue: String(s.maxValue),
+          rate: String(s.rate),
+          pricingMode: s.pricingMode,
+        })),
+        charge: ch ? { id: ch.id, code: ch.code, name: ch.name, calculationBase: ch.calculationBase } : undefined,
+      };
+      setRateConditions((current) => {
+        const copy = [...current];
+        if (editingIndex === null) copy.push(nextRow);
+        else copy[editingIndex] = { ...copy[editingIndex], ...nextRow, rateChargeSourceId: copy[editingIndex]?.rateChargeSourceId };
+        return copy;
+      });
+      toast.success(editingIndex === null ? "Charge slab rule added (saved with rate master)" : "Charge slab rule updated");
+      resetDraft();
+      return;
+    }
+
+    const chargeAmount = Number(draft.chargeAmount);
+    const hasExplicitCondition =
+      draft.field.trim().length > 0 &&
+      draft.operator.trim().length > 0 &&
+      Number.isFinite(Number(draft.value));
+    const field = hasExplicitCondition ? draft.field.trim() : "CHARGEABLE_WEIGHT";
+    const operator = hasExplicitCondition ? draft.operator.trim() : "GTE";
+    const value = hasExplicitCondition ? Number(draft.value) : 0;
+    if (!Number.isFinite(chargeAmount)) return;
     const next: RateConditionPayload = {
-      field: draft.field.trim(),
-      operator: draft.operator.trim(),
+      chargeId,
+      field,
+      operator,
       value,
       chargeAmount,
       isPercentage: draft.isPercentage,
     };
-    if (chargeId) next.chargeId = chargeId;
-    if (draft.chargeName.trim()) next.chargeName = draft.chargeName.trim();
     if (draft.calculationBase.trim()) next.calculationBase = draft.calculationBase.trim();
-    const editingRowId = rateConditions[editingIndex ?? -1]?.id ?? draft.id;
-    if (isEdit && rateMasterId && editingRowId) {
-      updateMutation.mutate({ rowId: editingRowId, payload: next });
+    const thresholdRowId = rateConditions[editingIndex ?? -1]?.id ?? draft.id;
+    if (isEdit && rateMasterId && thresholdRowId) {
+      updateMutation.mutate({ rowId: thresholdRowId, payload: next });
       return;
     }
     if (isEdit && rateMasterId) {
@@ -1873,8 +1838,8 @@ function RateConditionsEditor({
     }
     setRateConditions((current) => {
       const copy = [...current];
-      if (editingIndex === null) copy.push({ ...next } as RateConditionRow);
-      else copy[editingIndex] = { ...(next as RateConditionRow) };
+      if (editingIndex === null) copy.push({ ...next, ruleType: "threshold" } as RateConditionRow);
+      else copy[editingIndex] = { ...(next as RateConditionRow), ruleType: "threshold" };
       return copy;
     });
     resetDraft();
@@ -1882,7 +1847,7 @@ function RateConditionsEditor({
 
   function removeRow(index: number) {
     const row = rateConditions[index];
-    if (isEdit && rateMasterId && row?.id) {
+    if (isEdit && rateMasterId && row?.id && row.ruleType !== "slab") {
       deleteMutation.mutate({ rowId: row.id, index });
       return;
     }
@@ -1894,71 +1859,212 @@ function RateConditionsEditor({
     }
   }
 
+  const conditionFieldSelectValues = useMemo(() => {
+    const base: string[] = [...CONDITION_FIELD_OPTIONS];
+    if (draft.field && !base.includes(draft.field)) {
+      base.push(draft.field);
+    }
+    return base;
+  }, [draft.field]);
+
+  function toggleExtraDetails(enabled: boolean) {
+    setDraft((c) => ({
+      ...c,
+      ruleType: enabled ? "slab" : "threshold",
+      field: enabled ? c.field.trim() || "CHARGEABLE_WEIGHT" : c.field,
+      operator: enabled ? c.operator.trim() || "GTE" : c.operator,
+      value: enabled ? (c.value.trim() ? c.value : "0") : c.value,
+      slabs: enabled
+        ? c.slabs.length > 0
+          ? c.slabs
+          : [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }]
+        : [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
+    }));
+  }
+
+  function addConditionSlabRow() {
+    setDraft((c) => ({
+      ...c,
+      slabs: [...c.slabs, { minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
+    }));
+  }
+
+  function updateConditionSlabRow(index: number, patch: Partial<ConditionSlabFormRow>) {
+    setDraft((c) => ({
+      ...c,
+      slabs: c.slabs.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    }));
+  }
+
+  function removeConditionSlabRow(index: number) {
+    setDraft((c) => ({
+      ...c,
+      slabs: c.slabs.length <= 1 ? c.slabs : c.slabs.filter((_, i) => i !== index),
+    }));
+  }
+
   return (
     <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Select value={draft.field || "__field__"} onValueChange={(v) => setDraft((c) => ({ ...c, field: v === "__field__" ? "" : v }))}>
-          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="Condition field" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__field__">— Field —</SelectItem>
-            {CONDITION_FIELD_OPTIONS.map((f) => (
-              <SelectItem key={f} value={f}>
-                {f}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={draft.operator || "__op__"} onValueChange={(v) => setDraft((c) => ({ ...c, operator: v === "__op__" ? "" : v }))}>
-          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="Operator" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__op__">— Operator —</SelectItem>
-            {CONDITION_OPERATOR_OPTIONS.map((o) => (
-              <SelectItem key={o} value={o}>
-                {o}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input type="number" step="0.01" placeholder="Compare value" className={FLOATING_INNER_CONTROL} value={draft.value} onChange={(e) => setDraft((current) => ({ ...current, value: e.target.value }))} />
-        <Select value={draft.chargeId || "__none__"} onValueChange={onConditionChargeChange}>
-          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="Linked charge (master)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">— None —</SelectItem>
-            {chargesForCondition.map((ch) => (
-              <SelectItem key={ch.id} value={String(ch.id)}>
-                {ch.code ? `${ch.code} — ${ch.name}` : ch.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">Rate conditions</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Standard rules compare a field to a value. Use <span className="font-medium text-foreground">Extra details (charge slabs)</span> for ECC-style
+          bands (e.g. chargeable weight slabs with flat or per-kg rates). Slab rules are stored as rate charges when you save the rate master.
+        </p>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Input placeholder="Charge name (fallback)" className={FLOATING_INNER_CONTROL} value={draft.chargeName} onChange={(e) => setDraft((current) => ({ ...current, chargeName: e.target.value }))} />
-        <Input type="number" step="0.01" placeholder="Charge amount" className={FLOATING_INNER_CONTROL} value={draft.chargeAmount} onChange={(e) => setDraft((current) => ({ ...current, chargeAmount: e.target.value }))} />
-        <Select value={draft.calculationBase || "__cb__"} onValueChange={(v) => setDraft((c) => ({ ...c, calculationBase: v === "__cb__" ? "" : v }))}>
-          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="Calculation base (optional)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__cb__">— Calculation base —</SelectItem>
-            {CALCULATION_BASE_OPTIONS.map((b) => (
-              <SelectItem key={b} value={b}>
-                {b}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
-          <Checkbox checked={draft.isPercentage} onCheckedChange={(checked) => setDraft((current) => ({ ...current, isPercentage: Boolean(checked) }))} />
-          <span className="text-sm font-medium text-foreground">Is percentage</span>
+
+      <>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Select value={draft.field || "__field__"} onValueChange={(v) => setDraft((c) => ({ ...c, field: v === "__field__" ? "" : v }))}>
+            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+              <SelectValue placeholder="Condition field" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__field__">— Field —</SelectItem>
+              {conditionFieldSelectValues.map((f) => (
+                <SelectItem key={f} value={f}>
+                  {f}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={draft.operator || "__op__"} onValueChange={(v) => setDraft((c) => ({ ...c, operator: v === "__op__" ? "" : v }))}>
+            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+              <SelectValue placeholder="Operator" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__op__">— Operator —</SelectItem>
+              {CONDITION_OPERATOR_OPTIONS.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {o}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input type="number" step="0.01" placeholder="Compare value" className={FLOATING_INNER_CONTROL} value={draft.value} onChange={(e) => setDraft((current) => ({ ...current, value: e.target.value }))} />
+          <Select value={draft.chargeId || "__none__"} onValueChange={onConditionChargeChange}>
+            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+              <SelectValue placeholder="Linked charge (master)" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72" onScroll={onConditionChargeSelectScroll}>
+              <SelectItem value="__none__">— Select charge —</SelectItem>
+              {conditionChargeOptionsSorted.map((ch) => (
+                <SelectItem key={ch.id} value={String(ch.id)}>
+                  {ch.code ? `${ch.code} — ${ch.name}` : ch.name}
+                </SelectItem>
+              ))}
+              {isFetchingNextConditionChargePage ? (
+                <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+              ) : null}
+            </SelectContent>
+          </Select>
         </div>
-      </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Input type="number" step="0.01" placeholder="Charge amount" className={FLOATING_INNER_CONTROL} value={draft.chargeAmount} onChange={(e) => setDraft((current) => ({ ...current, chargeAmount: e.target.value }))} />
+          <Select value={draft.calculationBase || "__cb__"} onValueChange={(v) => setDraft((c) => ({ ...c, calculationBase: v === "__cb__" ? "" : v }))}>
+            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+              <SelectValue placeholder="Calculation base (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__cb__">— Calculation base —</SelectItem>
+              {CALCULATION_BASE_OPTIONS.map((b) => (
+                <SelectItem key={b} value={b}>
+                  {b}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+            <Checkbox checked={draft.isPercentage} onCheckedChange={(checked) => setDraft((current) => ({ ...current, isPercentage: Boolean(checked) }))} />
+            <span className="text-sm font-medium text-foreground">Is percentage</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border/70 px-4 py-3">
+            <Checkbox
+              id="rule-slab-extra"
+              checked={draft.ruleType === "slab"}
+              onCheckedChange={(checked) => toggleExtraDetails(Boolean(checked))}
+            />
+            <Label htmlFor="rule-slab-extra" className="cursor-pointer text-sm font-medium">
+              Extra details (charge slabs)
+            </Label>
+          </div>
+        </div>
+      </>
+
+      {draft.ruleType === "slab" ? (
+        <>
+          <div className="rounded-md border border-border bg-background p-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-foreground">Charge slabs</p>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 rounded-lg border border-border/70 px-3 py-1.5">
+                  <Checkbox checked={draft.applyPerPiece} onCheckedChange={(checked) => setDraft((c) => ({ ...c, applyPerPiece: Boolean(checked) }))} />
+                  <span className="text-xs font-medium text-foreground">Apply per piece</span>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addConditionSlabRow}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add slab
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {draft.slabs.map((slab, slabIndex) => (
+                <div key={slabIndex} className="grid grid-cols-1 gap-3 md:grid-cols-5">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Min (e.g. 0)"
+                    className={FLOATING_INNER_CONTROL}
+                    value={slab.minValue}
+                    onChange={(e) => updateConditionSlabRow(slabIndex, { minValue: e.target.value })}
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Max (e.g. 50)"
+                    className={FLOATING_INNER_CONTROL}
+                    value={slab.maxValue}
+                    onChange={(e) => updateConditionSlabRow(slabIndex, { maxValue: e.target.value })}
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Rate"
+                    className={FLOATING_INNER_CONTROL}
+                    value={slab.rate}
+                    onChange={(e) => updateConditionSlabRow(slabIndex, { rate: e.target.value })}
+                  />
+                  <Select
+                    value={slab.pricingMode}
+                    onValueChange={(v) => updateConditionSlabRow(slabIndex, { pricingMode: v === "PER_KG" ? "PER_KG" : "FLAT" })}
+                  >
+                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                      <SelectValue placeholder="Pricing" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FLAT">Flat (fixed amount for band)</SelectItem>
+                      <SelectItem value="PER_KG">Per unit (rate × basis: weight or km)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-[var(--express-danger)]"
+                      onClick={() => removeConditionSlabRow(slabIndex)}
+                      disabled={draft.slabs.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="success" onClick={saveDraft} disabled={createMutation.isPending || updateMutation.isPending}>
           {editingIndex === null ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
@@ -1973,12 +2079,12 @@ function RateConditionsEditor({
         <Table>
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
+              <TableHead className="font-semibold text-primary-foreground">Type</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Field</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Operator</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Value</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Charge</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Charge name</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Amount</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Charge (master)</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Amount / slabs</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -1991,19 +2097,52 @@ function RateConditionsEditor({
               </TableRow>
             ) : (
               rateConditions.map((row, index) => (
-                <TableRow key={`${row.field}-${index}`} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
+                <TableRow
+                  key={`${row.ruleType ?? "threshold"}-${row.field}-${row.rateChargeSourceId ?? row.id ?? index}`}
+                  className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}
+                >
+                  <TableCell className="text-sm">
+                    {row.ruleType === "slab" ? (
+                      <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">Charge slabs</span>
+                    ) : (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">Standard</span>
+                    )}
+                  </TableCell>
                   <TableCell>{row.field}</TableCell>
-                  <TableCell>{row.operator}</TableCell>
-                  <TableCell>{row.value}</TableCell>
-                  <TableCell>{row.chargeId != null ? `#${row.chargeId}` : "—"}</TableCell>
-                  <TableCell>{row.chargeName || row.charge?.name || "—"}</TableCell>
-                  <TableCell>{row.chargeAmount}</TableCell>
+                  <TableCell>{row.ruleType === "slab" ? "—" : row.operator}</TableCell>
+                  <TableCell>{row.ruleType === "slab" ? "—" : row.value}</TableCell>
+                  <TableCell>
+                    {row.charge != null
+                      ? row.charge.code
+                        ? `${row.charge.code} — ${row.charge.name}`
+                        : row.charge.name
+                      : row.chargeId != null
+                        ? `#${row.chargeId}`
+                        : row.chargeName || "—"}
+                  </TableCell>
+                  <TableCell className="max-w-[220px] text-xs leading-snug text-muted-foreground">
+                    {row.ruleType === "slab" && row.slabs?.length
+                      ? row.slabs.map((s, i) => (
+                          <span key={i} className="mr-1 inline-block">
+                            {s.minValue}–{s.maxValue}: {s.rate} ({s.pricingMode === "PER_KG" ? "× basis" : "flat"})
+                            {i < (row.slabs?.length ?? 0) - 1 ? " · " : ""}
+                          </span>
+                        ))
+                      : row.chargeAmount}
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)]" onClick={() => setEditingIndex(index)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)} disabled={deleteMutation.isPending}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-[var(--express-danger)]"
+                        onClick={() => removeRow(index)}
+                        disabled={deleteMutation.isPending && row.ruleType !== "slab"}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
