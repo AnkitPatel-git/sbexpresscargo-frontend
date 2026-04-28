@@ -1861,7 +1861,7 @@ function RateConditionsEditor({
         chargeId,
         field: draft.field.trim(),
         operator: draft.operator.trim(),
-        value: draft.value.trim() === "" ? "" : Number(draft.value),
+        value: draft.value.trim() === "" ? 0 : Number(draft.value),
         chargeAmount: 0,
         calculationBase: calcBase,
         applyPerPiece: draft.applyPerPiece,
