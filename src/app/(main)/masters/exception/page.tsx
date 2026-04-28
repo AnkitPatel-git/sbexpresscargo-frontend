@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, Check, X, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Check, X, FileDown, Filter, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils"
 import { exceptionService } from "@/services/masters/exception-service"
 import { ExceptionMaster } from "@/types/masters/exception"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ExceptionPage() {
@@ -170,9 +171,8 @@ export default function ExceptionPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["exceptions"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                     <PermissionGuard permission="master.exception.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
+                        <MasterExcelImportButton master="exceptions" label="Exceptions" queryKey={["exceptions"]} />
                     </PermissionGuard>
                     <PermissionGuard permission="master.exception.read">
                         <Button
@@ -184,13 +184,15 @@ export default function ExceptionPage() {
                             disabled={exporting}
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["exceptions"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <PermissionGuard permission="master.exception.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Exception</Button>
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Exception
+                    </Button>
                 </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">

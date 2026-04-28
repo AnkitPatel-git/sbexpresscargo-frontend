@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, Filter, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -31,16 +31,9 @@ import { cn } from "@/lib/utils"
 
 import { serviceCenterService } from "@/services/masters/service-center-service"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
-
-function SortArrows() {
-    return (
-        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-            <ChevronDown className="h-2.5 w-2.5" />
-        </span>
-    )
-}
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function ServiceCentersPage() {
     const router = useRouter()
@@ -55,6 +48,8 @@ export default function ServiceCentersPage() {
     const debouncedCode = useDebounce(appliedFilters.code, 400)
     const debouncedName = useDebounce(appliedFilters.name, 400)
     const debouncedSubName = useDebounce(appliedFilters.subName, 400)
+    const [sortBy, setSortBy] = useState("code")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -63,14 +58,14 @@ export default function ServiceCentersPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["service-centers", page, debouncedSearch, debouncedCode, debouncedName, debouncedSubName],
+        queryKey: ["service-centers", page, debouncedSearch, debouncedCode, debouncedName, debouncedSubName, sortBy, sortOrder],
         queryFn: () =>
             serviceCenterService.getServiceCenters({
                 page,
                 limit,
                 search: debouncedSearch,
-                sortBy: "code",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 code: debouncedCode || undefined,
                 name: debouncedName || undefined,
                 subName: debouncedSubName || undefined,
@@ -84,8 +79,8 @@ export default function ServiceCentersPage() {
         try {
             const { blob, filename } = await serviceCenterService.exportServiceCenters({
                 search: debouncedSearch,
-                sortBy: "code",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 code: debouncedCode || undefined,
                 name: debouncedName || undefined,
                 subName: debouncedSubName || undefined,
@@ -150,6 +145,15 @@ export default function ServiceCentersPage() {
         setPage(1)
         setFiltersOpen(false)
     }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -178,13 +182,8 @@ export default function ServiceCentersPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-centers"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                     <PermissionGuard permission="master.service_center.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
-                            <FilePlus className="h-4 w-4" />
-                        </Button>
+                        <MasterExcelImportButton master="service-centers" label="Service Centers" queryKey={["service-centers"]} />
                     </PermissionGuard>
                     <PermissionGuard permission="master.service_center.read">
                         <Button
@@ -196,16 +195,14 @@ export default function ServiceCentersPage() {
                             disabled={exporting}
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-centers"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                 </div>
                 <PermissionGuard permission="master.service_center.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Service Center">
-                        <FilePlus className="mr-1 h-4 w-4" /> Add Service Center
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Service Center
                     </Button>
                 </PermissionGuard>
             </div>
@@ -213,14 +210,14 @@ export default function ServiceCentersPage() {
                 <Table className="min-w-[1250px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Code <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">SC Name <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Sub Name <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Pin Code <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">City <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Telephone <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Email <SortArrows /></span></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Code" field="code" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="SC Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Sub Name" field="subName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Pin Code</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">City</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">State</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Telephone</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Email</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

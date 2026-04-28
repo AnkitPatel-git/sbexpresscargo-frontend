@@ -3,6 +3,11 @@ import { ContentListResponse, ContentSingleResponse, ContentFormData } from '@/t
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
+async function readError(response: Response, fallback: string): Promise<string> {
+    const json = await response.clone().json().catch(() => null) as { message?: string } | null;
+    return json?.message || fallback;
+}
+
 export const contentService = {
     async getContents(params?: {
         page?: number;
@@ -125,5 +130,60 @@ export const contentService = {
 
         const blob = await response.blob();
         return { blob, filename };
+    },
+
+    async downloadImportTemplate(): Promise<{ blob: Blob; filename: string }> {
+        const response = await apiFetch(`${API_URL}/content-master/import/template`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(await readError(response, 'Failed to download import template'));
+        }
+
+        const cd = response.headers.get('content-disposition');
+        let filename = 'contents-import-template.xlsx';
+        const match = cd?.match(/filename="?([^";\n]+)"?/i);
+        if (match?.[1]) filename = match[1].trim();
+
+        return { blob: await response.blob(), filename };
+    },
+
+    async importContentsFromExcel(file: File): Promise<{
+        created: number;
+        failed: number;
+        failures: Array<{ row: number; message: string }>;
+        successes: Array<{ row: number; contentCode: string }>;
+    }> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await apiFetch(`${API_URL}/content-master/import`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: formData,
+        });
+        const json = (await response.json().catch(() => ({}))) as {
+            success?: boolean;
+            data?: {
+                created: number;
+                failed: number;
+                failures: Array<{ row: number; message: string }>;
+                successes: Array<{ row: number; contentCode: string }>;
+            };
+            message?: string;
+        };
+
+        if (!response.ok) {
+            throw new Error(json.message || 'Import failed');
+        }
+        if (!json.success || json.data == null) {
+            throw new Error('Invalid import response');
+        }
+        return json.data;
     },
 };

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, Loader2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Loader2, FileDown, Filter, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils"
 import { vendorService } from "@/services/masters/vendor-service"
 import { Vendor } from "@/types/masters/vendor"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function VendorPage() {
@@ -140,11 +141,17 @@ export default function VendorPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const { blob, filename } = await vendorService.exportVendors({ search: debouncedSearch, vendorCode: appliedFilters.vendorCode || undefined, vendorName: appliedFilters.vendorName || undefined, address: appliedFilters.address || undefined, telephone: appliedFilters.telephone || undefined }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url); } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to export vendors"); } }}><FileUp className="h-4 w-4" /></Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["vendors"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
-                    <PermissionGuard permission="master.vendor.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const { blob, filename } = await vendorService.exportVendors({ search: debouncedSearch, vendorCode: appliedFilters.vendorCode || undefined, vendorName: appliedFilters.vendorName || undefined, address: appliedFilters.address || undefined, telephone: appliedFilters.telephone || undefined }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url); } catch (error) { toast.error(error instanceof Error ? error.message : "Failed to export vendors"); } }}><FileDown className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.vendor.create">
+                        <MasterExcelImportButton master="vendors" label="Vendors" queryKey={["vendors"]} />
+                    </PermissionGuard>
                 </div>
-                <PermissionGuard permission="master.vendor.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Vendor</Button></PermissionGuard>
+                <PermissionGuard permission="master.vendor.create">
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Vendor
+                    </Button>
+                </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[980px] border-0">

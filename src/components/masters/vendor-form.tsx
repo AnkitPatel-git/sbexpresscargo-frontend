@@ -194,7 +194,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control}
                                     name="vendorName"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Vendor Name*">
+                                        <FloatingFormItem required label="Vendor Name*">
                                             <FormControl>
                                                 <Input placeholder="e.g. Bluedart" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -206,7 +206,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 control={form.control}
                                 name="contactPerson"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Contact Person*">
+                                    <FloatingFormItem required label="Contact Person*">
                                         <FormControl>
                                             <Input placeholder="Name of contact" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -251,7 +251,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control}
                                     name="mobile"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Mobile*">
+                                        <FloatingFormItem required label="Mobile*">
                                             <FormControl>
                                                 <Input placeholder="10 digit number" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -262,7 +262,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control}
                                     name="email"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Email Address*">
+                                        <FloatingFormItem required label="Email Address*">
                                             <FormControl>
                                                 <Input placeholder="vendor@example.com" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -275,7 +275,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control}
                                     name="telephone"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Telephone*">
+                                        <FloatingFormItem required label="Telephone*">
                                             <FormControl>
                                                 <Input placeholder="Office number" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -313,7 +313,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 control={form.control}
                                 name="address1"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Address Line 1*">
+                                    <FloatingFormItem required label="Address Line 1*">
                                         <FormControl>
                                             <Input placeholder="Street address" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -446,7 +446,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control}
                                     name="bankId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Bank">
+                                        <FloatingFormItem required label="Bank">
                                             <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -469,7 +469,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                         control={form.control}
                                         name="bankAccount"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Bank Account">
+                                            <FloatingFormItem required label="Bank Account">
                                                 <FormControl>
                                                     <Input placeholder="Account number" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
@@ -480,7 +480,7 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                         control={form.control}
                                         name="bankIfsc"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Bank IFSC">
+                                            <FloatingFormItem required label="Bank IFSC">
                                                 <FormControl>
                                                     <Input placeholder="IFSC code" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>

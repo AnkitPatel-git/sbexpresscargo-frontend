@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, Filter, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils"
 import { zoneService } from "@/services/masters/zone-service"
 import { Zone } from "@/types/masters/zone"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function ZonesPage() {
@@ -137,11 +138,17 @@ export default function ZonesPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["zones"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
-                    <PermissionGuard permission="master.area.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const blob = await zoneService.exportZonesCsv(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "zones.csv"; a.click(); URL.revokeObjectURL(url); } catch { toast.error("Failed to export zones"); } }}><FileUp className="h-4 w-4" /></Button>
+                    <PermissionGuard permission="master.area.create">
+                        <MasterExcelImportButton master="zones" label="Zones" queryKey={["zones"]} />
+                    </PermissionGuard>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={async () => { try { const blob = await zoneService.exportZonesCsv(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "zones.csv"; a.click(); URL.revokeObjectURL(url); } catch { toast.error("Failed to export zones"); } }}><FileDown className="h-4 w-4" /></Button>
                 </div>
-                <PermissionGuard permission="master.area.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Zone</Button></PermissionGuard>
+                <PermissionGuard permission="master.area.create">
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Zone
+                    </Button>
+                </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[860px] border-0">

@@ -207,7 +207,7 @@ export function CourierForm({ initialData }: CourierFormProps) {
                             control={form.control}
                             name="userId"
                             render={({ field }) => (
-                                <FloatingFormItem label={<>Linked user <span className="text-red-500">*</span></>}>
+                                <FloatingFormItem required label={<>Linked user</>}>
                                     <div className="space-y-2">
                                         <Input
                                             placeholder="Search user from DB"
@@ -276,7 +276,7 @@ export function CourierForm({ initialData }: CourierFormProps) {
                             control={form.control}
                             name="pickupCharge"
                             render={({ field }) => (
-                                <FloatingFormItem label={<>Pickup charge <span className="text-red-500">*</span></>}>
+                                <FloatingFormItem required label={<>Pickup charge</>}>
                                     <FormControl>
                                         <Input
                                             type="number"
@@ -294,7 +294,7 @@ export function CourierForm({ initialData }: CourierFormProps) {
                             control={form.control}
                             name="deliveryCharge"
                             render={({ field }) => (
-                                <FloatingFormItem label={<>Delivery charge <span className="text-red-500">*</span></>}>
+                                <FloatingFormItem required label={<>Delivery charge</>}>
                                     <FormControl>
                                         <Input
                                             type="number"

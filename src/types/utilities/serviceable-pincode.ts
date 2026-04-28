@@ -6,12 +6,6 @@ export interface ServiceablePincodeZone {
     name: string;
 }
 
-export interface ServiceablePincodeProductRef {
-    id: number;
-    productCode: string;
-    productName: string;
-}
-
 export interface ServiceablePincode {
     id: number;
     countryId: number;
@@ -22,11 +16,9 @@ export interface ServiceablePincode {
     serviceable: boolean;
     oda?: boolean;
     edl?: boolean;
-    productId?: number | null;
     odaEdlDistanceKm?: number | string | null;
     tatWorkingDays?: number | null;
     embargo?: boolean | null;
-    product?: ServiceablePincodeProductRef | null;
     zoneIds?: number[];
     country?: {
         id: number;
@@ -56,7 +48,6 @@ export interface ServiceablePincodeFormData {
     areaName: string;
     serviceable: boolean;
     edl: boolean;
-    productId?: number | null;
     odaEdlDistanceKm?: number | null;
     tatWorkingDays?: number | null;
     embargo?: boolean | null;

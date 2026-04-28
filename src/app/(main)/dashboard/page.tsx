@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   RefreshCw,
@@ -26,9 +26,14 @@ import { SalesTrendChart, ServiceCenterSalesChart } from "@/components/dashboard
 import { ExpressInboundSummary, ExpressOutboundSummary } from "@/components/dashboard/express-operation-summary";
 
 export default function DashboardPage() {
+  const [isMounted, setIsMounted] = useState(false);
   const [fromDate, setFromDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [serviceCenterId, setServiceCenterId] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const { data: serviceCentersData } = useQuery({
     queryKey: ["service-centers-master"],
@@ -89,6 +94,10 @@ export default function DashboardPage() {
       maximumFractionDigits: 0,
     }).format(val);
   };
+
+  if (!isMounted) {
+    return <div className="min-h-[60vh]" />;
+  }
 
   return (
     <div className="space-y-4">

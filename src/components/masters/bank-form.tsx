@@ -130,7 +130,7 @@ export function BankForm({ initialData }: BankFormProps) {
                             control={form.control}
                             name="status"
                             render={({ field }) => (
-                                <FloatingFormItem label="Status" itemClassName="max-w-[200px]">
+                                <FloatingFormItem required label="Status" itemClassName="max-w-[200px]">
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>

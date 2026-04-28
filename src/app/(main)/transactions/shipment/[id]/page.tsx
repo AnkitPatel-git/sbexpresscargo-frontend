@@ -21,6 +21,14 @@ const fallbackText = (value?: string | number | null) => {
 };
 
 function buildCalculationPayload(shipment: Shipment) {
+  const actualWeight = Math.max(0, Number(shipment.declaredWeight ?? 0));
+  const volumetricWeight = Math.round(
+    (shipment.piecesRows || []).reduce(
+      (sum, row) => sum + (Number(row.volumetricWeight) || 0),
+      0,
+    ),
+  );
+  const chargeWeight = Math.max(actualWeight, volumetricWeight);
   return {
     awbNo: shipment.awbNo,
     ewaybillNumber: shipment.ewaybillNumber || undefined,
@@ -47,6 +55,9 @@ function buildCalculationPayload(shipment: Shipment) {
     fromZoneId: shipment.fromZoneId ?? undefined,
     toZoneId: shipment.toZoneId ?? undefined,
     shipmentTotalValue: shipment.shipmentTotalValue ?? shipment.totalAmount ?? undefined,
+    actualWeight,
+    volumetricWeight,
+    chargeWeight,
     reversePickup: shipment.reversePickup ?? false,
     appointmentDelivery: shipment.appointmentDelivery ?? false,
     floorDelivery: shipment.floorDelivery ?? false,
@@ -67,7 +78,7 @@ function buildCalculationPayload(shipment: Shipment) {
       actualWeight: Number(row.actualWeight) || 0,
       pieces: Number(row.pieces) || 0,
       length: row.length ?? undefined,
-      width: row.width ?? undefined,
+      breadth: row.breadth ?? undefined,
       height: row.height ?? undefined,
       division: row.division ?? undefined,
       volumetricWeight: row.volumetricWeight ?? undefined,

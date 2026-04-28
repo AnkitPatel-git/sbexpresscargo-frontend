@@ -32,6 +32,8 @@ type CachedDistance = {
 }
 
 const USER_AGENT = "sbexpresscargo-frontend/1.0"
+/** Same pickup and delivery pincode would otherwise be 0 km; align with backend pricing floor. */
+const MIN_SAME_PINCODE_DISTANCE_KM = 10
 const pinPointCache = new Map<string, GeoPoint>()
 const pairCache = new Map<string, CachedDistance>()
 
@@ -174,7 +176,7 @@ export async function GET(request: Request) {
     const payload: DistanceData = {
       fromPinCode,
       toPinCode,
-      distanceKm: 0,
+      distanceKm: MIN_SAME_PINCODE_DISTANCE_KM,
       source: "haversine",
     }
     return NextResponse.json({ success: true, data: payload })

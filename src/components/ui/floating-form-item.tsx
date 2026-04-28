@@ -53,11 +53,13 @@ function FloatingFieldSurface({
   className,
   children,
   suppressError = false,
+  required = false,
 }: {
   label: React.ReactNode
   className?: string
   children: React.ReactNode
   suppressError?: boolean
+  required?: boolean
 }) {
   const { error } = useFormField()
   const showError = !!error && !suppressError
@@ -70,7 +72,10 @@ function FloatingFieldSurface({
         className
       )}
     >
-      <FormLabel className={cn(outlinedLabelClass, showError && "text-destructive")}>{label}</FormLabel>
+      <FormLabel className={cn(outlinedLabelClass, showError && "text-destructive")}>
+        {label}
+        {required ? <span className="ml-0.5 text-red-500">*</span> : null}
+      </FormLabel>
       {children}
     </div>
   )
@@ -143,16 +148,18 @@ export function FloatingFormItem({
   itemClassName,
   children,
   suppressError = false,
+  required = false,
 }: {
   label: React.ReactNode
   className?: string
   itemClassName?: string
   children: React.ReactNode
   suppressError?: boolean
+  required?: boolean
 }) {
   return (
     <FormItem className={cn("min-w-0 gap-0", itemClassName)}>
-      <FloatingFieldSurface label={label} className={className} suppressError={suppressError}>
+      <FloatingFieldSurface label={label} className={className} suppressError={suppressError} required={required}>
         {children}
       </FloatingFieldSurface>
       {!suppressError ? <FormMessage className="mt-1" /> : null}

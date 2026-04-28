@@ -1,6 +1,6 @@
 "use client"
 
-import { ChangeEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, useFieldArray, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -17,14 +17,19 @@ import {
     Plus,
     Trash2,
     Calculator,
-    RotateCcw
+    RotateCcw,
+    FileUp,
+    Download
 } from "lucide-react"
+import * as XLSX from "xlsx"
 
 import { cn } from "@/lib/utils"
 import {
     Form,
     FormControl,
     FormField,
+    FormItem,
+    FormLabel,
     FormMessage,
 } from "@/components/ui/form"
 import {
@@ -38,6 +43,14 @@ import {
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import {
     Command,
@@ -121,6 +134,15 @@ const generateKycRowId = () => {
     return `kyc-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+/** Same pickup and delivery pincode would otherwise be 0 km; pricing uses a floor (see backend PincodeRouteDistanceService). */
+const MIN_SAME_PINCODE_DISTANCE_KM = 10
+const roundWeightKg = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return 0
+    const baseKg = Math.floor(value)
+    const gramsFraction = value - baseKg
+    return gramsFraction > 0.1 ? baseKg + 1 : baseKg
+}
+
 const normalizeNumberValue = (value: unknown): number | undefined => {
     if (typeof value === "number" && Number.isFinite(value)) return value
     if (typeof value === "string" && value.trim()) {
@@ -154,7 +176,9 @@ const normalizePieceRows = (rows?: ShipmentFormValues['piecesRows']): NonNullabl
         actualWeight: normalizeNumberValue(row.actualWeight) ?? normalizeNumberValue((row as Record<string, unknown>).actualWeightPerPc) ?? 0,
         pieces: normalizeNumberValue(row.pieces) || 0,
         length: normalizeNumberValue(row.length),
-        width: normalizeNumberValue(row.width),
+        breadth:
+            normalizeNumberValue(row.breadth) ??
+            normalizeNumberValue((row as Record<string, unknown>).width),
         height: normalizeNumberValue(row.height),
         division: normalizeNumberValue(row.division),
         volumetricWeight: normalizeNumberValue(row.volumetricWeight),
@@ -216,8 +240,8 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         productId: shipmentRef?.productId || 0,
         vendorId: shipmentRef?.vendorId || 0,
         serviceMapId: shipmentRef?.serviceMapId || 0,
-        shipmentValue: shipmentRef?.shipmentValue || 0,
-        shipmentTotalValue: shipmentRef?.shipmentTotalValue || 0,
+        shipmentValue: shipmentRef?.shipmentValue ?? 0,
+        shipmentTotalValue: shipmentRef?.shipmentTotalValue ?? 0,
         fromZoneId: shipmentRef?.fromZoneId || 0,
         toZoneId: shipmentRef?.toZoneId || 0,
         reversePickup: shipmentRef?.reversePickup || false,
@@ -226,7 +250,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         floorCount: shipmentRef?.floorCount || 0,
         currency: shipmentRef?.currency || 'INR',
         pieces: shipmentRef?.pieces || 1,
-        actualWeight: shipmentRef?.actualWeight || 0,
+        actualWeight: normalizeNumberValue(shipmentRef?.actualWeight) ?? normalizeNumberValue(shipmentRef?.declaredWeight) ?? 0,
         volumetricWeight: shipmentRef?.volumetricWeight || 0,
         chargeWeight: shipmentRef?.chargeWeight || 0,
         km: shipmentRef?.km || 0,
@@ -286,6 +310,9 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         fromZoneId: normalizePositiveNumberValue(values.fromZoneId),
         toZoneId: normalizePositiveNumberValue(values.toZoneId),
         shipmentTotalValue: normalizeNumberValue(values.shipmentTotalValue ?? values.shipmentValue),
+        actualWeight: normalizeNumberValue(values.actualWeight) ?? 0,
+        volumetricWeight: normalizeNumberValue(values.volumetricWeight) ?? 0,
+        chargeWeight: normalizeNumberValue(values.chargeWeight) ?? 0,
         reversePickup: Boolean(values.reversePickup),
         appointmentDelivery: Boolean(values.appointmentDelivery),
         floorDelivery: Boolean(values.floorDelivery),
@@ -301,6 +328,15 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         isCod: Boolean(values.isCod),
         codAmount: normalizeNumberValue(values.codAmount),
         piecesRows: normalizePieceRows(values.piecesRows).filter((row) => Number(row.pieces || 0) > 0),
+        charges: (values.charges || []).map((row) => ({
+            chargeId: normalizePositiveNumberValue(row.chargeId) ?? 0,
+            description: row.description?.trim() || undefined,
+            amount: normalizeNumberValue(row.amount) ?? 0,
+            fuelApply: Boolean(row.fuelApply),
+            taxApply: Boolean(row.taxApply),
+            taxOnFuel: Boolean(row.taxOnFuel),
+            chargeType: row.chargeType?.trim() || undefined,
+        })),
     }
 
     return payload
@@ -312,7 +348,7 @@ const normalizeShipmentUpdatePayload = (values: ShipmentFormValues): ShipmentFor
 }
 
 const normalizeShipmentCalculatePayload = (values: ShipmentFormValues): ShipmentFormValues => {
-    const { serviceMapId: _serviceMapId, ...payload } = normalizeShipmentPayload(values)
+    const { serviceMapId: _serviceMapId, charges: _charges, ...payload } = normalizeShipmentPayload(values)
     return payload
 }
 
@@ -381,7 +417,7 @@ const parsePiecesCsv = (raw: string): NonNullable<ShipmentFormValues["piecesRows
             actualWeight: actualWeight ?? fallbackActualWeight ?? 0,
             pieces: parseNum(get(cells, "pieces")) || 0,
             length: parseNum(get(cells, "length")),
-            width: parseNum(get(cells, "width")),
+            breadth: parseNum(get(cells, "breadth")) ?? parseNum(get(cells, "width")),
             height: parseNum(get(cells, "height")),
             division: parseNum(get(cells, "division")),
             volumetricWeight: parseNum(get(cells, "volumetricWeight")),
@@ -390,6 +426,40 @@ const parsePiecesCsv = (raw: string): NonNullable<ShipmentFormValues["piecesRows
         }
     }).filter((row) => row.pieces > 0)
 }
+
+const parsePiecesExcel = (file: File): Promise<NonNullable<ShipmentFormValues["piecesRows"]>> =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+            try {
+                const data = reader.result
+                if (!data) throw new Error("Empty file")
+                const workbook = XLSX.read(data, { type: "array" })
+                const firstSheetName = workbook.SheetNames[0]
+                if (!firstSheetName) throw new Error("No sheet found")
+                const sheet = workbook.Sheets[firstSheetName]
+                const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" })
+                const csvHeader = "actualWeight,pieces,length,breadth,height,division,volumetricWeight,chargeWeight"
+                const csvRows = rows.map((row) =>
+                    [
+                        row.actualWeight ?? row.actualWeightPerPc ?? "",
+                        row.pieces ?? "",
+                        row.length ?? "",
+                        row.breadth ?? row.width ?? "",
+                        row.height ?? "",
+                        row.division ?? "",
+                        row.volumetricWeight ?? "",
+                        row.chargeWeight ?? "",
+                    ].join(","),
+                )
+                resolve(parsePiecesCsv([csvHeader, ...csvRows].join("\n")))
+            } catch (error) {
+                reject(error)
+            }
+        }
+        reader.onerror = () => reject(reader.error ?? new Error("Unable to read file"))
+        reader.readAsArrayBuffer(file)
+    })
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
     if (error instanceof Error && error.message) return error.message
@@ -416,7 +486,24 @@ const numberInputValue = (value: unknown) => {
 const parseOptionalNumberInput = (value: string) => {
     if (!value.trim()) return undefined
     const next = Number(value)
-    return Number.isFinite(next) ? next : undefined
+    return Number.isFinite(next) ? Math.max(0, next) : undefined
+}
+
+const decimalToFiniteNumber = (value: unknown): number | undefined => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim()) {
+        const next = Number(value)
+        return Number.isFinite(next) ? next : undefined
+    }
+    if (value && typeof value === 'object' && 'd' in (value as { d?: number[] })) {
+        const decimal = value as { s?: number; e?: number; d?: number[] }
+        const digits = Array.isArray(decimal.d) ? decimal.d.join('') : ''
+        const exponent = decimal.e ?? 0
+        const sign = decimal.s === -1 ? '-' : ''
+        const parsed = Number(`${sign}${digits}e${exponent}`)
+        return Number.isFinite(parsed) ? parsed : undefined
+    }
+    return undefined
 }
 
 const sanitizeArray = <T,>(value: Array<T | null | undefined> | null | undefined): T[] => {
@@ -483,9 +570,9 @@ const createEmptyPieceItem = (): PieceItemForm => ({
 
 const createEmptyPieceRow = (): PieceRowForm => ({
     pieces: 1,
-    actualWeight: 0,
+    actualWeight: undefined,
     length: undefined,
-    width: undefined,
+    breadth: undefined,
     height: undefined,
     division: undefined,
     volumetricWeight: undefined,
@@ -645,7 +732,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const [vendorSearch, setVendorSearch] = useState('')
     const [serviceMapSearch, setServiceMapSearch] = useState('')
     const [serviceCenterSearch, setServiceCenterSearch] = useState('')
-    const [piecesCsvName, setPiecesCsvName] = useState('No file chosen')
+    const [piecesImportOpen, setPiecesImportOpen] = useState(false)
+    const [piecesExcelFile, setPiecesExcelFile] = useState<File | null>(null)
     const [shipperPincodeSearch, setShipperPincodeSearch] = useState('')
     const [consigneePincodeSearch, setConsigneePincodeSearch] = useState('')
     const [selectedShipperPincode, setSelectedShipperPincode] = useState<ServiceablePincode | null>(null)
@@ -664,13 +752,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             }]
             : []
         const sortedRows = [...(chargePreview.rows || [])].sort((a, b) => {
+            const isEdlA = /(?:\bEDL\b|ODA)/i.test(`${a.name || ''} ${(a as { chargeType?: string }).chargeType || ''}`)
+            const isEdlB = /(?:\bEDL\b|ODA)/i.test(`${b.name || ''} ${(b as { chargeType?: string }).chargeType || ''}`)
             const isFuelA = /(?:\bFUEL\b)/i.test(`${a.name || ''} ${(a as { chargeType?: string }).chargeType || ''}`)
             const isFuelB = /(?:\bFUEL\b)/i.test(`${b.name || ''} ${(b as { chargeType?: string }).chargeType || ''}`)
             if (isFuelA !== isFuelB) return isFuelA ? 1 : -1
-            const isEdlA = /(?:\bEDL\b|ODA)/i.test(`${a.name || ''} ${(a as { chargeType?: string }).chargeType || ''}`)
-            const isEdlB = /(?:\bEDL\b|ODA)/i.test(`${b.name || ''} ${(b as { chargeType?: string }).chargeType || ''}`)
-            if (isEdlA === isEdlB) return 0
-            return isEdlA ? -1 : 1
+            if (isEdlA !== isEdlB) return isEdlA ? -1 : 1
+            const sequenceA = Number.isFinite(a.sequence) ? Number(a.sequence) : Number.MAX_SAFE_INTEGER
+            const sequenceB = Number.isFinite(b.sequence) ? Number(b.sequence) : Number.MAX_SAFE_INTEGER
+            if (sequenceA !== sequenceB) return sequenceA - sequenceB
+            return a.name.localeCompare(b.name)
         })
         return [...baseRow, ...sortedRows]
     }, [chargePreview])
@@ -864,6 +955,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         mutationFn: () => shipmentService.calculateCharges(normalizeShipmentCalculatePayload(form.getValues())),
         onSuccess: (response) => {
             setChargePreview(response.data)
+            const editableCharges = (response.data?.rows || []).map((row) => ({
+                chargeId: normalizePositiveNumberValue(row.chargeId) ?? 0,
+                description: row.name,
+                amount: Math.round(Number(row.amount) || 0),
+                fuelApply: row.type !== 'CONDITION' ? true : false,
+                taxApply: false,
+                taxOnFuel: false,
+            }))
+            form.setValue('charges', editableCharges, { shouldDirty: true, shouldValidate: true })
             toast.success("Charges calculated")
         },
         onError: (error: unknown) => {
@@ -891,12 +991,23 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const watchedReversePickup = form.watch('reversePickup')
     const watchedAppointmentDelivery = form.watch('appointmentDelivery')
     const watchedShipmentTotalValue = form.watch('shipmentTotalValue')
+    const watchedActualWeight = form.watch('actualWeight')
+    const watchedVolumetricWeight = form.watch('volumetricWeight')
     const watchedKm = form.watch('km')
     const watchedIsEdl = form.watch('isEdl')
     const watchedOdaEdlDistanceKm = form.watch('odaEdlDistanceKm')
     const watchedPiecesRowsForPricing = form.watch('piecesRows')
     const watchedShipperPinCode = form.watch('shipper.pinCode')
     const watchedConsigneePinCode = form.watch('consignee.pinCode')
+
+    const { data: customerVolumetricsData } = useQuery({
+        queryKey: ['shipment-customer-volumetrics', watchedCustomerId],
+        queryFn: () => customerService.getCustomerVolumetrics(normalizeMasterSelectId(watchedCustomerId)),
+        enabled: normalizeMasterSelectId(watchedCustomerId) > 0,
+    })
+
+    const customerVolumetricOptions = sanitizeArray(customerVolumetricsData?.data)
+
     const debouncedShipperPinCode = useDebounce((watchedShipperPinCode || '').trim(), 400)
     const debouncedConsigneePinCode = useDebounce((watchedConsigneePinCode || '').trim(), 400)
     const autoPricingTriggerKey = useMemo(
@@ -1111,8 +1222,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
 
         if (shipperPin === consigneePin) {
-            if ((form.getValues('km') || 0) !== 0) {
-                form.setValue('km', 0, { shouldDirty: false, shouldValidate: false })
+            if ((form.getValues('km') || 0) !== MIN_SAME_PINCODE_DISTANCE_KM) {
+                form.setValue('km', MIN_SAME_PINCODE_DISTANCE_KM, { shouldDirty: false, shouldValidate: false })
             }
             return
         }
@@ -1287,63 +1398,92 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     // --- Automatic Calculations ---
 
-    // 1. Piece Volumetric weight and Row Totals
+    // 1. Piece volumetric totals. Surface products use customer/product CFT with 27000; all others use 5000.
     const watchedPiecesRows = form.watch('piecesRows')
+    const selectedProduct = useMemo(
+        () => productOptions.find((product) => normalizeMasterSelectId(product.id) === normalizeMasterSelectId(watchedProductId)),
+        [productOptions, watchedProductId],
+    )
+    const isSurfaceProduct = useMemo(() => {
+        const productName = typeof selectedProduct?.productName === 'string' ? selectedProduct.productName.toLowerCase() : ''
+        return productName.includes('surface')
+    }, [selectedProduct])
+    const surfaceCft = useMemo(() => {
+        if (!isSurfaceProduct) return 0
+        const productId = normalizeMasterSelectId(watchedProductId)
+        const match = customerVolumetricOptions.find(
+            (item) => normalizeMasterSelectId(item.productId) === productId,
+        )
+        const cft = decimalToFiniteNumber(match?.cft)
+        return cft && cft > 0 ? cft : 0
+    }, [customerVolumetricOptions, isSurfaceProduct, watchedProductId])
     const weightCalcKey = useDebounce(
-        JSON.stringify({
-            customerId: watchedCustomerId,
-            productId: watchedProductId,
-            piecesRows: watchedPiecesRows,
-        }),
+        JSON.stringify(
+            (watchedPiecesRows || []).map((row) => ({
+                actualWeight: Number(row.actualWeight) || 0,
+                pieces: Number(row.pieces) || 0,
+                length: Number(row.length) || 0,
+                breadth: Number(row.breadth) || 0,
+                height: Number(row.height) || 0,
+                items: (row.items || []).map((item) => ({
+                    totalValue: Number(item.totalValue) || 0,
+                })),
+            })),
+        ),
         250,
     )
     useEffect(() => {
-        if (!watchedPiecesRows || watchedPiecesRows.length === 0) return
-        const customerId = normalizeMasterSelectId(form.getValues('customerId'))
-        const productId = normalizeMasterSelectId(form.getValues('productId'))
-        if (customerId <= 0 || productId <= 0) return
+        const calcRows = JSON.parse(weightCalcKey) as Array<{
+            actualWeight: number
+            pieces: number
+            length: number
+            breadth: number
+            height: number
+            items: Array<{ totalValue: number }>
+        }>
+        if (calcRows.length === 0) return
 
-        let cancelled = false
-        ;(async () => {
-            try {
-                const response = await shipmentService.calculateWeight({
-                    customerId,
-                    productId,
-                    piecesRows: watchedPiecesRows.map((row) => ({
-                        actualWeight: Number(row.actualWeight) || 0,
-                        pieces: Number(row.pieces) || 0,
-                        length: Number(row.length) || 0,
-                        width: Number(row.width) || 0,
-                        height: Number(row.height) || 0,
-                        items: (row.items || []).map((item) => ({
-                            totalValue: Number(item.totalValue) || 0,
-                        })),
-                    })),
-                })
-                if (cancelled) return
+        const rowVolumetrics = calcRows.map((row) => {
+            const pcs = Math.max(0, Number(row.pieces) || 0)
+            const length = Math.max(0, Number(row.length) || 0)
+            const breadth = Math.max(0, Number(row.breadth) || 0)
+            const height = Math.max(0, Number(row.height) || 0)
+            if (pcs <= 0 || length <= 0 || breadth <= 0 || height <= 0) return 0
+            const lbh = length * breadth * height
+            return roundWeightKg(
+                isSurfaceProduct
+                    ? ((lbh / 27000) * surfaceCft) * pcs
+                    : (lbh / 5000) * pcs,
+            )
+        })
 
-                const rows = response.data?.rows || []
-                rows.forEach((row, index) => {
-                    form.setValue(`piecesRows.${index}.volumetricWeight`, row.volumetricWeight, { shouldValidate: true })
-                    form.setValue(`piecesRows.${index}.chargeWeight`, row.chargeWeight, { shouldValidate: true })
-                })
+        rowVolumetrics.forEach((volWeight, index) => {
+            form.setValue(`piecesRows.${index}.volumetricWeight`, volWeight, { shouldValidate: true })
+        })
 
-                const totalPcs = watchedPiecesRows.reduce((sum, row) => sum + (Number(row.pieces) || 0), 0)
-                const totalActualWeight = rows.reduce((sum, row) => sum + (Number(row.actualWeight) || 0), 0)
-                form.setValue('pieces', totalPcs, { shouldValidate: true })
-                form.setValue('actualWeight', Number(totalActualWeight.toFixed(2)), { shouldValidate: true })
-                form.setValue('volumetricWeight', response.data?.shipmentVolumetricWeight || 0, { shouldValidate: true })
-                form.setValue('chargeWeight', response.data?.shipmentChargeWeight || 0, { shouldValidate: true })
-                form.setValue('shipmentTotalValue', response.data?.bookingTotalValue || 0, { shouldValidate: true })
-            } catch {
-                // Ignore while user is typing; backend validation will still run on calculate/create.
-            }
-        })()
-
-        return () => {
-            cancelled = true
+        const totalPcs = calcRows.reduce((sum, row) => sum + (Number(row.pieces) || 0), 0)
+        const bookingTotalValue = calcRows.reduce(
+            (sum, row) => sum + row.items.reduce((itemSum, item) => itemSum + (Number(item.totalValue) || 0), 0),
+            0,
+        )
+        const totalVolumetricWeight = rowVolumetrics.reduce((sum, value) => sum + value, 0)
+        form.setValue('pieces', Math.round(totalPcs), { shouldValidate: true })
+        form.setValue('volumetricWeight', totalVolumetricWeight, { shouldValidate: true })
+        // On edit, preserve backend booking total until user changes piece/item rows.
+        if (!(isEdit && !form.formState.isDirty)) {
+            form.setValue('shipmentTotalValue', Math.round(bookingTotalValue), { shouldValidate: true })
         }
-    }, [form, watchedPiecesRows, weightCalcKey]);
+    }, [form, isSurfaceProduct, surfaceCft, weightCalcKey]);
+
+    useEffect(() => {
+        const manualActualWeight = Math.max(0, Number(watchedActualWeight) || 0)
+        const manualVolumetricWeight = Math.max(0, Number(watchedVolumetricWeight) || 0)
+        const nextChargeWeight = roundWeightKg(Math.max(manualActualWeight, manualVolumetricWeight))
+        const currentChargeWeight = Math.max(0, Number(form.getValues('chargeWeight')) || 0)
+        if (nextChargeWeight !== currentChargeWeight) {
+            form.setValue('chargeWeight', nextChargeWeight, { shouldValidate: true })
+        }
+    }, [form, watchedActualWeight, watchedVolumetricWeight]);
 
     // --- End Calculations ---
 
@@ -1418,38 +1558,46 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         },
     })
 
-    const templateMutation = useMutation({
-        mutationFn: () => shipmentService.downloadPiecesTemplate(),
-        onSuccess: ({ blob, filename }) => {
-            const url = window.URL.createObjectURL(blob)
-            const anchor = document.createElement('a')
-            anchor.href = url
-            anchor.download = filename
-            document.body.appendChild(anchor)
-            anchor.click()
-            anchor.remove()
-            window.URL.revokeObjectURL(url)
-            toast.success('Template downloaded')
-        },
-        onError: (error: unknown) => {
-            toast.error(getErrorMessage(error, 'Failed to download template'))
-        },
-    })
+    const [downloadingPiecesTemplate, setDownloadingPiecesTemplate] = useState(false)
 
-    const handlePiecesCsvUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
-        if (!file) return
+    const downloadPiecesExcelTemplate = async () => {
+        setDownloadingPiecesTemplate(true)
         try {
-            setPiecesCsvName(file.name)
-            const raw = await file.text()
-            const parsed = parsePiecesCsv(raw)
+            const sheet = XLSX.utils.aoa_to_sheet([
+                [
+                    "actualWeight",
+                    "pieces",
+                    "length",
+                    "breadth",
+                    "height",
+                    "division",
+                    "volumetricWeight",
+                    "chargeWeight",
+                ],
+                [500, 1, 10, 10, 10, 5000, 0, 0],
+                ["", "", "", "", "", "", "", ""],
+            ])
+            const workbook = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(workbook, sheet, "pieces")
+            XLSX.writeFile(workbook, "shipment-pieces-template.xlsx")
+            toast.success("Excel template downloaded")
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Failed to download template"))
+        } finally {
+            setDownloadingPiecesTemplate(false)
+        }
+    }
+
+    const handlePiecesExcelImport = async () => {
+        if (!piecesExcelFile) return
+        try {
+            const parsed = await parsePiecesExcel(piecesExcelFile)
             form.setValue('piecesRows', parsed, { shouldValidate: true })
             toast.success(`${parsed.length} piece row(s) imported`)
+            setPiecesImportOpen(false)
+            setPiecesExcelFile(null)
         } catch {
-            setPiecesCsvName('No file chosen')
-            toast.error('Unable to parse uploaded template')
-        } finally {
-            event.target.value = ''
+            toast.error('Unable to parse uploaded Excel file')
         }
     }
 
@@ -1560,7 +1708,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="bookDate"
                                         render={({ field }) => (
-                                            <FloatingFormItem label={<>Book Date <span className="text-red-500">*</span></>} itemClassName="md:col-span-1">
+                                            <FloatingFormItem required label="Book Date" itemClassName="md:col-span-1">
                                                 <FormControl>
                                                     <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
@@ -1601,7 +1749,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="customerId"
                                         render={({ field }) => (
-                                            <FloatingFormItem label={<>Client Name <span className="text-red-500">*</span></>} itemClassName="md:col-span-1">
+                                            <FloatingFormItem required label="Client Name" itemClassName="md:col-span-1">
                                                 <FormControl>
                                                     <Combobox
                                                         options={customerComboboxOptions}
@@ -1702,7 +1850,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="shipper.telephone"
                                             render={({ field }) => (
-                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("Telephone", !isShipperLocked)}>
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label="Telephone">
                                                     <FormControl>
                                                         <Input {...field} value={field.value || ""} disabled={isShipperLocked} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
@@ -1881,7 +2029,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="consignee.telephone"
                                             render={({ field }) => (
-                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("Telephone", !isConsigneeLocked)}>
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label="Telephone">
                                                     <FormControl>
                                                         <Input {...field} value={field.value || ""} disabled={isConsigneeLocked} className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
@@ -1995,7 +2143,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     control={form.control}
                                     name="productId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label={<>Product <span className="text-red-500">*</span></>}>
+                                        <FloatingFormItem required label="Product">
                                             <FormControl>
                                                 <Combobox
                                                     options={productComboboxOptions}
@@ -2011,7 +2159,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         </FloatingFormItem>
                                     )}
                                 />
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                     <FormField
                                         control={form.control}
                                         name="shipmentTotalValue"
@@ -2020,11 +2168,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <FormControl>
                                                     <Input
                                                         type="number"
+                                                        min="0"
                                                         className={FLOATING_INNER_CONTROL}
                                                         {...field}
                                                         value={numberInputValue(field.value)}
                                                         onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
-                                                        disabled={!watchedFloorDelivery}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>
@@ -2034,10 +2182,49 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="km"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="KM">
+                                            <FloatingFormItem label="Total Distance (KM)">
                                                 <FormControl>
                                                     <Input
                                                         type="number"
+                                                        min="0"
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        {...field}
+                                                        value={numberInputValue(field.value)}
+                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                    <FormField
+                                        control={form.control}
+                                        name="actualWeight"
+                                        render={({ field }) => (
+                                            <FloatingFormItem required label="Actual Weight">
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        {...field}
+                                                        value={numberInputValue(field.value)}
+                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="volumetricWeight"
+                                        render={({ field }) => (
+                                            <FloatingFormItem required label="Total Vol. Weight">
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
                                                         className={FLOATING_INNER_CONTROL}
                                                         {...field}
                                                         value={numberInputValue(field.value)}
@@ -2051,14 +2238,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="chargeWeight"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Charge Weight">
+                                            <FloatingFormItem required label="Charge Weight">
                                                 <FormControl>
                                                     <Input
                                                         type="number"
+                                                        min="0"
                                                         className={FLOATING_INNER_CONTROL}
                                                         {...field}
                                                         value={numberInputValue(field.value)}
-                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
                                                         disabled
                                                     />
                                                 </FormControl>
@@ -2067,131 +2254,141 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     />
                                 </div>
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="isEdl"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="ODA/EDL charges">
-                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                    <div className="rounded-md border border-border/70 bg-muted/20 p-2.5">
+                                        <div className="flex flex-wrap items-center gap-4">
+                                            <FormField
+                                                control={form.control}
+                                                name="isEdl"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center gap-2 space-y-0">
+                                                        <FormControl>
+                                                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        </FormControl>
+                                                        <FormLabel className="text-xs font-normal leading-none">ODA/EDL</FormLabel>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="floorDelivery"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center gap-2 space-y-0">
+                                                        <FormControl>
+                                                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        </FormControl>
+                                                        <FormLabel className="text-xs font-normal leading-none">Floor Delivery</FormLabel>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="reversePickup"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center gap-2 space-y-0">
+                                                        <FormControl>
+                                                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        </FormControl>
+                                                        <FormLabel className="text-xs font-normal leading-none">Reverse Pickup</FormLabel>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="appointmentDelivery"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center gap-2 space-y-0">
+                                                        <FormControl>
+                                                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        </FormControl>
+                                                        <FormLabel className="text-xs font-normal leading-none">Appointment Delivery</FormLabel>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="commercial"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center gap-2 space-y-0">
+                                                        <FormControl>
+                                                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        </FormControl>
+                                                        <FormLabel className="text-xs font-normal leading-none">Commercial</FormLabel>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="isCod"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center gap-2 space-y-0">
+                                                        <FormControl>
+                                                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        </FormControl>
+                                                        <FormLabel className="text-xs font-normal leading-none">COD</FormLabel>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <FormField
+                                            control={form.control}
+                                            name="odaEdlDistanceKm"
+                                            render={({ field }) => (
+                                                <FloatingFormItem required={watchedIsEdl} label="EDL distance (km)">
                                                     <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        <Input
+                                                            type="number"
+                                                        min="0"
+                                                            className={FLOATING_INNER_CONTROL}
+                                                            {...field}
+                                                            value={numberInputValue(field.value)}
+                                                            onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                            disabled={!watchedIsEdl}
+                                                        />
                                                     </FormControl>
-                                                </div>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="odaEdlDistanceKm"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="EDL distance (km)">
-                                                <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        className={FLOATING_INNER_CONTROL}
-                                                        {...field}
-                                                        value={numberInputValue(field.value)}
-                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="reversePickup"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Reverse Pickup">
-                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="floorCount"
+                                            render={({ field }) => (
+                                                <FloatingFormItem required={watchedFloorDelivery} label="Floor Count">
                                                     <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        <Input
+                                                            type="number"
+                                                        min="0"
+                                                            className={FLOATING_INNER_CONTROL}
+                                                            {...field}
+                                                            value={numberInputValue(field.value)}
+                                                            onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                            disabled={!watchedFloorDelivery}
+                                                        />
                                                     </FormControl>
-                                                </div>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="appointmentDelivery"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Appointment Delivery">
-                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="codAmount"
+                                            render={({ field }) => (
+                                                <FloatingFormItem label="COD Amount">
                                                     <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
+                                                        <Input
+                                                            type="number"
+                                                        min="0"
+                                                            className={FLOATING_INNER_CONTROL}
+                                                            {...field}
+                                                            value={numberInputValue(field.value)}
+                                                            onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                            disabled={!watchedIsCod}
+                                                        />
                                                     </FormControl>
-                                                </div>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="floorDelivery"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Floor Delivery">
-                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
-                                                    </FormControl>
-                                                </div>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="floorCount"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Floor Count">
-                                                <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        className={FLOATING_INNER_CONTROL}
-                                                        {...field}
-                                                        value={numberInputValue(field.value)}
-                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="commercial"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Commercial">
-                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
-                                                    </FormControl>
-                                                </div>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="paymentType"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label={<>Payment Type <span className="text-red-500">*</span></>}>
-                                                <FormControl>
-                                                        <Combobox
-                                                            options={[
-                                                                { label: "Prepaid", value: "PREPAID" },
-                                                                { label: "Cash", value: "CASH" },
-                                                                { label: "Credit", value: "CREDIT" },
-                                                                { label: "To Pay", value: "TOPAY" },
-                                                            ]}
-                                                        value={field.value}
-                                                        onChange={field.onChange}
-                                                        placeholder="Select type"
-                                                        className={FLOATING_INNER_COMBO}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                    </div>
                                 </div>
                                 <FormField
                                     control={form.control}
@@ -2229,39 +2426,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         </FloatingFormItem>
                                     )}
                                 />
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="isCod"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="COD">
-                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
-                                                    </FormControl>
-                                                </div>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="codAmount"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="COD Amount">
-                                                <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        className={FLOATING_INNER_CONTROL}
-                                                        {...field}
-                                                        value={numberInputValue(field.value)}
-                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
-                                                        disabled={!watchedIsCod}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                </div>
                         </FormSection>
                         </div>
                     </div>
@@ -2270,90 +2434,172 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 {/* Section 5: Piece Details */}
                 <OutlinedFormSection label="Piece Details" labelTone="navy">
                     <div className="flex flex-wrap items-end justify-end gap-2 border-b border-border/70 pb-3">
-                        <Button type="button" variant="outline" size="sm" onClick={() => templateMutation.mutate()} disabled={templateMutation.isPending}>
-                            Download Template
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            title="Import pieces from Excel"
+                            onClick={() => setPiecesImportOpen(true)}
+                        >
+                            <FileUp className="h-4 w-4" />
                         </Button>
-                        <OutlinedFieldShell label="Import CSV" className="w-full min-w-[200px] sm:w-[230px] !pt-1.5 !pb-0.5">
-                            <div className="flex h-8 items-center gap-2">
-                                <Button type="button" variant="outline" size="sm" className="h-8 shrink-0" onClick={() => document.getElementById('shipment-pieces-csv-input')?.click()}>
-                                    Choose file
-                                </Button>
-                                <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-                                    {piecesCsvName}
-                                </span>
-                            </div>
-                            <input
-                                id="shipment-pieces-csv-input"
-                                type="file"
-                                accept=".csv"
-                                onChange={handlePiecesCsvUpload}
-                                className="hidden"
-                            />
-                        </OutlinedFieldShell>
                         <Button type="button" variant="outline" size="sm" onClick={() => appendPiece(createEmptyPieceRow())}>
                             <Plus className="mr-2 h-4 w-4" /> Add Piece
                         </Button>
                     </div>
+                    <Dialog
+                        open={piecesImportOpen}
+                        onOpenChange={(open) => {
+                            setPiecesImportOpen(open)
+                            if (!open) setPiecesExcelFile(null)
+                        }}
+                    >
+                        <DialogContent className="max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle>Import Piece Details</DialogTitle>
+                                <DialogDescription>
+                                    Download template, fill rows in Excel, then upload the file.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex flex-col gap-4 py-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full justify-center gap-2"
+                                    disabled={downloadingPiecesTemplate}
+                                    onClick={() => void downloadPiecesExcelTemplate()}
+                                >
+                                    <Download className="h-4 w-4" />
+                                    {downloadingPiecesTemplate ? "Downloading..." : "Download Excel template"}
+                                </Button>
+                                <input
+                                    id="shipment-pieces-excel-input"
+                                    type="file"
+                                    accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                    className="hidden"
+                                    onChange={(event) => {
+                                        const file = event.target.files?.[0] ?? null
+                                        if (!file) {
+                                            setPiecesExcelFile(null)
+                                            return
+                                        }
+                                        const lower = file.name.toLowerCase()
+                                        if (!lower.endsWith(".xlsx") && !lower.endsWith(".xls")) {
+                                            toast.error("Only .xlsx or .xls files are allowed")
+                                            event.target.value = ""
+                                            setPiecesExcelFile(null)
+                                            return
+                                        }
+                                        setPiecesExcelFile(file)
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    className="w-full"
+                                    onClick={() => document.getElementById('shipment-pieces-excel-input')?.click()}
+                                >
+                                    {piecesExcelFile ? `Selected: ${piecesExcelFile.name}` : "Choose Excel file (.xlsx / .xls)"}
+                                </Button>
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-0">
+                                <Button type="button" variant="outline" onClick={() => setPiecesImportOpen(false)}>
+                                    Close
+                                </Button>
+                                <Button
+                                    type="button"
+                                    disabled={!piecesExcelFile}
+                                    onClick={() => void handlePiecesExcelImport()}
+                                >
+                                    Upload & import
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                     <div className="overflow-hidden rounded-md border border-border/70 bg-muted/20">
                         <Table>
-                            <TableHeader>
-                                <TableRow className="border-b-0 bg-primary hover:bg-primary">
-                                    <TableHead className="whitespace-nowrap text-primary-foreground first:rounded-tl-md">
-                                        Pcs
-                                    </TableHead>
-                                    <TableHead className="whitespace-nowrap text-primary-foreground">
-                                        Weight/Pc
-                                    </TableHead>
-                                    <TableHead className="whitespace-nowrap text-primary-foreground">L</TableHead>
-                                    <TableHead className="whitespace-nowrap text-primary-foreground">W</TableHead>
-                                    <TableHead className="whitespace-nowrap text-primary-foreground">H</TableHead>
-                                    <TableHead className="whitespace-nowrap text-primary-foreground">
-                                        Vol. Weight
-                                    </TableHead>
-                                    <TableHead className="w-[50px] text-primary-foreground last:rounded-tr-md" />
-                                </TableRow>
-                            </TableHeader>
                             <TableBody>
                                 {pieceFields.map((field, index) => (
                                     <Fragment key={field.id}>
-                                        <TableRow>
+                                        <TableRow className="bg-primary/10 backdrop-blur-sm hover:bg-primary/15">
+                                            <TableCell className="w-[58px] text-xs font-medium">Pcs</TableCell>
                                             <TableCell>
-                                                <Input type="number" {...form.register(`piecesRows.${index}.pieces` as const, { valueAsNumber: true })} className="h-8 w-16" />
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    {...form.register(`piecesRows.${index}.pieces` as const, {
+                                                        valueAsNumber: true,
+                                                        onChange: (event) => {
+                                                            if (Number(event.target.value) < 0) event.target.value = "0"
+                                                        },
+                                                    })}
+                                                    className="h-8 w-16"
+                                                />
                                             </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Input type="number" step="0.01" {...form.register(`piecesRows.${index}.actualWeight` as const, { valueAsNumber: true })} className="h-8 w-20" />
-                                                    <span className="text-xs text-muted-foreground">kg</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Input type="number" {...form.register(`piecesRows.${index}.length` as const, { valueAsNumber: true })} className="h-8 w-16" />
-                                                    <span className="text-xs text-muted-foreground">mm</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Input type="number" {...form.register(`piecesRows.${index}.width` as const, { valueAsNumber: true })} className="h-8 w-16" />
-                                                    <span className="text-xs text-muted-foreground">mm</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Input type="number" {...form.register(`piecesRows.${index}.height` as const, { valueAsNumber: true })} className="h-8 w-16" />
-                                                    <span className="text-xs text-muted-foreground">mm</span>
-                                                </div>
-                                            </TableCell>
+                                            <TableCell className="w-[40px] text-xs font-medium">L</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
                                                     <Input
                                                         type="number"
-                                                        step="0.01"
+                                                        min="0"
+                                                        {...form.register(`piecesRows.${index}.length` as const, {
+                                                            valueAsNumber: true,
+                                                            onChange: (event) => {
+                                                                if (Number(event.target.value) < 0) event.target.value = "0"
+                                                            },
+                                                        })}
+                                                        className="h-8 w-16"
+                                                    />
+                                                    <span className="text-[10px] text-muted-foreground">cm</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[40px] text-xs font-medium">B</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        {...form.register(`piecesRows.${index}.breadth` as const, {
+                                                            valueAsNumber: true,
+                                                            onChange: (event) => {
+                                                                if (Number(event.target.value) < 0) event.target.value = "0"
+                                                            },
+                                                        })}
+                                                        className="h-8 w-16"
+                                                    />
+                                                    <span className="text-[10px] text-muted-foreground">cm</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[40px] text-xs font-medium">H</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        {...form.register(`piecesRows.${index}.height` as const, {
+                                                            valueAsNumber: true,
+                                                            onChange: (event) => {
+                                                                if (Number(event.target.value) < 0) event.target.value = "0"
+                                                            },
+                                                        })}
+                                                        className="h-8 w-16"
+                                                    />
+                                                    <span className="text-[10px] text-muted-foreground">cm</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[58px] text-xs font-medium">Vol. Wt</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
                                                         {...form.register(`piecesRows.${index}.volumetricWeight` as const, { valueAsNumber: true })}
                                                         className="h-8 w-20"
                                                         disabled
                                                     />
-                                                    <span className="text-xs text-muted-foreground">kg</span>
+                                                    <span className="text-[10px] text-muted-foreground">kg</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
@@ -2363,157 +2609,170 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             </TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell colSpan={7} className="border-t-0 pb-4 pt-0">
+                                            <TableCell colSpan={11} className="border-t-0 pb-4 pt-0">
                                                 <div className="space-y-3 rounded-md border border-dashed border-border/70 bg-background/80 p-3">
-                                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                                        <div>
-                                                            <p className="text-sm font-medium">Items</p>
-                                                            <p className="text-xs text-muted-foreground">At least one item is required for every piece.</p>
-                                                        </div>
-                                                        <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => addPieceItem(index)}>
-                                                            <Plus className="mr-2 h-4 w-4" /> Add Item
-                                                        </Button>
-                                                    </div>
                                                     <div className="space-y-3">
                                                         {(watchedPiecesRows?.[index]?.items || []).map((item, itemIndex) => (
                                                             <div key={`${field.id}-item-${itemIndex}`} className="rounded-md border border-border/60 bg-card p-3">
                                                                 <div className="mb-3 flex items-center justify-between gap-2">
-                                                                    <span className="text-xs font-medium text-muted-foreground">Item {itemIndex + 1}</span>
-                                                                    <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => removePieceItem(index, itemIndex)} disabled={(watchedPiecesRows?.[index]?.items || []).length <= 1}>
-                                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                                    </Button>
+                                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                                        Item {itemIndex + 1}
+                                                                        {itemIndex === 0 && (
+                                                                            <span className="font-normal opacity-70 ml-1">
+                                                                                | At least one item is required for every piece.
+                                                                            </span>
+                                                                        )}
+                                                                    </span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {itemIndex === 0 ? (
+                                                                            <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => addPieceItem(index)}>
+                                                                                <Plus className="mr-2 h-4 w-4" /> Add Item
+                                                                            </Button>
+                                                                        ) : (
+                                                                            <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => removePieceItem(index, itemIndex)}>
+                                                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={`piecesRows.${index}.items.${itemIndex}.contentId` as const}
-                                                                        render={({ field: itemField }) => (
-                                                                            <FloatingFormItem label={requiredFieldLabel("Content", true)} itemClassName="min-w-0">
-                                                                                <FormControl>
-                                                                                    <Combobox
-                                                                                        options={contentOptions.map((content) => ({
-                                                                                            label: `${content.contentCode} - ${content.contentName}`,
-                                                                                            value: content.id,
-                                                                                        }))}
-                                                                                        value={itemField.value || ""}
-                                                                                        onChange={(val) => {
-                                                                                            const nextValue = typeof val === "number" ? val : Number(val)
-                                                                                            itemField.onChange(Number.isFinite(nextValue) ? nextValue : 0)
-                                                                                        }}
-                                                                                        placeholder="Select content"
-                                                                                        searchPlaceholder="Search content..."
-                                                                                        emptyMessage="No content found."
-                                                                                        searchValue={contentSearch}
-                                                                                        onSearchValueChange={setContentSearch}
-                                                                                        isSearching={contentsQuery.isLoading}
-                                                                                        className="h-8"
-                                                                                    />
-                                                                                </FormControl>
-                                                                            </FloatingFormItem>
-                                                                        )}
-                                                                    />
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={`piecesRows.${index}.items.${itemIndex}.quantity` as const}
-                                                                        render={({ field: itemField }) => (
-                                                                            <FloatingFormItem label="Quantity">
-                                                                                <FormControl>
-                                                                                    <Input
-                                                                                        type="number"
-                                                                                        value={numberInputValue(itemField.value)}
-                                                                                        onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
-                                                                                        className={FLOATING_INNER_CONTROL}
-                                                                                    />
-                                                                                </FormControl>
-                                                                            </FloatingFormItem>
-                                                                        )}
-                                                                    />
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={`piecesRows.${index}.items.${itemIndex}.measureValue` as const}
-                                                                        render={({ field: itemField }) => (
-                                                                            <FloatingFormItem label="Measure Value">
-                                                                                <FormControl>
-                                                                                    <Input
-                                                                                        type="number"
-                                                                                        value={numberInputValue(itemField.value)}
-                                                                                        onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
-                                                                                        className={FLOATING_INNER_CONTROL}
-                                                                                    />
-                                                                                </FormControl>
-                                                                            </FloatingFormItem>
-                                                                        )}
-                                                                    />
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={`piecesRows.${index}.items.${itemIndex}.measureUnit` as const}
-                                                                        render={({ field: itemField }) => (
-                                                                            <FloatingFormItem label="Measure Unit">
-                                                                                <Select value={itemField.value || ""} onValueChange={itemField.onChange}>
+                                                                <div className="grid gap-2 lg:grid-cols-4">
+                                                                    <div className="min-w-0">
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`piecesRows.${index}.items.${itemIndex}.contentId` as const}
+                                                                            render={({ field: itemField }) => (
+                                                                                <FloatingFormItem label={requiredFieldLabel("Content", true)} itemClassName="min-w-0">
                                                                                     <FormControl>
-                                                                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                                                            <SelectValue placeholder="Select unit" />
-                                                                                        </SelectTrigger>
+                                                                                        <Combobox
+                                                                                            options={contentOptions.map((content) => ({
+                                                                                                label: `${content.contentCode} - ${content.contentName}`,
+                                                                                                value: content.id,
+                                                                                            }))}
+                                                                                            value={itemField.value || ""}
+                                                                                            onChange={(val) => {
+                                                                                                const nextValue = typeof val === "number" ? val : Number(val)
+                                                                                                itemField.onChange(Number.isFinite(nextValue) ? nextValue : 0)
+                                                                                            }}
+                                                                                            placeholder="Select content"
+                                                                                            searchPlaceholder="Search content..."
+                                                                                            emptyMessage="No content found."
+                                                                                            searchValue={contentSearch}
+                                                                                            onSearchValueChange={setContentSearch}
+                                                                                            isSearching={contentsQuery.isLoading}
+                                                                                            className="h-8"
+                                                                                        />
                                                                                     </FormControl>
-                                                                                    <SelectContent>
-                                                                                        {["PCS", "KG", "METER", "LITER"].map((unit) => (
-                                                                                            <SelectItem key={unit} value={unit}>
-                                                                                                {unit}
-                                                                                            </SelectItem>
-                                                                                        ))}
-                                                                                    </SelectContent>
-                                                                                </Select>
-                                                                            </FloatingFormItem>
-                                                                        )}
-                                                                    />
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={`piecesRows.${index}.items.${itemIndex}.totalValue` as const}
-                                                                        render={({ field: itemField }) => (
-                                                                            <FloatingFormItem label="Total Value">
-                                                                                <FormControl>
-                                                                                    <Input
-                                                                                        type="number"
-                                                                                        value={numberInputValue(itemField.value)}
-                                                                                        onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
-                                                                                        className={FLOATING_INNER_CONTROL}
-                                                                                    />
-                                                                                </FormControl>
-                                                                            </FloatingFormItem>
-                                                                        )}
-                                                                    />
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={`piecesRows.${index}.items.${itemIndex}.invoiceDate` as const}
-                                                                        render={({ field: itemField }) => (
-                                                                            <FloatingFormItem label="Invoice Date">
-                                                                                <FormControl>
-                                                                                    <Input
-                                                                                        type="date"
-                                                                                        value={itemField.value || ""}
-                                                                                        onChange={itemField.onChange}
-                                                                                        className={FLOATING_INNER_CONTROL}
-                                                                                    />
-                                                                                </FormControl>
-                                                                            </FloatingFormItem>
-                                                                        )}
-                                                                    />
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={`piecesRows.${index}.items.${itemIndex}.invoiceNumber` as const}
-                                                                        render={({ field: itemField }) => (
-                                                                            <FloatingFormItem label="Invoice No.">
-                                                                                <FormControl>
-                                                                                    <Input
-                                                                                        value={itemField.value || ""}
-                                                                                        onChange={itemField.onChange}
-                                                                                        placeholder="INV/001"
-                                                                                        className={FLOATING_INNER_CONTROL}
-                                                                                    />
-                                                                                </FormControl>
-                                                                            </FloatingFormItem>
-                                                                        )}
-                                                                    />
+                                                                                </FloatingFormItem>
+                                                                            )}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:col-span-3 xl:grid-cols-6">
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`piecesRows.${index}.items.${itemIndex}.quantity` as const}
+                                                                            render={({ field: itemField }) => (
+                                                                                <FloatingFormItem label="Quantity">
+                                                                                    <FormControl>
+                                                                                        <Input
+                                                                                            type="number"
+                                                                                            min="1"
+                                                                                            value={numberInputValue(itemField.value)}
+                                                                                            onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                            className={FLOATING_INNER_CONTROL}
+                                                                                        />
+                                                                                    </FormControl>
+                                                                                </FloatingFormItem>
+                                                                            )}
+                                                                        />
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`piecesRows.${index}.items.${itemIndex}.measureValue` as const}
+                                                                            render={({ field: itemField }) => (
+                                                                                <FloatingFormItem label="M. Value">
+                                                                                    <FormControl>
+                                                                                        <Input
+                                                                                            type="number"
+                                                                                            min="0"
+                                                                                            value={numberInputValue(itemField.value)}
+                                                                                            onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                            className={FLOATING_INNER_CONTROL}
+                                                                                        />
+                                                                                    </FormControl>
+                                                                                </FloatingFormItem>
+                                                                            )}
+                                                                        />
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`piecesRows.${index}.items.${itemIndex}.measureUnit` as const}
+                                                                            render={({ field: itemField }) => (
+                                                                                <FloatingFormItem label="Unit">
+                                                                                    <Select value={itemField.value || ""} onValueChange={itemField.onChange}>
+                                                                                        <FormControl>
+                                                                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                                                                <SelectValue placeholder="Unit" />
+                                                                                            </SelectTrigger>
+                                                                                        </FormControl>
+                                                                                        <SelectContent>
+                                                                                            {["PCS", "KG", "METER", "LITER"].map((unit) => (
+                                                                                                <SelectItem key={unit} value={unit}>
+                                                                                                    {unit}
+                                                                                                </SelectItem>
+                                                                                            ))}
+                                                                                        </SelectContent>
+                                                                                    </Select>
+                                                                                </FloatingFormItem>
+                                                                            )}
+                                                                        />
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`piecesRows.${index}.items.${itemIndex}.totalValue` as const}
+                                                                            render={({ field: itemField }) => (
+                                                                                <FloatingFormItem label="Total Value">
+                                                                                    <FormControl>
+                                                                                        <Input
+                                                                                            type="number"
+                                                                                            min="0"
+                                                                                            value={numberInputValue(itemField.value)}
+                                                                                            onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                            className={FLOATING_INNER_CONTROL}
+                                                                                        />
+                                                                                    </FormControl>
+                                                                                </FloatingFormItem>
+                                                                            )}
+                                                                        />
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`piecesRows.${index}.items.${itemIndex}.invoiceDate` as const}
+                                                                            render={({ field: itemField }) => (
+                                                                                <FloatingFormItem label="Invoice Date">
+                                                                                    <FormControl>
+                                                                                        <Input
+                                                                                            type="date"
+                                                                                            value={itemField.value || ""}
+                                                                                            onChange={itemField.onChange}
+                                                                                            className={FLOATING_INNER_CONTROL}
+                                                                                        />
+                                                                                    </FormControl>
+                                                                                </FloatingFormItem>
+                                                                            )}
+                                                                        />
+                                                                        <FormField
+                                                                            control={form.control}
+                                                                            name={`piecesRows.${index}.items.${itemIndex}.invoiceNumber` as const}
+                                                                            render={({ field: itemField }) => (
+                                                                                <FloatingFormItem label="Invoice No.">
+                                                                                    <FormControl>
+                                                                                        <Input
+                                                                                            value={itemField.value || ""}
+                                                                                            onChange={itemField.onChange}
+                                                                                            placeholder="INV/001"
+                                                                                            className={FLOATING_INNER_CONTROL}
+                                                                                        />
+                                                                                    </FormControl>
+                                                                                </FloatingFormItem>
+                                                                            )}
+                                                                        />
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -2525,7 +2784,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 ))}
                                 {pieceFields.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                                        <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
                                             No piece details added.
                                         </TableCell>
                                     </TableRow>
@@ -2572,7 +2831,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 {chargePreviewRows.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
-                                            No calculated charges yet. Click "Calculate Charges".
+                                            No calculated charges yet. Click &quot;Calculate Charges&quot;.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -2600,7 +2859,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         onChange={(e) => updateForwardingForm({ forwardingAwb: e.target.value })}
                                     />
                                 </FloatingFormItem>
-                                <FloatingFormItem label={<>Vendor <span className="text-red-500">*</span></>}>
+                                <FloatingFormItem required label="Vendor">
                                     <Combobox
                                         options={vendorComboboxOptions}
                                         value={forwardingForm.deliveryVendorId}
@@ -2617,7 +2876,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         className={FLOATING_INNER_COMBO}
                                     />
                                 </FloatingFormItem>
-                                <FloatingFormItem label={<>Service <span className="text-red-500">*</span></>}>
+                                <FloatingFormItem required label="Service">
                                     <Combobox
                                         options={forwardingServiceOptions}
                                         value={forwardingForm.deliveryServiceMapId}
@@ -2632,6 +2891,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="Vendor Weight">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.vendorWeight)}
                                         onChange={(e) => updateForwardingForm({ vendorWeight: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2640,6 +2900,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="Vendor Amount">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.vendorAmount)}
                                         onChange={(e) => updateForwardingForm({ vendorAmount: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2655,6 +2916,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="Contract Charges">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.contractCharges)}
                                         onChange={(e) => updateForwardingForm({ contractCharges: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2663,6 +2925,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="Other Charges">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.otherCharges)}
                                         onChange={(e) => updateForwardingForm({ otherCharges: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2671,6 +2934,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="Sub Total">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.subTotal)}
                                         onChange={(e) => updateForwardingForm({ subTotal: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2679,6 +2943,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="Total Fuel">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.totalFuel)}
                                         onChange={(e) => updateForwardingForm({ totalFuel: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2687,6 +2952,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="IGST">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.igst)}
                                         onChange={(e) => updateForwardingForm({ igst: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2695,6 +2961,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="CGST">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.cgst)}
                                         onChange={(e) => updateForwardingForm({ cgst: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2703,6 +2970,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="SGST">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={numberInputValue(forwardingForm.sgst)}
                                         onChange={(e) => updateForwardingForm({ sgst: parseOptionalNumberInput(e.target.value) || 0 })}
@@ -2711,9 +2979,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 <FloatingFormItem label="Total Amount">
                                     <Input
                                         type="number"
+                                                        min="0"
                                         className={FLOATING_INNER_CONTROL}
                                         value={forwardingForm.totalAmount || 0}
-                                        onChange={(e) => updateForwardingForm({ totalAmount: Number(e.target.value) || 0 })}
+                                        onChange={(e) => updateForwardingForm({ totalAmount: parseOptionalNumberInput(e.target.value) || 0 })}
                                     />
                                 </FloatingFormItem>
                             </div>

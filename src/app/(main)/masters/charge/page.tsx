@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus } from "lucide-react";
+import { Edit, Trash2, FileDown, Filter, FilePlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,8 @@ import { cn } from "@/lib/utils";
 
 import { chargeService } from "@/services/masters/charge-service";
 import type { Charge } from "@/types/masters/charge";
-import { PermissionGuard } from "@/components/auth/permission-guard";
+import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button";
 
 export default function ChargePage() {
   const router = useRouter();
@@ -187,6 +188,9 @@ export default function ChargePage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <PermissionGuard permission="master.charge.create">
+            <MasterExcelImportButton master="charges" label="Charges" queryKey={["charges"]} />
+          </PermissionGuard>
           <PermissionGuard permission="master.charge.read">
             <Button
               type="button"
@@ -197,19 +201,9 @@ export default function ChargePage() {
               onClick={() => exportMutation.mutate()}
               disabled={exportMutation.isPending}
             >
-              <FileUp className="h-4 w-4" />
+              <FileDown className="h-4 w-4" />
             </Button>
           </PermissionGuard>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-primary"
-            title="Refresh"
-            onClick={() => queryClient.refetchQueries({ queryKey: ["charges"], type: "active" })}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
         </div>
         <PermissionGuard permission="master.charge.create">
           <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={() => router.push("/masters/charge/create")}>

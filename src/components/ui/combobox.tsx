@@ -49,7 +49,7 @@ export function Combobox({
   const [open, setOpen] = React.useState(false)
   const [localSearchValue, setLocalSearchValue] = React.useState("")
 
-  const selectedOption = options.find((option) => option.value === value)
+  const selectedOption = options.find((option) => String(option.value) === String(value ?? ""))
   const currentSearchValue = searchValue ?? localSearchValue
 
   return (
@@ -61,7 +61,7 @@ export function Combobox({
           aria-expanded={open}
           className={cn(
             "flex w-full min-w-0 justify-between overflow-hidden font-normal",
-            !value && "text-muted-foreground",
+            (value === undefined || value === null || value === "") && "text-muted-foreground",
             className
           )}
           disabled={disabled}
@@ -93,7 +93,7 @@ export function Combobox({
                   key={option.value}
                   value={option.label}
                   onSelect={() => {
-                    onChange(option.value === value ? "" : option.value)
+                    onChange(String(option.value) === String(value ?? "") ? "" : option.value)
                     if (onSearchValueChange) onSearchValueChange("")
                     else setLocalSearchValue("")
                     setOpen(false)
@@ -102,7 +102,7 @@ export function Combobox({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
+                      String(value ?? "") === String(option.value) ? "opacity-100" : "opacity-0"
                     )}
                   />
                   {option.label}

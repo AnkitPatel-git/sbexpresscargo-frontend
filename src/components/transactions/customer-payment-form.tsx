@@ -95,7 +95,7 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="customerId"
             render={({ field }) => (
-              <FloatingFormItem label={<>Customer <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label={<>Customer</>}>
                 <FormControl>
                   <Combobox
                     options={customerOptions}
@@ -114,7 +114,7 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="amount"
             render={({ field }) => (
-              <FloatingFormItem label={<>Amount <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label={<>Amount</>}>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
@@ -126,7 +126,7 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="date"
             render={({ field }) => (
-              <FloatingFormItem label={<>Date <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label={<>Date</>}>
                 <FormControl>
                   <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
@@ -138,7 +138,7 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="invoiceNo"
             render={({ field }) => (
-              <FloatingFormItem label={<>Invoice No <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label={<>Invoice No</>}>
                 <FormControl>
                   <Input placeholder="INV-0001" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
@@ -150,7 +150,7 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             control={form.control}
             name="paidDate"
             render={({ field }) => (
-              <FloatingFormItem label={<>Paid Date <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label={<>Paid Date</>}>
                 <FormControl>
                   <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>

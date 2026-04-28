@@ -128,7 +128,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         control={form.control}
                         name="productName"
                         render={({ field }) => (
-                            <FloatingFormItem label="Product Name">
+                            <FloatingFormItem required label="Product Name">
                                 <FormControl>
                                     <Input
                                         placeholder="Enter product name"
@@ -146,7 +146,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         control={form.control}
                         name="productType"
                         render={({ field }) => (
-                            <FloatingFormItem label="Product Type">
+                            <FloatingFormItem required label="Product Type">
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value || ""}
@@ -172,7 +172,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         control={form.control}
                         name="status"
                         render={({ field }) => (
-                            <FloatingFormItem label="Status">
+                            <FloatingFormItem required label="Status">
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value || ""}

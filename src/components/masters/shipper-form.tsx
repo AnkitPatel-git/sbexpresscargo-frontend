@@ -4,7 +4,7 @@ import { useEffect } from "react"
 import { Resolver, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
 
-import { bankService } from "@/services/masters/bank-service"
 import { shipperService } from "@/services/masters/shipper-service"
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
 import {
@@ -44,17 +43,14 @@ const shipperSchema = z.object({
     shipperCode: optionalMasterCode(2),
     shipperName: z.string().min(3, "Name must be at least 3 characters"),
     contactPerson: z.string().optional().or(z.literal("")),
-    address1: z.string().optional().or(z.literal("")),
+    address1: z.string().min(1, "Address Line 1 is required"),
     address2: z.string().optional().or(z.literal("")),
     pinCodeId: requiredPincodeField(),
     telephone: z.string().optional().or(z.literal("")),
-    email: z.string().email("Invalid email address").or(z.literal("")),
-    mobile: z.string().optional().or(z.literal("")),
+    email: z.string().min(1, "Email is required").email("Invalid email address"),
+    mobile: z.string().min(1, "Mobile is required"),
     aadhaarNo: z.string().optional().or(z.literal("")),
     panNo: z.string().optional().or(z.literal("")),
-    bankId: z.coerce.number().int().positive("Bank is required"),
-    bankAccount: z.string().min(1, "Bank account is required"),
-    bankIfsc: z.string().min(1, "Bank IFSC is required"),
     firmType: z.enum(["GOV", "NON_GOV"]),
 })
 
@@ -68,11 +64,6 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
-
-    const { data: banksResponse } = useQuery({
-        queryKey: ["banks-list-shipper-form"],
-        queryFn: () => bankService.getBanks({ page: 1, limit: 100, sortBy: "bankName", sortOrder: "asc" }),
-    })
 
     const form = useForm<ShipperFormValues>({
         resolver: zodResolver(shipperSchema) as Resolver<ShipperFormValues>,
@@ -88,9 +79,6 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
             mobile: "",
             aadhaarNo: "",
             panNo: "",
-            bankId: 0,
-            bankAccount: "",
-            bankIfsc: "",
             firmType: "NON_GOV",
         },
     })
@@ -110,9 +98,6 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
             mobile: initialData.mobile || "",
             aadhaarNo: initialData.aadhaarNo || "",
             panNo: initialData.panNo || "",
-            bankId: initialData.bankId ?? 0,
-            bankAccount: initialData.bankAccount || "",
-            bankIfsc: initialData.bankIfsc || "",
             firmType: (initialData.firmType as "GOV" | "NON_GOV") || "NON_GOV",
         })
     }, [initialData, form])
@@ -158,7 +143,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                 control={form.control}
                                 name="shipperName"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Shipper Name">
+                                    <FloatingFormItem required label="Shipper Name">
                                         <FormControl>
                                             <Input placeholder="Sender name" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -206,7 +191,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                 control={form.control}
                                 name="mobile"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Mobile">
+                                    <FloatingFormItem required label="Mobile">
                                         <FormControl>
                                             <Input placeholder="Mobile no" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -229,7 +214,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                             control={form.control}
                             name="email"
                             render={({ field }) => (
-                                <FloatingFormItem label="Email">
+                                <FloatingFormItem required label="Email">
                                     <FormControl>
                                         <Input placeholder="shipper@example.com" {...field} className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
@@ -243,7 +228,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                             control={form.control}
                             name="address1"
                             render={({ field }) => (
-                                <FloatingFormItem label="Address Line 1">
+                                <FloatingFormItem required label="Address Line 1">
                                     <FormControl>
                                         <Input placeholder="Street address" {...field} className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
@@ -265,7 +250,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                             control={form.control}
                             name="pinCodeId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Pin Code">
+                                <FloatingFormItem required label="Pin Code">
                                     <FormControl>
                                         <Input
                                             {...field}
@@ -309,52 +294,6 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                         </div>
                     </FormSection>
 
-                    <FormSection title="Bank Details" contentClassName="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="bankId"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Bank">
-                                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ''}>
-                                        <FormControl>
-                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select bank" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {banksResponse?.data?.map((bank) => (
-                                                <SelectItem key={bank.id} value={String(bank.id)}>
-                                                    {bank.bankName}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="bankAccount"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Bank Account">
-                                    <FormControl>
-                                        <Input placeholder="Bank account number" {...field} className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="bankIfsc"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Bank IFSC">
-                                    <FormControl>
-                                        <Input placeholder="IFSC code" {...field} className={FLOATING_INNER_CONTROL} />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                    </FormSection>
                 </div>
 
                 <div className="flex justify-end gap-3 border-t pt-6">

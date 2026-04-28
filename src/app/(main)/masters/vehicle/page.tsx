@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, Loader2, RefreshCw, FilePlus, Filter, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Loader2, FilePlus, Filter, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils"
 import { vehicleService } from "@/services/masters/vehicle-service"
 import { Vehicle } from "@/types/masters/vehicle"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function VehiclePage() {
@@ -146,12 +147,16 @@ export default function VehiclePage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["vehicles"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
-                    <PermissionGuard permission="master.vehicle.create"><Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button></PermissionGuard>
+                    <PermissionGuard permission="master.vehicle.create">
+                        <MasterExcelImportButton master="vehicles" label="Vehicles" queryKey={["vehicles"]} />
+                    </PermissionGuard>
                 </div>
-                <PermissionGuard permission="master.vehicle.create"><Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Vehicle</Button></PermissionGuard>
+                <PermissionGuard permission="master.vehicle.create">
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Vehicle
+                    </Button>
+                </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[980px] border-0">

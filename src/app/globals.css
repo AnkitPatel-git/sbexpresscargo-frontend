@@ -73,7 +73,7 @@
   --accent-foreground: #1e2a44;
   --destructive: #d1544a;
   --border: #dee2e6;
-  --input: #dee2e6;
+  --input: #1f2a44;
   --ring: #3b5bdb;
   --chart-1: #2d6a4f;
   --chart-2: #e9c46a;
@@ -126,7 +126,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply outline-ring/50;
   }
   body {
     @apply bg-background text-foreground antialiased;

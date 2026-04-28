@@ -32,7 +32,6 @@ import { serviceablePincodeService } from '@/services/utilities/serviceable-pinc
 import { countryService } from '@/services/masters/country-service'
 import { stateService } from '@/services/masters/state-service'
 import { zoneService } from '@/services/masters/zone-service'
-import { productService } from '@/services/masters/product-service'
 import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import { ServiceablePincode, type ServiceablePincodeFormData } from '@/types/utilities/serviceable-pincode'
@@ -47,7 +46,6 @@ const pincodeSchema = z.object({
     areaName: z.string().min(1, "Area Name is required"),
     serviceable: z.boolean(),
     edl: z.boolean(),
-    productId: z.number().int().min(0),
     odaEdlDistanceKm: z
         .string()
         .optional()
@@ -80,16 +78,13 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     const [countryOpen, setCountryOpen] = useState(false)
     const [stateOpen, setStateOpen] = useState(false)
     const [zoneOpen, setZoneOpen] = useState(false)
-    const [productOpen, setProductOpen] = useState(false)
     const [countrySearch, setCountrySearch] = useState('')
     const [stateSearch, setStateSearch] = useState('')
     const [zoneSearch, setZoneSearch] = useState('')
-    const [productSearch, setProductSearch] = useState('')
 
     const debouncedCountrySearch = useDebounce(countrySearch, 300)
     const debouncedStateSearch = useDebounce(stateSearch, 300)
     const debouncedZoneSearch = useDebounce(zoneSearch, 300)
-    const debouncedProductSearch = useDebounce(productSearch, 300)
 
     const { data: countriesData } = useQuery({
         queryKey: ['countries-list', debouncedCountrySearch],
@@ -130,7 +125,6 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             areaName: initialData?.areaName ?? '',
             serviceable: initialData?.serviceable ?? true,
             edl: Boolean(initialData?.edl) || Boolean(initialData?.oda),
-            productId: initialData?.productId ?? 0,
             odaEdlDistanceKm: formatDistanceInitial(initialData?.odaEdlDistanceKm),
             tatWorkingDays: initialData?.tatWorkingDays != null ? String(initialData.tatWorkingDays) : '',
             embargo: initialData?.embargo ?? false,
@@ -140,6 +134,11 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     const selectedCountryId = useWatch({
         control: form.control,
         name: 'countryId',
+    })
+
+    const selectedStateId = useWatch({
+        control: form.control,
+        name: 'stateId',
     })
 
     const selectedZoneIds = useWatch({
@@ -168,47 +167,12 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         staleTime: 5 * 60 * 1000,
     })
 
-    const { data: productsData, isFetching: isProductsFetching } = useQuery({
-        queryKey: ['serviceable-pincode-products', debouncedProductSearch],
-        queryFn: () =>
-            productService.getProducts({
-                page: 1,
-                limit: 50,
-                search: debouncedProductSearch,
-                sortBy: 'productName',
-                sortOrder: 'asc',
-                status: 'ACTIVE',
-            }),
-        enabled: productOpen || !!initialData?.productId,
-        staleTime: 5 * 60 * 1000,
-    })
-
     const countryOptions = useMemo(() => countriesData?.data ?? [], [countriesData?.data])
     const stateOptions = useMemo(
         () => (statesData?.data ?? []).filter((state) => !selectedCountryId || state.countryId === selectedCountryId),
         [selectedCountryId, statesData?.data]
     )
     const zoneOptions = useMemo(() => zonesData?.data ?? [], [zonesData?.data])
-    const productOptions = useMemo(() => productsData?.data ?? [], [productsData?.data])
-
-    const selectedProductId = useWatch({
-        control: form.control,
-        name: 'productId',
-    })
-
-    const selectedProduct = useMemo(() => {
-        if (selectedProductId && productOptions.some((p) => p.id === selectedProductId)) {
-            return productOptions.find((p) => p.id === selectedProductId) ?? null
-        }
-        if (initialData?.productId === selectedProductId && initialData.product) {
-            return {
-                id: initialData.product.id,
-                productCode: initialData.product.productCode,
-                productName: initialData.product.productName,
-            }
-        }
-        return null
-    }, [initialData, productOptions, selectedProductId])
 
     const selectedCountry = useMemo(() => {
         if (countryOptions.length > 0) {
@@ -226,7 +190,6 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     }, [countryOptions, initialData, selectedCountryId])
 
     const selectedState = useMemo(() => {
-        const selectedStateId = form.getValues('stateId')
         if (stateOptions.length > 0) {
             const state = stateOptions.find((item) => item.id === selectedStateId)
             if (state) return state
@@ -238,7 +201,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             }
         }
         return null
-    }, [form, initialData, stateOptions])
+    }, [initialData, selectedStateId, stateOptions])
 
     const selectedZones = useMemo(() => {
         const zoneMap = new Map(zoneOptions.map((zone) => [zone.id, zone]))
@@ -277,10 +240,6 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     }, [zoneOpen])
 
     useEffect(() => {
-        if (!productOpen) setProductSearch('')
-    }, [productOpen])
-
-    useEffect(() => {
         if (!initialData) return
         form.reset({
             countryId: initialData.countryId ?? 0,
@@ -294,7 +253,6 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             areaName: initialData.areaName ?? '',
             serviceable: initialData.serviceable ?? true,
             edl: Boolean(initialData.edl) || Boolean(initialData.oda),
-            productId: initialData.productId ?? 0,
             odaEdlDistanceKm: formatDistanceInitial(initialData.odaEdlDistanceKm),
             tatWorkingDays: initialData.tatWorkingDays != null ? String(initialData.tatWorkingDays) : '',
             embargo: initialData.embargo ?? false,
@@ -322,11 +280,6 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                 areaName: data.areaName,
                 serviceable: data.serviceable,
                 edl: data.edl,
-            }
-            if (data.productId > 0) {
-                payload.productId = data.productId
-            } else if (isEdit) {
-                payload.productId = null
             }
             const odaKm = data.odaEdlDistanceKm?.trim()
             if (odaKm) {
@@ -370,7 +323,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="countryId"
                         render={({ field }) => (
-                            <FloatingFormItem label="Country">
+                            <FloatingFormItem required label="Country">
                                 <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -434,7 +387,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="stateId"
                         render={({ field }) => (
-                            <FloatingFormItem label="State">
+                            <FloatingFormItem required label="State">
                                 <Popover open={stateOpen} onOpenChange={setStateOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -496,7 +449,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="pinCode"
                         render={({ field }) => (
-                            <FloatingFormItem label="Pin Code">
+                            <FloatingFormItem required label="Pin Code">
                                 <FormControl>
                                     <Input placeholder="e.g. 452001" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
@@ -508,7 +461,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="cityName"
                         render={({ field }) => (
-                            <FloatingFormItem label="City Name">
+                            <FloatingFormItem required label="City Name">
                                 <FormControl>
                                     <Input placeholder="e.g. Indore" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
@@ -520,84 +473,10 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="areaName"
                         render={({ field }) => (
-                            <FloatingFormItem label="Area Name">
+                            <FloatingFormItem required label="Area Name">
                                 <FormControl>
                                     <Input placeholder="e.g. Indore City" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
-                            </FloatingFormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="productId"
-                        render={({ field }) => (
-                            <FloatingFormItem label="Mode / product">
-                                <Popover open={productOpen} onOpenChange={setProductOpen}>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                role="combobox"
-                                                className={cn(
-                                                    FLOATING_INNER_COMBO,
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <span className="truncate">
-                                                    {selectedProduct
-                                                        ? `${selectedProduct.productName} (${selectedProduct.productCode})`
-                                                        : "Optional — select product"}
-                                                </span>
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                                        <Command shouldFilter={false}>
-                                            <CommandInput
-                                                placeholder="Search product..."
-                                                value={productSearch}
-                                                onValueChange={setProductSearch}
-                                            />
-                                            <CommandList>
-                                                <CommandEmpty>No product found.</CommandEmpty>
-                                                <CommandGroup>
-                                                    <CommandItem
-                                                        value="__none__"
-                                                        onSelect={() => {
-                                                            field.onChange(0)
-                                                            setProductOpen(false)
-                                                        }}
-                                                    >
-                                                        <Check className={cn("mr-2 h-4 w-4", field.value === 0 ? "opacity-100" : "opacity-0")} />
-                                                        None
-                                                    </CommandItem>
-                                                    {productOptions.map((product) => (
-                                                        <CommandItem
-                                                            key={product.id}
-                                                            value={`${product.productName} ${product.productCode}`}
-                                                            onSelect={() => {
-                                                                field.onChange(product.id)
-                                                                setProductOpen(false)
-                                                            }}
-                                                        >
-                                                            <Check className={cn("mr-2 h-4 w-4", product.id === field.value ? "opacity-100" : "opacity-0")} />
-                                                            {product.productName} ({product.productCode})
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                                {isProductsFetching ? (
-                                                    <div className="flex items-center justify-center p-3 text-sm text-muted-foreground">
-                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        Loading products...
-                                                    </div>
-                                                ) : null}
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
                             </FloatingFormItem>
                         )}
                     />
@@ -644,7 +523,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="zoneIds"
                         render={({ field }) => (
-                            <FloatingFormItem label="Zones">
+                            <FloatingFormItem required label="Zones">
                                 <Popover open={zoneOpen} onOpenChange={setZoneOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>

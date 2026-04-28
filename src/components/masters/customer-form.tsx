@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from "lucide-react"
 import {
     Form,
@@ -107,6 +107,7 @@ const ALL_PRODUCTS_OPTION_VALUE = '__ALL_PRODUCTS__'
 
 export function CustomerForm({ initialData }: CustomerFormProps) {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
     const [activeTab, setActiveTab] = useState("personal")
@@ -114,6 +115,14 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
     const customerId = initialData?.id ?? null
     const isFirstTab = activeTabIndex === 0
     const isLastTab = activeTabIndex === CUSTOMER_TABS.length - 1
+
+    useEffect(() => {
+        const tab = searchParams.get('tab')
+        if (!tab) return
+        if (CUSTOMER_TABS.some((item) => item.value === tab)) {
+            setActiveTab(tab)
+        }
+    }, [searchParams])
 
     const { data: banksData } = useQuery({
         queryKey: ['customer-form-banks'],
@@ -130,6 +139,27 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
         ...(initialData?.serviceCenter && !(serviceCentersData?.data ?? []).some((serviceCenter) => serviceCenter.id === initialData.serviceCenterId)
             ? [initialData.serviceCenter]
             : []),
+        ...(
+            initialData?.serviceCenterId &&
+            !initialData?.serviceCenter &&
+            !(serviceCentersData?.data ?? []).some((serviceCenter) => serviceCenter.id === initialData.serviceCenterId)
+                ? [{ id: initialData.serviceCenterId, code: `ID-${initialData.serviceCenterId}`, name: `Service Center #${initialData.serviceCenterId}` }]
+                : []
+        ),
+    ]
+
+    const bankOptions = [
+        ...(banksData?.data ?? []),
+        ...(initialData?.bank && !(banksData?.data ?? []).some((bank) => bank.id === initialData.bankId)
+            ? [initialData.bank]
+            : []),
+        ...(
+            initialData?.bankId &&
+            !initialData?.bank &&
+            !(banksData?.data ?? []).some((bank) => bank.id === initialData.bankId)
+                ? [{ id: initialData.bankId, bankCode: `ID-${initialData.bankId}`, bankName: `Bank #${initialData.bankId}` }]
+                : []
+        ),
     ]
 
     const form = useForm<CustomerFormValues>({
@@ -168,8 +198,8 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             address1: initialData.address1 || '',
             address2: initialData.address2 || '',
             pinCodeId: getInitialPincode(initialData),
-            serviceCenterId: initialData.serviceCenterId ?? 0,
-            bankId: initialData.bankId ?? 0,
+            serviceCenterId: initialData.serviceCenterId ?? initialData.serviceCenter?.id ?? 0,
+            bankId: initialData.bankId ?? initialData.bank?.id ?? 0,
             bankAccount: initialData.bankAccount || '',
             bankIfsc: initialData.bankIfsc || '',
             telephone: initialData.telephone || '',
@@ -196,12 +226,19 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             }
             return customerService.createCustomer(payload)
         },
-        onSuccess: () => {
+        onSuccess: (saved) => {
             queryClient.invalidateQueries({ queryKey: ['customers'] })
             if (isEdit && initialData) {
                 queryClient.invalidateQueries({ queryKey: ['customer', initialData.id] })
             }
             toast.success(`Customer ${isEdit ? 'updated' : 'created'} successfully`)
+            if (!isEdit) {
+                const createdId = (saved as { id?: number } | null)?.id
+                if (createdId) {
+                    router.push(`/masters/customers/${createdId}/edit?tab=fuel`)
+                    return
+                }
+            }
             router.push('/masters/customers')
         },
         onError: (error: Error) => {
@@ -250,7 +287,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                         control={form.control}
                                         name="name"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Customer Name">
+                                            <FloatingFormItem required label="Customer Name">
                                                 <FormControl>
                                                     <Input {...field} placeholder="e.g. Acme Corp" className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
@@ -262,7 +299,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="contactPerson"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Contact Person">
+                                        <FloatingFormItem required label="Contact Person">
                                             <FormControl>
                                                 <Input {...field} placeholder="Full Name" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -287,7 +324,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="email"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Email Address">
+                                        <FloatingFormItem required label="Email Address">
                                             <FormControl>
                                                 <Input {...field} placeholder="email@example.com" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -310,7 +347,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                         control={form.control}
                                         name="mobile"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Mobile">
+                                            <FloatingFormItem required label="Mobile">
                                                 <FormControl>
                                                     <Input {...field} placeholder="Mobile No" className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
@@ -336,7 +373,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="address1"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Address / Building" itemClassName="md:col-span-2">
+                                        <FloatingFormItem required label="Address / Building" itemClassName="md:col-span-2">
                                             <FormControl>
                                                 <Input {...field} placeholder="Street address, building, floor" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -358,7 +395,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="pinCodeId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Pin Code">
+                                        <FloatingFormItem required label="Pin Code">
                                             <FormControl>
                                                 <Input
                                                     {...field}
@@ -377,11 +414,12 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="serviceCenterId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Service Center ID">
+                                        <FloatingFormItem required label="Service Center ID">
                                             <FormControl>
                                                 <Select
+                                                    key={`service-center-${String(field.value)}-${serviceCenterOptions.length}`}
                                                     onValueChange={(value) => field.onChange(Number(value))}
-                                                    value={field.value ? String(field.value) : ''}
+                                                    value={field.value ? String(field.value) : undefined}
                                                 >
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                         <SelectValue placeholder="Select service center" />
@@ -407,7 +445,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="serviceStartDate"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Service Start Date">
+                                        <FloatingFormItem required label="Service Start Date">
                                             <FormControl>
                                                 <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -421,10 +459,11 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="bankId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Bank">
+                                        <FloatingFormItem required label="Bank">
                                             <Select
+                                                key={`bank-${String(field.value)}-${bankOptions.length}`}
                                                 onValueChange={(value) => field.onChange(Number(value))}
-                                                value={field.value ? String(field.value) : ''}
+                                                value={field.value ? String(field.value) : undefined}
                                             >
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -432,7 +471,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {banksData?.data?.map((bank) => (
+                                                    {bankOptions.map((bank) => (
                                                         <SelectItem key={bank.id} value={String(bank.id)}>
                                                             {bank.bankName}
                                                         </SelectItem>
@@ -446,7 +485,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="bankAccount"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Bank Account">
+                                        <FloatingFormItem required label="Bank Account">
                                             <FormControl>
                                                 <Input {...field} placeholder="Bank account number" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -457,7 +496,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="bankIfsc"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Bank IFSC">
+                                        <FloatingFormItem required label="Bank IFSC">
                                             <FormControl>
                                                 <Input {...field} placeholder="Bank IFSC" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -471,7 +510,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="customerType"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Customer Type">
+                                        <FloatingFormItem required label="Customer Type">
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -490,7 +529,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="registerType"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Register Type">
+                                        <FloatingFormItem required label="Register Type">
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -509,7 +548,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="status"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Status">
+                                        <FloatingFormItem required label="Status">
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -524,19 +563,21 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                         </FloatingFormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="createDefaultShipper"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Create Default Shipper">
-                                            <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                                <FormControl>
-                                                    <Checkbox checked={field.value ?? false} onCheckedChange={(value) => field.onChange(Boolean(value))} />
-                                                </FormControl>
-                                            </div>
-                                        </FloatingFormItem>
-                                    )}
-                                />
+                                {!isEdit ? (
+                                    <FormField
+                                        control={form.control}
+                                        name="createDefaultShipper"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Create Default Shipper">
+                                                <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
+                                                    <FormControl>
+                                                        <Checkbox checked={field.value ?? false} onCheckedChange={(value) => field.onChange(Boolean(value))} />
+                                                    </FormControl>
+                                                </div>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                ) : null}
                             </FormSection>
                         </div>
                     </TabsContent>
@@ -553,7 +594,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                 </Tabs>
 
                 <div className="flex flex-wrap justify-end gap-3 border-t pt-6">
-                    {!isFirstTab && (
+                    {isEdit && !isFirstTab && (
                         <Button
                             type="button"
                             variant="expressNext"
@@ -575,7 +616,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                         {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {isEdit ? 'Update Customer' : 'Create Customer'}
                     </Button>
-                    {!isLastTab && (
+                    {isEdit && !isLastTab && (
                         <Button
                             type="button"
                             variant="expressNext"
@@ -629,6 +670,9 @@ function getChildRows<T>(response: unknown): T[] {
 
         const documents = (data as { documents?: unknown }).documents
         if (Array.isArray(documents)) return documents as T[]
+
+        const kycDocuments = (data as { kycDocuments?: unknown }).kycDocuments
+        if (Array.isArray(kycDocuments)) return kycDocuments as T[]
 
         const records = (data as { records?: unknown }).records
         if (Array.isArray(records)) return records as T[]

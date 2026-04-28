@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown, Filter } from "lucide-react"
+import { Edit, Trash2, FileDown, FilePlus, Filter } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -35,6 +35,8 @@ import { customerService } from "@/services/masters/customer-service"
 import { serviceCenterService } from "@/services/masters/service-center-service"
 import { Customer } from "@/types/masters/customer"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 type CustomerFilters = {
     search: string
@@ -64,6 +66,8 @@ export default function CustomersPage() {
     const [draftFilters, setDraftFilters] = useState<CustomerFilters>(emptyFilters)
     const [deleteId, setDeleteId] = useState<number | null>(null)
     const [isMounted, setIsMounted] = useState(false)
+    const [sortBy, setSortBy] = useState("code")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     useEffect(() => {
         setIsMounted(true)
@@ -84,8 +88,8 @@ export default function CustomersPage() {
         page,
         limit,
         search: appliedFilters.search || undefined,
-        sortBy: "code",
-        sortOrder: "asc" as const,
+        sortBy,
+        sortOrder,
         code: appliedFilters.code || undefined,
         name: appliedFilters.name || undefined,
         mobile: appliedFilters.mobile || undefined,
@@ -166,6 +170,15 @@ export default function CustomersPage() {
         setPage(1)
         setFiltersOpen(false)
     }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -225,6 +238,9 @@ export default function CustomersPage() {
                             <Filter className="h-4 w-4" />
                         </Button>
                     )}
+                    <PermissionGuard permission="master.customer.create">
+                        <MasterExcelImportButton master="customers" label="Customers" queryKey={["customers"]} />
+                    </PermissionGuard>
                     <PermissionGuard permission="master.customer.read">
                         <Button
                             type="button"
@@ -235,10 +251,9 @@ export default function CustomersPage() {
                             disabled={exporting}
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["customers"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <PermissionGuard permission="master.customer.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
@@ -251,12 +266,12 @@ export default function CustomersPage() {
                 <Table className="min-w-[1080px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground">Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Customer Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Contact Person <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">City <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Type <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Status <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Code" field="code" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Customer Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Contact Person</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">City</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Type" field="customerType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

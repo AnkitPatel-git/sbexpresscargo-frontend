@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Edit, Trash2, Link as LinkIcon, Check, X, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Link as LinkIcon, Check, X, FileDown, Filter, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -42,16 +42,9 @@ import { serviceMapService } from "@/services/masters/service-map-service"
 import { vendorService } from "@/services/masters/vendor-service"
 import { ServiceMap } from "@/types/masters/service-map"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
-
-function SortArrows() {
-    return (
-        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-            <ChevronDown className="h-2.5 w-2.5" />
-        </span>
-    )
-}
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function ServiceMapPage() {
     const router = useRouter()
@@ -63,6 +56,8 @@ export default function ServiceMapPage() {
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("vendor")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -76,14 +71,14 @@ export default function ServiceMapPage() {
     })
 
     const { data, isLoading } = useQuery({
-        queryKey: ["service-maps", page, debouncedSearch, appliedFilters.vendorId, appliedFilters.serviceType, appliedFilters.status],
+        queryKey: ["service-maps", page, debouncedSearch, appliedFilters.vendorId, appliedFilters.serviceType, appliedFilters.status, sortBy, sortOrder],
         queryFn: () =>
             serviceMapService.getServiceMaps({
                 page,
                 limit,
                 search: debouncedSearch,
-                sortBy: "vendor",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 vendorId: appliedFilters.vendorId ? Number(appliedFilters.vendorId) : undefined,
                 serviceType: appliedFilters.serviceType || undefined,
                 status: appliedFilters.status || undefined,
@@ -97,8 +92,8 @@ export default function ServiceMapPage() {
         try {
             const { blob, filename } = await serviceMapService.exportServiceMaps({
                 search: debouncedSearch,
-                sortBy: "vendor",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 vendorId: appliedFilters.vendorId ? Number(appliedFilters.vendorId) : undefined,
                 serviceType: appliedFilters.serviceType || undefined,
                 status: appliedFilters.status || undefined,
@@ -175,6 +170,15 @@ export default function ServiceMapPage() {
         setPage(1)
         setFiltersOpen(false)
     }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -208,13 +212,8 @@ export default function ServiceMapPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-maps"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                     <PermissionGuard permission="master.service_map.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
-                            <FilePlus className="h-4 w-4" />
-                        </Button>
+                        <MasterExcelImportButton master="service-map" label="Service Maps" queryKey={["service-maps"]} />
                     </PermissionGuard>
                     <PermissionGuard permission="master.service_map.read">
                         <Button
@@ -226,16 +225,14 @@ export default function ServiceMapPage() {
                             disabled={exporting}
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["service-maps"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                 </div>
                 <PermissionGuard permission="master.service_map.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Service Map">
-                        <FilePlus className="mr-1 h-4 w-4" /> Add Service Map
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Service Map
                     </Button>
                 </PermissionGuard>
             </div>
@@ -243,11 +240,11 @@ export default function ServiceMapPage() {
                 <Table className="min-w-[1200px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Vendor <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Service Type <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Weight (Min-Max) <SortArrows /></span></TableHead>
-                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Single Pc <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Status <SortArrows /></span></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Vendor" field="vendor" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Service Type" field="serviceType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Weight (Min-Max)</TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">Single Pc</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

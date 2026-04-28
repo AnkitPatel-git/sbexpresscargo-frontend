@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, Filter, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -33,7 +33,9 @@ import { useRouter } from "next/navigation"
 import { bankService } from "@/services/masters/bank-service"
 import { Bank } from "@/types/masters/bank"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 type BankFilters = { code: string; name: string; status: string }
 const defaultFilters: BankFilters = { code: "", name: "", status: "all" }
@@ -48,6 +50,8 @@ export default function BanksPage() {
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [appliedFilters, setAppliedFilters] = useState<BankFilters>(defaultFilters)
     const [draftFilters, setDraftFilters] = useState<BankFilters>(defaultFilters)
+    const [sortBy, setSortBy] = useState("bankCode")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -56,14 +60,14 @@ export default function BanksPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["banks", page, debouncedSearch],
+        queryKey: ["banks", page, debouncedSearch, sortBy, sortOrder],
         queryFn: () =>
             bankService.getBanks({
                 page,
                 limit,
                 search: debouncedSearch,
-                sortBy: "bankCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
             }),
     })
 
@@ -74,8 +78,8 @@ export default function BanksPage() {
         try {
             const { blob, filename } = await bankService.exportBanks({
                 search: debouncedSearch,
-                sortBy: "bankCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
@@ -142,6 +146,15 @@ export default function BanksPage() {
         setPage(1)
         setFiltersOpen(false)
     }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -178,6 +191,9 @@ export default function BanksPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                    <PermissionGuard permission="master.bank.create">
+                        <MasterExcelImportButton master="banks" label="Banks" queryKey={["banks"]} />
+                    </PermissionGuard>
                     <PermissionGuard permission="master.bank.read">
                         <Button
                             type="button"
@@ -188,20 +204,30 @@ export default function BanksPage() {
                             onClick={() => void handleExportCsv()}
                             title="Export CSV"
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["banks"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
-                <PermissionGuard permission="master.bank.create"><Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}><FilePlus className="h-4 w-4" />Add Bank</Button></PermissionGuard>
+                <PermissionGuard permission="master.bank.create">
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Bank
+                    </Button>
+                </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[760px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground">Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Bank Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Status <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Code" field="bankCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Bank Name" field="bankName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

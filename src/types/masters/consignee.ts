@@ -62,12 +62,12 @@ export interface ConsigneeFormData {
     code?: string
     name: string
     contactPerson?: string
-    address1?: string
+    address1: string
     address2?: string
-    pinCodeId?: string
+    pinCodeId: string
     telephone?: string
-    email?: string
-    mobile?: string
+    email: string
+    mobile: string
 }
 
 export interface ConsigneeListResponse {

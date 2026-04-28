@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, Filter, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -32,7 +32,9 @@ import { cn } from "@/lib/utils"
 import { countryService } from "@/services/masters/country-service"
 import { Country } from "@/types/masters/country"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function CountriesPage() {
     const router = useRouter()
@@ -44,6 +46,8 @@ export default function CountriesPage() {
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("code")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -52,14 +56,14 @@ export default function CountriesPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["countries", page, debouncedSearch],
+        queryKey: ["countries", page, debouncedSearch, sortBy, sortOrder],
         queryFn: () =>
             countryService.getCountries({
                 page,
                 limit,
                 search: debouncedSearch,
-                sortBy: "code",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
             }),
     })
 
@@ -70,8 +74,8 @@ export default function CountriesPage() {
         try {
             const { blob, filename } = await countryService.exportCountries({
                 search: debouncedSearch,
-                sortBy: "code",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
@@ -143,6 +147,15 @@ export default function CountriesPage() {
         setPage(1)
         setFiltersOpen(false)
     }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -173,9 +186,8 @@ export default function CountriesPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["countries"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                     <PermissionGuard permission="master.country.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
+                        <MasterExcelImportButton master="countries" label="Countries" queryKey={["countries"]} />
                     </PermissionGuard>
                     <PermissionGuard permission="master.country.read">
                         <Button
@@ -187,24 +199,26 @@ export default function CountriesPage() {
                             disabled={exporting}
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["countries"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <PermissionGuard permission="master.country.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Country</Button>
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Country
+                    </Button>
                 </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[920px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground">Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Country Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Weight Unit <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Currency <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">ISD Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Code" field="code" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Country Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Weight Unit" field="weightUnit" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Currency" field="currency" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="ISD Code" field="isdCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

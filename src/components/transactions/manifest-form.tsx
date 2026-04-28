@@ -124,7 +124,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="shipmentIds"
             render={({ field }) => (
-              <FloatingFormItem label={<>Shipment IDs <span className="text-red-500">*</span></>} itemClassName="md:col-span-2">
+              <FloatingFormItem required label="Shipment IDs" itemClassName="md:col-span-2">
                 <FormControl>
                   <MultiSelect
                     options={shipmentOptions}
@@ -143,7 +143,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="manifestNo"
             render={({ field }) => (
-              <FloatingFormItem label={<>Manifest No <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label="Manifest No">
                 <FormControl>
                   <Input placeholder="Manifest No" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
@@ -167,7 +167,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="manifestDate"
             render={({ field }) => (
-              <FloatingFormItem label={<>Manifest Date <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label="Manifest Date">
                 <FormControl>
                   <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>

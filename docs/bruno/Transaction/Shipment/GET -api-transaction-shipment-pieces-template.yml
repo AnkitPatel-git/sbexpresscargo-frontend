@@ -76,5 +76,5 @@ examples:
       body:
         type: text
         data: |
-          actualWeight,pieces,length,width,height,volumetricWeight,chargeWeight
+          actualWeight,pieces,length,breadth,height,volumetricWeight,chargeWeight
           500,1,10,10,10,200,500
