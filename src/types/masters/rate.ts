@@ -143,6 +143,8 @@ export interface RateConditionPayload {
   chargeAmount: number;
   calculationBase?: string;
   isPercentage?: boolean;
+  minValue?: number | null;
+  maxValue?: number | null;
 }
 
 export interface RateCondition extends RateConditionPayload {

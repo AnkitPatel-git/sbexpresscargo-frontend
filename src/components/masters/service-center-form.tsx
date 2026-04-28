@@ -26,9 +26,8 @@ import { ServiceCenter, type ServiceCenterFormData } from '@/types/masters/servi
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 import {
     getInitialPincode,
-    normalizeOptionalPincode,
     normalizePincodeInput,
-    optionalPincodeField,
+    requiredPincodeField,
 } from '@/lib/pincode-field'
 
 const serviceCenterSchema = z.object({
@@ -41,7 +40,7 @@ const serviceCenterSchema = z.object({
     email: z.string().email("Invalid email address").or(z.literal("")).nullable().optional(),
     gstNo: z.string().nullable().optional(),
     panNo: z.string().nullable().optional(),
-    pinCodeId: optionalPincodeField(),
+    pinCodeId: requiredPincodeField(),
 })
 
 type ServiceCenterFormValues = z.infer<typeof serviceCenterSchema>
@@ -90,9 +89,13 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
 
     const mutation = useMutation({
         mutationFn: (values: ServiceCenterFormValues) => {
+            const gstNo = values.gstNo?.trim()
+            const panNo = values.panNo?.trim()
             const payload = {
                 ...omitEmptyCodeFields(values, ['code']),
-                pinCodeId: normalizeOptionalPincode(values.pinCodeId),
+                gstNo: gstNo || undefined,
+                panNo: panNo || undefined,
+                pinCodeId: values.pinCodeId,
             } as ServiceCenterFormData
 
             if (isEdit && initialData) {
@@ -141,7 +144,7 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                             control={form.control}
                             name="name"
                             render={({ field }) => (
-                                <FloatingFormItem label="Service Center Name">
+                                <FloatingFormItem required label="Service Center Name">
                                     <FormControl>
                                         <Input {...field} value={field.value || ''} placeholder="Full Name" className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
@@ -241,7 +244,7 @@ export function ServiceCenterForm({ initialData }: ServiceCenterFormProps) {
                             control={form.control}
                             name="pinCodeId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Pin Code" itemClassName="md:col-span-2">
+                                <FloatingFormItem required label="Pin Code" itemClassName="md:col-span-2">
                                     <FormControl>
                                         <Input
                                             {...field}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { useForm, Resolver } from 'react-hook-form'
+import { useForm, Resolver, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -121,15 +121,19 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
         if (!serviceCenterOpen) setServiceCenterSearch('')
     }, [serviceCenterOpen])
 
+    const selectedServiceCenterId = useWatch({
+        control: form.control,
+        name: 'serviceCenterId',
+    })
+
     const selectedServiceCenter = useMemo(() => {
-        const selectedId = form.getValues('serviceCenterId')
-        const match = serviceCentersData?.data?.find((serviceCenter) => serviceCenter.id === selectedId)
+        const match = serviceCentersData?.data?.find((serviceCenter) => serviceCenter.id === selectedServiceCenterId)
         if (match) return match
-        if (initialData?.serviceCenterId === selectedId && initialData.serviceCenter) {
+        if (initialData?.serviceCenterId === selectedServiceCenterId && initialData.serviceCenter) {
             return initialData.serviceCenter
         }
         return null
-    }, [form, initialData, serviceCentersData?.data])
+    }, [initialData, selectedServiceCenterId, serviceCentersData?.data])
 
     const mutation = useMutation({
         mutationFn: (values: LocalBranchFormValues) => {
@@ -177,7 +181,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                                 control={form.control}
                                 name="name"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Branch Name">
+                                    <FloatingFormItem required label="Branch Name">
                                         <FormControl>
                                             <Input {...field} placeholder="e.g. Mumbai Main" className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -189,7 +193,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                             control={form.control}
                             name="companyName"
                             render={({ field }) => (
-                                <FloatingFormItem label="Company Name">
+                                <FloatingFormItem required label="Company Name">
                                     <FormControl>
                                         <Input {...field} placeholder="Company Name" className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
@@ -200,7 +204,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                             control={form.control}
                             name="serviceCenterId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Service Center">
+                                <FloatingFormItem required label="Service Center">
                                     <Popover open={serviceCenterOpen} onOpenChange={setServiceCenterOpen}>
                                         <PopoverTrigger asChild>
                                             <FormControl>
@@ -282,7 +286,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                             control={form.control}
                             name="email"
                             render={({ field }) => (
-                                <FloatingFormItem label="Email Address">
+                                <FloatingFormItem required label="Email Address">
                                     <FormControl>
                                         <Input {...field} placeholder="email@example.com" className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
@@ -324,7 +328,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                             control={form.control}
                             name="address1"
                             render={({ field }) => (
-                                <FloatingFormItem label="Address Line 1" itemClassName="md:col-span-2">
+                                <FloatingFormItem required label="Address Line 1" itemClassName="md:col-span-2">
                                     <FormControl>
                                         <Input {...field} placeholder="Building name, Street" className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
@@ -346,7 +350,7 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                             control={form.control}
                             name="pinCodeId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Pin Code" itemClassName="md:col-span-2">
+                                <FloatingFormItem required label="Pin Code" itemClassName="md:col-span-2">
                                     <FormControl>
                                         <Input
                                             {...field}

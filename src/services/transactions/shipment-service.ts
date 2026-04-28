@@ -111,7 +111,7 @@ export const shipmentService = {
       actualWeight?: number;
       pieces?: number;
       length?: number;
-      width?: number;
+      breadth?: number;
       height?: number;
       items?: Array<{ totalValue?: number }>;
     }>;

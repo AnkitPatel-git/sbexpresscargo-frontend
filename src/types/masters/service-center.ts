@@ -60,7 +60,7 @@ export interface ServiceCenterFormData {
     email?: string | null;
     gstNo?: string | null;
     panNo?: string | null;
-    pinCodeId?: string | null;
+    pinCodeId: string;
     version?: number;
 }
 

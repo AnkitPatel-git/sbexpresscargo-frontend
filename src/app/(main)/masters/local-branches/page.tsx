@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, Filter, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -28,19 +28,12 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 import { localBranchService } from "@/services/masters/local-branch-service"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
-
-function SortArrows() {
-    return (
-        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-            <ChevronDown className="h-2.5 w-2.5" />
-        </span>
-    )
-}
 
 export default function LocalBranchesPage() {
     const router = useRouter()
@@ -55,6 +48,8 @@ export default function LocalBranchesPage() {
     const debouncedCode = useDebounce(appliedFilters.code, 400)
     const debouncedCompanyName = useDebounce(appliedFilters.companyName, 400)
     const debouncedBranchName = useDebounce(appliedFilters.branchName, 400)
+    const [sortBy, setSortBy] = useState("branchCode")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -63,14 +58,14 @@ export default function LocalBranchesPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["local-branches", page, debouncedSearch, debouncedCode, debouncedCompanyName, debouncedBranchName],
+        queryKey: ["local-branches", page, debouncedSearch, debouncedCode, debouncedCompanyName, debouncedBranchName, sortBy, sortOrder],
         queryFn: () =>
             localBranchService.getLocalBranches({
                 page,
                 limit,
                 search: debouncedSearch,
-                sortBy: "branchCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 branchCode: debouncedCode || undefined,
                 companyName: debouncedCompanyName || undefined,
                 name: debouncedBranchName || undefined,
@@ -84,8 +79,8 @@ export default function LocalBranchesPage() {
         try {
             const { blob, filename } = await localBranchService.exportLocalBranches({
                 search: debouncedSearch,
-                sortBy: "branchCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 branchCode: debouncedCode || undefined,
                 companyName: debouncedCompanyName || undefined,
                 name: debouncedBranchName || undefined,
@@ -150,6 +145,15 @@ export default function LocalBranchesPage() {
         setPage(1)
         setFiltersOpen(false)
     }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -178,13 +182,8 @@ export default function LocalBranchesPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["local-branches"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                     <PermissionGuard permission="master.local_branch.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
-                            <FilePlus className="h-4 w-4" />
-                        </Button>
+                        <MasterExcelImportButton master="local-branches" label="Local Branches" queryKey={["local-branches"]} />
                     </PermissionGuard>
                     <PermissionGuard permission="master.local_branch.read">
                         <Button
@@ -196,16 +195,14 @@ export default function LocalBranchesPage() {
                             disabled={exporting}
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["local-branches"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                 </div>
                 <PermissionGuard permission="master.local_branch.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Branch">
-                        <FilePlus className="mr-1 h-4 w-4" /> Add Branch
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Branch
                     </Button>
                 </PermissionGuard>
             </div>
@@ -213,10 +210,18 @@ export default function LocalBranchesPage() {
                 <Table className="min-w-[1000px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Code <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Company Name <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Branch Name <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Service Center <SortArrows /></span></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Code" field="branchCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Company Name" field="companyName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Branch Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Service Center" field="serviceCenterId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

@@ -110,7 +110,7 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="drsNo"
             render={({ field }) => (
-              <FloatingFormItem label={<>DRS No <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label={<>DRS No</>}>
                 <FormControl>
                   <Input placeholder="DRS No" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
@@ -122,7 +122,7 @@ export function DrsForm({ initialData }: DrsFormProps) {
             control={form.control}
             name="drsDate"
             render={({ field }) => (
-              <FloatingFormItem label={<>DRS Date <span className="text-red-500">*</span></>}>
+              <FloatingFormItem required label={<>DRS Date</>}>
                 <FormControl>
                   <Input type="date" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
@@ -230,7 +230,7 @@ export function DrsForm({ initialData }: DrsFormProps) {
                   control={form.control}
                   name={`items.${index}.awbNo`}
                   render={({ field }) => (
-                    <FloatingFormItem label="AWB No" itemClassName="flex-1">
+                    <FloatingFormItem required label="AWB No" itemClassName="flex-1">
                       <FormControl>
                         <Input placeholder="Scan or type AWB No" {...field} className={FLOATING_INNER_CONTROL} />
                       </FormControl>

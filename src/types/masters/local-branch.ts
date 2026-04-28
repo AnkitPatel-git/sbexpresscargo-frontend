@@ -52,7 +52,7 @@ export interface LocalBranchFormData {
     name: string;
     address1: string;
     address2?: string | null | undefined;
-    pinCodeId?: string;
+    pinCodeId: string;
     serviceCenterId: number;
     telephone?: string | null | undefined;
     email: string;

@@ -144,7 +144,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                                 control={form.control}
                                 name="vehicleNo"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Vehicle Number*">
+                                    <FloatingFormItem required label="Vehicle Number*">
                                         <FormControl>
                                             <Input placeholder="e.g. MH01AB1234" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -155,7 +155,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                                 control={form.control}
                                 name="vehicleType"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Vehicle Type*">
+                                    <FloatingFormItem required label="Vehicle Type*">
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>

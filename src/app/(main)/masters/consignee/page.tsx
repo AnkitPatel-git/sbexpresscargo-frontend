@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Edit, FilePlus, FileUp, Filter, RefreshCw, Trash2 } from "lucide-react"
+import { Edit, FilePlus, FileDown, Filter, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -121,11 +122,18 @@ export default function ConsigneePage() {
                 <div className="flex flex-wrap items-center gap-1 self-start rounded-md border border-border p-1 sm:self-auto">
                     <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
                         <DialogTrigger asChild>
-                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-primary"
+                                title="Filters"
+                                aria-controls="consignee-filters-dialog"
+                            >
                                 <Filter className="h-4 w-4" />
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-xl">
+                        <DialogContent id="consignee-filters-dialog" className="sm:max-w-xl">
                             <DialogHeader>
                                 <DialogTitle>Consignee Filters</DialogTitle>
                                 <DialogDescription>Use popup filters to keep the list page clean.</DialogDescription>
@@ -142,19 +150,15 @@ export default function ConsigneePage() {
                         </DialogContent>
                     </Dialog>
                     <PermissionGuard permission="master.consignee.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => router.push("/masters/consignee/create")}>
-                            <FilePlus className="h-4 w-4" />
-                        </Button>
+                        <MasterExcelImportButton master="consignees" label="Consignees" queryKey={["consignees"]} />
                     </PermissionGuard>
                     <PermissionGuard permission="master.consignee.read">
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" disabled={exporting} onClick={() => void handleExportCsv()}>
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["consignees"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                 </div>
+
                 <PermissionGuard permission="master.consignee.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={() => router.push("/masters/consignee/create")}>
                         <FilePlus className="h-4 w-4" />
@@ -162,7 +166,6 @@ export default function ConsigneePage() {
                     </Button>
                 </PermissionGuard>
             </div>
-
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[760px] border-0">
                     <TableHeader>

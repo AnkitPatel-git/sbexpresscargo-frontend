@@ -216,7 +216,7 @@ examples:
                   "actualWeight": 9500,
                   "pieces": 3,
                   "length": 60,
-                  "width": 40,
+                  "breadth": 40,
                   "height": 30,
                   "volumetricWeight": 24000,
                   "chargeWeight": 28500,

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, Filter, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils"
 import { courierService } from "@/services/masters/courier-service"
 import { Courier } from "@/types/masters/courier"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
 
 export default function CouriersPage() {
@@ -153,11 +154,8 @@ export default function CouriersPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["couriers"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                     <PermissionGuard permission="master.courier.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => router.push("/masters/courier/create")}>
-                            <FilePlus className="h-4 w-4" />
-                        </Button>
+                        <MasterExcelImportButton master="couriers" label="Couriers" queryKey={["couriers"]} />
                     </PermissionGuard>
                     <PermissionGuard permission="master.courier.read">
                         <Button
@@ -169,13 +167,13 @@ export default function CouriersPage() {
                             title="Export CSV"
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
                 </div>
                 <PermissionGuard permission="master.courier.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={() => router.push("/masters/courier/create")}>
-                        <FilePlus className="mr-1 h-4 w-4" />
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={() => router.push("/masters/courier/create")}>
+                        <FilePlus className="h-4 w-4" />
                         Add Courier
                     </Button>
                 </PermissionGuard>

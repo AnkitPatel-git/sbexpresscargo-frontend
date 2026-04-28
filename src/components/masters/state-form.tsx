@@ -105,7 +105,7 @@ export function StateForm({ initialData }: StateFormProps) {
                         control={form.control}
                         name="gstAlias"
                         render={({ field }) => (
-                            <FloatingFormItem label="GST Alias">
+                            <FloatingFormItem required label="GST Alias">
                                 <FormControl>
                                     <Input placeholder="e.g. 07, 27" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
@@ -118,7 +118,7 @@ export function StateForm({ initialData }: StateFormProps) {
                     control={form.control}
                     name="stateName"
                     render={({ field }) => (
-                        <FloatingFormItem label="State Name">
+                        <FloatingFormItem required label="State Name">
                             <FormControl>
                                 <Input placeholder="e.g. Delhi, Maharashtra" {...field} className={FLOATING_INNER_CONTROL} />
                             </FormControl>
@@ -130,7 +130,7 @@ export function StateForm({ initialData }: StateFormProps) {
                     control={form.control}
                     name="countryId"
                     render={({ field }) => (
-                        <FloatingFormItem label="Country*">
+                        <FloatingFormItem required label="Country*">
                             <Select
                                 onValueChange={(val) => field.onChange(parseInt(val))}
                                 value={field.value ? field.value.toString() : ""}
@@ -156,7 +156,7 @@ export function StateForm({ initialData }: StateFormProps) {
                     control={form.control}
                     name="unionTerritory"
                     render={({ field }) => (
-                        <FloatingFormItem label="Union Territory">
+                        <FloatingFormItem required label="Union Territory">
                             <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                 <FormControl>
                                     <Checkbox

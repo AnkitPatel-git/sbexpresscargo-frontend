@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, Check, X, FileUp, RefreshCw, FilePlus, ChevronUp, ChevronDown, Download } from "lucide-react"
+import { Plus, Edit, Trash2, Check, X, FileDown, FileUp, Filter, ChevronUp, ChevronDown, Download } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -33,6 +33,7 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
@@ -59,17 +60,20 @@ export default function ServiceablePincodesPage() {
     const debouncedSearch = useDebounce(search, 500)
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const [colFilters, setColFilters] = useState({
+    const defaultFilters = {
         pinCode: "",
         cityName: "",
         areaName: "",
         countryCode: "",
-    })
+    }
+    const [filtersOpen, setFiltersOpen] = useState(false)
+    const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
+    const [draftFilters, setDraftFilters] = useState(defaultFilters)
 
-    const debouncedPinCode = useDebounce(colFilters.pinCode, 400)
-    const debouncedCityName = useDebounce(colFilters.cityName, 400)
-    const debouncedAreaName = useDebounce(colFilters.areaName, 400)
-    const debouncedCountryCode = useDebounce(colFilters.countryCode, 400)
+    const debouncedPinCode = useDebounce(appliedFilters.pinCode, 400)
+    const debouncedCityName = useDebounce(appliedFilters.cityName, 400)
+    const debouncedAreaName = useDebounce(appliedFilters.areaName, 400)
+    const debouncedCountryCode = useDebounce(appliedFilters.countryCode, 400)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
     const [importOpen, setImportOpen] = useState(false)
@@ -82,6 +86,10 @@ export default function ServiceablePincodesPage() {
     } | null>(null)
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
     const importFileInputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        if (filtersOpen) setDraftFilters(appliedFilters)
+    }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
         queryKey: ["serviceable-pincodes", page, debouncedSearch, debouncedPinCode, debouncedCityName, debouncedAreaName, debouncedCountryCode],
@@ -226,6 +234,19 @@ export default function ServiceablePincodesPage() {
         }
     }
 
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+
+    const resetFilters = () => {
+        setDraftFilters(defaultFilters)
+        setAppliedFilters(defaultFilters)
+        setPage(1)
+        setFiltersOpen(false)
+    }
+
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
@@ -236,6 +257,29 @@ export default function ServiceablePincodesPage() {
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DialogTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                                <Filter className="h-4 w-4" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Serviceable Pincode Filters</DialogTitle>
+                                <DialogDescription>Filter the serviceable pincode list from this popup, then apply the filters.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Input placeholder="Pin Code" className="h-9 bg-background" value={draftFilters.pinCode} onChange={(e) => setDraftFilters((prev) => ({ ...prev, pinCode: e.target.value }))} />
+                                <Input placeholder="City" className="h-9 bg-background" value={draftFilters.cityName} onChange={(e) => setDraftFilters((prev) => ({ ...prev, cityName: e.target.value }))} />
+                                <Input placeholder="Area" className="h-9 bg-background" value={draftFilters.areaName} onChange={(e) => setDraftFilters((prev) => ({ ...prev, areaName: e.target.value }))} />
+                                <Input placeholder="Country Code" className="h-9 bg-background" value={draftFilters.countryCode} onChange={(e) => setDraftFilters((prev) => ({ ...prev, countryCode: e.target.value }))} />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
+                                <Button type="button" onClick={applyFilters}>Apply</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                     <PermissionGuard permission="utility.serviceable_pincode.create">
                         <Button
                             type="button"
@@ -249,7 +293,7 @@ export default function ServiceablePincodesPage() {
                                 setImportOpen(true)
                             }}
                         >
-                            <FilePlus className="h-4 w-4" />
+                            <FileUp className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
                     <PermissionGuard permission="utility.serviceable_pincode.read">
@@ -262,12 +306,9 @@ export default function ServiceablePincodesPage() {
                             disabled={exporting}
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["serviceable-pincodes"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                 </div>
                 <PermissionGuard permission="utility.serviceable_pincode.create">
                     <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Pincode">
@@ -280,7 +321,7 @@ export default function ServiceablePincodesPage() {
                 <Input placeholder="Search pincodes..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[1500px] border-0">
+                <Table className="min-w-[1360px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Pin Code <SortArrows /></span></TableHead>
@@ -289,7 +330,6 @@ export default function ServiceablePincodesPage() {
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Country <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State <SortArrows /></span></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Zones <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Product <SortArrows /></span></TableHead>
                             <TableHead className="text-right font-semibold text-primary-foreground"><span className="inline-flex items-center">EDL km <SortArrows /></span></TableHead>
                             <TableHead className="text-right font-semibold text-primary-foreground"><span className="inline-flex items-center">TAT days <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Embargo <SortArrows /></span></TableHead>
@@ -297,30 +337,15 @@ export default function ServiceablePincodesPage() {
                             <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">EDL <SortArrows /></span></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
-                        <TableRow className="border-b border-border bg-card hover:bg-card">
-                            <TableHead className="p-2"><Input placeholder="Pin Code" className="h-8 border-border bg-background text-xs" value={colFilters.pinCode} onChange={(e) => setColFilters((f) => ({ ...f, pinCode: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="City" className="h-8 border-border bg-background text-xs" value={colFilters.cityName} onChange={(e) => setColFilters((f) => ({ ...f, cityName: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Area" className="h-8 border-border bg-background text-xs" value={colFilters.areaName} onChange={(e) => setColFilters((f) => ({ ...f, areaName: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Country Code" className="h-8 border-border bg-background text-xs" value={colFilters.countryCode} onChange={(e) => setColFilters((f) => ({ ...f, countryCode: e.target.value }))} /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="State" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Zones" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Product" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="km" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="TAT" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Embargo" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="Serviceable" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2"><Input placeholder="EDL" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                            <TableHead className="p-2" />
-                        </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">Loading pincodes...</TableCell>
+                                <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">Loading pincodes...</TableCell>
                             </TableRow>
                         ) : rows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">No pincodes found.</TableCell>
+                                <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">No pincodes found.</TableCell>
                             </TableRow>
                         ) : (
                             rows.map((pincode: ServiceablePincode, index) => (
@@ -332,11 +357,6 @@ export default function ServiceablePincodesPage() {
                                     <TableCell className="text-foreground">{pincode.state?.stateName || '-'}</TableCell>
                                     <TableCell className="text-foreground">
                                         {(pincode.zones ?? []).map((z) => z.code).join(', ') || '-'}
-                                    </TableCell>
-                                    <TableCell className="text-foreground text-sm">
-                                        {pincode.product?.productCode
-                                            ? `${pincode.product.productName} (${pincode.product.productCode})`
-                                            : '-'}
                                     </TableCell>
                                     <TableCell className="text-right text-foreground text-sm">
                                         {pincode.odaEdlDistanceKm != null && pincode.odaEdlDistanceKm !== ''

@@ -126,7 +126,7 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                            <FloatingFormItem label="Zone Name">
+                            <FloatingFormItem required label="Zone Name">
                                 <FormControl>
                                     <Input placeholder="Enter zone name" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
@@ -151,7 +151,7 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         control={form.control}
                         name="countryId"
                         render={({ field }) => (
-                            <FloatingFormItem label="Country*">
+                            <FloatingFormItem required label="Country*">
                                 <Select
                                     onValueChange={(val) => field.onChange(parseInt(val))}
                                     value={field.value ? field.value.toString() : ""}
@@ -176,7 +176,7 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         control={form.control}
                         name="zoneType"
                         render={({ field }) => (
-                            <FloatingFormItem label="Zone Type">
+                            <FloatingFormItem required label="Zone Type">
                                 <Select
                                     onValueChange={field.onChange}
                                     value={field.value || ""}

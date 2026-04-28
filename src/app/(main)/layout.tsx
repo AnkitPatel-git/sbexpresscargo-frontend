@@ -98,6 +98,7 @@ const headerNavItems = [
   { href: "/transactions/pod", label: "POD" },
   { href: "/transactions/customer-payment", label: "Customer Payment" },
   { href: "/transactions/receipt", label: "Receipts" },
+  { href: "/report/mis", label: "MIS Report" },
   { href: "/document/invoice-generation", label: "Invoice Generation" },
   { href: "/document/invoice-print", label: "Invoice Print" },
   { href: "/document/invoice-finalise", label: "Invoice Finalise" },
@@ -1236,9 +1237,17 @@ const SidebarContent = ({
 
         {isReportsOpen && !isCollapsed && (
           <div className="mt-1 flex flex-col gap-0.5 rounded-md bg-white p-1 shadow-sm">
-            <div className="px-3 py-2 text-xs text-muted-foreground">
-              No menu items configured
-            </div>
+            <PermissionGuard permission="transaction.shipment.read">
+              <LinkItem
+                href="/report/mis"
+                active={isActive("/report/mis")}
+                icon={ClipboardList}
+                showTextOverride
+                inFlyout
+              >
+                MIS Report
+              </LinkItem>
+            </PermissionGuard>
           </div>
         )}
 
@@ -1252,9 +1261,17 @@ const SidebarContent = ({
             </div>
             <div className="max-h-[70vh] overflow-y-auto">
               <div className="mt-1 flex flex-col gap-1">
-                <div className="px-3 py-2 text-xs text-muted-foreground">
-                  No menu items configured
-                </div>
+                <PermissionGuard permission="transaction.shipment.read">
+                  <LinkItem
+                    href="/report/mis"
+                    active={isActive("/report/mis")}
+                    icon={ClipboardList}
+                    showTextOverride
+                    inFlyout
+                  >
+                    MIS Report
+                  </LinkItem>
+                </PermissionGuard>
               </div>
             </div>
           </div>

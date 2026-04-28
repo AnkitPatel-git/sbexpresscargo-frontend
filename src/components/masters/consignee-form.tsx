@@ -34,12 +34,12 @@ const consigneeSchema = z.object({
     code: optionalMasterCode(2),
     name: z.string().min(3, "Name must be at least 3 characters"),
     contactPerson: z.string().optional().or(z.literal("")),
-    address1: z.string().optional().or(z.literal("")),
+    address1: z.string().min(1, "Address Line 1 is required"),
     address2: z.string().optional().or(z.literal("")),
     pinCodeId: requiredPincodeField(),
     telephone: z.string().optional().or(z.literal("")),
-    email: z.string().email("Invalid email address").or(z.literal("")),
-    mobile: z.string().optional().or(z.literal("")),
+    email: z.string().min(1, "Email is required").email("Invalid email address"),
+    mobile: z.string().min(1, "Mobile is required"),
 })
 
 type ConsigneeFormValues = z.infer<typeof consigneeSchema>
@@ -125,7 +125,7 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                 control={form.control}
                                 name="name"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Consignee Name">
+                                    <FloatingFormItem required label="Consignee Name">
                                         <FormControl>
                                             <Input placeholder="Receiver name" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -152,7 +152,7 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                                 control={form.control}
                                 name="mobile"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Mobile">
+                                    <FloatingFormItem required label="Mobile">
                                         <FormControl>
                                             <Input placeholder="Mobile no" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -175,7 +175,7 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                             control={form.control}
                             name="email"
                             render={({ field }) => (
-                                <FloatingFormItem label="Email">
+                                <FloatingFormItem required label="Email">
                                     <FormControl>
                                         <Input placeholder="receiver@example.com" {...field} className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
@@ -189,7 +189,7 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                             control={form.control}
                             name="address1"
                             render={({ field }) => (
-                                <FloatingFormItem label="Address Line 1">
+                                <FloatingFormItem required label="Address Line 1">
                                     <FormControl>
                                         <Input placeholder="Street address" {...field} className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
@@ -211,7 +211,7 @@ export function ConsigneeForm({ initialData }: ConsigneeFormProps) {
                             control={form.control}
                             name="pinCodeId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Pin Code">
+                                <FloatingFormItem required label="Pin Code">
                                     <FormControl>
                                         <Input
                                             {...field}

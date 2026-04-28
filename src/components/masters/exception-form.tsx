@@ -113,7 +113,7 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                            <FloatingFormItem label="Exception Name">
+                            <FloatingFormItem required label="Exception Name">
                                 <FormControl>
                                     <Input placeholder="e.g. Address Not Found" {...field} className={FLOATING_INNER_CONTROL} />
                                 </FormControl>
@@ -125,7 +125,7 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                         control={form.control}
                         name="type"
                         render={({ field }) => (
-                            <FloatingFormItem label="Exception Type">
+                            <FloatingFormItem required label="Exception Type">
                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>

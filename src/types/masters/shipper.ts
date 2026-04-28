@@ -13,13 +13,6 @@ export interface ShipperStateRef {
     countryId?: number
 }
 
-export interface ShipperBankRef {
-    id: number
-    bankCode?: string
-    bankName: string
-    status?: string
-}
-
 export interface ShipperServiceablePincode {
     id: number
     countryId?: number
@@ -47,9 +40,6 @@ export interface Shipper {
     mobile: string | null
     aadhaarNo: string | null
     panNo: string | null
-    bankId: number | null
-    bankAccount: string | null
-    bankIfsc: string | null
     firmType: 'GOV' | 'NON_GOV' | string | null
     createdAt?: string
     updatedAt?: string
@@ -59,7 +49,6 @@ export interface Shipper {
     deletedById?: number | null
     country?: ShipperCountryRef | null
     state?: ShipperStateRef | null
-    bank?: ShipperBankRef | null
     serviceablePincode?: ShipperServiceablePincode | null
 }
 
@@ -67,17 +56,14 @@ export interface ShipperFormData {
     shipperCode?: string
     shipperName: string
     contactPerson?: string
-    address1?: string
+    address1: string
     address2?: string
-    pinCodeId?: string
+    pinCodeId: string
     telephone?: string
-    email?: string
-    mobile?: string
+    email: string
+    mobile: string
     aadhaarNo?: string
     panNo?: string
-    bankId?: number
-    bankAccount?: string
-    bankIfsc?: string
     firmType?: 'GOV' | 'NON_GOV' | string
 }
 

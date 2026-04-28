@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit, FilePlus, FileUp, Filter, RefreshCw, Trash2 } from "lucide-react";
+import { Edit, FilePlus, FileDown, Filter, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { cn } from "@/lib/utils";
 import { rateService } from "@/services/masters/rate-service";
 import type { RateMaster } from "@/types/masters/rate";
-import { PermissionGuard } from "@/components/auth/permission-guard";
+import { PermissionGuard } from "@/components/auth/permission-guard"
 
 function displayName(value?: { code?: string; name?: string } | { productCode?: string; productName?: string } | null, fallback = "—") {
   if (!value) return fallback;
@@ -200,19 +200,9 @@ export default function RateMasterPage() {
               onClick={() => exportMutation.mutate()}
               disabled={exportMutation.isPending}
             >
-              <FileUp className="h-4 w-4" />
+              <FileDown className="h-4 w-4" />
             </Button>
           </PermissionGuard>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-primary"
-            onClick={() => queryClient.refetchQueries({ queryKey: ["rate-masters"], type: "active" })}
-            title="Refresh"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
         </div>
         <Button
           type="button"

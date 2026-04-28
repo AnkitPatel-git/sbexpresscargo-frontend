@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Edit, Trash2, FileUp, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, Filter, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils"
 import { stateService } from "@/services/masters/state-service"
 import { State } from "@/types/masters/state"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
 
 function SortArrows() {
@@ -167,18 +168,14 @@ export default function StatesPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["states"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                     <PermissionGuard permission="master.state.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
-                            <FilePlus className="h-4 w-4" />
-                        </Button>
+                        <MasterExcelImportButton master="states" label="States" queryKey={["states"]} />
                     </PermissionGuard>
                     </div>
                 <PermissionGuard permission="master.state.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add State">
-                        <FilePlus className="mr-1 h-4 w-4" /> Add State
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add State
                     </Button>
                 </PermissionGuard>
             </div>

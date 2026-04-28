@@ -158,7 +158,7 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             control={form.control}
                             name="vendorId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Vendor*">
+                                <FloatingFormItem required label="Vendor*">
                                     <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -181,7 +181,7 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             control={form.control}
                             name="serviceMapId"
                             render={({ field }) => (
-                                <FloatingFormItem label="Service Map*">
+                                <FloatingFormItem required label="Service Map*">
                                     <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -207,7 +207,7 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                                 control={form.control}
                                 name="environment"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Environment*">
+                                    <FloatingFormItem required label="Environment*">
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>

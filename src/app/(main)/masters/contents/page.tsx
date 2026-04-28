@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, FileDown, Filter, RefreshCw, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, FileUp, Filter, FilePlus, Download } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -32,40 +32,46 @@ import { contentService } from "@/services/masters/content-service"
 import { Content } from "@/types/masters/content"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
-
-function contentCountryLabel(c: Content): string {
-    const x = c.country
-    if (x == null) return "-"
-    if (typeof x === "string") return x || "-"
-    return x.name ?? "-"
-}
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function ContentsPage() {
     const queryClient = useQueryClient()
     const router = useRouter()
     const [page, setPage] = useState(1)
     const [limit] = useState(10)
-    const defaultFilters = { search: "", code: "", name: "", hsn: "", country: "" }
+    const defaultFilters = { search: "", code: "", name: "", hsn: "" }
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("contentCode")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
+    const importFileInputRef = useRef<HTMLInputElement | null>(null)
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
+    const [importOpen, setImportOpen] = useState(false)
+    const [importFile, setImportFile] = useState<File | null>(null)
+    const [importSummary, setImportSummary] = useState<{
+        created: number
+        failed: number
+        failures: Array<{ row: number; message: string }>
+        successes: Array<{ row: number; contentCode: string }>
+    } | null>(null)
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false)
 
     useEffect(() => {
         if (filtersOpen) setDraftFilters(appliedFilters)
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["contents", page, debouncedSearch],
+        queryKey: ["contents", page, debouncedSearch, sortBy, sortOrder],
         queryFn: () =>
             contentService.getContents({
                 page,
                 limit,
                 search: debouncedSearch,
-                sortBy: "contentCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
             }),
     })
 
@@ -76,8 +82,8 @@ export default function ContentsPage() {
         try {
             const { blob, filename } = await contentService.exportContents({
                 search: debouncedSearch,
-                sortBy: "contentCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement("a")
@@ -92,6 +98,41 @@ export default function ContentsPage() {
             setExporting(false)
         }
     }
+
+    async function handleDownloadImportTemplate() {
+        setDownloadingTemplate(true)
+        try {
+            const { blob, filename } = await contentService.downloadImportTemplate()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to download template")
+        } finally {
+            setDownloadingTemplate(false)
+        }
+    }
+
+    const importMutation = useMutation({
+        mutationFn: (file: File) => contentService.importContentsFromExcel(file),
+        onSuccess: (summary) => {
+            setImportSummary(summary)
+            setImportFile(null)
+            if (importFileInputRef.current) importFileInputRef.current.value = ""
+            queryClient.invalidateQueries({ queryKey: ["contents"] })
+            if (summary.failed > 0) {
+                toast.warning(`Imported ${summary.created} contents, ${summary.failed} failed`)
+            } else {
+                toast.success(`Imported ${summary.created} contents`)
+            }
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Failed to import contents")
+        },
+    })
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => contentService.deleteContent(id),
@@ -124,16 +165,28 @@ export default function ContentsPage() {
         }
     }
 
+    const onImportDialogOpenChange = (open: boolean) => {
+        setImportOpen(open)
+        if (!open) {
+            setImportFile(null)
+            setImportSummary(null)
+            if (importFileInputRef.current) importFileInputRef.current.value = ""
+        }
+    }
+
+    const onPickImportFile = (fileList: FileList | null) => {
+        setImportFile(fileList?.[0] ?? null)
+        setImportSummary(null)
+    }
+
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
     const filteredRows =
         data?.data.filter((content) => {
-            const countryName = contentCountryLabel(content)
             if (appliedFilters.code && !(content.contentCode || "").toLowerCase().includes(appliedFilters.code.toLowerCase())) return false
             if (appliedFilters.name && !(content.contentName || "").toLowerCase().includes(appliedFilters.name.toLowerCase())) return false
             if (appliedFilters.hsn && !(content.hsnCode || "").toLowerCase().includes(appliedFilters.hsn.toLowerCase())) return false
-            if (appliedFilters.country && !countryName.toLowerCase().includes(appliedFilters.country.toLowerCase())) return false
             return true
         }) ?? []
 
@@ -148,6 +201,15 @@ export default function ContentsPage() {
         setAppliedFilters(defaultFilters)
         setPage(1)
         setFiltersOpen(false)
+    }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
     }
 
     return (
@@ -170,7 +232,6 @@ export default function ContentsPage() {
                                 <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
                                 <Input placeholder="Content Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
                                 <Input placeholder="HSN Code" className="h-9 bg-background" value={draftFilters.hsn} onChange={(e) => setDraftFilters((prev) => ({ ...prev, hsn: e.target.value }))} />
-                                <Input placeholder="Country" className="h-9 bg-background" value={draftFilters.country} onChange={(e) => setDraftFilters((prev) => ({ ...prev, country: e.target.value }))} />
                             </div>
                             <DialogFooter className="gap-2 sm:gap-2">
                                 <Button type="button" variant="outline" onClick={resetFilters}>Reset</Button>
@@ -178,10 +239,6 @@ export default function ContentsPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["contents"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
-                    <PermissionGuard permission="master.content.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}><FilePlus className="h-4 w-4" /></Button>
-                    </PermissionGuard>
                     <PermissionGuard permission="master.content.read">
                         <Button
                             type="button"
@@ -195,35 +252,35 @@ export default function ContentsPage() {
                             <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["contents"], type: "active" })}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
                 <PermissionGuard permission="master.content.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}><FilePlus className="mr-1 h-4 w-4" />Add Content</Button>
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Content
+                    </Button>
                 </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[800px] border-0">
+                <Table className="min-w-[700px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground">Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Content Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">HSN Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Country <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Code" field="contentCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Content Name" field="contentName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="HSN Code" field="hsnCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Loading contents...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">Loading contents...</TableCell></TableRow>
                         ) : filteredRows.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No contents found.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No contents found.</TableCell></TableRow>
                         ) : (
                             filteredRows.map((content: Content, index) => (
                                 <TableRow key={content.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{content.contentCode}</TableCell>
                                     <TableCell className="font-medium text-foreground">{content.contentName}</TableCell>
                                     <TableCell className="text-foreground">{content.hsnCode || "-"}</TableCell>
-                                    <TableCell className="text-foreground">{contentCountryLabel(content)}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">
                                             <PermissionGuard permission="master.content.update">
@@ -250,6 +307,59 @@ export default function ContentsPage() {
                     <Button variant="outline" size="sm" className="h-8 min-w-8 px-2" disabled={!data || page >= (data.meta?.totalPages || 1)} onClick={() => setPage(data?.meta?.totalPages ?? 1)}>»</Button>
                 </div>
             </div>
+            <Dialog open={importOpen} onOpenChange={onImportDialogOpenChange}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Import Contents</DialogTitle>
+                        <DialogDescription>Upload an Excel file using the content import template.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-9"
+                            disabled={downloadingTemplate}
+                            onClick={() => void handleDownloadImportTemplate()}
+                        >
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Template
+                        </Button>
+                        <Input
+                            ref={importFileInputRef}
+                            type="file"
+                            accept=".xlsx,.xls"
+                            className="h-9 bg-background"
+                            onChange={(e) => onPickImportFile(e.target.files)}
+                        />
+                        {importSummary ? (
+                            <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+                                <p className="font-medium text-foreground">
+                                    Created {importSummary.created}; Failed {importSummary.failed}
+                                </p>
+                                {importSummary.failures.length > 0 ? (
+                                    <div className="mt-2 max-h-32 overflow-auto text-muted-foreground">
+                                        {importSummary.failures.slice(0, 5).map((failure) => (
+                                            <p key={`${failure.row}-${failure.message}`}>
+                                                Row {failure.row}: {failure.message}
+                                            </p>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
+                        ) : null}
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-2">
+                        <Button type="button" variant="outline" onClick={() => onImportDialogOpenChange(false)}>Close</Button>
+                        <Button
+                            type="button"
+                            disabled={!importFile || importMutation.isPending}
+                            onClick={() => importFile && importMutation.mutate(importFile)}
+                        >
+                            Upload
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

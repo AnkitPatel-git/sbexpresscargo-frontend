@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, ChevronUp, Edit, FilePlus, Filter, Loader2, RefreshCw, Trash2 } from "lucide-react"
+import { Edit, FilePlus, Filter, Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +44,7 @@ import { serviceMapService } from "@/services/masters/service-map-service"
 import { vendorConfigService } from "@/services/masters/vendor-config-service"
 import { vendorService } from "@/services/masters/vendor-service"
 import { VendorConfig } from "@/types/masters/vendor-config"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function VendorConfigPage() {
     const router = useRouter()
@@ -63,18 +65,22 @@ export default function VendorConfigPage() {
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("vendorId")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     useEffect(() => {
         if (filtersOpen) setDraftFilters(appliedFilters)
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["vendor-configs", page, limit, debouncedSearch, appliedFilters.vendorId, appliedFilters.serviceMapId, appliedFilters.customerId, appliedFilters.environment, appliedFilters.isActive],
+        queryKey: ["vendor-configs", page, limit, debouncedSearch, appliedFilters.vendorId, appliedFilters.serviceMapId, appliedFilters.customerId, appliedFilters.environment, appliedFilters.isActive, sortBy, sortOrder],
         queryFn: () =>
             vendorConfigService.getVendorConfigs({
                 page,
                 limit,
                 search: debouncedSearch,
+                sortBy,
+                sortOrder,
                 vendorId: appliedFilters.vendorId === "all" ? undefined : Number(appliedFilters.vendorId),
                 serviceMapId: appliedFilters.serviceMapId === "all" ? undefined : Number(appliedFilters.serviceMapId),
                 customerId: appliedFilters.customerId === "all" ? undefined : Number(appliedFilters.customerId),
@@ -133,6 +139,15 @@ export default function VendorConfigPage() {
         setAppliedFilters(defaultFilters)
         setPage(1)
         setFiltersOpen(false)
+    }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
     }
 
     return (
@@ -208,35 +223,38 @@ export default function VendorConfigPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => queryClient.refetchQueries({ queryKey: ["vendor-configs"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                     <PermissionGuard permission="master.vendor_config.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={handleCreate}>
-                            <FilePlus className="h-4 w-4" />
-                        </Button>
+                        <MasterExcelImportButton master="vendor-config" label="Vendor Configs" queryKey={["vendor-configs"]} />
                     </PermissionGuard>
                 </div>
+
                 <PermissionGuard permission="master.vendor_config.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate}>
-                        <FilePlus className="mr-1 h-4 w-4" />
-                        Add Config
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
+                        Add Vendor Config
                     </Button>
                 </PermissionGuard>
             </div>
-
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1160px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground">
-                                Vendor <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" />
+                                <SortableColumnHeader label="Vendor" field="vendorId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Service Map</TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Environment</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Service Map" field="serviceMapId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Customer" field="customerId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Environment" field="environment" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Base URL</TableHead>
-                            <TableHead className="font-semibold text-primary-foreground text-center">Active</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground text-center">
+                                <SortableColumnHeader label="Active" field="isActive" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="justify-center" />
+                            </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
 

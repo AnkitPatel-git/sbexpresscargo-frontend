@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, RefreshCw, FilePlus, FileUp, Filter, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FilePlus, FileDown, Filter } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -28,20 +28,13 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 
 import { productService } from "@/services/masters/product-service"
 import { Product } from "@/types/masters/product"
 import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
-
-function SortArrows() {
-    return (
-        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-            <ChevronDown className="h-2.5 w-2.5" />
-        </span>
-    )
-}
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function ProductsPage() {
     const router = useRouter()
@@ -53,6 +46,8 @@ export default function ProductsPage() {
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("productCode")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
     useEffect(() => {
@@ -60,14 +55,14 @@ export default function ProductsPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["products", page, debouncedSearch],
+        queryKey: ["products", page, debouncedSearch, sortBy, sortOrder],
         queryFn: () =>
             productService.getProducts({
                 page,
                 limit,
                 search: debouncedSearch,
-                sortBy: "productCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
             }),
     })
 
@@ -78,8 +73,8 @@ export default function ProductsPage() {
         try {
             const { blob, filename } = await productService.exportProducts({
                 search: appliedFilters.search,
-                sortBy: "productCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 productCode: appliedFilters.code || undefined,
                 productName: appliedFilters.name || undefined,
                 productType: appliedFilters.type || undefined,
@@ -153,6 +148,15 @@ export default function ProductsPage() {
         setPage(1)
         setFiltersOpen(false)
     }
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -181,13 +185,8 @@ export default function ProductsPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Refresh" onClick={() => queryClient.refetchQueries({ queryKey: ["products"], type: "active" })}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                     <PermissionGuard permission="master.product.create">
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add" onClick={handleCreate}>
-                            <FilePlus className="h-4 w-4" />
-                        </Button>
+                        <MasterExcelImportButton master="products" label="Products" queryKey={["products"]} />
                     </PermissionGuard>
                     <PermissionGuard permission="master.product.read">
                         <Button
@@ -199,50 +198,30 @@ export default function ProductsPage() {
                             disabled={exporting}
                             onClick={() => void handleExportCsv()}
                         >
-                            <FileUp className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                         </Button>
                     </PermissionGuard>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-primary"
-                        title="Refresh"
-                        onClick={() => queryClient.refetchQueries({ queryKey: ["products"], type: "active" })}
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
                 </div>
 
                 <PermissionGuard permission="master.product.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Product">
-                        <FilePlus className="mr-1 h-4 w-4" />
+                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                        <FilePlus className="h-4 w-4" />
                         Add Product
                     </Button>
                 </PermissionGuard>
             </div>
-
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[640px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground">
-                                <span className="inline-flex items-center">
-                                    Product Code
-                                    <SortArrows />
-                                </span>
+                                <SortableColumnHeader label="Product Code" field="productCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">
-                                <span className="inline-flex items-center">
-                                    Product Name
-                                    <SortArrows />
-                                </span>
+                                <SortableColumnHeader label="Product Name" field="productName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">
-                                <span className="inline-flex items-center">
-                                    Product Type
-                                    <SortArrows />
-                                </span>
+                                <SortableColumnHeader label="Product Type" field="productType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>

@@ -71,7 +71,7 @@ http:
             "actualWeight": 10000,
             "pieces": 1,
             "length": 10,
-            "width": 10,
+            "breadth": 10,
             "height": 10,
             "volumetricWeight": 10000,
             "chargeWeight": 10000,

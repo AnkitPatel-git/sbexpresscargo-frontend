@@ -4,39 +4,39 @@ import { optionalMasterCode } from "@/lib/master-code-schema";
 
 export const pieceItemSchema = z.object({
   contentId: z.number().int().positive("Content is required"),
-  quantity: z.number().optional(),
-  measureValue: z.number().optional(),
+  quantity: z.number().int().optional(),
+  measureValue: z.number().int().optional(),
   measureUnit: z.string().optional(),
-  totalValue: z.number().optional(),
+  totalValue: z.number().int().optional(),
   invoiceDate: z.string().optional(),
   invoiceNumber: z.string().optional(),
 });
 
 export const pieceRowSchema = z.object({
-  actualWeight: z.number().min(0, "Weight must be positive"),
-  pieces: z.number().min(1, "Pieces must be at least 1"),
-  length: z.number().optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  division: z.number().optional(),
-  volumetricWeight: z.number().optional(),
-  chargeWeight: z.number().optional(),
+  actualWeight: z.number().int().min(0, "Weight must be a whole number").optional(),
+  pieces: z.number().int().min(1, "Pieces must be at least 1"),
+  length: z.number().int().optional(),
+  breadth: z.number().int().optional(),
+  height: z.number().int().optional(),
+  division: z.number().int().optional(),
+  volumetricWeight: z.number().int().optional(),
+  chargeWeight: z.number().int().optional(),
   items: z.array(pieceItemSchema).optional(),
 });
 
 export const shipmentChargeSchema = z.object({
   chargeId: z.number().min(1, "Charge is required"),
   description: z.string().optional(),
-  rate: z.number().optional(),
-  amount: z.number().optional(),
+  rate: z.number().int().optional(),
+  amount: z.number().int().optional(),
   fuelApply: z.boolean().default(false),
-  fuelAmount: z.number().optional(),
+  fuelAmount: z.number().int().optional(),
   taxApply: z.boolean().default(false),
   taxOnFuel: z.boolean().default(false),
-  igst: z.number().optional(),
-  cgst: z.number().optional(),
-  sgst: z.number().optional(),
-  total: z.number().optional(),
+  igst: z.number().int().optional(),
+  cgst: z.number().int().optional(),
+  sgst: z.number().int().optional(),
+  total: z.number().int().optional(),
   chargeType: z.string().optional(),
 });
 
@@ -123,14 +123,14 @@ export const shipmentSchema = z.object({
   reversePickup: z.boolean().default(false),
   appointmentDelivery: z.boolean().default(false),
   floorDelivery: z.boolean().default(false),
-  floorCount: z.number().optional(),
-  pieces: z.number().optional(),
-  actualWeight: z.number().optional(),
-  volumetricWeight: z.number().optional(),
-  chargeWeight: z.number().optional(),
-  km: z.number().optional(),
+  floorCount: z.number().int().optional(),
+  pieces: z.number().int().optional(),
+  actualWeight: z.number().int().min(1, "Actual Weight is required"),
+  volumetricWeight: z.number().int().min(1, "Total Vol. Weight is required"),
+  chargeWeight: z.number().int().min(1, "Charge Weight is required"),
+  km: z.number().int().optional(),
   isEdl: z.boolean().default(false),
-  odaEdlDistanceKm: z.number().optional(),
+  odaEdlDistanceKm: z.number().int().optional(),
   commercial: z.boolean().default(false),
   paymentType: z.string().optional(),
   currency: z.string().optional(),
@@ -138,19 +138,19 @@ export const shipmentSchema = z.object({
   serviceCenterId: z.number().optional(),
   serviceMapId: z.number().optional(),
   vendorId: z.number().optional(),
-  cashReceiptNo: z.number().optional(),
-  amountReceived: z.number().optional(),
-  balanceAmount: z.number().optional(),
+  cashReceiptNo: z.number().int().optional(),
+  amountReceived: z.number().int().optional(),
+  balanceAmount: z.number().int().optional(),
   cashReceiptDate: z.string().optional(),
-  contractCharges: z.number().optional(),
-  otherCharges: z.number().optional(),
-  subTotal: z.number().optional(),
-  totalFuel: z.number().optional(),
-  igst: z.number().optional(),
-  cgst: z.number().optional(),
-  sgst: z.number().optional(),
-  totalAmount: z.number().optional(),
-  medicalCharges: z.number().optional(),
+  contractCharges: z.number().int().optional(),
+  otherCharges: z.number().int().optional(),
+  subTotal: z.number().int().optional(),
+  totalFuel: z.number().int().optional(),
+  igst: z.number().int().optional(),
+  cgst: z.number().int().optional(),
+  sgst: z.number().int().optional(),
+  totalAmount: z.number().int().optional(),
+  medicalCharges: z.number().int().optional(),
   manifestNo: z.string().optional(),
   manifestDate: z.string().optional(),
   invoiceNo: z.string().optional(),
@@ -158,7 +158,7 @@ export const shipmentSchema = z.object({
   creditNoteNo: z.string().optional(),
   flightNo: z.string().optional(),
   isCod: z.boolean().default(false),
-  codAmount: z.number().optional(),
+  codAmount: z.number().int().optional(),
   piecesRows: z.array(pieceRowSchema).optional(),
   charges: z.array(shipmentChargeSchema).optional(),
 }).superRefine((values, ctx) => {
@@ -179,6 +179,21 @@ export const shipmentSchema = z.object({
       })
     }
   })
+
+  const totalPieceVolumetricWeight = Math.round(
+    (values.piecesRows ?? []).reduce(
+      (sum, row) => sum + (Number(row.volumetricWeight) || 0),
+      0,
+    ),
+  )
+  const enteredVolumetricWeight = Math.round(Number(values.volumetricWeight) || 0)
+  if (enteredVolumetricWeight < totalPieceVolumetricWeight) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["volumetricWeight"],
+      message: `Total Vol. Weight cannot be lower than piece volumetric total (${totalPieceVolumetricWeight})`,
+    })
+  }
 
   const requireFields = (
     block: Record<string, unknown> | undefined,
@@ -203,7 +218,6 @@ export const shipmentSchema = z.object({
     ["shipperName", "Company Name"],
     ["contactPerson", "Contact Person Name"],
     ["mobile", "Mobile No."],
-    ["telephone", "Telephone"],
     ["email", "E-Mail"],
     ["address1", "Address"],
     ["pinCode", "Pincode"],
@@ -213,7 +227,6 @@ export const shipmentSchema = z.object({
     ["name", "Company Name"],
     ["contactPerson", "Contact Person Name"],
     ["mobile", "Mobile No."],
-    ["telephone", "Telephone"],
     ["email", "E-Mail"],
     ["address1", "Address"],
     ["pinCode", "Pincode"],
@@ -232,6 +245,54 @@ export const shipmentSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["toZoneId"],
       message: "To Zone is required",
+    })
+  }
+
+  if (values.isEdl && (!values.odaEdlDistanceKm || values.odaEdlDistanceKm <= 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["odaEdlDistanceKm"],
+      message: "EDL distance is required when ODA/EDL is checked",
+    })
+  }
+
+  if (values.floorDelivery && (!values.floorCount || values.floorCount <= 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["floorCount"],
+      message: "Floor Count is required when Floor Delivery is checked",
+    })
+  }
+
+  if (!values.serviceCenterId || values.serviceCenterId <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["serviceCenterId"],
+      message: "Service Center is required",
+    })
+  }
+
+  if (values.shipmentTotalValue == null || Number(values.shipmentTotalValue) < 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["shipmentTotalValue"],
+      message: "Booking Total Value is required",
+    })
+  }
+
+  if (values.km == null || Number(values.km) <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["km"],
+      message: "Total Distance is required",
+    })
+  }
+
+  if (values.isCod && (!values.codAmount || values.codAmount <= 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["codAmount"],
+      message: "COD Amount is required when COD is checked",
     })
   }
 });
@@ -465,6 +526,9 @@ export interface ShipmentFormPayload extends ShipmentFormValues {
 
 export interface ShipmentCalculateRow {
   type: "RATE_CHARGE" | "CONDITION" | string;
+  sequence?: number;
+  chargeId?: number | null;
+  chargeType?: string | null;
   name: string;
   amount: number;
   calculationBase?: string;

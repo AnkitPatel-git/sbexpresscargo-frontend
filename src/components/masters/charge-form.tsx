@@ -117,7 +117,7 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FloatingFormItem label="Charge Name">
+              <FloatingFormItem required label="Charge Name">
                 <FormControl>
                   <Input placeholder="e.g. Freight Charge" {...field} className={FLOATING_INNER_CONTROL} />
                 </FormControl>
@@ -128,7 +128,7 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
             control={form.control}
             name="sequence"
             render={({ field }) => (
-              <FloatingFormItem label="Sequence">
+              <FloatingFormItem required label="Sequence">
                 <FormControl>
                   <Input
                     type="number"
@@ -145,7 +145,7 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
             control={form.control}
             name="applyFuel"
             render={({ field }) => (
-              <FloatingFormItem label="Apply Fuel">
+              <FloatingFormItem required label="Apply Fuel">
                 <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                   <FormControl>
                     <Checkbox checked={field.value ?? false} onCheckedChange={(value) => field.onChange(Boolean(value))} />
