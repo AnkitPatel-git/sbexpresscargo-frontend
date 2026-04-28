@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { CustomerForm } from "@/components/masters/customer-form"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
@@ -26,7 +27,9 @@ export default function CreateCustomerPage() {
                 </div>
             </div>
 
-            <CustomerForm />
+            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading customer form...</div>}>
+                <CustomerForm />
+            </Suspense>
         </div>
     )
 }
