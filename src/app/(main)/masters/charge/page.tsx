@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
@@ -38,7 +37,6 @@ export default function ChargePage() {
     search: "",
     code: "",
     name: "",
-    applyFuel: "all",
   });
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -46,8 +44,6 @@ export default function ChargePage() {
   useEffect(() => {
     if (filtersOpen) setDraftFilters(appliedFilters);
   }, [appliedFilters, filtersOpen]);
-
-  const parseBooleanFilter = (value: string): boolean | undefined => (value === "all" ? undefined : value === "true");
 
   const listParams = {
     page,
@@ -57,7 +53,6 @@ export default function ChargePage() {
     sortOrder: "asc" as const,
     code: appliedFilters.code || undefined,
     name: appliedFilters.name || undefined,
-    applyFuel: parseBooleanFilter(appliedFilters.applyFuel),
   };
 
   const exportParams = {
@@ -66,7 +61,6 @@ export default function ChargePage() {
     sortOrder: "asc" as const,
     code: appliedFilters.code || undefined,
     name: appliedFilters.name || undefined,
-    applyFuel: parseBooleanFilter(appliedFilters.applyFuel),
   };
 
   const { data, isLoading } = useQuery({
@@ -108,7 +102,7 @@ export default function ChargePage() {
   const to = Math.min(page * limit, total);
   const rows = data?.data ?? [];
 
-  const defaultFilters = { search: "", code: "", name: "", applyFuel: "all" };
+  const defaultFilters = { search: "", code: "", name: "" };
 
   const applyFilters = () => {
     setAppliedFilters(draftFilters);
@@ -164,19 +158,6 @@ export default function ChargePage() {
                     onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Apply fuel</label>
-                  <Select value={draftFilters.applyFuel} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, applyFuel: value }))}>
-                    <SelectTrigger className="h-9 w-full bg-background">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="true">Yes</SelectItem>
-                      <SelectItem value="false">No</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               <DialogFooter className="gap-2 sm:gap-2">
                 <Button type="button" variant="outline" onClick={resetFilters}>
@@ -214,13 +195,14 @@ export default function ChargePage() {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
-        <Table className="min-w-[800px] border-0">
+        <Table className="min-w-[960px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
               <TableHead className="font-semibold text-primary-foreground">ID</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Code</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Name</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Apply fuel</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">State scope</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Pincode scope</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Sequence</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Version</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
@@ -229,13 +211,13 @@ export default function ChargePage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   Loading charges…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   No charges found.
                 </TableCell>
               </TableRow>
@@ -245,7 +227,16 @@ export default function ChargePage() {
                   <TableCell className="font-medium">{charge.id}</TableCell>
                   <TableCell className="font-medium text-foreground">{charge.code}</TableCell>
                   <TableCell className="text-foreground">{charge.name}</TableCell>
-                  <TableCell className="text-foreground">{charge.applyFuel ? "Yes" : "No"}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-foreground" title={charge.stateApplicationMode}>
+                    {charge.stateApplicationMode === "ALL"
+                      ? "All"
+                      : `${charge.stateApplicationMode} (${charge.applicableStates?.length ?? 0})`}
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-foreground" title={charge.pincodeApplicationMode}>
+                    {charge.pincodeApplicationMode === "ALL"
+                      ? "All"
+                      : `${charge.pincodeApplicationMode} (${charge.applicablePincodes?.length ?? 0})`}
+                  </TableCell>
                   <TableCell className="text-center text-foreground">{charge.sequence}</TableCell>
                   <TableCell className="text-center text-foreground">{charge.version}</TableCell>
                   <TableCell>

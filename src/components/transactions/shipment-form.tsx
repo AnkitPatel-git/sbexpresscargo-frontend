@@ -107,17 +107,6 @@ type ForwardingRow = {
     forwardingAwb: string
     deliveryVendorId: number
     deliveryServiceMapId: number
-    vendorWeight: number
-    vendorAmount: number
-    vendorInvoice: string
-    contractCharges: number
-    otherCharges: number
-    subTotal: number
-    totalFuel: number
-    igst: number
-    cgst: number
-    sgst: number
-    totalAmount: number
 }
 
 type KycRow = {
@@ -352,22 +341,16 @@ const normalizeShipmentCalculatePayload = (values: ShipmentFormValues): Shipment
     return payload
 }
 
-const normalizeForwardingPayload = (values: ForwardingRow) => ({
-    forwardingAwb: values.forwardingAwb?.trim() || undefined,
-    deliveryVendorId: normalizePositiveNumberValue(values.deliveryVendorId),
-    deliveryServiceMapId: normalizePositiveNumberValue(values.deliveryServiceMapId),
-    vendorWeight: normalizeNumberValue(values.vendorWeight),
-    vendorAmount: normalizeNumberValue(values.vendorAmount),
-    vendorInvoice: values.vendorInvoice?.trim() || undefined,
-    contractCharges: normalizeNumberValue(values.contractCharges),
-    otherCharges: normalizeNumberValue(values.otherCharges),
-    subTotal: normalizeNumberValue(values.subTotal),
-    totalFuel: normalizeNumberValue(values.totalFuel),
-    igst: normalizeNumberValue(values.igst),
-    cgst: normalizeNumberValue(values.cgst),
-    sgst: normalizeNumberValue(values.sgst),
-    totalAmount: normalizeNumberValue(values.totalAmount),
-})
+const normalizeForwardingPayload = (values: ForwardingRow, awbVendorId: number) => {
+    const awb = Number(awbVendorId) || 0
+    const resolvedVendor =
+        values.deliveryVendorId > 0 ? values.deliveryVendorId : awb > 0 ? awb : 0
+    return {
+        forwardingAwb: values.forwardingAwb.trim(),
+        deliveryVendorId: resolvedVendor > 0 ? resolvedVendor : null,
+        deliveryServiceMapId: values.deliveryServiceMapId > 0 ? values.deliveryServiceMapId : null,
+    }
+}
 
 const buildPreviewFromSavedShipment = (shipment?: Shipment | null): ShipmentCalculateResponse | null => {
     if (!shipment) return null
@@ -699,24 +682,18 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         initialData ? { id: initialData.id, version: initialData.version } : null
     )
     const [isAwbStepComplete, setIsAwbStepComplete] = useState(Boolean(initialData))
-    const [isForwardingStepComplete, setIsForwardingStepComplete] = useState(Boolean(initialData?.forwarding))
+    const [isForwardingStepComplete, setIsForwardingStepComplete] = useState(() => {
+        const awbV = Number(initialData?.vendorId) || 0
+        const fwdV = Number(initialData?.forwarding?.deliveryVendorId) || 0
+        const hasVendor = fwdV > 0 || awbV > 0
+        return Boolean(initialData?.forwarding?.forwardingAwb?.trim()) && hasVendor
+    })
     const [forwardingForm, setForwardingForm] = useState<ForwardingRow>(() => {
         const existing = initialData?.forwarding
         return {
             forwardingAwb: existing?.forwardingAwb || "",
             deliveryVendorId: existing?.deliveryVendorId || 0,
             deliveryServiceMapId: existing?.deliveryServiceMapId || 0,
-            vendorWeight: Number(existing?.vendorWeight || 0),
-            vendorAmount: Number(existing?.vendorAmount || 0),
-            vendorInvoice: existing?.vendorInvoice || "",
-            contractCharges: Number(existing?.contractCharges || 0),
-            otherCharges: Number(existing?.otherCharges || 0),
-            subTotal: Number(existing?.subTotal || 0),
-            totalFuel: Number(existing?.totalFuel || 0),
-            igst: Number(existing?.igst || 0),
-            cgst: Number(existing?.cgst || 0),
-            sgst: Number(existing?.sgst || 0),
-            totalAmount: Number(existing?.totalAmount || 0),
         }
     })
     const [kycRows, setKycRows] = useState<KycRow[]>([
@@ -802,12 +779,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         queryKey: ['vendors-list', debouncedVendorSearch],
         queryFn: () => vendorService.getVendors({ limit: 10, search: debouncedVendorSearch || undefined }),
     })
-
-    const { data: serviceMapsData } = useQuery({
-        queryKey: ['service-maps-list', forwardingForm.deliveryVendorId, debouncedServiceMapSearch],
-        queryFn: () => serviceMapService.getServiceMaps({ limit: 10, search: debouncedServiceMapSearch || undefined, vendorId: forwardingForm.deliveryVendorId || undefined }),
-    })
-
 
     const contentsQuery = useQuery({
         queryKey: ['shipment-content-options', debouncedContentSearch],
@@ -916,6 +887,31 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const form = useForm<ShipmentFormValues>({
         resolver: zodResolver(shipmentSchema) as Resolver<ShipmentFormValues>,
         defaultValues: buildShipmentFormValues(initialData),
+    })
+
+    const awbTabVendorId = form.watch("vendorId")
+
+    const { data: serviceMapsData } = useQuery({
+        queryKey: [
+            "service-maps-list",
+            forwardingForm.deliveryVendorId,
+            awbTabVendorId,
+            debouncedServiceMapSearch,
+        ],
+        queryFn: () => {
+            const awbVid = awbTabVendorId ?? 0
+            const vid =
+                forwardingForm.deliveryVendorId > 0
+                    ? forwardingForm.deliveryVendorId
+                    : awbVid > 0
+                      ? awbVid
+                      : 0
+            return serviceMapService.getServiceMaps({
+                limit: 10,
+                search: debouncedServiceMapSearch || undefined,
+                vendorId: vid > 0 ? vid : undefined,
+            })
+        },
     })
 
     const { fields: pieceFields, append: appendPiece, remove: removePiece } = useFieldArray({
@@ -1516,9 +1512,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             if (!savedShipment?.id || !savedShipment.version) {
                 throw new Error('Please create shipment booking first')
             }
+            const awbVendorId = Number(form.getValues("vendorId")) || 0
             return shipmentService.upsertForwarding(savedShipment.id, {
                 version: Number(savedShipment.version),
-                ...normalizeForwardingPayload(forwardingForm),
+                ...normalizeForwardingPayload(forwardingForm, awbVendorId),
             })
         },
         onSuccess: (response) => {
@@ -1605,8 +1602,32 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         setForwardingForm((prev) => ({ ...prev, ...patch }))
     }
 
+    const awbVendorIdNum = Number(awbTabVendorId) || 0
+    const effectiveForwardingVendorId =
+        forwardingForm.deliveryVendorId > 0 ? forwardingForm.deliveryVendorId : awbVendorIdNum
+
+    const previewShipmentId = savedShipment?.id
+    const forwardingRatePreview = useQuery({
+        queryKey: [
+            'forwarding-rate-preview',
+            previewShipmentId,
+            effectiveForwardingVendorId,
+            watchedProductId,
+        ],
+        queryFn: () =>
+            shipmentService.getForwardingRatePreview(
+                previewShipmentId!,
+                effectiveForwardingVendorId,
+            ),
+        enabled:
+            Boolean(previewShipmentId) &&
+            effectiveForwardingVendorId > 0 &&
+            normalizeMasterSelectId(watchedProductId) > 0,
+        staleTime: 30_000,
+    })
+
     const forwardingServiceOptions = sanitizeArray(serviceMapsData?.data)
-        .filter((sm) => sm.vendorId === forwardingForm.deliveryVendorId)
+        .filter((sm) => sm.vendorId === effectiveForwardingVendorId)
         .map((sm) => ({
             label: `${sm.serviceType} (${sm.id})`,
             value: sm.id,
@@ -1649,8 +1670,17 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     }
 
     const handleForwardingNext = async () => {
-        if (!forwardingForm.deliveryVendorId || !forwardingForm.deliveryServiceMapId) {
-            toast.error('Please select forwarding vendor and service')
+        if (!forwardingForm.forwardingAwb.trim()) {
+            toast.error("Forwarding AWB is required")
+            return
+        }
+        const awbVendorId = Number(form.getValues("vendorId")) || 0
+        const effectiveVendorId =
+            forwardingForm.deliveryVendorId > 0 ? forwardingForm.deliveryVendorId : awbVendorId
+        if (effectiveVendorId <= 0) {
+            toast.error(
+                "Vendor is required for forwarding. Set vendor on the AWB step or select a delivery vendor here.",
+            )
             return
         }
         forwardingMutation.mutate()
@@ -2852,14 +2882,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     <TabsContent value="forwarding">
                         <OutlinedFormSection label="Forwarding Details" labelTone="navy">
                             <div className="grid grid-cols-1 gap-3 pt-2 md:grid-cols-2 xl:grid-cols-3">
-                                <FloatingFormItem label="Forwarding AWB">
+                                <FloatingFormItem required label="Forwarding AWB*">
                                     <Input
                                         className={FLOATING_INNER_CONTROL}
                                         value={forwardingForm.forwardingAwb}
                                         onChange={(e) => updateForwardingForm({ forwardingAwb: e.target.value })}
+                                        placeholder="Partner / linehaul AWB"
                                     />
                                 </FloatingFormItem>
-                                <FloatingFormItem required label="Vendor">
+                                <FloatingFormItem required label="Vendor*">
                                     <Combobox
                                         options={vendorComboboxOptions}
                                         value={forwardingForm.deliveryVendorId}
@@ -2869,124 +2900,61 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 deliveryServiceMapId: 0,
                                             })
                                         }
-                                        placeholder="Select vendor"
+                                        placeholder="Select vendor (or set on AWB)"
                                         searchPlaceholder="Search vendor..."
                                         searchValue={vendorSearch}
                                         onSearchValueChange={setVendorSearch}
                                         className={FLOATING_INNER_COMBO}
                                     />
                                 </FloatingFormItem>
-                                <FloatingFormItem required label="Service">
+                                <FloatingFormItem label="Service (optional)">
                                     <Combobox
                                         options={forwardingServiceOptions}
                                         value={forwardingForm.deliveryServiceMapId}
                                         onChange={(val) => updateForwardingForm({ deliveryServiceMapId: Number(val) || 0 })}
-                                        placeholder={forwardingForm.deliveryVendorId > 0 ? "Select service" : "Select vendor first"}
+                                        placeholder={
+                                            effectiveForwardingVendorId > 0 ? "Select service" : "Select vendor on AWB or above"
+                                        }
                                         searchPlaceholder="Search service..."
                                         searchValue={serviceMapSearch}
                                         onSearchValueChange={setServiceMapSearch}
                                         className={FLOATING_INNER_COMBO}
                                     />
                                 </FloatingFormItem>
-                                <FloatingFormItem label="Vendor Weight">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.vendorWeight)}
-                                        onChange={(e) => updateForwardingForm({ vendorWeight: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="Vendor Amount">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.vendorAmount)}
-                                        onChange={(e) => updateForwardingForm({ vendorAmount: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="Vendor Invoice">
-                                    <Input
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={forwardingForm.vendorInvoice}
-                                        onChange={(e) => updateForwardingForm({ vendorInvoice: e.target.value })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="Contract Charges">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.contractCharges)}
-                                        onChange={(e) => updateForwardingForm({ contractCharges: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="Other Charges">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.otherCharges)}
-                                        onChange={(e) => updateForwardingForm({ otherCharges: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="Sub Total">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.subTotal)}
-                                        onChange={(e) => updateForwardingForm({ subTotal: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="Total Fuel">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.totalFuel)}
-                                        onChange={(e) => updateForwardingForm({ totalFuel: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="IGST">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.igst)}
-                                        onChange={(e) => updateForwardingForm({ igst: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="CGST">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.cgst)}
-                                        onChange={(e) => updateForwardingForm({ cgst: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="SGST">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={numberInputValue(forwardingForm.sgst)}
-                                        onChange={(e) => updateForwardingForm({ sgst: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="Total Amount">
-                                    <Input
-                                        type="number"
-                                                        min="0"
-                                        className={FLOATING_INNER_CONTROL}
-                                        value={forwardingForm.totalAmount || 0}
-                                        onChange={(e) => updateForwardingForm({ totalAmount: parseOptionalNumberInput(e.target.value) || 0 })}
-                                    />
-                                </FloatingFormItem>
                             </div>
-                            <p className="pt-2 text-xs text-muted-foreground">Forwarding details are saved after shipment booking save/update.</p>
+                            <p className="pt-2 text-xs text-muted-foreground">
+                                Forwarding AWB and a vendor are required (vendor on this tab or on the AWB step). Service
+                                map is optional. Details are saved after shipment booking save/update.
+                            </p>
+                            {previewShipmentId && effectiveForwardingVendorId > 0 ? (
+                                <div className="mt-3 rounded-md border border-border/70 bg-muted/15 p-3 text-xs">
+                                    <p className="mb-1 font-medium text-foreground">Rate preview (saved booking)</p>
+                                    {forwardingRatePreview.isPending ? (
+                                        <p className="text-muted-foreground">Loading customer vs vendor totals…</p>
+                                    ) : null}
+                                    {forwardingRatePreview.isError ? (
+                                        <p className="text-destructive">
+                                            {getErrorMessage(forwardingRatePreview.error, 'Could not load rate preview')}
+                                        </p>
+                                    ) : null}
+                                    {forwardingRatePreview.data?.data ? (
+                                        <div className="mt-1 space-y-0.5 text-muted-foreground">
+                                            <p>
+                                                <span className="text-foreground/80">Customer (AWB contract):</span>{' '}
+                                                {forwardingRatePreview.data.data.customerQuote.totalAmount}
+                                            </p>
+                                            <p>
+                                                <span className="text-foreground/80">Vendor (buy contract):</span>{' '}
+                                                {forwardingRatePreview.data.data.vendorQuote.totalAmount}
+                                            </p>
+                                            <p>
+                                                <span className="text-foreground/80">Difference (customer − vendor):</span>{' '}
+                                                {forwardingRatePreview.data.data.profit}
+                                            </p>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : null}
                         </OutlinedFormSection>
                     </TabsContent>
 

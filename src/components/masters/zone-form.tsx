@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect } from "react"
 import { useRouter } from 'next/navigation'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from 'sonner'
-import { Check, Loader2, Search } from 'lucide-react'
-import { cn } from "@/lib/utils"
+import { Loader2 } from "lucide-react"
 import {
     Form,
     FormControl,
@@ -16,23 +15,9 @@ import {
 } from "@/components/ui/form"
 import {
     FloatingFormItem,
-    FLOATING_INNER_COMBO,
     FLOATING_INNER_CONTROL,
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
 import {
     Select,
     SelectContent,
@@ -42,9 +27,9 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { zoneService } from '@/services/masters/zone-service'
-import { countryService } from '@/services/masters/country-service'
-import { Zone, ZoneFormData } from '@/types/masters/zone'
+import { zoneService } from "@/services/masters/zone-service"
+import { Zone, ZoneFormData } from "@/types/masters/zone"
+import { CountryFloatingAsyncSelect } from "@/components/masters/floating-master-async-selects"
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
 const zoneSchema = z.object({
@@ -62,13 +47,6 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
-    const [countryOpen, setCountryOpen] = useState(false)
-
-    const { data: countriesData } = useQuery({
-        queryKey: ['countries-list'],
-        queryFn: () => countryService.getCountries({ limit: 100 }),
-    })
-
     const form = useForm<ZoneFormData>({
         resolver: zodResolver(zoneSchema) as Resolver<ZoneFormData>,
         defaultValues: {
@@ -152,23 +130,12 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         name="countryId"
                         render={({ field }) => (
                             <FloatingFormItem required label="Country*">
-                                <Select
-                                    onValueChange={(val) => field.onChange(parseInt(val))}
-                                    value={field.value ? field.value.toString() : ""}
-                                >
-                                    <FormControl>
-                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select country" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {countriesData?.data?.map((country) => (
-                                            <SelectItem key={country.id} value={country.id.toString()}>
-                                                {country.name} ({country.code})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <CountryFloatingAsyncSelect
+                                    triggerRef={field.ref}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    queryKeyScope={`zone-${String(initialData?.id ?? "new")}`}
+                                />
                             </FloatingFormItem>
                         )}
                     />

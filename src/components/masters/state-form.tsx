@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from "react"
 import { useRouter } from 'next/navigation'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import {
@@ -16,7 +16,6 @@ import {
 import {
     FloatingFormItem,
     FLOATING_INNER_CONTROL,
-    FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -28,9 +27,10 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { stateService } from '@/services/masters/state-service'
-import { countryService } from '@/services/masters/country-service'
-import { State, StateFormData } from '@/types/masters/state'
+import { stateService } from "@/services/masters/state-service"
+import { State, StateFormData } from "@/types/masters/state"
+import type { Country } from "@/types/masters/country"
+import { CountryFloatingAsyncSelect } from "@/components/masters/floating-master-async-selects"
 const stateSchema = z.object({
     countryId: z.number().min(1, "Country is required"),
     stateName: z.string().min(3, "State name must be at least 3 characters"),
@@ -47,10 +47,11 @@ export function StateForm({ initialData }: StateFormProps) {
     const queryClient = useQueryClient()
     const isEdit = !!initialData
 
-    const { data: countriesData } = useQuery({
-        queryKey: ['countries-list'],
-        queryFn: () => countryService.getCountries({ limit: 100 }),
-    })
+    const extraCountries = useMemo((): Country[] | undefined => {
+        const c = initialData?.country
+        if (!c || !initialData?.countryId) return undefined
+        return [{ id: c.id, code: c.code, name: c.name, weightUnit: "KGS" as const }]
+    }, [initialData?.country, initialData?.countryId])
 
     const form = useForm<StateFormData>({
         resolver: zodResolver(stateSchema) as Resolver<StateFormData>,
@@ -131,23 +132,13 @@ export function StateForm({ initialData }: StateFormProps) {
                     name="countryId"
                     render={({ field }) => (
                         <FloatingFormItem required label="Country*">
-                            <Select
-                                onValueChange={(val) => field.onChange(parseInt(val))}
-                                value={field.value ? field.value.toString() : ""}
-                            >
-                                <FormControl>
-                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                        <SelectValue placeholder="Select country" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {countriesData?.data?.map((country) => (
-                                        <SelectItem key={country.id} value={country.id.toString()}>
-                                            {country.name} ({country.code})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <CountryFloatingAsyncSelect
+                                triggerRef={field.ref}
+                                value={field.value}
+                                onChange={field.onChange}
+                                queryKeyScope={`state-${String(initialData?.id ?? "new")}`}
+                                extraCountries={extraCountries}
+                            />
                         </FloatingFormItem>
                     )}
                 />

@@ -38,6 +38,10 @@ import {
 import { cn } from "@/lib/utils"
 
 import { serviceablePincodeService } from "@/services/utilities/serviceable-pincode-service"
+import {
+    bulkUploadLogService,
+    canDownloadBulkUploadErrorsCsv,
+} from "@/services/utilities/bulk-upload-log-service"
 import { ServiceablePincode } from "@/types/utilities/serviceable-pincode"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useAuth } from "@/context/auth-context"
@@ -83,8 +87,10 @@ export default function ServiceablePincodesPage() {
         failed: number
         failures: Array<{ row: number; message: string }>
         successes: Array<{ row: number; pinCode: string }>
+        bulkUploadLogId?: number
     } | null>(null)
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+    const [downloadingErrorCsv, setDownloadingErrorCsv] = useState(false)
     const importFileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -171,6 +177,32 @@ export default function ServiceablePincodesPage() {
             toast.error(error.message || "Import failed")
         },
     })
+
+    async function handleDownloadImportErrorCsv() {
+        if (
+            !importSummary?.bulkUploadLogId ||
+            !canDownloadBulkUploadErrorsCsv(importSummary.failed)
+        ) {
+            return
+        }
+        setDownloadingErrorCsv(true)
+        try {
+            const { blob, filename } = await bulkUploadLogService.downloadErrorRowsCsv(
+                importSummary.bulkUploadLogId,
+            )
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Error details CSV downloaded")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to download error CSV")
+        } finally {
+            setDownloadingErrorCsv(false)
+        }
+    }
 
     async function handleDownloadImportTemplate() {
         setDownloadingTemplate(true)
@@ -499,6 +531,28 @@ export default function ServiceablePincodesPage() {
                                         {importSummary.failures.length > 50 && (
                                             <p className="mt-1 text-xs text-muted-foreground">Showing first 50 errors.</p>
                                         )}
+                                        {canDownloadBulkUploadErrorsCsv(importSummary.failed) &&
+                                        importSummary.bulkUploadLogId != null ? (
+                                            hasPermission("utility.bulk_upload_log.read") ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="mt-2 w-full"
+                                                    disabled={downloadingErrorCsv}
+                                                    onClick={() => void handleDownloadImportErrorCsv()}
+                                                >
+                                                    {downloadingErrorCsv
+                                                        ? "Downloading…"
+                                                        : "Download all errors (CSV)"}
+                                                </Button>
+                                            ) : (
+                                                <p className="mt-2 text-xs text-muted-foreground">
+                                                    Full error CSV requires{" "}
+                                                    <span className="font-mono">utility.bulk_upload_log.read</span>.
+                                                </p>
+                                            )
+                                        ) : null}
                                     </div>
                                 )}
                             </div>

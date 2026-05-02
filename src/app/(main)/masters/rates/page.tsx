@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit, FilePlus, FileDown, Filter, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,12 @@ import { cn } from "@/lib/utils";
 import { rateService } from "@/services/masters/rate-service";
 import type { RateMaster } from "@/types/masters/rate";
 import { PermissionGuard } from "@/components/auth/permission-guard"
+import {
+  defaultRateListUpdateType,
+  isVendorRateMasterRow,
+  parseRateContractParam,
+  type RateMasterContract,
+} from "@/lib/rate-master-nav";
 
 function displayName(value?: { code?: string; name?: string } | { productCode?: string; productName?: string } | null, fallback = "—") {
   if (!value) return fallback;
@@ -30,7 +36,12 @@ function displayName(value?: { code?: string; name?: string } | { productCode?: 
 
 export default function RateMasterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const contract: RateMasterContract = useMemo(
+    () => parseRateContractParam(searchParams.get("contract")),
+    [searchParams],
+  );
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -48,6 +59,20 @@ export default function RateMasterPage() {
       setDraftFilters(appliedFilters);
     }
   }, [appliedFilters, filtersOpen]);
+
+  useEffect(() => {
+    const raw = searchParams.get("contract");
+    if (raw !== "vendor" && raw !== "customer") {
+      router.replace("/masters/rates?contract=customer");
+    }
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    const ut = defaultRateListUpdateType(contract);
+    setAppliedFilters((prev) => ({ ...prev, updateType: ut }));
+    setDraftFilters((prev) => ({ ...prev, updateType: ut }));
+    setPage(1);
+  }, [contract]);
 
   const listParams = {
     page,
@@ -127,8 +152,20 @@ export default function RateMasterPage() {
     setFiltersOpen(false);
   };
 
+  const pageTitle =
+    contract === "vendor" ? "Vendor rate masters" : "Customer rate masters";
+  const partyColumnLabel = contract === "vendor" ? "Vendor" : "Customer";
+
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
+      <div className="mb-4">
+        <h1 className="text-xl font-bold tracking-tight text-foreground">{pageTitle}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {contract === "vendor"
+            ? "Buy-side contracts (VENDOR_RATE). Use Customer → Customer rates for sell-side AWB pricing."
+            : "Sell-side customer contracts (default filter AWB_ENTRY_RATE). Use Vendor → Vendor rates for forwarding buy rates."}
+        </p>
+      </div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-1 self-start rounded-md border border-border p-1 sm:self-auto">
           <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -208,7 +245,11 @@ export default function RateMasterPage() {
           type="button"
           variant="default"
           className="h-8 gap-2 px-3 font-semibold"
-          onClick={() => router.push("/masters/rates/create")}
+          onClick={() =>
+            router.push(
+              `/masters/rates/create?contract=${contract === "vendor" ? "vendor" : "customer"}`,
+            )
+          }
           title="Create rate master"
         >
           <FilePlus className="h-4 w-4" />
@@ -223,7 +264,7 @@ export default function RateMasterPage() {
               <TableHead className="font-semibold text-primary-foreground">ID</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Update type</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Rate type</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">{partyColumnLabel}</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Product</TableHead>
               <TableHead className="font-semibold text-primary-foreground">From</TableHead>
               <TableHead className="font-semibold text-primary-foreground">To</TableHead>
@@ -250,14 +291,36 @@ export default function RateMasterPage() {
                   <TableCell className="font-medium">{row.id}</TableCell>
                   <TableCell>{row.updateType}</TableCell>
                   <TableCell>{row.rateType || "—"}</TableCell>
-                  <TableCell>{displayName(row.customer)}</TableCell>
+                  <TableCell>
+                    {contract === "vendor"
+                      ? displayName(
+                          row.vendor
+                            ? {
+                                name: row.vendor.vendorName,
+                                code: row.vendor.vendorCode,
+                              }
+                            : null,
+                          "—",
+                        )
+                      : displayName(row.customer)}
+                  </TableCell>
                   <TableCell>{displayName(row.product)}</TableCell>
                   <TableCell>{row.fromDate?.slice(0, 10)}</TableCell>
                   <TableCell>{row.toDate?.slice(0, 10)}</TableCell>
                   <TableCell>{row.flatRate != null ? String(row.flatRate) : "—"}</TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => router.push(`/masters/rates/${row.id}/edit`)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10"
+                        onClick={() =>
+                          router.push(
+                            `/masters/rates/${row.id}/edit?contract=${isVendorRateMasterRow(row) ? "vendor" : "customer"}`,
+                          )
+                        }
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <PermissionGuard permission="master.rate.delete">

@@ -18,7 +18,14 @@ import type {
   UpdateRateMasterReviewPayload,
 } from "@/types/masters/rate";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+function normalizeApiBaseUrl(raw?: string) {
+  const value = raw?.trim();
+  if (!value) return "/api";
+  if (/^https?:\/\//i.test(value)) return value.replace(/\/+$/, "");
+  return `/${value.replace(/^\/+/, "").replace(/\/+$/, "")}`;
+}
+
+const API_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 export type RateMasterListQueryParams = {
   page?: number;
@@ -27,6 +34,7 @@ export type RateMasterListQueryParams = {
   sortBy?: "fromDate" | "id" | "updateType" | string;
   sortOrder?: "asc" | "desc";
   updateType?: string;
+  vendorId?: number;
   fromDate?: string;
   toDate?: string;
 };
@@ -47,14 +55,23 @@ function appendRateMasterListFilters(queryParams: URLSearchParams, params?: Rate
   queryParams.append("sortBy", params?.sortBy ?? "fromDate");
   queryParams.append("sortOrder", params?.sortOrder ?? "desc");
   if (params?.updateType) queryParams.append("updateType", params.updateType);
+  if (params?.vendorId !== undefined) queryParams.append("vendorId", String(params.vendorId));
   if (params?.fromDate) queryParams.append("fromDate", params.fromDate);
   if (params?.toDate) queryParams.append("toDate", params.toDate);
 }
 
 async function readErrorMessage(response: Response, fallback: string) {
+  const contentType = response.headers.get("content-type") || "";
   try {
-    const err = await response.json();
-    return err?.message || fallback;
+    if (contentType.includes("application/json")) {
+      const err = await response.json();
+      return err?.message || fallback;
+    }
+    const text = await response.text();
+    if (text.includes("<!DOCTYPE html>")) {
+      return `${fallback} (received HTML ${response.status}; check NEXT_PUBLIC_API_URL and API route path)`;
+    }
+    return text.trim() || fallback;
   } catch {
     return fallback;
   }
@@ -98,6 +115,25 @@ export const rateService = {
         body: JSON.stringify(data),
       },
       "Failed to create rate master",
+    );
+  },
+
+  async duplicateRateMaster(payload: {
+    sourceRateMasterId: number;
+    fromDate: string;
+    toDate: string;
+    customerId?: number;
+    targetVendorId?: number;
+    productId: number;
+  }): Promise<RateMasterSingleResponse> {
+    return requestJson(
+      `${API_URL}/rate-master/duplicate`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify(payload),
+      },
+      "Failed to duplicate rate master",
     );
   },
 

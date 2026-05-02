@@ -16,7 +16,6 @@ export type ChargeListQueryParams = {
   sortOrder?: "asc" | "desc";
   code?: string;
   name?: string;
-  applyFuel?: boolean;
 };
 
 function authHeaders(includeJson = false) {
@@ -53,7 +52,6 @@ function appendChargeListQuery(queryParams: URLSearchParams, params?: ChargeList
   queryParams.append("sortOrder", params?.sortOrder ?? "asc");
   if (params?.code) queryParams.append("code", params.code);
   if (params?.name) queryParams.append("name", params.name);
-  if (typeof params?.applyFuel === "boolean") queryParams.append("applyFuel", String(params.applyFuel));
 }
 
 export const chargeService = {

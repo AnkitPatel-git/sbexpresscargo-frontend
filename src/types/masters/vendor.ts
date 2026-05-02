@@ -20,7 +20,7 @@ export interface Vendor {
     vendorName: string;
     version?: number;
     contactPerson: string;
-    address1: string;
+    address1: string | null;
     address2: string | null;
     pinCodeId: number | null;
     countryId: number | null;
@@ -29,17 +29,13 @@ export interface Vendor {
     bankId: number | null;
     bankAccount: string | null;
     bankIfsc: string | null;
-    telephone: string;
+    telephone: string | null;
     email: string;
     mobile: string;
     website: string | null;
     gstNo: string | null;
-    currency: string | null;
-    origin: string | null;
     vendorZip: string | null;
     status: 'ACTIVE' | 'INACTIVE';
-    global: boolean;
-    volumetricRound: number | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -54,23 +50,19 @@ export interface VendorFormData {
     vendorCode?: string;
     vendorName: string;
     contactPerson: string;
-    address1: string;
+    address1?: string;
     address2?: string;
     pinCodeId?: string;
-    bankId?: number;
-    bankAccount?: string;
-    bankIfsc?: string;
-    telephone: string;
+    bankId?: number | null;
+    bankAccount?: string | null;
+    bankIfsc?: string | null;
+    telephone?: string;
     email: string;
     mobile: string;
     website?: string;
     gstNo?: string;
-    currency?: string;
-    origin?: string;
     vendorZip?: string;
     status: 'ACTIVE' | 'INACTIVE';
-    global?: boolean;
-    volumetricRound?: number;
     version?: number;
 }
 

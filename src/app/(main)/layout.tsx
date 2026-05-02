@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
 import {
   Package2,
   Users,
@@ -53,6 +53,10 @@ import { useAuth } from "@/context/auth-context";
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { cn } from "@/lib/utils";
 import {
+  masterNavItemActive,
+  resolveMastersNavSection,
+} from "@/lib/rate-master-nav";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -67,6 +71,8 @@ interface SidebarContentProps {
   pathname: string;
   isCollapsed?: boolean;
   onItemClick?: () => void;
+  /** `contract` query on `/masters/rates` (null when absent = customer list). */
+  rateContractQuery: string | null;
 }
 
 const headerNavItems = [
@@ -81,7 +87,9 @@ const headerNavItems = [
   { href: "/masters/service-centers", label: "Service Center Master" },
   { href: "/masters/local-branches", label: "Local Branch Master" },
   { href: "/masters/customers", label: "Customer Master" },
-  { href: "/masters/rates", label: "Rate Master" },
+  { href: "/masters/customer-groups", label: "Customer group" },
+  { href: "/masters/rates?contract=customer", label: "Customer rates" },
+  { href: "/masters/rates?contract=vendor", label: "Vendor rates" },
   { href: "/masters/consignee", label: "Consignee Master" },
   { href: "/masters/shipper", label: "Shipper Master" },
   { href: "/masters/vendor", label: "Vendor Master" },
@@ -182,8 +190,14 @@ const MASTER_GROUP_ITEMS = {
       permission: "master.customer.read",
     },
     {
-      href: "/masters/rates",
-      label: "Rate",
+      href: "/masters/customer-groups",
+      label: "Customer group",
+      icon: Users,
+      permission: "master.customer_group.read",
+    },
+    {
+      href: "/masters/rates?contract=customer",
+      label: "Customer rates",
       icon: Percent,
       permission: "master.rate.read",
     },
@@ -219,6 +233,12 @@ const MASTER_GROUP_ITEMS = {
       icon: Settings,
       permission: "master.vendor_config.read",
     },
+    {
+      href: "/masters/rates?contract=vendor",
+      label: "Vendor rates",
+      icon: Percent,
+      permission: "master.rate.read",
+    },
   ],
   operations: [
     {
@@ -242,38 +262,11 @@ const MASTER_GROUP_ITEMS = {
   ],
 } as const;
 
-const resolveMasterGroupFromPath = (
-  path: string,
-): "sales" | "customer" | "vendor" | "operations" => {
-  if (
-    path.startsWith("/masters/customers") ||
-    path.startsWith("/masters/rates") ||
-    path.startsWith("/masters/client-rates") ||
-    path.startsWith("/masters/consignee") ||
-    path.startsWith("/masters/shipper")
-  ) {
-    return "customer";
-  }
-
-  if (path.startsWith("/masters/vendor") || path.startsWith("/masters/service-map")) {
-    return "vendor";
-  }
-
-  if (
-    path.startsWith("/masters/exception") ||
-    path.startsWith("/masters/vehicle") ||
-    path.startsWith("/masters/courier")
-  ) {
-    return "operations";
-  }
-
-  return "sales";
-};
-
 const SidebarContent = ({
   pathname,
   isCollapsed = false,
   onItemClick,
+  rateContractQuery,
 }: SidebarContentProps) => {
   const collapsedSubmenuScrollClass = "max-h-[20rem] overflow-y-auto pr-1";
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(
@@ -312,7 +305,7 @@ const SidebarContent = ({
     setIsUtilitiesOpen(pathname.startsWith("/utilities"));
     setIsTransactionsOpen(pathname.startsWith("/transactions"));
     if (pathname.startsWith("/masters")) {
-      const section = resolveMasterGroupFromPath(pathname);
+      const section = resolveMastersNavSection(pathname, rateContractQuery);
       setIsSalesOpen(section === "sales");
       setIsCustomerSubmenuOpen(section === "customer");
       setIsVendorSubmenuOpen(section === "vendor");
@@ -324,7 +317,7 @@ const SidebarContent = ({
       setIsOperationSubmenuOpen(false);
     }
     setIsUsersSubmenuOpen(pathname.startsWith("/utilities/users"));
-  }, [pathname, isCollapsed]);
+  }, [pathname, isCollapsed, rateContractQuery]);
 
   useEffect(() => {
     return () => {
@@ -596,7 +589,7 @@ const SidebarContent = ({
       <PermissionGuard key={item.href} permission={item.permission}>
         <LinkItem
           href={item.href}
-          active={isActive(item.href)}
+          active={masterNavItemActive(pathname, rateContractQuery, item.href)}
           icon={item.icon}
           showTextOverride={opts?.inFlyout}
           inFlyout={opts?.inFlyout}
@@ -653,7 +646,9 @@ const SidebarContent = ({
               setIsMastersOpen(nextOpen);
               setMastersHovered(nextOpen);
               if (nextOpen)
-                openMasterSubmenu(resolveMasterGroupFromPath(pathname));
+                openMasterSubmenu(
+                  resolveMastersNavSection(pathname, rateContractQuery),
+                );
               return;
             }
             toggleSection("masters");
@@ -1474,7 +1469,7 @@ const SidebarContent = ({
   );
 };
 
-export default function DashboardLayout({
+function DashboardLayoutClient({
   children,
 }: {
   children: React.ReactNode;
@@ -1482,6 +1477,7 @@ export default function DashboardLayout({
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const rateContractQuery = useSearchParams().get("contract");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
@@ -1492,9 +1488,8 @@ export default function DashboardLayout({
   const activeHeaderItem =
     [...headerNavItems]
       .sort((a, b) => b.href.length - a.href.length)
-      .find(
-        (item) =>
-          pathname === item.href || pathname.startsWith(`${item.href}/`),
+      .find((item) =>
+        masterNavItemActive(pathname, rateContractQuery, item.href),
       ) ?? headerNavItems[0];
 
   const filteredMenuItems = headerNavItems
@@ -1587,6 +1582,7 @@ export default function DashboardLayout({
           <SidebarContent
             pathname={pathname}
             isCollapsed={isSidebarCollapsed}
+            rateContractQuery={rateContractQuery}
           />
         </div>
       </aside>
@@ -1613,6 +1609,7 @@ export default function DashboardLayout({
             <SidebarContent
               pathname={pathname}
               onItemClick={() => setIsMobileMenuOpen(false)}
+              rateContractQuery={rateContractQuery}
             />
           </div>
         </SheetContent>
@@ -1743,7 +1740,7 @@ export default function DashboardLayout({
                 {
                   icon: Calculator,
                   label: "Rates",
-                  href: "/masters/rates",
+                  href: "/masters/rates?contract=customer",
                 },
                 {
                   icon: Wallet,
@@ -1875,5 +1872,23 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen w-full items-center justify-center bg-gray-100 text-muted-foreground">
+          Loading…
+        </div>
+      }
+    >
+      <DashboardLayoutClient>{children}</DashboardLayoutClient>
+    </Suspense>
   );
 }

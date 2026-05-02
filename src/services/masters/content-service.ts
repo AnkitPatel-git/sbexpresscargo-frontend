@@ -156,6 +156,7 @@ export const contentService = {
         failed: number;
         failures: Array<{ row: number; message: string }>;
         successes: Array<{ row: number; contentCode: string }>;
+        bulkUploadLogId?: number;
     }> {
         const formData = new FormData();
         formData.append('file', file);
@@ -174,6 +175,7 @@ export const contentService = {
                 failed: number;
                 failures: Array<{ row: number; message: string }>;
                 successes: Array<{ row: number; contentCode: string }>;
+                bulkUploadLogId?: number;
             };
             message?: string;
         };

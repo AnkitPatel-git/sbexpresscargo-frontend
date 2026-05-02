@@ -359,17 +359,6 @@ export interface ShipmentForwarding {
   forwardingAwb?: string | null;
   deliveryVendorId?: number | null;
   deliveryServiceMapId?: number | null;
-  vendorWeight?: number | null;
-  vendorAmount?: number | null;
-  vendorInvoice?: string | null;
-  contractCharges?: number | null;
-  otherCharges?: number | null;
-  subTotal?: number | null;
-  totalFuel?: number | null;
-  igst?: number | null;
-  cgst?: number | null;
-  sgst?: number | null;
-  totalAmount?: number | null;
   charges?: ShipmentCharge[];
   createdAt?: string;
   updatedAt?: string;
@@ -578,6 +567,23 @@ export interface ShipmentWeightPreviewResponse {
   shipmentVolumetricWeight: number;
   shipmentChargeWeight: number;
   bookingTotalValue: number;
+}
+
+/** `GET /transaction/shipment/:id/forwarding-rate-preview?vendorId=` — live rate engine totals. */
+export interface ForwardingRatePreviewData {
+  customerQuote: {
+    rateMasterId: number;
+    totalAmount: number;
+    baseFreight: number;
+    charges?: Array<{ name: string; amount: number }>;
+  };
+  vendorQuote: {
+    rateMasterId: number;
+    totalAmount: number;
+    baseFreight: number;
+    charges?: Array<{ name: string; amount: number }>;
+  };
+  profit: number;
 }
 
 export interface ApiEnvelope<T> {

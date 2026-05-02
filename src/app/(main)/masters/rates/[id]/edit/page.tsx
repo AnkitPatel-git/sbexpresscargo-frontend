@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
@@ -9,9 +9,15 @@ import { RateForm } from "@/components/masters/rate-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { rateService } from "@/services/masters/rate-service";
+import {
+  isVendorRateMasterRow,
+  parseRateContractParam,
+  rateMasterListPath,
+} from "@/lib/rate-master-nav";
 
 export default function EditRatePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = Number(params.id);
 
   const { data: response, isLoading, error } = useQuery({
@@ -33,17 +39,23 @@ export default function EditRatePage() {
       <div className="flex min-h-[400px] flex-col items-center justify-center space-y-4">
         <p className="font-medium text-destructive">Failed to load rate master data.</p>
         <Button variant="outline" asChild>
-          <Link href="/masters/rates">Back to List</Link>
+          <Link href={rateMasterListPath(parseRateContractParam(searchParams.get("contract")))}>
+            Back to List
+          </Link>
         </Button>
       </div>
     );
   }
 
+  const listHref = rateMasterListPath(
+    isVendorRateMasterRow(response.data) ? "vendor" : "customer",
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/masters/rates">
+          <Link href={listHref}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>

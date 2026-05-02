@@ -49,11 +49,19 @@ export interface CustomerBankRef {
     status?: string;
 }
 
+export interface CustomerGroupRef {
+    id: number;
+    code: string;
+    name: string;
+    status?: string;
+}
+
 export interface Customer {
     id: number;
     code: string;
     name: string;
     version: number;
+    customerGroupId?: number | null;
     contactPerson: string | null;
     address1: string | null;
     address2: string | null;
@@ -84,6 +92,7 @@ export interface Customer {
     state?: CustomerStateRef | null;
     serviceCenter?: CustomerServiceCenterRef | null;
     bank?: CustomerBankRef | null;
+    customerGroup?: CustomerGroupRef | null;
 }
 
 export interface CustomerFormData {
@@ -94,6 +103,7 @@ export interface CustomerFormData {
     address2?: string;
     pinCodeId?: string | number;
     serviceCenterId?: number;
+    customerGroupId?: number | null;
     bankId?: number;
     bankAccount?: string;
     bankIfsc?: string;
