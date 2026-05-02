@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { Resolver, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
@@ -30,11 +29,11 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
-import { Checkbox } from "@/components/ui/checkbox"
 
 import { vendorService } from "@/services/masters/vendor-service"
-import { bankService } from "@/services/masters/bank-service"
 import { Vendor, VendorFormData } from "@/types/masters/vendor"
+import type { Bank } from "@/types/masters/bank"
+import { BankFloatingAsyncSelect } from "@/components/masters/floating-master-async-selects"
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
 import {
     getInitialPincode,
@@ -43,30 +42,60 @@ import {
     optionalPincodeField,
 } from "@/lib/pincode-field"
 
+const optionalTrim = z.string().optional().or(z.literal(""))
+
 const vendorSchema = z.object({
     vendorCode: optionalMasterCode(2),
     vendorName: z.string().min(3, "Name must be at least 3 characters"),
     contactPerson: z.string().min(3, "Contact person is required"),
-    address1: z.string().min(5, "Address must be at least 5 characters"),
+    address1: optionalTrim,
     address2: z.string().optional(),
     pinCodeId: optionalPincodeField(),
-    bankId: z.coerce.number().int().positive("Bank is required"),
-    bankAccount: z.string().min(1, "Bank account is required"),
-    bankIfsc: z.string().min(1, "Bank IFSC is required"),
-    telephone: z.string().min(10, "Telephone must be at least 10 characters"),
+    bankId: z.coerce.number().int().min(0),
+    bankAccount: optionalTrim,
+    bankIfsc: optionalTrim,
+    telephone: optionalTrim,
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),
     gstNo: z.string().optional(),
-    currency: z.string().optional().or(z.literal("")),
-    origin: z.string().optional().or(z.literal("")),
     vendorZip: z.string().optional().or(z.literal("")),
     status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
-    global: z.boolean().default(false),
-    volumetricRound: z.coerce.number().optional(),
 })
 
 type VendorFormValues = z.infer<typeof vendorSchema>
+
+function toVendorPayload(data: VendorFormValues): VendorFormData {
+    const base: VendorFormData = {
+        ...omitEmptyCodeFields({ vendorCode: data.vendorCode }, ["vendorCode"]),
+        pinCodeId: normalizeOptionalPincode(data.pinCodeId),
+        vendorName: data.vendorName,
+        contactPerson: data.contactPerson,
+        email: data.email,
+        mobile: data.mobile,
+        status: data.status,
+        address1: data.address1?.trim() || undefined,
+        address2: data.address2?.trim() || undefined,
+        telephone: data.telephone?.trim() || undefined,
+        website: data.website?.trim() || undefined,
+        gstNo: data.gstNo?.trim() || undefined,
+        vendorZip: data.vendorZip?.trim() || undefined,
+    }
+    if (data.bankId > 0) {
+        return {
+            ...base,
+            bankId: data.bankId,
+            bankAccount: data.bankAccount?.trim() || undefined,
+            bankIfsc: data.bankIfsc?.trim() || undefined,
+        }
+    }
+    return {
+        ...base,
+        bankId: null,
+        bankAccount: null,
+        bankIfsc: null,
+    }
+}
 
 interface VendorFormProps {
     initialData?: Vendor | null
@@ -76,10 +105,24 @@ export function VendorForm({ initialData }: VendorFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
-    const { data: banksResponse } = useQuery({
-        queryKey: ["vendor-form-banks"],
-        queryFn: () => bankService.getBanks({ page: 1, limit: 100, sortBy: "bankName", sortOrder: "asc" }),
-    })
+    const extraBanks = useMemo((): Bank[] | undefined => {
+        const b = initialData?.bank
+        if (!b || !initialData?.bankId) return undefined
+        return [
+            {
+                id: b.id,
+                bankCode: b.bankCode ?? "",
+                bankName: b.bankName,
+                status: (b.status ?? "ACTIVE") as Bank["status"],
+                createdAt: "",
+                updatedAt: "",
+                createdById: null,
+                updatedById: null,
+                deletedAt: null,
+                deletedById: null,
+            },
+        ]
+    }, [initialData?.bank, initialData?.bankId])
 
     const form = useForm<VendorFormValues>({
         resolver: zodResolver(vendorSchema) as Resolver<VendorFormValues>,
@@ -98,12 +141,8 @@ export function VendorForm({ initialData }: VendorFormProps) {
             mobile: "",
             website: "",
             gstNo: "",
-            currency: "",
-            origin: "",
             vendorZip: "",
             status: "ACTIVE",
-            global: false,
-            volumetricRound: undefined,
         },
     })
 
@@ -113,33 +152,26 @@ export function VendorForm({ initialData }: VendorFormProps) {
                 vendorCode: initialData.vendorCode,
                 vendorName: initialData.vendorName,
                 contactPerson: initialData.contactPerson,
-                address1: initialData.address1,
+                address1: initialData.address1 ?? "",
                 address2: initialData.address2 || "",
                 pinCodeId: getInitialPincode(initialData),
                 bankId: initialData.bankId ?? 0,
                 bankAccount: initialData.bankAccount || "",
                 bankIfsc: initialData.bankIfsc || "",
-                telephone: initialData.telephone,
+                telephone: initialData.telephone ?? "",
                 email: initialData.email,
                 mobile: initialData.mobile,
                 website: initialData.website || "",
                 gstNo: initialData.gstNo || "",
-                currency: initialData.currency || "",
-                origin: initialData.origin || "",
                 vendorZip: initialData.vendorZip || "",
                 status: initialData.status,
-                global: initialData.global ?? false,
-                volumetricRound: initialData.volumetricRound ?? undefined,
             })
         }
     }, [initialData, form])
 
     const mutation = useMutation({
         mutationFn: (data: VendorFormValues) => {
-            const payload: VendorFormData = {
-                ...omitEmptyCodeFields(data, ["vendorCode"]),
-                pinCodeId: normalizeOptionalPincode(data.pinCodeId),
-            }
+            const payload = toVendorPayload(data)
             if (isEdit && initialData) {
                 return vendorService.updateVendor(initialData.id, { ...payload, version: initialData.version ?? 1 })
             }
@@ -275,9 +307,9 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                     control={form.control}
                                     name="telephone"
                                     render={({ field }) => (
-                                        <FloatingFormItem required label="Telephone*">
+                                        <FloatingFormItem label="Telephone">
                                             <FormControl>
-                                                <Input placeholder="Office number" {...field} className={FLOATING_INNER_CONTROL} />
+                                                <Input placeholder="Office number (optional)" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -313,9 +345,9 @@ export function VendorForm({ initialData }: VendorFormProps) {
                                 control={form.control}
                                 name="address1"
                                 render={({ field }) => (
-                                    <FloatingFormItem required label="Address Line 1*">
+                                    <FloatingFormItem label="Address Line 1">
                                         <FormControl>
-                                            <Input placeholder="Street address" {...field} className={FLOATING_INNER_CONTROL} />
+                                            <Input placeholder="Street address (optional)" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
                                     </FloatingFormItem>
                                 )}
@@ -376,118 +408,57 @@ export function VendorForm({ initialData }: VendorFormProps) {
                             />
                     </FormSection>
 
-                    {/* Section 4: Vendor Config */}
+                    {/* Section 4: Bank (optional) */}
                     <FormSection
                         title={
                             <span className="flex items-center gap-2">
                                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-semibold">
                                     4
                                 </span>
-                                Vendor Settings
+                                Bank (optional)
                             </span>
                         }
                         contentClassName="space-y-4"
                     >
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="currency"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Currency">
-                                            <FormControl>
-                                                <Input placeholder="e.g. INR" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="origin"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Origin">
-                                            <FormControl>
-                                                <Input placeholder="e.g. MUMBAI" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="volumetricRound"
-                                    render={({ field }) => (
-                                        <FloatingFormItem label="Volumetric Round">
-                                            <FormControl>
-                                                <Input type="number" placeholder="e.g. 5000" {...field} value={field.value ?? ""} className={FLOATING_INNER_CONTROL} />
-                                            </FormControl>
-                                        </FloatingFormItem>
-                                    )}
-                                />
-                            </div>
                             <FormField
                                 control={form.control}
-                                name="global"
+                                name="bankId"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Global">
-                                        <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                            <FormControl>
-                                                <Checkbox
-                                                    checked={field.value}
-                                                    onCheckedChange={(v) => field.onChange(Boolean(v))}
-                                                />
-                                            </FormControl>
-                                        </div>
+                                    <FloatingFormItem label="Bank">
+                                        <BankFloatingAsyncSelect
+                                            optional
+                                            triggerRef={field.ref}
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            queryKeyScope={`vendor-${String(initialData?.id ?? "new")}`}
+                                            extraBanks={extraBanks}
+                                        />
                                     </FloatingFormItem>
                                 )}
                             />
-                            <div className="grid grid-cols-1 gap-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="bankId"
+                                    name="bankAccount"
                                     render={({ field }) => (
-                                        <FloatingFormItem required label="Bank">
-                                            <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
-                                                <FormControl>
-                                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                        <SelectValue placeholder="Select bank" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {banksResponse?.data?.map((bank) => (
-                                                        <SelectItem key={bank.id} value={String(bank.id)}>
-                                                            {bank.bankName}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                        <FloatingFormItem label="Bank Account">
+                                            <FormControl>
+                                                <Input placeholder="Account number (optional)" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
                                         </FloatingFormItem>
                                     )}
                                 />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="bankAccount"
-                                        render={({ field }) => (
-                                            <FloatingFormItem required label="Bank Account">
-                                                <FormControl>
-                                                    <Input placeholder="Account number" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="bankIfsc"
-                                        render={({ field }) => (
-                                            <FloatingFormItem required label="Bank IFSC">
-                                                <FormControl>
-                                                    <Input placeholder="IFSC code" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="bankIfsc"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Bank IFSC">
+                                            <FormControl>
+                                                <Input placeholder="IFSC code (optional)" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
                             </div>
                     </FormSection>
                 </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { UIEvent } from "react"
 import { Check, X, ChevronsUpDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,15 @@ interface MultiSelectProps {
   searchPlaceholder?: string
   emptyMessage?: string
   className?: string
+  /** When false, options are not client-filtered (use with server search + `onSearchChange`). Default true. */
+  enableClientFilter?: boolean
+  /** Fired when the search box value changes (e.g. debounce and refetch server-side). */
+  onSearchChange?: (query: string) => void
+  /** Attach to the scrollable list (e.g. load next page near bottom). */
+  onListScroll?: (e: UIEvent<HTMLDivElement>) => void
+  /** Shown at the bottom of the list (e.g. loading more). */
+  listFooter?: React.ReactNode
+  onOpenChange?: (open: boolean) => void
 }
 
 export function MultiSelect({
@@ -42,8 +52,18 @@ export function MultiSelect({
   searchPlaceholder = "Search...",
   emptyMessage = "No results found.",
   className,
+  enableClientFilter = true,
+  onSearchChange,
+  onListScroll,
+  listFooter,
+  onOpenChange,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false)
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    onOpenChange?.(next)
+  }
 
   const handleUnselect = (value: string | number) => {
     onChange(selected.filter((s) => s !== value))
@@ -58,7 +78,7 @@ export function MultiSelect({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -76,7 +96,7 @@ export function MultiSelect({
                 .map((option) => (
                   <Badge
                     variant="secondary"
-                    key={option.value}
+                    key={String(option.value)}
                     className="mr-1 mb-1"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -95,14 +115,18 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command className="w-full">
-          <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
+        <Command shouldFilter={enableClientFilter}>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            onValueChange={(v) => onSearchChange?.(v)}
+          />
+          <CommandList onScroll={onListScroll}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup className="max-h-64 overflow-auto">
+            <CommandGroup className="p-1">
               {options.map((option) => (
                 <CommandItem
-                  key={option.value}
+                  key={String(option.value)}
+                  value={`${option.label} ${option.value}`}
                   onSelect={() => handleSelect(option.value)}
                 >
                   <div
@@ -118,6 +142,7 @@ export function MultiSelect({
                   <span>{option.label}</span>
                 </CommandItem>
               ))}
+              {listFooter}
             </CommandGroup>
           </CommandList>
         </Command>

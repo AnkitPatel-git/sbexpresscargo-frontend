@@ -1,6 +1,7 @@
 import { apiFetch } from "@/lib/api-fetch";
 import type {
   ApiEnvelope,
+  ForwardingRatePreviewData,
   ShipmentCalculateResponse,
   ShipmentFormPayload,
   ShipmentListQueryParams,
@@ -149,20 +150,9 @@ export const shipmentService = {
     shipmentId: number,
     data: {
       version: number;
-      forwardingAwb?: string;
-      deliveryVendorId?: number;
-      deliveryServiceMapId?: number;
-      vendorWeight?: number;
-      vendorAmount?: number;
-      vendorInvoice?: string;
-      contractCharges?: number;
-      otherCharges?: number;
-      subTotal?: number;
-      totalFuel?: number;
-      igst?: number;
-      cgst?: number;
-      sgst?: number;
-      totalAmount?: number;
+      forwardingAwb: string;
+      deliveryVendorId?: number | null;
+      deliveryServiceMapId?: number | null;
       charges?: Array<{
         chargeId: number;
         description?: string;
@@ -195,13 +185,24 @@ export const shipmentService = {
     shipmentId: number,
     data: {
       version: number;
-      forwardingAwb?: string;
-      deliveryVendorId?: number;
-      deliveryServiceMapId?: number;
-      totalAmount?: number;
+      forwardingAwb: string;
+      deliveryVendorId?: number | null;
+      deliveryServiceMapId?: number | null;
     },
   ): Promise<ApiEnvelope<unknown>> {
     return shipmentService.saveForwarding(shipmentId, data);
+  },
+
+  async getForwardingRatePreview(
+    shipmentId: number,
+    vendorId: number,
+  ): Promise<ApiEnvelope<ForwardingRatePreviewData>> {
+    const query = new URLSearchParams({ vendorId: String(vendorId) });
+    return requestJson(
+      `${API_URL}/transaction/shipment/${shipmentId}/forwarding-rate-preview?${query.toString()}`,
+      { headers: authHeaders() },
+      "Failed to load forwarding rate preview",
+    );
   },
 
   async uploadKyc(

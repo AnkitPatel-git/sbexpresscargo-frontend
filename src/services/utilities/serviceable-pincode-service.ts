@@ -166,6 +166,7 @@ export const serviceablePincodeService = {
         failed: number;
         failures: Array<{ row: number; message: string }>;
         successes: Array<{ row: number; pinCode: string }>;
+        bulkUploadLogId?: number;
     }> {
         const formData = new FormData();
         formData.append('file', file);
@@ -181,6 +182,7 @@ export const serviceablePincodeService = {
                 failed: number;
                 failures: Array<{ row: number; message: string }>;
                 successes: Array<{ row: number; pinCode: string }>;
+                bulkUploadLogId?: number;
             };
             message?: string;
         };

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-quer
 import { Download, FileUp } from "lucide-react"
 import { toast } from "sonner"
 
+import { PermissionGuard } from "@/components/auth/permission-guard"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -15,6 +16,10 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { masterExcelImportService, type MasterExcelImportSummary } from "@/services/masters/master-excel-import-service"
+import {
+    bulkUploadLogService,
+    canDownloadBulkUploadErrorsCsv,
+} from "@/services/utilities/bulk-upload-log-service"
 
 type MasterExcelImportButtonProps = {
     master: string
@@ -29,6 +34,26 @@ export function MasterExcelImportButton({ master, label, queryKey }: MasterExcel
     const [file, setFile] = useState<File | null>(null)
     const [summary, setSummary] = useState<MasterExcelImportSummary | null>(null)
     const [downloading, setDownloading] = useState(false)
+    const [downloadingErrorCsv, setDownloadingErrorCsv] = useState(false)
+
+    async function downloadErrorCsv() {
+        if (!summary?.bulkUploadLogId || !canDownloadBulkUploadErrorsCsv(summary.failed)) return
+        setDownloadingErrorCsv(true)
+        try {
+            const { blob, filename } = await bulkUploadLogService.downloadErrorRowsCsv(summary.bulkUploadLogId)
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Error details CSV downloaded")
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to download error CSV")
+        } finally {
+            setDownloadingErrorCsv(false)
+        }
+    }
 
     async function downloadTemplate() {
         setDownloading(true)
@@ -156,6 +181,21 @@ export function MasterExcelImportButton({ master, label, queryKey }: MasterExcel
                                                 <li key={`${failure.row}-${failure.message}`}>Row {failure.row}: {failure.message}</li>
                                             ))}
                                         </ul>
+                                        {canDownloadBulkUploadErrorsCsv(summary.failed) &&
+                                        summary.bulkUploadLogId != null ? (
+                                            <PermissionGuard permission="utility.bulk_upload_log.read">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="mt-2 w-full"
+                                                    disabled={downloadingErrorCsv}
+                                                    onClick={() => void downloadErrorCsv()}
+                                                >
+                                                    {downloadingErrorCsv ? "Downloading…" : "Download all errors (CSV)"}
+                                                </Button>
+                                            </PermissionGuard>
+                                        ) : null}
                                     </div>
                                 ) : null}
                             </div>

@@ -29,6 +29,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { contentService } from "@/services/masters/content-service"
+import {
+    bulkUploadLogService,
+    canDownloadBulkUploadErrorsCsv,
+} from "@/services/utilities/bulk-upload-log-service"
 import { Content } from "@/types/masters/content"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -56,8 +60,10 @@ export default function ContentsPage() {
         failed: number
         failures: Array<{ row: number; message: string }>
         successes: Array<{ row: number; contentCode: string }>
+        bulkUploadLogId?: number
     } | null>(null)
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+    const [downloadingErrorCsv, setDownloadingErrorCsv] = useState(false)
 
     useEffect(() => {
         if (filtersOpen) setDraftFilters(appliedFilters)
@@ -96,6 +102,32 @@ export default function ContentsPage() {
             toast.error(e instanceof Error ? e.message : "Failed to export contents")
         } finally {
             setExporting(false)
+        }
+    }
+
+    async function handleDownloadImportErrorCsv() {
+        if (
+            !importSummary?.bulkUploadLogId ||
+            !canDownloadBulkUploadErrorsCsv(importSummary.failed)
+        ) {
+            return
+        }
+        setDownloadingErrorCsv(true)
+        try {
+            const { blob, filename } = await bulkUploadLogService.downloadErrorRowsCsv(
+                importSummary.bulkUploadLogId,
+            )
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success("Error details CSV downloaded")
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Failed to download error CSV")
+        } finally {
+            setDownloadingErrorCsv(false)
         }
     }
 
@@ -337,12 +369,31 @@ export default function ContentsPage() {
                                     Created {importSummary.created}; Failed {importSummary.failed}
                                 </p>
                                 {importSummary.failures.length > 0 ? (
-                                    <div className="mt-2 max-h-32 overflow-auto text-muted-foreground">
-                                        {importSummary.failures.slice(0, 5).map((failure) => (
-                                            <p key={`${failure.row}-${failure.message}`}>
-                                                Row {failure.row}: {failure.message}
-                                            </p>
-                                        ))}
+                                    <div className="mt-2 space-y-2">
+                                        <div className="max-h-32 overflow-auto text-muted-foreground">
+                                            {importSummary.failures.slice(0, 5).map((failure) => (
+                                                <p key={`${failure.row}-${failure.message}`}>
+                                                    Row {failure.row}: {failure.message}
+                                                </p>
+                                            ))}
+                                        </div>
+                                        {canDownloadBulkUploadErrorsCsv(importSummary.failed) &&
+                                        importSummary.bulkUploadLogId != null ? (
+                                            <PermissionGuard permission="utility.bulk_upload_log.read">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full"
+                                                    disabled={downloadingErrorCsv}
+                                                    onClick={() => void handleDownloadImportErrorCsv()}
+                                                >
+                                                    {downloadingErrorCsv
+                                                        ? "Downloading…"
+                                                        : "Download all errors (CSV)"}
+                                                </Button>
+                                            </PermissionGuard>
+                                        ) : null}
                                     </div>
                                 ) : null}
                             </div>

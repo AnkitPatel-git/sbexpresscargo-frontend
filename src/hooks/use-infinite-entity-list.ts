@@ -66,6 +66,17 @@ type UseInfiniteEntityListConfig<T extends { id: number }> = {
   staleTime?: number;
 };
 
+type UseInfiniteSearchEntityListConfig<T extends { id: number }> = {
+  queryKey: readonly unknown[];
+  pageSize?: number;
+  /** Server-side filter; debounce in the caller. First page refetches when this changes. */
+  search: string;
+  fetchPage: (page: number, search: string) => Promise<PaginatedListShape<T>>;
+  extraRows?: T[];
+  enabled?: boolean;
+  staleTime?: number;
+};
+
 /**
  * Paged list for selects: first page uses `pageSize` (default 10). Call `fetchNextPage` when the user
  * scrolls the dropdown, or use `onScroll` from `useSelectContentInfiniteScroll`.
@@ -87,6 +98,40 @@ export function useInfiniteEntityList<T extends { id: number }>(config: UseInfin
   return {
     rows,
     /** Flat pages only (no `extraRows` merge), for cache inspection */
+    pagesFlat,
+    fetchNextPage,
+    hasNextPage: Boolean(hasNextPage),
+    isFetchingNextPage,
+    isInitialLoading: isLoading,
+    isError,
+    error: error as Error | null,
+  };
+}
+
+/**
+ * Same as {@link useInfiniteEntityList} but passes `search` into every page request and resets pages when `search` changes.
+ * Use for server-side typeahead (always use with {@link DEFAULT_PAGE_SIZE} in API calls).
+ */
+export function useInfiniteSearchEntityList<T extends { id: number }>(
+  config: UseInfiniteSearchEntityListConfig<T>,
+) {
+  const pageSize = config.pageSize ?? DEFAULT_PAGE_SIZE;
+  const search = config.search;
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useInfiniteQuery({
+    queryKey: [...config.queryKey, "infinite-search", pageSize, search],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => config.fetchPage(pageParam as number, search),
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      getNextPageParamFromResponse(lastPage, lastPageParam as number, pageSize),
+    enabled: config.enabled !== false,
+    staleTime: config.staleTime ?? 60_000,
+  });
+
+  const pagesFlat = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data?.pages]);
+  const rows = useMemo(() => mergeById(pagesFlat, config.extraRows), [pagesFlat, config.extraRows]);
+
+  return {
+    rows,
     pagesFlat,
     fetchNextPage,
     hasNextPage: Boolean(hasNextPage),
@@ -120,3 +165,6 @@ export function useSelectContentInfiniteScroll(options: {
 }
 
 export { DEFAULT_PAGE_SIZE as INFINITE_LIST_PAGE_SIZE };
+
+/** Fixed page size for server-backed selects (`DbAsyncSelect`): use as API `limit` with search + scroll paging. */
+export const DB_ASYNC_SELECT_PAGE_SIZE = DEFAULT_PAGE_SIZE;

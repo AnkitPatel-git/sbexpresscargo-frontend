@@ -333,7 +333,6 @@ export default function ShipmentDetailsPage() {
           <p><span className="text-muted-foreground">Forwarding AWB:</span> {fallbackText(shipment.forwarding?.forwardingAwb)}</p>
           <p><span className="text-muted-foreground">Vendor:</span> {fallbackText(shipment.forwarding?.deliveryVendorId)}</p>
           <p><span className="text-muted-foreground">Service Map:</span> {fallbackText(shipment.forwarding?.deliveryServiceMapId)}</p>
-          <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(shipment.forwarding?.totalAmount)}</p>
         </FormSection>
         <FormSection title="KYC Documents" contentClassName="space-y-2 text-sm">
           {kycDocuments.length > 0 ? (

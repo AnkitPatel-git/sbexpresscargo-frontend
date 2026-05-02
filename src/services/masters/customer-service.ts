@@ -13,7 +13,31 @@ import {
     CustomerKycDocumentFormData,
 } from '@/types/masters/customer';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+function normalizeApiBaseUrl(raw?: string) {
+    const value = raw?.trim();
+    if (!value) return '/api';
+    if (/^https?:\/\//i.test(value)) return value.replace(/\/+$/, '');
+    return `/${value.replace(/^\/+/, '').replace(/\/+$/, '')}`;
+}
+
+async function getErrorMessage(response: Response, fallback: string) {
+    const contentType = response.headers.get('content-type') || '';
+    try {
+        if (contentType.includes('application/json')) {
+            const error = await response.json();
+            return error?.message || fallback;
+        }
+        const text = await response.text();
+        if (text.includes('<!DOCTYPE html>')) {
+            return `${fallback} (received HTML ${response.status}; check NEXT_PUBLIC_API_URL and API route path)`;
+        }
+        return text.trim() || fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+const API_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 export const customerService = {
     async getCustomers(params?: {
@@ -26,6 +50,7 @@ export const customerService = {
         name?: string;
         mobile?: string;
         serviceCenterId?: number;
+        customerGroupId?: number;
         status?: string;
     }): Promise<CustomerListResponse> {
         const queryParams = new URLSearchParams();
@@ -38,6 +63,9 @@ export const customerService = {
         if (params?.name) queryParams.append('name', params.name);
         if (params?.mobile) queryParams.append('mobile', params.mobile);
         if (params?.serviceCenterId) queryParams.append('serviceCenterId', String(params.serviceCenterId));
+        if (params?.customerGroupId != null) {
+            queryParams.append('customerGroupId', String(params.customerGroupId));
+        }
         if (params?.status) queryParams.append('status', params.status);
 
         const response = await apiFetch(`${API_URL}/customer-master?${queryParams.toString()}`, {
@@ -96,8 +124,7 @@ export const customerService = {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to update customer');
+            throw new Error(await getErrorMessage(response, 'Failed to update customer'));
         }
 
         return response.json();
@@ -260,8 +287,7 @@ export const customerService = {
             body: JSON.stringify(body),
         });
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to update fuel surcharge');
+            throw new Error(await getErrorMessage(response, 'Failed to update fuel surcharge'));
         }
         return response.json() as Promise<CustomerChildSingleResponse<CustomerFuelSurcharge>>;
     },
@@ -312,8 +338,7 @@ export const customerService = {
             body: JSON.stringify(body),
         });
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to update volumetric');
+            throw new Error(await getErrorMessage(response, 'Failed to update volumetric'));
         }
         return response.json() as Promise<CustomerChildSingleResponse<CustomerVolumetric>>;
     },

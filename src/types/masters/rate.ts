@@ -14,6 +14,8 @@ export interface RateZoneRatePayload {
   fromZoneId: number;
   toZoneId: number;
   rate: number;
+  /** When true, this zone pair’s freight counts toward customer fuel surcharge basis. */
+  applyFuel?: boolean;
 }
 
 export interface RateZoneRate extends RateZoneRatePayload {
@@ -34,6 +36,8 @@ export interface RateWeightSlabPayload {
   rate: number;
   /** Route / ODA weight slabs only; distance matrix weight rows omit this. */
   pricingMode?: RouteWeightSlabPricingMode;
+  /** When true, this slab’s freight counts toward customer fuel surcharge basis. */
+  applyFuel?: boolean;
 }
 
 export interface RateWeightSlab extends RateWeightSlabPayload {
@@ -121,6 +125,8 @@ export interface RateChargePayload {
   minValue?: number;
   maxValue?: number;
   sequence?: number;
+  /** When true, this tariff line amount counts toward customer fuel surcharge basis. */
+  applyFuel?: boolean;
   chargeSlabs?: RateChargeSlabPayload[];
 }
 
@@ -145,6 +151,8 @@ export interface RateConditionPayload {
   isPercentage?: boolean;
   minValue?: number | null;
   maxValue?: number | null;
+  /** When true, this condition’s amount counts toward customer fuel surcharge basis. */
+  applyFuel?: boolean;
 }
 
 export interface RateCondition extends RateConditionPayload {
@@ -164,6 +172,12 @@ export interface RateCustomerRef {
   name?: string;
 }
 
+export interface RateVendorRef {
+  id: number;
+  vendorCode?: string;
+  vendorName?: string;
+}
+
 export interface RateProductRef {
   id: number;
   productCode?: string;
@@ -178,6 +192,7 @@ export interface RateMaster {
   fromDate: string;
   toDate: string;
   customerId?: number | null;
+  vendorId?: number | null;
   productId?: number | null;
   flatRate?: number | null;
   weightUnitStep?: number | null;
@@ -188,6 +203,7 @@ export interface RateMaster {
   deletedAt?: string | null;
   deletedById?: number | null;
   customer?: RateCustomerRef | null;
+  vendor?: RateVendorRef | null;
   product?: RateProductRef | null;
   zoneRates?: RateZoneRate[];
   distanceSlabs?: RateDistanceSlab[];
@@ -218,6 +234,7 @@ export interface RateMasterReviewHeader {
   fromDate?: string;
   toDate?: string;
   customerId?: number;
+  vendorId?: number;
   productId?: number;
   flatRate?: number | null;
   weightUnitStep?: number | null;
@@ -252,7 +269,10 @@ export interface CreateRateMasterPayload {
   updateType: string;
   fromDate: string;
   toDate: string;
-  customerId: number;
+  /** Omit when creating a vendor contract (`vendorId` + `VENDOR_RATE`). */
+  customerId?: number;
+  /** Vendor buy-rate contract; mutually exclusive with `customerId`. */
+  vendorId?: number;
   productId: number;
   rateType?: string;
   flatRate?: number;

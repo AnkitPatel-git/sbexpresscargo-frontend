@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState, type Ref } from "react"
 import { useForm, Resolver, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -12,6 +12,7 @@ import {
     Form,
     FormControl,
     FormField,
+    useFormField,
 } from "@/components/ui/form"
 import {
     FloatingFormItem,
@@ -47,9 +48,10 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { bankService } from '@/services/masters/bank-service'
+import { customerGroupService } from '@/services/masters/customer-group-service'
 import { customerService } from '@/services/masters/customer-service'
+import { productService } from "@/services/masters/product-service"
 import { serviceCenterService } from '@/services/masters/service-center-service'
-import { productService } from '@/services/masters/product-service'
 import {
     Customer,
     type CustomerFormData,
@@ -60,6 +62,15 @@ import {
     type CustomerVolumetric,
     type CustomerVolumetricFormData,
 } from '@/types/masters/customer'
+import type { CustomerGroup } from "@/types/masters/customer-group"
+import type { Product } from "@/types/masters/product"
+import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select"
+import {
+    BankFloatingAsyncSelect,
+    ServiceCenterFloatingAsyncSelect,
+} from "@/components/masters/floating-master-async-selects"
+import type { Bank } from "@/types/masters/bank"
+import type { ServiceCenter } from "@/types/masters/service-center"
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 import {
     getInitialPincode,
@@ -75,6 +86,7 @@ const customerSchema = z.object({
     address2: z.string().optional().or(z.literal("")),
     pinCodeId: requiredPincodeField(),
     serviceCenterId: z.coerce.number().int().positive("Service center is required"),
+    customerGroupId: z.coerce.number().int().nonnegative().default(0),
     bankId: z.coerce.number().int().positive("Bank is required"),
     bankAccount: z.string().min(1, "Bank account is required"),
     bankIfsc: z.string().min(1, "Bank IFSC is required"),
@@ -105,6 +117,47 @@ const CUSTOMER_TABS = [
 
 const ALL_PRODUCTS_OPTION_VALUE = '__ALL_PRODUCTS__'
 
+function CustomerGroupFloatingSelect({
+    value,
+    onChange,
+    queryScope,
+    extraGroups,
+    triggerRef,
+}: {
+    value: number
+    onChange: (v: number) => void
+    queryScope: string
+    extraGroups?: CustomerGroup[]
+    triggerRef: Ref<HTMLButtonElement>
+}) {
+    const { formItemId, error } = useFormField()
+    return (
+        <DbAsyncSelect<CustomerGroup>
+            triggerRef={triggerRef}
+            id={formItemId}
+            aria-invalid={error ? true : undefined}
+            queryKey={["customer-form", "customer-groups", queryScope]}
+            fetchPage={(page, search) =>
+                customerGroupService.getCustomerGroups({
+                    page,
+                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                    sortBy: "code",
+                    sortOrder: "asc",
+                    search: search || undefined,
+                })
+            }
+            getItemLabel={(g) => `${g.code} — ${g.name}`}
+            extraItems={extraGroups}
+            value={String(value ?? 0)}
+            onValueChange={(v) => onChange(Number(v))}
+            clearOption={{ value: "0", label: "None" }}
+            placeholder="None — not in a group"
+            searchPlaceholder="Search groups…"
+            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+        />
+    )
+}
+
 export function CustomerForm({ initialData }: CustomerFormProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -124,43 +177,72 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
         }
     }, [searchParams])
 
-    const { data: banksData } = useQuery({
-        queryKey: ['customer-form-banks'],
-        queryFn: () => bankService.getBanks({ page: 1, limit: 100, sortBy: 'bankName', sortOrder: 'asc' }),
-    })
+    const extraBanks = useMemo((): Bank[] | undefined => {
+        const b = initialData?.bank
+        if (!b || !initialData?.bankId) return undefined
+        return [
+            {
+                id: b.id,
+                bankCode: b.bankCode,
+                bankName: b.bankName,
+                status: (b.status ?? "ACTIVE") as Bank["status"],
+                createdAt: "",
+                updatedAt: "",
+                createdById: null,
+                updatedById: null,
+                deletedAt: null,
+                deletedById: null,
+            },
+        ]
+    }, [initialData?.bank, initialData?.bankId])
 
-    const { data: serviceCentersData, isLoading: isServiceCentersLoading } = useQuery({
-        queryKey: ['customer-form-service-centers'],
-        queryFn: () => serviceCenterService.getServiceCenters({ page: 1, limit: 100, sortBy: 'name', sortOrder: 'asc' }),
-    })
+    const extraServiceCenters = useMemo((): ServiceCenter[] | undefined => {
+        const sc = initialData?.serviceCenter
+        if (!sc || !initialData?.serviceCenterId) return undefined
+        return [
+            {
+                id: sc.id,
+                code: sc.code,
+                name: sc.name,
+                subName: sc.subName ?? null,
+                address1: null,
+                address2: null,
+                telephone: null,
+                email: null,
+                pinCodeId: null,
+                countryId: null,
+                stateId: null,
+                localBranchId: null,
+                version: 1,
+                createdAt: "",
+                updatedAt: "",
+                createdById: null,
+                updatedById: null,
+                deletedAt: null,
+                deletedById: null,
+            },
+        ]
+    }, [initialData?.serviceCenter, initialData?.serviceCenterId])
 
-    const serviceCenterOptions = [
-        ...(serviceCentersData?.data ?? []),
-        ...(initialData?.serviceCenter && !(serviceCentersData?.data ?? []).some((serviceCenter) => serviceCenter.id === initialData.serviceCenterId)
-            ? [initialData.serviceCenter]
-            : []),
-        ...(
-            initialData?.serviceCenterId &&
-            !initialData?.serviceCenter &&
-            !(serviceCentersData?.data ?? []).some((serviceCenter) => serviceCenter.id === initialData.serviceCenterId)
-                ? [{ id: initialData.serviceCenterId, code: `ID-${initialData.serviceCenterId}`, name: `Service Center #${initialData.serviceCenterId}` }]
-                : []
-        ),
-    ]
-
-    const bankOptions = [
-        ...(banksData?.data ?? []),
-        ...(initialData?.bank && !(banksData?.data ?? []).some((bank) => bank.id === initialData.bankId)
-            ? [initialData.bank]
-            : []),
-        ...(
-            initialData?.bankId &&
-            !initialData?.bank &&
-            !(banksData?.data ?? []).some((bank) => bank.id === initialData.bankId)
-                ? [{ id: initialData.bankId, bankCode: `ID-${initialData.bankId}`, bankName: `Bank #${initialData.bankId}` }]
-                : []
-        ),
-    ]
+    const extraCustomerGroups = useMemo((): CustomerGroup[] | undefined => {
+        const g = initialData?.customerGroup
+        if (!g || !initialData?.customerGroupId) return undefined
+        return [
+            {
+                id: g.id,
+                code: g.code,
+                name: g.name,
+                version: 1,
+                status: (g.status ?? "ACTIVE") as "ACTIVE" | "INACTIVE",
+                createdAt: "",
+                updatedAt: "",
+                createdById: null,
+                updatedById: null,
+                deletedAt: null,
+                deletedById: null,
+            },
+        ]
+    }, [initialData?.customerGroup, initialData?.customerGroupId])
 
     const form = useForm<CustomerFormValues>({
         resolver: zodResolver(customerSchema) as Resolver<CustomerFormValues>,
@@ -172,6 +254,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             address2: '',
             pinCodeId: '',
             serviceCenterId: 0,
+            customerGroupId: 0,
             bankId: 0,
             bankAccount: '',
             bankIfsc: '',
@@ -199,6 +282,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             address2: initialData.address2 || '',
             pinCodeId: getInitialPincode(initialData),
             serviceCenterId: initialData.serviceCenterId ?? initialData.serviceCenter?.id ?? 0,
+            customerGroupId: initialData.customerGroupId ?? initialData.customerGroup?.id ?? 0,
             bankId: initialData.bankId ?? initialData.bank?.id ?? 0,
             bankAccount: initialData.bankAccount || '',
             bankIfsc: initialData.bankIfsc || '',
@@ -217,7 +301,15 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
 
     const mutation = useMutation({
         mutationFn: (values: CustomerFormValues) => {
-            const payload = omitEmptyCodeFields(values, ['code']) as CustomerFormData
+            const raw = omitEmptyCodeFields(values, ['code']) as Record<string, unknown>
+            delete raw.customerGroupId
+            const payload = { ...(raw as unknown as CustomerFormData) }
+            const groupId = values.customerGroupId
+            if (isEdit) {
+                payload.customerGroupId = groupId > 0 ? groupId : null
+            } else if (groupId > 0) {
+                payload.customerGroupId = groupId
+            }
             if (isEdit && initialData) {
                 return customerService.updateCustomer(initialData.id, {
                     ...payload,
@@ -368,6 +460,31 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                 />
                             </FormSection>
 
+                            <FormSection
+                                className="md:col-span-2"
+                                title="Customer group (optional)"
+                                contentClassName="space-y-3 max-w-2xl"
+                            >
+                                <p className="text-sm text-muted-foreground">
+                                    Optional. Assign a group to roll this customer into reports and list filters (Masters → Customer group). Leave as none if this account stands alone.
+                                </p>
+                                <FormField
+                                    control={form.control}
+                                    name="customerGroupId"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Group">
+                                            <CustomerGroupFloatingSelect
+                                                triggerRef={field.ref}
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                queryScope={String(customerId ?? "new")}
+                                                extraGroups={extraCustomerGroups}
+                                            />
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                            </FormSection>
+
                             <FormSection title="Address & Links" contentClassName="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
@@ -415,29 +532,13 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     name="serviceCenterId"
                                     render={({ field }) => (
                                         <FloatingFormItem required label="Service Center ID">
-                                            <FormControl>
-                                                <Select
-                                                    key={`service-center-${String(field.value)}-${serviceCenterOptions.length}`}
-                                                    onValueChange={(value) => field.onChange(Number(value))}
-                                                    value={field.value ? String(field.value) : undefined}
-                                                >
-                                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                        <SelectValue placeholder="Select service center" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {isServiceCentersLoading ? (
-                                                            <SelectItem value="__loading__" disabled>
-                                                                Loading service centers...
-                                                            </SelectItem>
-                                                        ) : null}
-                                                        {serviceCenterOptions.map((serviceCenter) => (
-                                                            <SelectItem key={serviceCenter.id} value={String(serviceCenter.id)}>
-                                                                {serviceCenter.code} - {serviceCenter.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </FormControl>
+                                            <ServiceCenterFloatingAsyncSelect
+                                                triggerRef={field.ref}
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                queryKeyScope={`customer-${String(customerId ?? "new")}`}
+                                                extraCenters={extraServiceCenters}
+                                            />
                                         </FloatingFormItem>
                                     )}
                                 />
@@ -460,24 +561,13 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     name="bankId"
                                     render={({ field }) => (
                                         <FloatingFormItem required label="Bank">
-                                            <Select
-                                                key={`bank-${String(field.value)}-${bankOptions.length}`}
-                                                onValueChange={(value) => field.onChange(Number(value))}
-                                                value={field.value ? String(field.value) : undefined}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                        <SelectValue placeholder="Select bank" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {bankOptions.map((bank) => (
-                                                        <SelectItem key={bank.id} value={String(bank.id)}>
-                                                            {bank.bankName}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <BankFloatingAsyncSelect
+                                                triggerRef={field.ref}
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                queryKeyScope={`customer-${String(customerId ?? "new")}`}
+                                                extraBanks={extraBanks}
+                                            />
                                         </FloatingFormItem>
                                     )}
                                 />
@@ -683,6 +773,7 @@ function getChildRows<T>(response: unknown): T[] {
 
 function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null }) {
     const queryClient = useQueryClient()
+    const fuelProductSelectId = useId()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<CustomerFuelSurcharge | null>(null)
     const [form, setForm] = useState<CustomerFuelSurchargeFormData>({
@@ -696,11 +787,6 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
     const { data } = useQuery({
         queryKey: ['customer-fuel-surcharges', customerId],
         queryFn: () => customerService.getCustomerFuelSurcharges(customerId!),
-        enabled: !!customerId,
-    })
-    const { data: products } = useQuery({
-        queryKey: ['customer-tab-products'],
-        queryFn: () => productService.getProducts({ page: 1, limit: 100, sortBy: 'productName', sortOrder: 'asc' }),
         enabled: !!customerId,
     })
     const surchargeRows = getChildRows<CustomerFuelSurcharge>(data)
@@ -772,20 +858,64 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                 saving={mutation.isPending}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect
-                        label="Product"
-                        value={form.productId != null ? String(form.productId) : editing ? '' : ALL_PRODUCTS_OPTION_VALUE}
-                        onValueChange={(value) =>
-                            setForm((prev) => ({
-                                ...prev,
-                                productId: value === ALL_PRODUCTS_OPTION_VALUE ? undefined : Number(value),
-                            }))
-                        }
-                        options={[
-                            ...(!editing ? [{ value: ALL_PRODUCTS_OPTION_VALUE, label: 'All Products' }] : []),
-                            ...(products?.data ?? []).map((product) => ({ value: String(product.id), label: product.productName })),
-                        ]}
-                    />
+                    <div className="space-y-2">
+                        <label htmlFor={fuelProductSelectId} className="text-sm font-medium">
+                            Product
+                        </label>
+                        <DbAsyncSelect<Product>
+                            id={fuelProductSelectId}
+                            queryKey={["customer-fuel-surcharge", "products", customerId ?? 0, editing?.id ?? "new"]}
+                            fetchPage={(page, search) =>
+                                productService.getProducts({
+                                    page,
+                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                                    search: search || undefined,
+                                    sortBy: "productName",
+                                    sortOrder: "asc",
+                                })
+                            }
+                            getItemLabel={(p) => p.productName}
+                            extraItems={
+                                editing?.productId != null && editing.product
+                                    ? [
+                                          {
+                                              id: editing.productId,
+                                              productCode: editing.product.productCode ?? "",
+                                              productName: editing.product.productName ?? `Product ${editing.productId}`,
+                                              version: 1,
+                                              productType: "DOMESTIC",
+                                              status: "ACTIVE",
+                                              createdAt: "",
+                                              updatedAt: "",
+                                              createdById: null,
+                                              updatedById: null,
+                                              deletedAt: null,
+                                              deletedById: null,
+                                          },
+                                      ]
+                                    : undefined
+                            }
+                            value={
+                                form.productId != null
+                                    ? String(form.productId)
+                                    : !editing
+                                      ? ALL_PRODUCTS_OPTION_VALUE
+                                      : undefined
+                            }
+                            onValueChange={(value) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    productId: value === ALL_PRODUCTS_OPTION_VALUE ? undefined : Number(value),
+                                }))
+                            }
+                            clearOption={
+                                !editing ? { value: ALL_PRODUCTS_OPTION_VALUE, label: "All Products" } : undefined
+                            }
+                            placeholder="All products"
+                            searchPlaceholder="Search products…"
+                            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+                        />
+                    </div>
                     <SimpleSelect
                         label="Fuel Charge Type"
                         value={form.fuelChargeType}
@@ -816,6 +946,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
 
 function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
     const queryClient = useQueryClient()
+    const volumetricProductSelectId = useId()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<CustomerVolumetric | null>(null)
     const [form, setForm] = useState<CustomerVolumetricFormData>({ productId: 0, cft: 5000 })
@@ -824,27 +955,12 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
         queryFn: () => customerService.getCustomerVolumetrics(customerId!),
         enabled: !!customerId,
     })
-    const { data: products } = useQuery({
-        queryKey: ['customer-tab-products'],
-        queryFn: () => productService.getProducts({ page: 1, limit: 100, sortBy: 'productName', sortOrder: 'asc' }),
-        enabled: !!customerId,
-    })
     const volumetricRows = getChildRows<CustomerVolumetric>(data)
-    const productOptionsForAdd = useMemo(() => {
-        const all = products?.data ?? []
-        const taken = new Set(volumetricRows.map((r) => r.productId))
-        return all.filter((p) => !taken.has(p.id)).map((p) => ({ value: String(p.id), label: p.productName }))
-    }, [products?.data, volumetricRows])
-    const productOptionsForEdit = useMemo(() => {
-        const all = products?.data ?? []
-        if (!editing) return all.map((p) => ({ value: String(p.id), label: p.productName }))
-        const taken = new Set(
-            volumetricRows.filter((r) => r.id !== editing.id).map((r) => r.productId),
-        )
-        return all
-            .filter((p) => !taken.has(p.id) || p.id === editing.productId)
-            .map((p) => ({ value: String(p.id), label: p.productName }))
-    }, [products?.data, volumetricRows, editing])
+    const takenProductIds = useMemo(() => {
+        const s = new Set(volumetricRows.map((r) => r.productId))
+        if (editing) s.delete(editing.productId)
+        return s
+    }, [volumetricRows, editing])
     const mutation = useMutation({
         mutationFn: (payload: CustomerVolumetricFormData) =>
             editing
@@ -868,20 +984,12 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
         onError: (error: Error) => toast.error(error.message),
     })
     if (!customerId) return <DisabledCustomerTab title="Customer Volumetric" />
-    const selectOptions = editing ? productOptionsForEdit : productOptionsForAdd
     return (
         <CustomerChildTableCard
             title="Customer Volumetric"
             onAdd={() => {
                 setEditing(null)
-                const all = products?.data ?? []
-                const taken = new Set(volumetricRows.map((r) => r.productId))
-                const first = all.find((p) => !taken.has(p.id))
-                if (!first) {
-                    toast.error('Each product can have only one row. All products already have a volumetric row, or add products in master first.')
-                    return
-                }
-                setForm({ productId: first.id, cft: 5000 })
+                setForm({ productId: 0, cft: 5000 })
                 setOpen(true)
             }}
             columns={['Product', 'CFT', 'Action']}
@@ -924,12 +1032,51 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
                     One row per product. CFT is the divisor for volumetric weight (L×W×H / CFT); the default in billing when unset is 5000.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SimpleSelect
-                        label="Product"
-                        value={String(form.productId || '')}
-                        onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))}
-                        options={selectOptions}
-                    />
+                    <div className="space-y-2">
+                        <label htmlFor={volumetricProductSelectId} className="text-sm font-medium">
+                            Product
+                        </label>
+                        <DbAsyncSelect<Product>
+                            id={volumetricProductSelectId}
+                            queryKey={["customer-volumetric", "products", customerId ?? 0, editing?.id ?? "new"]}
+                            fetchPage={(page, search) =>
+                                productService.getProducts({
+                                    page,
+                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                                    search: search || undefined,
+                                    sortBy: "productName",
+                                    sortOrder: "asc",
+                                })
+                            }
+                            getItemLabel={(p) => p.productName}
+                            visibleItem={(p) => !takenProductIds.has(p.id)}
+                            extraItems={
+                                editing?.productId != null && editing.product
+                                    ? [
+                                          {
+                                              id: editing.productId,
+                                              productCode: editing.product.productCode ?? "",
+                                              productName: editing.product.productName ?? `Product ${editing.productId}`,
+                                              version: 1,
+                                              productType: "DOMESTIC",
+                                              status: "ACTIVE",
+                                              createdAt: "",
+                                              updatedAt: "",
+                                              createdById: null,
+                                              updatedById: null,
+                                              deletedAt: null,
+                                              deletedById: null,
+                                          },
+                                      ]
+                                    : undefined
+                            }
+                            value={form.productId > 0 ? String(form.productId) : undefined}
+                            onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))}
+                            placeholder="Select product"
+                            searchPlaceholder="Search products…"
+                            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+                        />
+                    </div>
                     <SimpleInput label="CFT" type="number" value={String(form.cft)} onChange={(value) => setForm((prev) => ({ ...prev, cft: Number(value) }))} />
                 </div>
             </CustomerEntityDialog>

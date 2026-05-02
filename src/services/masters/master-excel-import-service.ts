@@ -9,8 +9,9 @@ async function readError(response: Response, fallback: string): Promise<string> 
 export type MasterExcelImportSummary = {
     created: number;
     failed: number;
-    failures: Array<{ row: number; message: string }>;
+    failures: Array<{ row: number; message: string; error?: Record<string, unknown> }>;
     successes: Array<{ row: number; code: string }>;
+    bulkUploadLogId?: number;
 };
 
 export const masterExcelImportService = {

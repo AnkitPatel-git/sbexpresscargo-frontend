@@ -1,9 +1,19 @@
-import type { Metadata } from "next";
+import { Suspense } from "react";
 
-export const metadata: Metadata = {
-  title: "Rate Master",
-};
-
-export default function RateMasterLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+export default function RatesSectionLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-lg border border-border/80 bg-card p-8 text-center text-sm text-muted-foreground">
+          Loading rates…
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
 }

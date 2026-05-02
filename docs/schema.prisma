@@ -1922,25 +1922,14 @@ model ShipmentCharge {
   @@map("shipment_charges")
 }
 
-// Shipment forwarding step (Delivery AWB, Vendor, Vendor charges grid).
+// Shipment forwarding step (forwarding AWB, optional delivery vendor/service).
 model ShipmentForwarding {
-  id                   Int                        @id @default(autoincrement())
-  shipmentId           Int                        @unique @map("shipment_id")
-  forwardingAwb        String?                    @map("forwarding_awb") @db.VarChar(64)
-  deliveryVendorId     Int?                       @map("delivery_vendor_id")
-  deliveryServiceMapId Int?                       @map("delivery_service_map_id")
-  vendorWeight         Decimal?                   @map("vendor_weight") @db.Decimal(14, 3)
-  vendorAmount         Decimal?                   @map("vendor_amount") @db.Decimal(14, 4)
-  vendorInvoice        String?                    @map("vendor_invoice") @db.VarChar(255)
-  contractCharges      Decimal?                   @map("contract_charges") @db.Decimal(14, 4)
-  otherCharges         Decimal?                   @map("other_charges") @db.Decimal(14, 4)
-  subTotal             Decimal?                   @map("sub_total") @db.Decimal(14, 4)
-  totalFuel            Decimal?                   @map("total_fuel") @db.Decimal(14, 4)
-  igst                 Decimal?                   @db.Decimal(14, 4)
-  cgst                 Decimal?                   @db.Decimal(14, 4)
-  sgst                 Decimal?                   @db.Decimal(14, 4)
-  totalAmount          Decimal?                   @map("total_amount") @db.Decimal(14, 4)
-  createdAt            DateTime                   @default(now()) @map("created_at") @db.Timestamp(6)
+  id                   Int       @id @default(autoincrement())
+  shipmentId           Int       @unique @map("shipment_id")
+  forwardingAwb        String    @map("forwarding_awb") @db.VarChar(64)
+  deliveryVendorId     Int?      @map("delivery_vendor_id")
+  deliveryServiceMapId Int?      @map("delivery_service_map_id")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt            DateTime                   @updatedAt @map("updated_at") @db.Timestamp(6)
   createdById          Int?                       @map("created_by_id")
   updatedById          Int?                       @map("updated_by_id")

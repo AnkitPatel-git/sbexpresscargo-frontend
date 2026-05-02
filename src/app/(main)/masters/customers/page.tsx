@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Edit, Trash2, FileDown, FilePlus, Filter } from "lucide-react"
 import { toast } from "sonner"
@@ -32,8 +32,12 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 import { customerService } from "@/services/masters/customer-service"
+import { customerGroupService } from "@/services/masters/customer-group-service"
 import { serviceCenterService } from "@/services/masters/service-center-service"
 import { Customer } from "@/types/masters/customer"
+import type { CustomerGroup } from "@/types/masters/customer-group"
+import type { ServiceCenter } from "@/types/masters/service-center"
+import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
@@ -44,6 +48,7 @@ type CustomerFilters = {
     name: string
     mobile: string
     serviceCenterId: string
+    customerGroupId: string
     status: string
 }
 
@@ -53,10 +58,13 @@ const emptyFilters: CustomerFilters = {
     name: "",
     mobile: "",
     serviceCenterId: "all",
+    customerGroupId: "all",
     status: "all",
 }
 
 export default function CustomersPage() {
+    const customerGroupFilterDomId = useId()
+    const serviceCenterFilterDomId = useId()
     const router = useRouter()
     const queryClient = useQueryClient()
     const [page, setPage] = useState(1)
@@ -79,11 +87,6 @@ export default function CustomersPage() {
         }
     }, [appliedFilters, filtersOpen])
 
-    const { data: serviceCentersResponse } = useQuery({
-        queryKey: ["customer-filters-service-centers"],
-        queryFn: () => serviceCenterService.getServiceCenters({ page: 1, limit: 100, sortBy: "code", sortOrder: "asc" }),
-    })
-
     const listParams = {
         page,
         limit,
@@ -94,6 +97,7 @@ export default function CustomersPage() {
         name: appliedFilters.name || undefined,
         mobile: appliedFilters.mobile || undefined,
         serviceCenterId: appliedFilters.serviceCenterId === "all" ? undefined : Number(appliedFilters.serviceCenterId),
+        customerGroupId: appliedFilters.customerGroupId === "all" ? undefined : Number(appliedFilters.customerGroupId),
         status: appliedFilters.status === "all" ? undefined : appliedFilters.status,
     }
 
@@ -201,20 +205,59 @@ export default function CustomersPage() {
                                     <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
                                     <Input placeholder="Customer Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
                                     <Input placeholder="Mobile" className="h-9 bg-background" value={draftFilters.mobile} onChange={(e) => setDraftFilters((prev) => ({ ...prev, mobile: e.target.value }))} />
-                                    <div className="sm:col-span-2">
-                                        <Select value={draftFilters.serviceCenterId} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, serviceCenterId: value }))}>
-                                            <SelectTrigger className="h-9 w-full bg-background">
-                                                <SelectValue placeholder="Service Center" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All service centers</SelectItem>
-                                                {(serviceCentersResponse?.data ?? []).map((serviceCenter) => (
-                                                    <SelectItem key={serviceCenter.id} value={String(serviceCenter.id)}>
-                                                        {serviceCenter.code} - {serviceCenter.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                    <div className="sm:col-span-2 space-y-1">
+                                        <label htmlFor={serviceCenterFilterDomId} className="text-xs font-medium text-muted-foreground">
+                                            Service center
+                                        </label>
+                                        <DbAsyncSelect<ServiceCenter>
+                                            id={serviceCenterFilterDomId}
+                                            queryKey={["customers-list-filter", "service-centers"]}
+                                            fetchPage={(page, search) =>
+                                                serviceCenterService.getServiceCenters({
+                                                    page,
+                                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                                                    sortBy: "code",
+                                                    sortOrder: "asc",
+                                                    search: search || undefined,
+                                                })
+                                            }
+                                            getItemLabel={(sc) => `${sc.code} - ${sc.name}`}
+                                            value={draftFilters.serviceCenterId}
+                                            onValueChange={(value) =>
+                                                setDraftFilters((prev) => ({ ...prev, serviceCenterId: value }))
+                                            }
+                                            clearOption={{ value: "all", label: "All service centers" }}
+                                            placeholder="All service centers"
+                                            searchPlaceholder="Search service centers…"
+                                            triggerClassName="h-9 w-full border border-input bg-background"
+                                        />
+                                    </div>
+                                    <div className="sm:col-span-2 space-y-1">
+                                        <label htmlFor={customerGroupFilterDomId} className="text-xs font-medium text-muted-foreground">
+                                            Customer group
+                                        </label>
+                                        <DbAsyncSelect<CustomerGroup>
+                                            id={customerGroupFilterDomId}
+                                            queryKey={["customers-list-filter", "customer-groups"]}
+                                            fetchPage={(page, search) =>
+                                                customerGroupService.getCustomerGroups({
+                                                    page,
+                                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                                                    sortBy: "code",
+                                                    sortOrder: "asc",
+                                                    search: search || undefined,
+                                                })
+                                            }
+                                            getItemLabel={(g) => `${g.code} — ${g.name}`}
+                                            value={draftFilters.customerGroupId}
+                                            onValueChange={(value) =>
+                                                setDraftFilters((prev) => ({ ...prev, customerGroupId: value }))
+                                            }
+                                            clearOption={{ value: "all", label: "All groups" }}
+                                            placeholder="All groups"
+                                            searchPlaceholder="Search groups…"
+                                            triggerClassName="h-9 w-full border border-input bg-background"
+                                        />
                                     </div>
                                     <Select value={draftFilters.status} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}>
                                         <SelectTrigger className="h-9 w-full bg-background">
@@ -263,11 +306,12 @@ export default function CustomersPage() {
                 </PermissionGuard>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[1080px] border-0">
+                <Table className="min-w-[1240px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Code" field="code" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Customer Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Customer group</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Contact Person</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">City</TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Type" field="customerType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
@@ -277,14 +321,17 @@ export default function CustomersPage() {
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading customers...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={8} className="h-24 text-center text-muted-foreground">Loading customers...</TableCell></TableRow>
                         ) : rows.length === 0 ? (
-                            <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No customers found.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={8} className="h-24 text-center text-muted-foreground">No customers found.</TableCell></TableRow>
                         ) : (
                             rows.map((customer: Customer, index) => (
                                 <TableRow key={customer.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{customer.code}</TableCell>
                                     <TableCell className="font-medium text-foreground">{customer.name}</TableCell>
+                                    <TableCell className="max-w-[200px] truncate text-sm text-foreground" title={customer.customerGroup ? `${customer.customerGroup.code} — ${customer.customerGroup.name}` : undefined}>
+                                        {customer.customerGroup ? `${customer.customerGroup.code} — ${customer.customerGroup.name}` : "—"}
+                                    </TableCell>
                                     <TableCell className="text-foreground">{customer.contactPerson}</TableCell>
                                     <TableCell className="text-foreground">
                                         {customer.serviceablePincode?.cityName || "-"}

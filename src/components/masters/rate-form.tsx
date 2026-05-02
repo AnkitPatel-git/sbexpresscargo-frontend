@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useInfiniteEntityList, useSelectContentInfiniteScroll } from "@/hooks/use-infinite-entity-list";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ import { chargeService } from "@/services/masters/charge-service";
 import { customerService } from "@/services/masters/customer-service";
 import { productService } from "@/services/masters/product-service";
 import { rateService } from "@/services/masters/rate-service";
+import { vendorService } from "@/services/masters/vendor-service";
 import { zoneService } from "@/services/masters/zone-service";
 import type {
   CreateRateMasterPayload,
@@ -40,20 +41,55 @@ import type {
 } from "@/types/masters/rate";
 import type { Customer } from "@/types/masters/customer";
 import type { Product } from "@/types/masters/product";
+import type { Vendor } from "@/types/masters/vendor";
 import type { Zone } from "@/types/masters/zone";
+import {
+  isVendorRateMasterRow,
+  parseRateContractParam,
+  rateMasterListPath,
+} from "@/lib/rate-master-nav";
 
 const DEFAULT_RATE_UPDATE_TYPE = "AWB_ENTRY_RATE";
 
-const rateMasterSchema = z.object({
-  fromDate: z.string().min(1, "From date is required"),
-  toDate: z.string().min(1, "To date is required"),
-  customerId: z.string().min(1, "Customer is required"),
-  productId: z.string().min(1, "Product is required"),
-  rateType: z.string().optional().or(z.literal("")),
-  flatRate: z.string().optional().or(z.literal("")),
-});
+function buildRateMasterSchema(isVendorContract: boolean) {
+  return z
+    .object({
+      fromDate: z.string().min(1, "From date is required"),
+      toDate: z.string().min(1, "To date is required"),
+      customerId: z.string().optional(),
+      vendorId: z.string().optional(),
+      productId: z.string().min(1, "Product is required"),
+      rateType: z.string().optional().or(z.literal("")),
+      flatRate: z.string().optional().or(z.literal("")),
+    })
+    .superRefine((data, ctx) => {
+      if (isVendorContract) {
+        if (!data.vendorId?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Vendor is required",
+            path: ["vendorId"],
+          });
+        }
+      } else if (!data.customerId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Customer is required",
+          path: ["customerId"],
+        });
+      }
+    });
+}
 
-type RateMasterFormValues = z.infer<typeof rateMasterSchema>;
+type RateMasterFormValues = {
+  fromDate: string;
+  toDate: string;
+  customerId?: string;
+  vendorId?: string;
+  productId: string;
+  rateType?: string;
+  flatRate?: string;
+};
 
 type TabValue = "master" | "route-slabs" | "oda-slabs" | "rate-conditions";
 
@@ -111,6 +147,7 @@ type WeightSlabDraft = {
   maxWeight: string;
   rate: string;
   pricingMode?: "FLAT" | "PER_KG";
+  applyFuel?: boolean;
 };
 
 type RouteSlabDraft = {
@@ -138,6 +175,7 @@ type RateChargeDraft = {
   minValue: string;
   maxValue: string;
   sequence: string;
+  applyFuel: boolean;
   chargeSlabs: ChargeSlabDraft[];
 };
 
@@ -163,6 +201,7 @@ type RateConditionDraft = {
   calculationBase: string;
   applyPerPiece: boolean;
   isPercentage: boolean;
+  applyFuel: boolean;
   slabs: ConditionSlabFormRow[];
 };
 
@@ -255,8 +294,14 @@ interface RateFormProps {
 
 export function RateForm({ initialData }: RateFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const ratesListHref = rateMasterListPath(parseRateContractParam(searchParams.get("contract")));
   const queryClient = useQueryClient();
   const isEdit = !!initialData;
+  const isVendorContract = isEdit
+    ? isVendorRateMasterRow(initialData ?? {})
+    : parseRateContractParam(searchParams.get("contract")) === "vendor";
+  const rateSchema = useMemo(() => buildRateMasterSchema(isVendorContract), [isVendorContract]);
   const [activeTab, setActiveTab] = useState<TabValue>("master");
   const [routeSlabs, setRouteSlabs] = useState<RouteSlabRow[]>([]);
   const [odaSlabs, setOdaSlabs] = useState<RouteSlabRow[]>([]);
@@ -264,11 +309,12 @@ export function RateForm({ initialData }: RateFormProps) {
   const [rateCharges, setRateCharges] = useState<RateChargeRow[]>([]);
 
   const form = useForm<RateMasterFormValues>({
-    resolver: zodResolver(rateMasterSchema) as Resolver<RateMasterFormValues>,
+    resolver: zodResolver(rateSchema) as Resolver<RateMasterFormValues>,
     defaultValues: {
       fromDate: "",
       toDate: "",
       customerId: "",
+      vendorId: "",
       productId: "",
       rateType: "",
       flatRate: "",
@@ -281,6 +327,7 @@ export function RateForm({ initialData }: RateFormProps) {
         fromDate: "",
         toDate: "",
         customerId: "",
+        vendorId: "",
         productId: "",
         rateType: "",
         flatRate: "",
@@ -295,7 +342,14 @@ export function RateForm({ initialData }: RateFormProps) {
     form.reset({
       fromDate: initialData.fromDate ? initialData.fromDate.slice(0, 10) : "",
       toDate: initialData.toDate ? initialData.toDate.slice(0, 10) : "",
-      customerId: initialData.customerId != null ? String(initialData.customerId) : "",
+      customerId:
+        initialData.customerId != null && !isVendorRateMasterRow(initialData)
+          ? String(initialData.customerId)
+          : "",
+      vendorId:
+        initialData.vendorId != null && isVendorRateMasterRow(initialData)
+          ? String(initialData.vendorId)
+          : "",
       rateType: initialData.rateType || "",
       flatRate: initialData.flatRate != null && initialData.flatRate !== undefined ? String(initialData.flatRate) : "",
       productId: initialData.productId != null ? String(initialData.productId) : "",
@@ -322,6 +376,41 @@ export function RateForm({ initialData }: RateFormProps) {
     const slabRows = mapRateChargesToSlabConditionRows(allCharges);
     setRateConditions([...thresholdRows, ...slabRows]);
   }, [form, initialData]);
+
+  const extraVendorRows = useMemo((): Vendor[] | undefined => {
+    const v = initialData?.vendor;
+    if (!v) return undefined;
+    return [
+      {
+        id: v.id,
+        vendorCode: v.vendorCode ?? "",
+        vendorName: v.vendorName ?? "",
+        contactPerson: "",
+        address1: null,
+        address2: null,
+        pinCodeId: null,
+        countryId: null,
+        stateId: null,
+        zoneId: null,
+        bankId: null,
+        bankAccount: null,
+        bankIfsc: null,
+        telephone: null,
+        email: "",
+        mobile: "",
+        website: null,
+        gstNo: null,
+        vendorZip: null,
+        status: "ACTIVE",
+        createdAt: "",
+        updatedAt: "",
+        createdById: null,
+        updatedById: null,
+        deletedAt: null,
+        deletedById: null,
+      } as Vendor,
+    ];
+  }, [initialData?.vendor]);
 
   const extraCustomerRows = useMemo((): Customer[] | undefined => {
     const c = initialData?.customer;
@@ -396,6 +485,19 @@ export function RateForm({ initialData }: RateFormProps) {
     queryKey: ["rate-form-customers"],
     fetchPage: (page) => customerService.getCustomers({ page, limit: 10, sortBy: "name", sortOrder: "asc" }),
     extraRows: extraCustomerRows,
+    enabled: !isVendorContract,
+  });
+
+  const {
+    rows: vendorOptions,
+    fetchNextPage: fetchNextVendors,
+    hasNextPage: hasNextVendorPage,
+    isFetchingNextPage: isFetchingNextVendorPage,
+  } = useInfiniteEntityList<Vendor>({
+    queryKey: ["rate-form-vendors"],
+    fetchPage: (page) => vendorService.getVendors({ page, limit: 10, sortBy: "vendorName", sortOrder: "asc" }),
+    extraRows: extraVendorRows,
+    enabled: isVendorContract,
   });
 
   const {
@@ -425,6 +527,11 @@ export function RateForm({ initialData }: RateFormProps) {
     isFetchingNextPage: isFetchingNextCustomerPage,
     fetchNextPage: fetchNextCustomers,
   });
+  const onVendorSelectScroll = useSelectContentInfiniteScroll({
+    hasNextPage: hasNextVendorPage,
+    isFetchingNextPage: isFetchingNextVendorPage,
+    fetchNextPage: fetchNextVendors,
+  });
   const onProductSelectScroll = useSelectContentInfiniteScroll({
     hasNextPage: hasNextProductPage,
     isFetchingNextPage: isFetchingNextProductPage,
@@ -441,8 +548,20 @@ export function RateForm({ initialData }: RateFormProps) {
   const mutation = useMutation({
     mutationFn: async (values: RateMasterFormValues) => {
       const updateType =
-        isEdit && initialData?.updateType ? initialData.updateType : DEFAULT_RATE_UPDATE_TYPE;
-      const payload = buildPayload(updateType, values, routeSlabs, odaSlabs, rateConditions, rateCharges);
+        isEdit && initialData?.updateType
+          ? initialData.updateType
+          : isVendorContract
+            ? "VENDOR_RATE"
+            : DEFAULT_RATE_UPDATE_TYPE;
+      const payload = buildPayload(
+        updateType,
+        values,
+        routeSlabs,
+        odaSlabs,
+        rateConditions,
+        rateCharges,
+        isVendorContract,
+      );
       if (isEdit && initialData) {
         const updatePayload: UpdateRateMasterPayload = {
           ...payload,
@@ -459,7 +578,7 @@ export function RateForm({ initialData }: RateFormProps) {
       }
       toast.success(`Rate master ${isEdit ? "updated" : "created"} successfully`);
       if (!isEdit) {
-        router.push("/masters/rates");
+        router.push(ratesListHref);
       }
     },
     onError: (error: Error) => {
@@ -522,34 +641,59 @@ export function RateForm({ initialData }: RateFormProps) {
                   </FloatingFormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="customerId"
-                render={({ field }) => (
-                  <FloatingFormItem required label="Customer">
-                    <Select key={field.value} onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                          <SelectValue placeholder="Select customer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent
-                        className="max-h-72"
-                        onScroll={onCustomerSelectScroll}
-                      >
-                        {customerOptions.map((customer) => (
-                          <SelectItem key={customer.id} value={String(customer.id)}>
-                            {customer.name || customer.code || `Customer ${customer.id}`}
-                          </SelectItem>
-                        ))}
-                        {isFetchingNextCustomerPage ? (
-                          <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                  </FloatingFormItem>
-                )}
-              />
+              {isVendorContract ? (
+                <FormField
+                  control={form.control}
+                  name="vendorId"
+                  render={({ field }) => (
+                    <FloatingFormItem required label="Vendor">
+                      <Select key={field.value} onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                            <SelectValue placeholder="Select vendor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-72" onScroll={onVendorSelectScroll}>
+                          {vendorOptions.map((vendor) => (
+                            <SelectItem key={vendor.id} value={String(vendor.id)}>
+                              {vendor.vendorName || vendor.vendorCode || `Vendor ${vendor.id}`}
+                            </SelectItem>
+                          ))}
+                          {isFetchingNextVendorPage ? (
+                            <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </FloatingFormItem>
+                  )}
+                />
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="customerId"
+                  render={({ field }) => (
+                    <FloatingFormItem required label="Customer">
+                      <Select key={field.value} onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                            <SelectValue placeholder="Select customer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-72" onScroll={onCustomerSelectScroll}>
+                          {customerOptions.map((customer) => (
+                            <SelectItem key={customer.id} value={String(customer.id)}>
+                              {customer.name || customer.code || `Customer ${customer.id}`}
+                            </SelectItem>
+                          ))}
+                          {isFetchingNextCustomerPage ? (
+                            <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </FloatingFormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="productId"
@@ -665,7 +809,7 @@ export function RateForm({ initialData }: RateFormProps) {
             </Button>
           )}
           {isFirstTab && (
-            <Button type="button" variant="expressDanger" onClick={() => router.push("/masters/rates")}>
+            <Button type="button" variant="expressDanger" onClick={() => router.push(ratesListHref)}>
               Cancel
             </Button>
           )}
@@ -692,6 +836,7 @@ function mapRouteSlabsForApi(rows: RouteSlabRow[], mode: "route" | "oda" = "rout
       maxWeight: Number(w.maxWeight),
       rate: Number(w.rate),
       pricingMode: (w as { pricingMode?: string }).pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
+      applyFuel: (w as { applyFuel?: boolean }).applyFuel !== false,
     }));
     const slab: RateRouteSlabPayload = { weightSlabs: ws };
     if (mode === "route") {
@@ -733,6 +878,7 @@ function mapRateChargesForApi(rows: RateChargeRow[]): RateChargePayload[] {
       if (row.maxValue != null && Number.isFinite(Number(row.maxValue))) next.maxValue = Number(row.maxValue);
       if (row.sequence != null && Number.isFinite(Number(row.sequence))) next.sequence = Number(row.sequence);
       if (chargeSlabs.length > 0) next.chargeSlabs = chargeSlabs;
+      next.applyFuel = (row as { applyFuel?: boolean }).applyFuel !== false;
       return next;
     })
     .filter((row): row is RateChargePayload => row != null);
@@ -761,6 +907,7 @@ function mapSlabConditionRulesToRateChargePayloads(rows: RateConditionRow[]): Ra
         applyPerPiece: Boolean(row.applyPerPiece),
         value: 0,
         isPercentage: false,
+        applyFuel: (row as { applyFuel?: boolean }).applyFuel !== false,
         chargeSlabs: slabs,
       };
       return payload;
@@ -798,16 +945,18 @@ function buildPayload(
   odaSlabs: RouteSlabRow[],
   rateConditions: RateConditionRow[],
   rateCharges: RateChargeRow[],
+  isVendorContract: boolean,
 ): CreateRateMasterPayload {
   const flatRaw = values.flatRate?.trim();
   const flatRate =
     flatRaw !== undefined && flatRaw !== "" && Number.isFinite(Number(flatRaw)) ? Number(flatRaw) : undefined;
 
+  const resolvedUpdateType = isVendorContract ? "VENDOR_RATE" : updateType;
+
   const payload: CreateRateMasterPayload = {
-    updateType,
+    updateType: resolvedUpdateType,
     fromDate: values.fromDate,
     toDate: values.toDate,
-    customerId: Number(values.customerId),
     productId: Number(values.productId),
     zoneRates: [],
     distanceSlabs: [],
@@ -832,6 +981,7 @@ function buildPayload(
         if (row.maxValue != null && Number.isFinite(Number(row.maxValue))) {
           next.maxValue = Number(row.maxValue);
         }
+        next.applyFuel = (row as { applyFuel?: boolean }).applyFuel !== false;
         return next;
       }),
     rateCharges: dedupeRateChargePayloads([
@@ -843,6 +993,12 @@ function buildPayload(
   const rt = values.rateType?.trim();
   if (rt) payload.rateType = rt;
   if (flatRate !== undefined) payload.flatRate = flatRate;
+
+  if (isVendorContract) {
+    payload.vendorId = Number(values.vendorId);
+  } else {
+    payload.customerId = Number(values.customerId);
+  }
 
   return payload;
 }
@@ -880,7 +1036,7 @@ function RouteSlabsEditor({
     toZoneId: "",
     minKm: "",
     maxKm: "",
-    weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT" }],
+    weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -902,8 +1058,9 @@ function RouteSlabsEditor({
               maxWeight: String(item.maxWeight),
               rate: String(item.rate),
               pricingMode: (item as { pricingMode?: string }).pricingMode === "PER_KG" ? "PER_KG" : "FLAT",
+              applyFuel: (item as { applyFuel?: boolean }).applyFuel !== false,
             }))
-          : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT" }],
+          : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
     });
   }, [editingIndex, slabs]);
 
@@ -914,7 +1071,7 @@ function RouteSlabsEditor({
       toZoneId: "",
       minKm: "",
       maxKm: "",
-      weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT" }],
+      weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
     });
     setEditingIndex(null);
   }
@@ -926,6 +1083,7 @@ function RouteSlabsEditor({
         maxWeight: Number(item.maxWeight),
         rate: Number(item.rate),
         pricingMode: item.pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
+        applyFuel: item.applyFuel !== false,
       }))
       .filter((item) => Number.isFinite(item.minWeight) && Number.isFinite(item.maxWeight) && Number.isFinite(item.rate));
     if (weightSlabs.length === 0) return;
@@ -985,11 +1143,21 @@ function RouteSlabsEditor({
     }
   }
 
-  function updateWeightSlab(index: number, field: keyof WeightSlabDraft, value: string) {
+  function updateWeightSlab(index: number, field: keyof WeightSlabDraft, value: string | boolean) {
     setDraft((current) => ({
       ...current,
       weightSlabs: current.weightSlabs.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: field === "pricingMode" ? (value as "FLAT" | "PER_KG") : value } : item,
+        itemIndex === index
+          ? {
+              ...item,
+              [field]:
+                field === "pricingMode"
+                  ? (value as "FLAT" | "PER_KG")
+                  : field === "applyFuel"
+                    ? Boolean(value)
+                    : String(value),
+            }
+          : item,
       ),
     }));
   }
@@ -997,7 +1165,7 @@ function RouteSlabsEditor({
   function addWeightRow() {
     setDraft((current) => ({
       ...current,
-      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT" }],
+      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
     }));
   }
 
@@ -1121,7 +1289,7 @@ function RouteSlabsEditor({
         </div>
         <div className="space-y-3">
           {draft.weightSlabs.map((item, index) => (
-            <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+            <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">
               <Input
                 type="number"
                 placeholder="Min weight"
@@ -1156,6 +1324,13 @@ function RouteSlabsEditor({
                 value={item.rate}
                 onChange={(e) => updateWeightSlab(index, "rate", e.target.value)}
               />
+              <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
+                <Checkbox
+                  checked={item.applyFuel !== false}
+                  onCheckedChange={(checked) => updateWeightSlab(index, "applyFuel", Boolean(checked))}
+                />
+                <span className="text-sm text-foreground">Fuel basis</span>
+              </div>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -1272,6 +1447,7 @@ function RateChargesEditor({
     minValue: "",
     maxValue: "",
     sequence: "",
+    applyFuel: true,
     chargeSlabs: [{ minValue: "", maxValue: "", rate: "" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -1296,8 +1472,9 @@ function RateChargesEditor({
         code: ch.code ?? "",
         name: ch.name ?? "",
         calculationBase: (ch as { calculationBase?: string }).calculationBase ?? "FLAT",
-        applyFuel: false,
         sequence: 0,
+        stateApplicationMode: "ALL",
+        pincodeApplicationMode: "ALL",
       });
     };
     for (const row of rateCharges) {
@@ -1392,6 +1569,7 @@ function RateChargesEditor({
       minValue: details.minValue != null ? String(details.minValue) : "",
       maxValue: details.maxValue != null ? String(details.maxValue) : "",
       sequence: details.sequence != null ? String(details.sequence) : "",
+      applyFuel: (details as { applyFuel?: boolean }).applyFuel !== false,
       chargeSlabs: (details.chargeSlabs ?? []).map((item) => ({ minValue: String(item.minValue), maxValue: String(item.maxValue), rate: String(item.rate) })),
     });
   }, [editingIndex, editingRowResponse?.data, rateCharges]);
@@ -1407,6 +1585,7 @@ function RateChargesEditor({
       minValue: "",
       maxValue: "",
       sequence: "",
+      applyFuel: true,
       chargeSlabs: [{ minValue: "", maxValue: "", rate: "" }],
     });
     setEditingIndex(null);
@@ -1441,6 +1620,7 @@ function RateChargesEditor({
     const next: RateChargePayload = {
       value,
       isPercentage: draft.isPercentage,
+      applyFuel: draft.applyFuel,
     };
     if (chargeId) next.chargeId = chargeId;
     if (draft.name.trim()) next.name = draft.name.trim();
@@ -1552,6 +1732,10 @@ function RateChargesEditor({
           <Checkbox checked={draft.isPercentage} onCheckedChange={(checked) => setDraft((current) => ({ ...current, isPercentage: Boolean(checked) }))} />
           <span className="text-sm font-medium text-foreground">Is percentage</span>
         </div>
+        <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+          <Checkbox checked={draft.applyFuel} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyFuel: Boolean(checked) }))} />
+          <span className="text-sm font-medium text-foreground">Counts toward fuel basis</span>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" onClick={addChargeSlabRow}>
@@ -1653,6 +1837,7 @@ function RateConditionsEditor({
     calculationBase: "",
     applyPerPiece: false,
     isPercentage: false,
+    applyFuel: true,
     slabs: [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -1681,8 +1866,9 @@ function RateConditionsEditor({
         code: ch.code ?? "",
         name: ch.name ?? "",
         calculationBase: (ch as { calculationBase?: string }).calculationBase ?? "FLAT",
-        applyFuel: false,
         sequence: 0,
+        stateApplicationMode: "ALL",
+        pincodeApplicationMode: "ALL",
       });
     };
     for (const row of rateConditions) {
@@ -1794,6 +1980,7 @@ function RateConditionsEditor({
       calculationBase: details.calculationBase ?? "",
       applyPerPiece: Boolean((row as { applyPerPiece?: boolean }).applyPerPiece),
       isPercentage: Boolean(details.isPercentage),
+      applyFuel: (details as { applyFuel?: boolean }).applyFuel !== false,
       slabs: slabsFromRow,
     });
   }, [editingIndex, editingRowResponse?.data, rateConditions]);
@@ -1812,6 +1999,7 @@ function RateConditionsEditor({
       calculationBase: "",
       applyPerPiece: false,
       isPercentage: false,
+      applyFuel: true,
       slabs: [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
     });
     setEditingIndex(null);
@@ -1866,6 +2054,7 @@ function RateConditionsEditor({
         calculationBase: calcBase,
         applyPerPiece: draft.applyPerPiece,
         isPercentage: false,
+        applyFuel: draft.applyFuel,
         slabs: parsedSlabs.map((s) => ({
           minValue: String(s.minValue),
           maxValue: String(s.maxValue),
@@ -1915,6 +2104,7 @@ function RateConditionsEditor({
       value: hasExplicitCondition ? Number(draft.value) : 0,
       chargeAmount,
       isPercentage: draft.isPercentage,
+      applyFuel: draft.applyFuel,
     };
     if (draft.minValue.trim() && Number.isFinite(Number(draft.minValue))) {
       next.minValue = Number(draft.minValue);
@@ -2086,6 +2276,10 @@ function RateConditionsEditor({
           <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
             <Checkbox checked={draft.isPercentage} onCheckedChange={(checked) => setDraft((current) => ({ ...current, isPercentage: Boolean(checked) }))} />
             <span className="text-sm font-medium text-foreground">Is percentage</span>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+            <Checkbox checked={draft.applyFuel} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyFuel: Boolean(checked) }))} />
+            <span className="text-sm font-medium text-foreground">Fuel basis</span>
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-border/70 px-4 py-3">
             <Checkbox
