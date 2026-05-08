@@ -212,7 +212,7 @@ export async function GET(request: Request) {
     const payload: DistanceData = {
       fromPinCode,
       toPinCode,
-      distanceKm: Number(distanceKm.toFixed(2)),
+      distanceKm: Math.round(distanceKm),
       source,
     }
 

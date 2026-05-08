@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ComponentProps, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { Charge } from "@/types/masters/charge";
 import { FieldErrors, Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select";
 import { cn } from "@/lib/utils";
 import { chargeService } from "@/services/masters/charge-service";
 import { customerService } from "@/services/masters/customer-service";
@@ -246,6 +247,39 @@ function mapRateChargesToSlabConditionRows(rows: RateCharge[] | undefined): Rate
     }));
 }
 
+function zoneStub(id: number): Zone {
+  return {
+    id,
+    name: "",
+    code: "",
+    countryId: null,
+    zoneType: "DOMESTIC",
+    createdAt: "",
+    updatedAt: "",
+    createdById: null,
+    updatedById: null,
+    deletedAt: null,
+    deletedById: null,
+  };
+}
+
+function formatZonePickLabel(z: { id: number; code?: string; name?: string }): string {
+  const c = (z.code ?? "").trim();
+  const n = (z.name ?? "").trim();
+  if (c && n) return `${c} — ${n}`;
+  if (c) return c;
+  if (n) return n;
+  return `Zone ${z.id}`;
+}
+
+/** Merges base zone extras with a draft pick so the trigger label resolves before save. */
+function mergeZoneExtrasForPick(base: Zone[], selectedIdStr: string | undefined): Zone[] {
+  if (!selectedIdStr || selectedIdStr === "__none__") return base;
+  const id = Number(selectedIdStr);
+  if (!Number.isFinite(id) || base.some((z) => z.id === id)) return base;
+  return [...base, zoneStub(id)];
+}
+
 /** Zones linked on slabs (and initial API refs) are merged so selects stay valid when paged. */
 function collectExtraZoneRows(
   initialData: RateMaster | null | undefined,
@@ -269,6 +303,10 @@ function collectExtraZoneRows(
       deletedById: null,
     });
   };
+  const ensureId = (id: number | null | undefined) => {
+    if (id == null || m.has(id)) return;
+    m.set(id, zoneStub(id));
+  };
   for (const s of initialData?.routeRateSlabs ?? []) {
     add(s.fromZone);
     add(s.toZone);
@@ -280,12 +318,26 @@ function collectExtraZoneRows(
   for (const s of routeSlabs) {
     add(s.fromZone);
     add(s.toZone);
+    ensureId(s.fromZoneId ?? null);
+    ensureId(s.toZoneId ?? null);
   }
   for (const s of odaSlabs) {
     add(s.fromZone);
     add(s.toZone);
+    ensureId(s.fromZoneId ?? null);
+    ensureId(s.toZoneId ?? null);
   }
   return Array.from(m.values());
+}
+
+async function fetchZonesPageForSelect(page: number, search: string) {
+  return zoneService.getZones({
+    page,
+    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+    sortBy: "name",
+    sortOrder: "asc",
+    search: search || undefined,
+  });
 }
 
 interface RateFormProps {
@@ -511,17 +563,6 @@ export function RateForm({ initialData }: RateFormProps) {
     extraRows: extraProductRows,
   });
 
-  const {
-    rows: zoneOptions,
-    fetchNextPage: fetchNextZones,
-    hasNextPage: hasNextZonePage,
-    isFetchingNextPage: isFetchingNextZonePage,
-  } = useInfiniteEntityList<Zone>({
-    queryKey: ["rate-form-zones"],
-    fetchPage: (page) => zoneService.getZones({ page, limit: 10, sortBy: "name", sortOrder: "asc" }),
-    extraRows: extraZoneRows.length > 0 ? extraZoneRows : undefined,
-  });
-
   const onCustomerSelectScroll = useSelectContentInfiniteScroll({
     hasNextPage: hasNextCustomerPage,
     isFetchingNextPage: isFetchingNextCustomerPage,
@@ -537,13 +578,13 @@ export function RateForm({ initialData }: RateFormProps) {
     isFetchingNextPage: isFetchingNextProductPage,
     fetchNextPage: fetchNextProducts,
   });
-  const onZoneSelectScroll = useSelectContentInfiniteScroll({
-    hasNextPage: hasNextZonePage,
-    isFetchingNextPage: isFetchingNextZonePage,
-    fetchNextPage: fetchNextZones,
-  });
-
-  const zoneLabelById = useMemo(() => new Map(zoneOptions.map((item) => [item.id, `${item.code || item.id}${item.name ? ` - ${item.name}` : ""}`])), [zoneOptions]);
+  const zoneLabelById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const item of extraZoneRows) {
+      map.set(item.id, formatZonePickLabel(item));
+    }
+    return map;
+  }, [extraZoneRows]);
 
   const mutation = useMutation({
     mutationFn: async (values: RateMasterFormValues) => {
@@ -770,9 +811,7 @@ export function RateForm({ initialData }: RateFormProps) {
               slabs={routeSlabs}
               setSlabs={setRouteSlabs}
               zoneLabelById={zoneLabelById}
-              zoneOptions={zoneOptions}
-              zoneSelectContentProps={{ className: "max-h-72", onScroll: onZoneSelectScroll }}
-              isLoadingMoreZones={isFetchingNextZonePage}
+              zoneExtraRows={extraZoneRows}
             />
           </TabsContent>
 
@@ -786,9 +825,7 @@ export function RateForm({ initialData }: RateFormProps) {
               slabs={odaSlabs}
               setSlabs={setOdaSlabs}
               zoneLabelById={zoneLabelById}
-              zoneOptions={zoneOptions}
-              zoneSelectContentProps={{ className: "max-h-72", onScroll: onZoneSelectScroll }}
-              isLoadingMoreZones={isFetchingNextZonePage}
+              zoneExtraRows={extraZoneRows}
             />
           </TabsContent>
 
@@ -1012,9 +1049,7 @@ function RouteSlabsEditor({
   slabs,
   setSlabs,
   zoneLabelById,
-  zoneOptions,
-  zoneSelectContentProps,
-  isLoadingMoreZones = false,
+  zoneExtraRows,
 }: {
   title: string;
   description: string;
@@ -1027,9 +1062,7 @@ function RouteSlabsEditor({
   slabs: RouteSlabRow[];
   setSlabs: Dispatch<SetStateAction<RouteSlabRow[]>>;
   zoneLabelById: Map<number, string>;
-  zoneOptions: Array<{ id: number; code?: string; name?: string }>;
-  zoneSelectContentProps?: Pick<ComponentProps<typeof SelectContent>, "onScroll" | "className">;
-  isLoadingMoreZones?: boolean;
+  zoneExtraRows: Zone[];
 }) {
   const [draft, setDraft] = useState<RouteSlabDraft>({
     fromZoneId: "",
@@ -1196,6 +1229,15 @@ function RouteSlabsEditor({
         Number.isFinite(Number(w.rate)),
     );
 
+  const fromZonePickExtras = useMemo(
+    () => mergeZoneExtrasForPick(zoneExtraRows, draft.fromZoneId),
+    [zoneExtraRows, draft.fromZoneId],
+  );
+  const toZonePickExtras = useMemo(
+    () => mergeZoneExtrasForPick(zoneExtraRows, draft.toZoneId),
+    [zoneExtraRows, draft.toZoneId],
+  );
+
   return (
     <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
       <div>
@@ -1213,50 +1255,34 @@ function RouteSlabsEditor({
       >
         {showZones ? (
           <>
-            <Select
-              value={draft.fromZoneId || "__none__"}
-              onValueChange={(value) => setDraft((current) => ({ ...current, fromZoneId: value === "__none__" ? "" : value }))}
-            >
-              <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                <SelectValue placeholder="From Zone" />
-              </SelectTrigger>
-              <SelectContent
-                className={cn("max-h-60", zoneSelectContentProps?.className)}
-                onScroll={zoneSelectContentProps?.onScroll}
-              >
-                <SelectItem value="__none__">— From Zone —</SelectItem>
-                {zoneOptions.map((zone) => (
-                  <SelectItem key={zone.id} value={String(zone.id)}>
-                    {zone.code || zone.name || `Zone ${zone.id}`}
-                  </SelectItem>
-                ))}
-                {isLoadingMoreZones ? (
-                  <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
-                ) : null}
-              </SelectContent>
-            </Select>
-            <Select
-              value={draft.toZoneId || "__none__"}
-              onValueChange={(value) => setDraft((current) => ({ ...current, toZoneId: value === "__none__" ? "" : value }))}
-            >
-              <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                <SelectValue placeholder="To Zone" />
-              </SelectTrigger>
-              <SelectContent
-                className={cn("max-h-60", zoneSelectContentProps?.className)}
-                onScroll={zoneSelectContentProps?.onScroll}
-              >
-                <SelectItem value="__none__">— To Zone —</SelectItem>
-                {zoneOptions.map((zone) => (
-                  <SelectItem key={zone.id} value={String(zone.id)}>
-                    {zone.code || zone.name || `Zone ${zone.id}`}
-                  </SelectItem>
-                ))}
-                {isLoadingMoreZones ? (
-                  <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
-                ) : null}
-              </SelectContent>
-            </Select>
+            <DbAsyncSelect<Zone>
+              queryKey={["rate-form", "zones", "from"]}
+              fetchPage={fetchZonesPageForSelect}
+              getItemLabel={formatZonePickLabel}
+              extraItems={fromZonePickExtras.length > 0 ? fromZonePickExtras : undefined}
+              clearOption={{ value: "__none__", label: "— From Zone —" }}
+              placeholder="From Zone"
+              searchPlaceholder="Search zones…"
+              triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+              value={draft.fromZoneId ? draft.fromZoneId : "__none__"}
+              onValueChange={(value) =>
+                setDraft((current) => ({ ...current, fromZoneId: value === "__none__" ? "" : value }))
+              }
+            />
+            <DbAsyncSelect<Zone>
+              queryKey={["rate-form", "zones", "to"]}
+              fetchPage={fetchZonesPageForSelect}
+              getItemLabel={formatZonePickLabel}
+              extraItems={toZonePickExtras.length > 0 ? toZonePickExtras : undefined}
+              clearOption={{ value: "__none__", label: "— To Zone —" }}
+              placeholder="To Zone"
+              searchPlaceholder="Search zones…"
+              triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+              value={draft.toZoneId ? draft.toZoneId : "__none__"}
+              onValueChange={(value) =>
+                setDraft((current) => ({ ...current, toZoneId: value === "__none__" ? "" : value }))
+              }
+            />
           </>
         ) : null}
         {showKmBands ? (
