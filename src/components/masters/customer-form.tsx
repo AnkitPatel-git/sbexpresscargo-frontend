@@ -47,7 +47,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { bankService } from '@/services/masters/bank-service'
 import { customerGroupService } from '@/services/masters/customer-group-service'
 import { customerService } from '@/services/masters/customer-service'
 import { productService } from "@/services/masters/product-service"
@@ -78,6 +77,8 @@ import {
     requiredPincodeField,
 } from '@/lib/pincode-field'
 
+const optionalTrim = z.string().optional().or(z.literal(""))
+
 const customerSchema = z.object({
     code: optionalMasterCode(2),
     name: z.string().min(3, "Name must be at least 3 characters"),
@@ -87,9 +88,9 @@ const customerSchema = z.object({
     pinCodeId: requiredPincodeField(),
     serviceCenterId: z.coerce.number().int().positive("Service center is required"),
     customerGroupId: z.coerce.number().int().nonnegative().default(0),
-    bankId: z.coerce.number().int().positive("Bank is required"),
-    bankAccount: z.string().min(1, "Bank account is required"),
-    bankIfsc: z.string().min(1, "Bank IFSC is required"),
+    bankId: z.coerce.number().int().min(0),
+    bankAccount: optionalTrim,
+    bankIfsc: optionalTrim,
     telephone: z.string().optional().or(z.literal("")),
     email: z.string().email("Invalid email address"),
     mobile: z.string().min(10, "Mobile must be at least 10 characters"),
@@ -305,6 +306,15 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             delete raw.customerGroupId
             const payload = { ...(raw as unknown as CustomerFormData) }
             const groupId = values.customerGroupId
+            if (values.bankId > 0) {
+                payload.bankId = values.bankId
+                payload.bankAccount = values.bankAccount?.trim() || undefined
+                payload.bankIfsc = values.bankIfsc?.trim() || undefined
+            } else {
+                payload.bankId = null
+                payload.bankAccount = null
+                payload.bankIfsc = null
+            }
             if (isEdit) {
                 payload.customerGroupId = groupId > 0 ? groupId : null
             } else if (groupId > 0) {
@@ -555,13 +565,14 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                 />
                             </FormSection>
 
-                            <FormSection title="Account" contentClassName="space-y-4">
+                            <FormSection title="Bank (optional)" contentClassName="space-y-4">
                                 <FormField
                                     control={form.control}
                                     name="bankId"
                                     render={({ field }) => (
-                                        <FloatingFormItem required label="Bank">
+                                        <FloatingFormItem label="Bank">
                                             <BankFloatingAsyncSelect
+                                                optional
                                                 triggerRef={field.ref}
                                                 value={field.value}
                                                 onChange={field.onChange}
@@ -575,9 +586,13 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="bankAccount"
                                     render={({ field }) => (
-                                        <FloatingFormItem required label="Bank Account">
+                                        <FloatingFormItem label="Bank Account">
                                             <FormControl>
-                                                <Input {...field} placeholder="Bank account number" className={FLOATING_INNER_CONTROL} />
+                                                <Input
+                                                    {...field}
+                                                    placeholder="Account number (optional)"
+                                                    className={FLOATING_INNER_CONTROL}
+                                                />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}
@@ -586,9 +601,9 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="bankIfsc"
                                     render={({ field }) => (
-                                        <FloatingFormItem required label="Bank IFSC">
+                                        <FloatingFormItem label="Bank IFSC">
                                             <FormControl>
-                                                <Input {...field} placeholder="Bank IFSC" className={FLOATING_INNER_CONTROL} />
+                                                <Input {...field} placeholder="IFSC code (optional)" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
                                         </FloatingFormItem>
                                     )}

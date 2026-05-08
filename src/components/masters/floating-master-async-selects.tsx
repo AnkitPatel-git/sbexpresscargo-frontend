@@ -46,7 +46,7 @@ export function BankFloatingAsyncSelect({
             getItemLabel={(b) => b.bankName}
             extraItems={extraBanks}
             clearOption={optional ? { value: "0", label: "No bank" } : undefined}
-            value={value > 0 ? String(value) : undefined}
+            value={value > 0 ? String(value) : optional ? "0" : undefined}
             onValueChange={(v) => onChange(v === "0" ? 0 : Number(v))}
             placeholder="Select bank"
             searchPlaceholder="Search banks…"

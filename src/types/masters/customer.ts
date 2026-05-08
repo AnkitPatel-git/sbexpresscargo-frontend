@@ -104,9 +104,9 @@ export interface CustomerFormData {
     pinCodeId?: string | number;
     serviceCenterId?: number;
     customerGroupId?: number | null;
-    bankId?: number;
-    bankAccount?: string;
-    bankIfsc?: string;
+    bankId?: number | null;
+    bankAccount?: string | null;
+    bankIfsc?: string | null;
     telephone?: string;
     email?: string;
     mobile?: string;
