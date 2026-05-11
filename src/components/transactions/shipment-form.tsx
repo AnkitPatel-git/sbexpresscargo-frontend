@@ -710,6 +710,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const [selectedConsigneePincode, setSelectedConsigneePincode] = useState<ServiceablePincode | null>(null)
     const [suppressShipperErrors, setSuppressShipperErrors] = useState(false)
     const [suppressConsigneeErrors, setSuppressConsigneeErrors] = useState(false)
+    /** Ensures shipper Combobox shows label when id comes from customer default shipper (not in search page). */
+    const [shipperPinnedOption, setShipperPinnedOption] = useState<{
+        label: string
+        value: number
+    } | null>(null)
     const chargePreviewRows = useMemo(() => {
         if (!chargePreview) return []
         const baseRow = typeof chargePreview.baseFreight === 'number'
@@ -821,16 +826,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             if (value <= 0) return null
             return {
                 label: toSafeOptionLabel(customer.name, `Customer #${value}`),
-                value,
-            }
-        })
-        .filter((option): option is { label: string; value: number } => option != null)
-    const shipperComboboxOptions = shipperOptions
-        .map((shipper) => {
-            const value = normalizeMasterSelectId(shipper.id)
-            if (value <= 0) return null
-            return {
-                label: toSafeOptionLabel(shipper.shipperName, `Shipper #${value}`),
                 value,
             }
         })
@@ -960,9 +955,12 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         },
     })
 
+    const lastDefaultShipperApplyCustomerRef = useRef(0)
+
     useEffect(() => {
         if (initialData) {
             form.reset(buildShipmentFormValues(initialData))
+            lastDefaultShipperApplyCustomerRef.current = normalizeMasterSelectId(initialData.customerId)
         }
     }, [initialData, form])
 
@@ -996,6 +994,33 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     })
 
     const customerVolumetricOptions = sanitizeArray(customerVolumetricsData?.data)
+
+    const customerIdNum = normalizeMasterSelectId(watchedCustomerId)
+    const { data: customerBookingDefaults, isFetching: customerBookingDefaultsLoading } = useQuery({
+        queryKey: ['customer-booking-defaults', customerIdNum],
+        queryFn: async () => {
+            const res = await customerService.getCustomerById(customerIdNum)
+            return res.data
+        },
+        enabled: customerIdNum > 0,
+    })
+
+    const shipperComboboxOptions = useMemo(() => {
+        const base = shipperOptions
+            .map((shipper) => {
+                const value = normalizeMasterSelectId(shipper.id)
+                if (value <= 0) return null
+                return {
+                    label: toSafeOptionLabel(shipper.shipperName, `Shipper #${value}`),
+                    value,
+                }
+            })
+            .filter((option): option is { label: string; value: number } => option != null)
+        if (shipperPinnedOption && !base.some((o) => o.value === shipperPinnedOption.value)) {
+            return [shipperPinnedOption, ...base]
+        }
+        return base
+    }, [shipperOptions, shipperPinnedOption])
 
     const debouncedShipperPinCode = useDebounce((watchedShipperPinCode || '').trim(), 400)
     const debouncedConsigneePinCode = useDebounce((watchedConsigneePinCode || '').trim(), 400)
@@ -1069,6 +1094,73 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     const prevShipperIdRef = useRef<number>(0)
     const prevConsigneeIdRef = useRef<number>(0)
+
+    useEffect(() => {
+        if (customerIdNum <= 0) {
+            setShipperPinnedOption(null)
+            lastDefaultShipperApplyCustomerRef.current = 0
+            return
+        }
+        if (customerBookingDefaultsLoading || !customerBookingDefaults) {
+            return
+        }
+        if (customerBookingDefaults.id !== customerIdNum) {
+            return
+        }
+        if (lastDefaultShipperApplyCustomerRef.current === customerIdNum) {
+            return
+        }
+        lastDefaultShipperApplyCustomerRef.current = customerIdNum
+
+        const ds = customerBookingDefaults.defaultShipper
+        const requested = customerBookingDefaults.onboardingDefaultShipperRequested === true
+        if (!requested || !ds?.id) {
+            setShipperPinnedOption(null)
+            return
+        }
+        const sid = normalizeMasterSelectId(ds.id)
+        if (sid <= 0) {
+            setShipperPinnedOption(null)
+            return
+        }
+        setShipperPinnedOption({
+            value: sid,
+            label: toSafeOptionLabel(
+                [ds.shipperCode, ds.shipperName].filter(Boolean).join(' · '),
+                `Shipper #${sid}`,
+            ),
+        })
+        form.setValue('clientId', customerIdNum, { shouldDirty: true, shouldValidate: false })
+        form.setValue('shipperId', sid, { shouldDirty: true, shouldValidate: true })
+        prevShipperIdRef.current = sid
+        let cancelled = false
+        void shipperService
+            .getShipperById(sid)
+            .then((res) => {
+                if (cancelled) return
+                if (normalizeMasterSelectId(form.getValues('customerId')) !== customerIdNum) return
+                if (res.data) {
+                    form.setValue('shipper', shipperFromMaster(res.data), {
+                        shouldDirty: false,
+                        shouldValidate: true,
+                    })
+                    setSelectedShipperPincode(null)
+                    if (!initialData) {
+                        form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
+                    }
+                }
+            })
+            .catch(() => {})
+        return () => {
+            cancelled = true
+        }
+    }, [
+        customerBookingDefaults,
+        customerBookingDefaultsLoading,
+        customerIdNum,
+        form,
+        initialData,
+    ])
     const isShipperLocked = normalizeMasterSelectId(watchedShipperId) > 0
     const isConsigneeLocked = normalizeMasterSelectId(watchedConsigneeId) > 0
 
@@ -1095,6 +1187,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         setSelectedShipperPincode(null)
         setShipperPincodeSearch('')
         setSuppressShipperErrors(true)
+        setShipperPinnedOption(null)
+        lastDefaultShipperApplyCustomerRef.current = 0
         form.clearErrors()
     }
 

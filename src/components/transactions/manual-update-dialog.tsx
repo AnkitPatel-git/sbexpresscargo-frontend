@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -40,11 +40,23 @@ import { trackingService } from "@/services/transactions/tracking-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
 import { Combobox } from "@/components/ui/combobox";
 
-const formSchema = z.object({
-    status: z.string().min(1, "Status is required"),
-    remark: z.string().optional(),
-    serviceCenterId: z.number().optional(),
-});
+const formSchema = z
+    .object({
+        status: z.string().min(1, "Status is required"),
+        remark: z.string().optional(),
+        serviceCenterId: z.number().optional(),
+        subStatus: z.string().max(128).optional(),
+        location: z.string().max(512).optional(),
+    })
+    .superRefine((data, ctx) => {
+        if (data.status === "DELIVERY_ATTEMPTED" && !data.subStatus?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "NDR / reason code is required for delivery attempted",
+                path: ["subStatus"],
+            });
+        }
+    });
 
 interface ManualUpdateDialogProps {
     awbNo: string;
@@ -58,16 +70,20 @@ interface ManualUpdateDialogProps {
 }
 
 const statusOptions = [
-    { label: "Pending", value: "PENDING" },
-    { label: "Picked", value: "PICKED" },
-    { label: "In Scan", value: "IN_SCAN" },
+    { label: "Created", value: "CREATED" },
     { label: "Manifested", value: "MANIFESTED" },
-    { label: "Bag Prepared", value: "BAG_PREPARED" },
-    { label: "In Transit", value: "IN_TRANSIT" },
-    { label: "Out Scan", value: "OUT_SCAN" },
+    { label: "Picked up", value: "PICKED_UP" },
+    { label: "Pickup failed", value: "PICKUP_FAILED" },
+    { label: "In transit", value: "IN_TRANSIT" },
+    { label: "Out for delivery", value: "OUT_FOR_DELIVERY" },
+    { label: "Delivery attempted (NDR)", value: "DELIVERY_ATTEMPTED" },
+    { label: "Partial delivered", value: "PARTIAL_DELIVERED" },
     { label: "Delivered", value: "DELIVERED" },
-    { label: "Returned", value: "RETURNED" },
-    { label: "Exception", value: "EXCEPTION" },
+    { label: "Cancelled", value: "CANCELLED" },
+    { label: "Lost", value: "LOST" },
+    { label: "Return in transit", value: "RETURN_IN_TRANSIT" },
+    { label: "Return out for delivery", value: "RETURN_OUT_FOR_DELIVERY" },
+    { label: "Returned (RTO complete)", value: "RETURNED" },
 ];
 
 export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: ManualUpdateDialogProps) {
@@ -89,8 +105,12 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
             status: initialData?.status || "",
             remark: initialData?.remark || "",
             serviceCenterId: initialData?.serviceCenterId,
+            subStatus: "",
+            location: "",
         },
     });
+
+    const watchedStatus = useWatch({ control: form.control, name: "status" });
 
     // Reset form when initialData changes or modal opens
     useEffect(() => {
@@ -99,6 +119,8 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                 status: initialData.status,
                 remark: initialData.remark || "",
                 serviceCenterId: initialData.serviceCenterId,
+                subStatus: "",
+                location: "",
             });
         }
     }, [isOpen, initialData, form]);
@@ -186,6 +208,40 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                                     <FormControl>
                                         <Textarea
                                             placeholder="Reason for manual update"
+                                            {...field}
+                                            className={FLOATING_INNER_TEXTAREA}
+                                        />
+                                    </FormControl>
+                                </FloatingFormItem>
+                            )}
+                        />
+
+                        {watchedStatus === "DELIVERY_ATTEMPTED" && (
+                            <FormField
+                                control={form.control}
+                                name="subStatus"
+                                render={({ field }) => (
+                                    <FloatingFormItem label="NDR / reason code">
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="e.g. HOUSE_LOCKED, vendor code 4"
+                                                {...field}
+                                                className={FLOATING_INNER_TEXTAREA}
+                                            />
+                                        </FormControl>
+                                    </FloatingFormItem>
+                                )}
+                            />
+                        )}
+
+                        <FormField
+                            control={form.control}
+                            name="location"
+                            render={({ field }) => (
+                                <FloatingFormItem label="Location (optional)">
+                                    <FormControl>
+                                        <Textarea
+                                            placeholder="Hub, city, or PIN area"
                                             {...field}
                                             className={FLOATING_INNER_TEXTAREA}
                                         />

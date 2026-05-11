@@ -107,6 +107,8 @@ export interface ManualUpdatePayload {
     status: string;
     remark?: string;
     serviceCenterId?: number;
+    subStatus?: string;
+    location?: string;
 }
 
 export interface DeadLetterLog {

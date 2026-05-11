@@ -98,7 +98,22 @@ const COLUMN_LABELS: Record<MisReportColumn, string> = {
   createdAt: "Created At",
 };
 
-const STATUS_OPTIONS = ["CREATED", "PICKED", "IN_TRANSIT", "DELIVERED", "FAILED"];
+const STATUS_OPTIONS = [
+  "CREATED",
+  "MANIFESTED",
+  "PICKED_UP",
+  "PICKUP_FAILED",
+  "IN_TRANSIT",
+  "OUT_FOR_DELIVERY",
+  "DELIVERY_ATTEMPTED",
+  "PARTIAL_DELIVERED",
+  "DELIVERED",
+  "CANCELLED",
+  "LOST",
+  "RETURN_IN_TRANSIT",
+  "RETURN_OUT_FOR_DELIVERY",
+  "RETURNED",
+];
 
 export default function MisReportPage() {
   const queryClient = useQueryClient();

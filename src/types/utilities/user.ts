@@ -38,6 +38,8 @@ export interface UtilityUser {
   role?: UserRole | null;
   profile?: UserProfile | null;
   customerId?: number | null;
+  /** CUSTOMER role: all linked customer master ids (shared portal email). */
+  customerIds?: number[];
   serviceCenterId?: number | null;
   jti?: string;
   platform?: string;

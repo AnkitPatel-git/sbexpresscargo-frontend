@@ -56,6 +56,16 @@ export interface CustomerGroupRef {
     status?: string;
 }
 
+/** Default shipper linked at customer onboarding (when createDefaultShipper was used). */
+export interface CustomerDefaultShipperRef {
+    id: number;
+    shipperCode: string;
+    shipperName: string;
+    mobile?: string | null;
+    telephone?: string | null;
+    email?: string | null;
+}
+
 export interface Customer {
     id: number;
     code: string;
@@ -81,6 +91,9 @@ export interface Customer {
     gstNo: string | null;
     customerType: 'INDIVIDUAL' | 'CORPORATE' | string | null;
     registerType: 'REGISTERED' | 'UNREGISTERED' | string | null;
+    defaultShipperId?: number | null;
+    onboardingDefaultShipperRequested?: boolean;
+    defaultShipper?: CustomerDefaultShipperRef | null;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
