@@ -186,3 +186,22 @@ export interface TrackingSummaryResponse {
     success: boolean;
     data: TrackingSummary;
 }
+
+export interface TrackingBulkManualRowResult {
+    row: number;
+    awbNo: string;
+    ok: boolean;
+    error?: string;
+}
+
+export interface TrackingBulkManualImportResult {
+    totalRows: number;
+    succeeded: number;
+    failed: number;
+    rows: TrackingBulkManualRowResult[];
+}
+
+export interface TrackingBulkManualImportResponse {
+    success: boolean;
+    data: TrackingBulkManualImportResult;
+}

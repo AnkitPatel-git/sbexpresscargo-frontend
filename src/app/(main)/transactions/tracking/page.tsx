@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, ChevronUp, ChevronDown, FilePlus, FileUp, Plus } from "lucide-react";
 import { format } from "date-fns";
 
@@ -17,12 +17,19 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { trackingService } from "@/services/transactions/tracking-service";
-import { TrackingListItem, DeadLetterLog, type ShipmentTrackingStatusRow } from "@/types/transactions/tracking";
+import { TrackingListItem, DeadLetterLog, type ShipmentTrackingStatusRow, type TrackingBulkManualImportResult } from "@/types/transactions/tracking";
 import { formatShipmentStatusLabel } from "@/lib/shipment-status-label";
 import { ManualUpdateDialog } from "@/components/transactions/manual-update-dialog";
 import { toast } from "sonner";
-import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 function SortArrows() {
@@ -44,12 +51,16 @@ function safeFormatDate(iso: string | null | undefined, fmt: string) {
 }
 
 export default function TrackingPage() {
+    const queryClient = useQueryClient();
     const [searchInput, setSearchInput] = useState("");
     const [searchTerm, setSearchTerm] = useState(""); // Submitted search term
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(20);
     const [activeView, setActiveView] = useState<'search' | 'logs'>('search');
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+    const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+    const [bulkFile, setBulkFile] = useState<File | null>(null);
+    const [bulkResult, setBulkResult] = useState<TrackingBulkManualImportResult | null>(null);
     const [selectedAwb, setSelectedAwb] = useState<string | null>(null);
     const [listFilters, setListFilters] = useState({ awb: "", origin: "", destination: "", payment: "", status: "" });
     const [logFilters, setLogFilters] = useState({ awb: "", carrier: "", error: "" });
@@ -91,6 +102,20 @@ export default function TrackingPage() {
             if (logFilters.error && !(log.error || "").toLowerCase().includes(logFilters.error.toLowerCase())) return false;
             return true;
         }) ?? [];
+
+    const bulkMutation = useMutation({
+        mutationFn: (file: File) => trackingService.bulkManualFromExcel(file),
+        onSuccess: (res) => {
+            const d = res.data;
+            setBulkResult(d);
+            queryClient.invalidateQueries({ queryKey: ["trackingSearch"] });
+            queryClient.invalidateQueries({ queryKey: ["trackingDetail"] });
+            toast.success(`Bulk tracking: ${d.succeeded} succeeded, ${d.failed} failed (${d.totalRows} rows).`);
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Bulk upload failed");
+        },
+    });
 
     const retryMutation = useMutation({
         mutationFn: () => trackingService.retryFailedLogs(1),
@@ -153,7 +178,18 @@ export default function TrackingPage() {
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary">
                         <FilePlus className="h-4 w-4" />
                     </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary"
+                        title="Bulk tracking from Excel"
+                        onClick={() => {
+                            setBulkResult(null);
+                            setBulkFile(null);
+                            setIsBulkDialogOpen(true);
+                        }}
+                    >
                         <FileUp className="h-4 w-4" />
                     </Button>
                     <Button
@@ -171,6 +207,18 @@ export default function TrackingPage() {
                         <Button variant={activeView === 'search' ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveView('search')}>Search</Button>
                         <Button variant={activeView === 'logs' ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveView('logs')}>Carrier Logs</Button>
                     </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 rounded-md px-3"
+                        onClick={() => {
+                            setBulkResult(null);
+                            setBulkFile(null);
+                            setIsBulkDialogOpen(true);
+                        }}
+                    >
+                        <FileUp className="mr-1 h-4 w-4" /> Bulk Excel
+                    </Button>
                     <Button
                         type="button"
                         className="h-9 rounded-md px-3"
@@ -595,6 +643,115 @@ export default function TrackingPage() {
                     </CardContent>
                 </Card>
             )}
+
+            <Dialog
+                open={isBulkDialogOpen}
+                onOpenChange={(open) => {
+                    setIsBulkDialogOpen(open);
+                    if (!open) {
+                        setBulkFile(null);
+                        setBulkResult(null);
+                    }
+                }}
+            >
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Bulk tracking from Excel</DialogTitle>
+                        <DialogDescription>
+                            One row per AWB. Status must be a valid ShipmentStatusType (e.g. IN_TRANSIT). Sub-status is required when status is DELIVERY_ATTEMPTED.
+                            Remove the sample row before uploading.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                    try {
+                                        const blob = await trackingService.downloadBulkManualTemplate();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement("a");
+                                        a.href = url;
+                                        a.download = "tracking-bulk-manual-template.xlsx";
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                        document.body.removeChild(a);
+                                        toast.success("Template downloaded");
+                                    } catch (e: unknown) {
+                                        toast.error(e instanceof Error ? e.message : "Download failed");
+                                    }
+                                }}
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Download template
+                            </Button>
+                        </div>
+                        <div>
+                            <p className="mb-2 text-sm font-medium">Excel file (.xlsx)</p>
+                            <Input
+                                type="file"
+                                accept=".xlsx,.xls"
+                                className="cursor-pointer"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    setBulkFile(f ?? null);
+                                    setBulkResult(null);
+                                }}
+                            />
+                        </div>
+                        {bulkResult && bulkResult.rows.length > 0 ? (
+                            <div className="rounded-md border border-border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-14">Row</TableHead>
+                                            <TableHead>AWB</TableHead>
+                                            <TableHead className="w-20">Result</TableHead>
+                                            <TableHead>Error</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {bulkResult.rows.map((r) => (
+                                            <TableRow key={`${r.row}-${r.awbNo}`}>
+                                                <TableCell>{r.row}</TableCell>
+                                                <TableCell className="font-mono text-sm">{r.awbNo || "—"}</TableCell>
+                                                <TableCell>
+                                                    {r.ok ? (
+                                                        <Badge className="bg-green-600">OK</Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive">Fail</Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground max-w-md break-words">
+                                                    {r.error ?? "—"}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : null}
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button type="button" variant="outline" onClick={() => setIsBulkDialogOpen(false)}>
+                            Close
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={!bulkFile || bulkMutation.isPending}
+                            onClick={() => {
+                                if (bulkFile) bulkMutation.mutate(bulkFile);
+                            }}
+                        >
+                            {bulkMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Upload and apply
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {selectedAwb && (
                 <ManualUpdateDialog

@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api-fetch';
-import { TrackingListResponse, TrackingDetailResponse, MetricsResponse, ManualUpdatePayload, DeadLettersResponse, TrackingSummaryResponse } from '@/types/transactions/tracking';
+import { TrackingListResponse, TrackingDetailResponse, MetricsResponse, ManualUpdatePayload, DeadLettersResponse, TrackingSummaryResponse, TrackingBulkManualImportResponse } from '@/types/transactions/tracking';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -56,6 +56,32 @@ class TrackingService {
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.message || 'Failed to update status manually');
+        }
+        return response.json();
+    }
+
+    async downloadBulkManualTemplate(): Promise<Blob> {
+        const response = await apiFetch(`${this.baseUrl}/bulk-manual/template`, {
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to download bulk tracking template');
+        }
+        return response.blob();
+    }
+
+    async bulkManualFromExcel(file: File): Promise<TrackingBulkManualImportResponse> {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiFetch(`${this.baseUrl}/bulk-manual/excel`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: formData,
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Bulk tracking upload failed');
         }
         return response.json();
     }
