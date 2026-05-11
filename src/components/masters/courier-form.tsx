@@ -18,6 +18,7 @@ import {
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
+import { IntegerInput } from "@/components/ui/integer-input"
 import { Button } from "@/components/ui/button"
 import {
     Select,
@@ -46,8 +47,24 @@ const courierSchema = z.object({
         },
         z.number().positive().optional(),
     ),
-    pickupCharge: z.coerce.number().min(0, "Pickup charge must be at least 0"),
-    deliveryCharge: z.coerce.number().min(0, "Delivery charge must be at least 0"),
+    pickupCharge: z.preprocess(
+        (v) => {
+            if (v === "" || v === null || v === undefined) return undefined
+            if (typeof v === "number" && Number.isFinite(v)) return Math.trunc(v)
+            const n = Number(v)
+            return Number.isFinite(n) ? Math.trunc(n) : undefined
+        },
+        z.number().min(0, "Pickup charge must be at least 0"),
+    ),
+    deliveryCharge: z.preprocess(
+        (v) => {
+            if (v === "" || v === null || v === undefined) return undefined
+            if (typeof v === "number" && Number.isFinite(v)) return Math.trunc(v)
+            const n = Number(v)
+            return Number.isFinite(n) ? Math.trunc(n) : undefined
+        },
+        z.number().min(0, "Delivery charge must be at least 0"),
+    ),
     inActive: z.boolean(),
 })
 
@@ -129,8 +146,8 @@ export function CourierForm({ initialData }: CourierFormProps) {
             code: initialData?.code || '',
             userId: initialData?.userId || 0,
             serviceCenterId: initialData?.serviceCenterId ?? undefined,
-            pickupCharge: initialData != null ? Number(initialData.pickupCharge) : 0,
-            deliveryCharge: initialData != null ? Number(initialData.deliveryCharge) : 0,
+            pickupCharge: (initialData != null ? Math.trunc(Number(initialData.pickupCharge)) : undefined) as CourierFormValues["pickupCharge"],
+            deliveryCharge: (initialData != null ? Math.trunc(Number(initialData.deliveryCharge)) : undefined) as CourierFormValues["deliveryCharge"],
             inActive: initialData?.inActive ?? false,
         },
     })
@@ -141,8 +158,8 @@ export function CourierForm({ initialData }: CourierFormProps) {
                 code: initialData.code || '',
                 userId: initialData.userId,
                 serviceCenterId: initialData.serviceCenterId ?? undefined,
-                pickupCharge: Number(initialData.pickupCharge),
-                deliveryCharge: Number(initialData.deliveryCharge),
+                pickupCharge: Math.trunc(Number(initialData.pickupCharge)),
+                deliveryCharge: Math.trunc(Number(initialData.deliveryCharge)),
                 inActive: initialData.inActive,
             })
         }
@@ -278,13 +295,14 @@ export function CourierForm({ initialData }: CourierFormProps) {
                             render={({ field }) => (
                                 <FloatingFormItem required label={<>Pickup charge</>}>
                                     <FormControl>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
+                                        <IntegerInput
                                             className={FLOATING_INNER_CONTROL}
-                                            {...field}
-                                            value={field.value === undefined || field.value === null ? '' : field.value}
-                                            onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
+                                            name={field.name}
+                                            ref={field.ref}
+                                            onBlur={field.onBlur}
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                            min={0}
                                         />
                                     </FormControl>
                                 </FloatingFormItem>
@@ -296,13 +314,14 @@ export function CourierForm({ initialData }: CourierFormProps) {
                             render={({ field }) => (
                                 <FloatingFormItem required label={<>Delivery charge</>}>
                                     <FormControl>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
+                                        <IntegerInput
                                             className={FLOATING_INNER_CONTROL}
-                                            {...field}
-                                            value={field.value === undefined || field.value === null ? '' : field.value}
-                                            onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
+                                            name={field.name}
+                                            ref={field.ref}
+                                            onBlur={field.onBlur}
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                            min={0}
                                         />
                                     </FormControl>
                                 </FloatingFormItem>

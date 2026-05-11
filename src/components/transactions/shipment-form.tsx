@@ -42,6 +42,7 @@ import {
     OutlinedFormSection,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
+import { IntegerInput } from "@/components/ui/integer-input"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -152,8 +153,6 @@ const normalizePieceItem = (item: Partial<PieceItemForm> & Record<string, unknow
     measureValue: normalizeNumberValue(item.measureValue),
     measureUnit: strOrEmpty(item.measureUnit),
     totalValue: normalizeNumberValue(item.totalValue),
-    invoiceDate: strOrEmpty(item.invoiceDate) || format(new Date(), 'yyyy-MM-dd'),
-    invoiceNumber: strOrEmpty(item.invoiceNumber),
 })
 
 const normalizePieceRows = (rows?: ShipmentFormValues['piecesRows']): NonNullable<ShipmentFormValues['piecesRows']> => {
@@ -231,6 +230,8 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         serviceMapId: shipmentRef?.serviceMapId || 0,
         shipmentValue: shipmentRef?.shipmentValue ?? 0,
         shipmentTotalValue: shipmentRef?.shipmentTotalValue ?? 0,
+        invoiceDate: toDateInputValue(shipmentRef?.invoiceDate ?? undefined),
+        invoiceNumber: strOrEmpty(shipmentRef?.invoiceNumber),
         fromZoneId: shipmentRef?.fromZoneId || 0,
         toZoneId: shipmentRef?.toZoneId || 0,
         reversePickup: shipmentRef?.reversePickup || false,
@@ -299,6 +300,8 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         fromZoneId: normalizePositiveNumberValue(values.fromZoneId),
         toZoneId: normalizePositiveNumberValue(values.toZoneId),
         shipmentTotalValue: normalizeNumberValue(values.shipmentTotalValue ?? values.shipmentValue),
+        invoiceDate: values.invoiceDate?.trim() || undefined,
+        invoiceNumber: values.invoiceNumber?.trim() || undefined,
         actualWeight: normalizeNumberValue(values.actualWeight) ?? 0,
         volumetricWeight: normalizeNumberValue(values.volumetricWeight) ?? 0,
         chargeWeight: normalizeNumberValue(values.chargeWeight) ?? 0,
@@ -461,17 +464,6 @@ const requiredFieldLabel = (label: string, required: boolean) => (
 const formatServiceablePincodeLabel = (pincode: ServiceablePincode) =>
     pincode.pinCode
 
-const numberInputValue = (value: unknown) => {
-    if (typeof value === 'number' && Number.isFinite(value)) return value
-    return ''
-}
-
-const parseOptionalNumberInput = (value: string) => {
-    if (!value.trim()) return undefined
-    const next = Number(value)
-    return Number.isFinite(next) ? Math.max(0, next) : undefined
-}
-
 const decimalToFiniteNumber = (value: unknown): number | undefined => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
     if (typeof value === 'string' && value.trim()) {
@@ -546,9 +538,7 @@ const createEmptyPieceItem = (): PieceItemForm => ({
     quantity: 1,
     measureValue: undefined,
     measureUnit: '',
-    totalValue: 0,
-    invoiceDate: format(new Date(), 'yyyy-MM-dd'),
-    invoiceNumber: '',
+    totalValue: undefined,
 })
 
 const createEmptyPieceRow = (): PieceRowForm => ({
@@ -677,6 +667,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
+    /** Ref avoids adding `isEdit` to effect deps (same hook must keep a constant-sized dep array across HMR). */
+    const isEditRef = useRef(isEdit)
+    isEditRef.current = isEdit
     const [activeTab, setActiveTab] = useState("awb")
     const [savedShipment, setSavedShipment] = useState<{ id: number; version?: number } | null>(
         initialData ? { id: initialData.id, version: initialData.version } : null
@@ -1453,8 +1446,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             )
         })
 
+        // Do not validate here: totals are often 0 until the user enters dimensions/weights;
+        // validating on every auto-update surfaces "required" errors before submit.
         rowVolumetrics.forEach((volWeight, index) => {
-            form.setValue(`piecesRows.${index}.volumetricWeight`, volWeight, { shouldValidate: true })
+            form.setValue(`piecesRows.${index}.volumetricWeight`, volWeight, { shouldValidate: false })
         })
 
         const totalPcs = calcRows.reduce((sum, row) => sum + (Number(row.pieces) || 0), 0)
@@ -1463,11 +1458,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             0,
         )
         const totalVolumetricWeight = rowVolumetrics.reduce((sum, value) => sum + value, 0)
-        form.setValue('pieces', Math.round(totalPcs), { shouldValidate: true })
-        form.setValue('volumetricWeight', totalVolumetricWeight, { shouldValidate: true })
+        form.setValue('pieces', Math.round(totalPcs), { shouldValidate: false })
+        form.setValue('volumetricWeight', totalVolumetricWeight, { shouldValidate: false })
         // On edit, preserve backend booking total until user changes piece/item rows.
-        if (!(isEdit && !form.formState.isDirty)) {
-            form.setValue('shipmentTotalValue', Math.round(bookingTotalValue), { shouldValidate: true })
+        if (!(isEditRef.current && !form.formState.isDirty)) {
+            form.setValue('shipmentTotalValue', Math.round(bookingTotalValue), { shouldValidate: false })
         }
     }, [form, isSurfaceProduct, surfaceCft, weightCalcKey]);
 
@@ -1477,7 +1472,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         const nextChargeWeight = roundWeightKg(Math.max(manualActualWeight, manualVolumetricWeight))
         const currentChargeWeight = Math.max(0, Number(form.getValues('chargeWeight')) || 0)
         if (nextChargeWeight !== currentChargeWeight) {
-            form.setValue('chargeWeight', nextChargeWeight, { shouldValidate: true })
+            form.setValue('chargeWeight', nextChargeWeight, { shouldValidate: false })
         }
     }, [form, watchedActualWeight, watchedVolumetricWeight]);
 
@@ -2196,13 +2191,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem label="Booking Total Value">
                                                 <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
+                                                    <IntegerInput
                                                         className={FLOATING_INNER_CONTROL}
-                                                        {...field}
-                                                        value={numberInputValue(field.value)}
-                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                        name={field.name}
+                                                        ref={field.ref}
+                                                        onBlur={field.onBlur}
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        min={0}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>
@@ -2214,13 +2210,48 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem label="Total Distance (KM)">
                                                 <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
+                                                    <IntegerInput
                                                         className={FLOATING_INNER_CONTROL}
-                                                        {...field}
-                                                        value={numberInputValue(field.value)}
-                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                        name={field.name}
+                                                        ref={field.ref}
+                                                        onBlur={field.onBlur}
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        min={0}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="invoiceDate"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Invoice Date">
+                                                <FormControl>
+                                                    <Input
+                                                        type="date"
+                                                        value={field.value || ""}
+                                                        onChange={field.onChange}
+                                                        className={FLOATING_INNER_CONTROL}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="invoiceNumber"
+                                        render={({ field }) => (
+                                            <FloatingFormItem label="Invoice No.">
+                                                <FormControl>
+                                                    <Input
+                                                        value={field.value || ""}
+                                                        onChange={field.onChange}
+                                                        placeholder="INV/001"
+                                                        className={FLOATING_INNER_CONTROL}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>
@@ -2234,13 +2265,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem required label="Actual Weight">
                                                 <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
+                                                    <IntegerInput
                                                         className={FLOATING_INNER_CONTROL}
-                                                        {...field}
-                                                        value={numberInputValue(field.value)}
-                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                        name={field.name}
+                                                        ref={field.ref}
+                                                        onBlur={field.onBlur}
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        min={0}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>
@@ -2252,13 +2284,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem required label="Total Vol. Weight">
                                                 <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
+                                                    <IntegerInput
                                                         className={FLOATING_INNER_CONTROL}
-                                                        {...field}
-                                                        value={numberInputValue(field.value)}
-                                                        onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                        name={field.name}
+                                                        ref={field.ref}
+                                                        onBlur={field.onBlur}
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        min={0}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>
@@ -2270,12 +2303,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem required label="Charge Weight">
                                                 <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
+                                                    <IntegerInput
                                                         className={FLOATING_INNER_CONTROL}
-                                                        {...field}
-                                                        value={numberInputValue(field.value)}
+                                                        name={field.name}
+                                                        ref={field.ref}
+                                                        value={field.value}
                                                         disabled
                                                     />
                                                 </FormControl>
@@ -2367,13 +2399,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             render={({ field }) => (
                                                 <FloatingFormItem required={watchedIsEdl} label="EDL distance (km)">
                                                     <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                        min="0"
+                                                        <IntegerInput
                                                             className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            value={numberInputValue(field.value)}
-                                                            onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                            onBlur={field.onBlur}
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            min={0}
                                                             disabled={!watchedIsEdl}
                                                         />
                                                     </FormControl>
@@ -2386,13 +2419,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             render={({ field }) => (
                                                 <FloatingFormItem required={watchedFloorDelivery} label="Floor Count">
                                                     <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                        min="0"
+                                                        <IntegerInput
                                                             className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            value={numberInputValue(field.value)}
-                                                            onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                            onBlur={field.onBlur}
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            min={0}
                                                             disabled={!watchedFloorDelivery}
                                                         />
                                                     </FormControl>
@@ -2405,13 +2439,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             render={({ field }) => (
                                                 <FloatingFormItem label="COD Amount">
                                                     <FormControl>
-                                                        <Input
-                                                            type="number"
-                                                        min="0"
+                                                        <IntegerInput
                                                             className={FLOATING_INNER_CONTROL}
-                                                            {...field}
-                                                            value={numberInputValue(field.value)}
-                                                            onChange={(e) => field.onChange(parseOptionalNumberInput(e.target.value))}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                            onBlur={field.onBlur}
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            min={0}
                                                             disabled={!watchedIsCod}
                                                         />
                                                     </FormControl>
@@ -2555,31 +2590,31 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         <TableRow className="bg-primary/10 backdrop-blur-sm hover:bg-primary/15">
                                             <TableCell className="w-[58px] text-xs font-medium">Pcs</TableCell>
                                             <TableCell>
-                                                <Input
-                                                    type="number"
-                                                    min="0"
-                                                    {...form.register(`piecesRows.${index}.pieces` as const, {
-                                                        valueAsNumber: true,
-                                                        onChange: (event) => {
-                                                            if (Number(event.target.value) < 0) event.target.value = "0"
-                                                        },
-                                                    })}
+                                                <IntegerInput
                                                     className="h-8 w-16"
+                                                    value={watchedPiecesRows?.[index]?.pieces}
+                                                    onValueChange={(n) =>
+                                                        form.setValue(`piecesRows.${index}.pieces`, n === undefined ? undefined : n, {
+                                                            shouldDirty: true,
+                                                            shouldValidate: true,
+                                                        })
+                                                    }
+                                                    min={1}
                                                 />
                                             </TableCell>
                                             <TableCell className="w-[40px] text-xs font-medium">L</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        {...form.register(`piecesRows.${index}.length` as const, {
-                                                            valueAsNumber: true,
-                                                            onChange: (event) => {
-                                                                if (Number(event.target.value) < 0) event.target.value = "0"
-                                                            },
-                                                        })}
+                                                    <IntegerInput
                                                         className="h-8 w-16"
+                                                        value={watchedPiecesRows?.[index]?.length}
+                                                        onValueChange={(n) =>
+                                                            form.setValue(`piecesRows.${index}.length`, n === undefined ? undefined : n, {
+                                                                shouldDirty: true,
+                                                                shouldValidate: true,
+                                                            })
+                                                        }
+                                                        min={0}
                                                     />
                                                     <span className="text-[10px] text-muted-foreground">cm</span>
                                                 </div>
@@ -2587,16 +2622,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <TableCell className="w-[40px] text-xs font-medium">B</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        {...form.register(`piecesRows.${index}.breadth` as const, {
-                                                            valueAsNumber: true,
-                                                            onChange: (event) => {
-                                                                if (Number(event.target.value) < 0) event.target.value = "0"
-                                                            },
-                                                        })}
+                                                    <IntegerInput
                                                         className="h-8 w-16"
+                                                        value={watchedPiecesRows?.[index]?.breadth}
+                                                        onValueChange={(n) =>
+                                                            form.setValue(`piecesRows.${index}.breadth`, n === undefined ? undefined : n, {
+                                                                shouldDirty: true,
+                                                                shouldValidate: true,
+                                                            })
+                                                        }
+                                                        min={0}
                                                     />
                                                     <span className="text-[10px] text-muted-foreground">cm</span>
                                                 </div>
@@ -2604,16 +2639,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <TableCell className="w-[40px] text-xs font-medium">H</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        {...form.register(`piecesRows.${index}.height` as const, {
-                                                            valueAsNumber: true,
-                                                            onChange: (event) => {
-                                                                if (Number(event.target.value) < 0) event.target.value = "0"
-                                                            },
-                                                        })}
+                                                    <IntegerInput
                                                         className="h-8 w-16"
+                                                        value={watchedPiecesRows?.[index]?.height}
+                                                        onValueChange={(n) =>
+                                                            form.setValue(`piecesRows.${index}.height`, n === undefined ? undefined : n, {
+                                                                shouldDirty: true,
+                                                                shouldValidate: true,
+                                                            })
+                                                        }
+                                                        min={0}
                                                     />
                                                     <span className="text-[10px] text-muted-foreground">cm</span>
                                                 </div>
@@ -2621,12 +2656,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <TableCell className="w-[58px] text-xs font-medium">Vol. Wt</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        step="1"
-                                                        {...form.register(`piecesRows.${index}.volumetricWeight` as const, { valueAsNumber: true })}
+                                                    <IntegerInput
                                                         className="h-8 w-20"
+                                                        value={watchedPiecesRows?.[index]?.volumetricWeight}
                                                         disabled
                                                     />
                                                     <span className="text-[10px] text-muted-foreground">kg</span>
@@ -2696,19 +2728,21 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                                             )}
                                                                         />
                                                                     </div>
-                                                                    <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:col-span-3 xl:grid-cols-6">
+                                                                    <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:col-span-3 xl:grid-cols-4">
                                                                         <FormField
                                                                             control={form.control}
                                                                             name={`piecesRows.${index}.items.${itemIndex}.quantity` as const}
                                                                             render={({ field: itemField }) => (
                                                                                 <FloatingFormItem label="Quantity">
                                                                                     <FormControl>
-                                                                                        <Input
-                                                                                            type="number"
-                                                                                            min="1"
-                                                                                            value={numberInputValue(itemField.value)}
-                                                                                            onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                        <IntegerInput
                                                                                             className={FLOATING_INNER_CONTROL}
+                                                                                            name={itemField.name}
+                                                                                            ref={itemField.ref}
+                                                                                            onBlur={itemField.onBlur}
+                                                                                            value={itemField.value}
+                                                                                            onValueChange={itemField.onChange}
+                                                                                            min={1}
                                                                                         />
                                                                                     </FormControl>
                                                                                 </FloatingFormItem>
@@ -2720,12 +2754,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                                             render={({ field: itemField }) => (
                                                                                 <FloatingFormItem label="M. Value">
                                                                                     <FormControl>
-                                                                                        <Input
-                                                                                            type="number"
-                                                                                            min="0"
-                                                                                            value={numberInputValue(itemField.value)}
-                                                                                            onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                        <IntegerInput
                                                                                             className={FLOATING_INNER_CONTROL}
+                                                                                            name={itemField.name}
+                                                                                            ref={itemField.ref}
+                                                                                            onBlur={itemField.onBlur}
+                                                                                            value={itemField.value}
+                                                                                            onValueChange={itemField.onChange}
+                                                                                            min={0}
                                                                                         />
                                                                                     </FormControl>
                                                                                 </FloatingFormItem>
@@ -2759,44 +2795,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                                             render={({ field: itemField }) => (
                                                                                 <FloatingFormItem label="Total Value">
                                                                                     <FormControl>
-                                                                                        <Input
-                                                                                            type="number"
-                                                                                            min="0"
-                                                                                            value={numberInputValue(itemField.value)}
-                                                                                            onChange={(event) => itemField.onChange(parseOptionalNumberInput(event.target.value))}
+                                                                                        <IntegerInput
                                                                                             className={FLOATING_INNER_CONTROL}
-                                                                                        />
-                                                                                    </FormControl>
-                                                                                </FloatingFormItem>
-                                                                            )}
-                                                                        />
-                                                                        <FormField
-                                                                            control={form.control}
-                                                                            name={`piecesRows.${index}.items.${itemIndex}.invoiceDate` as const}
-                                                                            render={({ field: itemField }) => (
-                                                                                <FloatingFormItem label="Invoice Date">
-                                                                                    <FormControl>
-                                                                                        <Input
-                                                                                            type="date"
-                                                                                            value={itemField.value || ""}
-                                                                                            onChange={itemField.onChange}
-                                                                                            className={FLOATING_INNER_CONTROL}
-                                                                                        />
-                                                                                    </FormControl>
-                                                                                </FloatingFormItem>
-                                                                            )}
-                                                                        />
-                                                                        <FormField
-                                                                            control={form.control}
-                                                                            name={`piecesRows.${index}.items.${itemIndex}.invoiceNumber` as const}
-                                                                            render={({ field: itemField }) => (
-                                                                                <FloatingFormItem label="Invoice No.">
-                                                                                    <FormControl>
-                                                                                        <Input
-                                                                                            value={itemField.value || ""}
-                                                                                            onChange={itemField.onChange}
-                                                                                            placeholder="INV/001"
-                                                                                            className={FLOATING_INNER_CONTROL}
+                                                                                            name={itemField.name}
+                                                                                            ref={itemField.ref}
+                                                                                            onBlur={itemField.onBlur}
+                                                                                            value={itemField.value}
+                                                                                            onValueChange={itemField.onChange}
+                                                                                            min={0}
                                                                                         />
                                                                                     </FormControl>
                                                                                 </FloatingFormItem>

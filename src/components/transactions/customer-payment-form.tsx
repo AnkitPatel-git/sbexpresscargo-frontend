@@ -22,6 +22,7 @@ import {
   OutlinedFieldShell,
 } from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
+import { IntegerInput } from "@/components/ui/integer-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { customerPaymentFormSchema, CustomerPaymentFormValues, CustomerPayment } from "@/types/transactions/customer-payment";
@@ -116,7 +117,15 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             render={({ field }) => (
               <FloatingFormItem required label={<>Amount</>}>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
+                  <IntegerInput
+                    className={FLOATING_INNER_CONTROL}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    min={0}
+                  />
                 </FormControl>
               </FloatingFormItem>
             )}

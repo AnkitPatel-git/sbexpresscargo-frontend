@@ -74,6 +74,8 @@ function buildCalculationPayload(shipment: Shipment) {
     serviceCenterId: shipment.serviceCenterId ?? undefined,
     isCod: shipment.isCod,
     codAmount: shipment.codAmount ?? undefined,
+    invoiceDate: shipment.invoiceDate?.split("T")[0],
+    invoiceNumber: shipment.invoiceNumber ?? undefined,
     piecesRows: (shipment.piecesRows || []).map((row) => ({
       actualWeight: Number(row.actualWeight) || 0,
       pieces: Number(row.pieces) || 0,
@@ -89,8 +91,6 @@ function buildCalculationPayload(shipment: Shipment) {
         measureValue: item.measureValue ?? undefined,
         measureUnit: item.measureUnit ?? undefined,
         totalValue: item.totalValue ?? undefined,
-        invoiceDate: item.invoiceDate ?? undefined,
-        invoiceNumber: item.invoiceNumber ?? undefined,
       })),
     })),
     charges: shipment.charges || [],

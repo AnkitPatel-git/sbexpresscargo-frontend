@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { Form, FormControl, FormField } from "@/components/ui/form";
 import { FloatingFormItem, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
+import { IntegerInput } from "@/components/ui/integer-input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -295,12 +296,14 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
             render={({ field }) => (
               <FloatingFormItem required label="Sequence">
                 <FormControl>
-                  <Input
-                    type="number"
+                  <IntegerInput
                     className={FLOATING_INNER_CONTROL}
-                    {...field}
-                    value={field.value === undefined || field.value === null ? "" : field.value}
-                    onChange={(e) => field.onChange(e.target.value === "" ? undefined : e.target.value)}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    min={0}
                   />
                 </FormControl>
               </FloatingFormItem>

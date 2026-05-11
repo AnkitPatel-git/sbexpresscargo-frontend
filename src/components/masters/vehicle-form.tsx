@@ -21,6 +21,7 @@ import {
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
+import { IntegerInput } from "@/components/ui/integer-input"
 import {
     Select,
     SelectContent,
@@ -178,7 +179,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                             render={({ field }) => (
                                 <FloatingFormItem label="Capacity (kg)">
                                     <FormControl>
-                                        <Input type="number" placeholder="e.g. 2500" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)} className={FLOATING_INNER_CONTROL} />
+                                        <IntegerInput placeholder="e.g. 2500" className={FLOATING_INNER_CONTROL} name={field.name} ref={field.ref} onBlur={field.onBlur} value={field.value} onValueChange={(n) => field.onChange(n === undefined ? null : n)} min={0} />
                                     </FormControl>
                                 </FloatingFormItem>
                             )}
@@ -243,7 +244,7 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                             render={({ field }) => (
                                 <FloatingFormItem label="Driver User ID">
                                     <FormControl>
-                                        <Input type="number" placeholder="Link to user account" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)} className={FLOATING_INNER_CONTROL} />
+                                        <IntegerInput placeholder="Link to user account" className={FLOATING_INNER_CONTROL} name={field.name} ref={field.ref} onBlur={field.onBlur} value={field.value} onValueChange={(n) => field.onChange(n === undefined ? null : n)} min={1} />
                                     </FormControl>
                                 </FloatingFormItem>
                             )}

@@ -8,8 +8,6 @@ export const pieceItemSchema = z.object({
   measureValue: z.number().int().optional(),
   measureUnit: z.string().optional(),
   totalValue: z.number().int().optional(),
-  invoiceDate: z.string().optional(),
-  invoiceNumber: z.string().optional(),
 });
 
 export const pieceRowSchema = z.object({
@@ -120,6 +118,8 @@ export const shipmentSchema = z.object({
   toZoneId: z.number().optional(),
   shipmentTotalValue: z.number().optional(),
   shipmentValue: z.number().optional(),
+  invoiceDate: z.string().optional(),
+  invoiceNumber: z.string().optional(),
   reversePickup: z.boolean().default(false),
   appointmentDelivery: z.boolean().default(false),
   floorDelivery: z.boolean().default(false),
@@ -406,6 +406,8 @@ export interface Shipment {
   floorDelivery?: boolean;
   floorCount?: number | null;
   shipmentTotalValue?: number | null;
+  invoiceDate?: string | null;
+  invoiceNumber?: string | null;
   origin?: string | null;
   destination?: string | null;
   pieces?: number | null;
