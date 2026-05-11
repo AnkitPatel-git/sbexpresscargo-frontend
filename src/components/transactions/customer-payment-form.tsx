@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/form";
 import {
   FloatingFormItem,
-  FLOATING_INNER_COMBO,
   FLOATING_INNER_CONTROL,
   FLOATING_INNER_TEXTAREA,
   OutlinedFieldShell,
@@ -27,8 +26,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { customerPaymentFormSchema, CustomerPaymentFormValues, CustomerPayment } from "@/types/transactions/customer-payment";
 import { customerPaymentService } from "@/services/transactions/customer-payment-service";
-import { customerService } from "@/services/masters/customer-service";
-import { Combobox } from "@/components/ui/combobox";
+import { CustomerFloatingAsyncSelect } from "@/components/masters/floating-master-async-selects";
+import type { Customer } from "@/types/masters/customer";
 import { cn } from "@/lib/utils";
 
 interface CustomerPaymentFormProps {
@@ -41,15 +40,13 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
   const isEditing = !!initialData;
   const [file, setFile] = useState<File | undefined>();
 
-  const { data: customersResponse } = useQuery({
-    queryKey: ["customers-master"],
-    queryFn: () => customerService.getCustomers({ limit: 100 }),
-  });
-
-  const customerOptions = customersResponse?.data.map((c) => ({
-    label: `${c.name} (${c.code || c.id})`,
-    value: c.id,
-  })) || [];
+  const extraCustomer = useMemo(
+    () =>
+      initialData?.customer
+        ? ([{ id: initialData.customerId, name: initialData.customer.name }] as unknown as Customer[])
+        : undefined,
+    [initialData?.customer, initialData?.customerId],
+  );
 
   const form = useForm<CustomerPaymentFormValues>({
     resolver: zodResolver(customerPaymentFormSchema),
@@ -98,13 +95,12 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
             render={({ field }) => (
               <FloatingFormItem required label={<>Customer</>}>
                 <FormControl>
-                  <Combobox
-                    options={customerOptions}
+                  <CustomerFloatingAsyncSelect
+                    triggerRef={field.ref}
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Select Customer"
-                    searchPlaceholder="Search by name or code..."
-                    className={FLOATING_INNER_COMBO}
+                    queryKeyScope={isEditing && initialData ? `customer-payment-${initialData.id}` : "customer-payment-new"}
+                    extraCustomers={extraCustomer}
                   />
                 </FormControl>
               </FloatingFormItem>

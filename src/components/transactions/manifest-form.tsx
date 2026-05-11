@@ -1,9 +1,10 @@
 "use client";
 
+import { useCallback, useMemo, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
@@ -19,6 +20,9 @@ import {
   FLOATING_INNER_CONTROL,
   FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item";
+import { DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useSelectContentInfiniteScroll } from "@/hooks/use-infinite-entity-list";
 import { Input } from "@/components/ui/input";
 import { IntegerInput } from "@/components/ui/integer-input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -33,6 +37,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { manifestFormSchema, ManifestFormValues, Manifest } from "@/types/transactions/manifest";
 import { manifestService } from "@/services/transactions/manifest-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
+import type { Shipment } from "@/types/transactions/shipment";
 
 interface ManifestFormProps {
   initialData?: Manifest | null;
@@ -43,15 +48,9 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
 
-  const { data: shipmentsData } = useQuery({
-    queryKey: ["shipments-list"],
-    queryFn: () => shipmentService.getShipments({ limit: 100 }),
-  });
-
-  const shipmentOptions = shipmentsData?.data?.map(s => ({
-    label: s.awbNo,
-    value: s.id
-  })) || [];
+  const [shipmentMultiOpen, setShipmentMultiOpen] = useState(false);
+  const [shipmentSearch, setShipmentSearch] = useState("");
+  const debouncedShipmentSearch = useDebounce(shipmentSearch, 300);
 
   const form = useForm<ManifestFormValues>({
     resolver: zodResolver(manifestFormSchema),
@@ -78,6 +77,62 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
   const { fields, append, remove } = useFieldArray({
     name: "items",
     control: form.control,
+  });
+
+  const shipmentIdsWatch = form.watch("shipmentIds");
+
+  const extraShipments = useMemo((): Pick<Shipment, "id" | "awbNo">[] => {
+    if (!initialData?.items?.length) return [];
+    const out: Pick<Shipment, "id" | "awbNo">[] = [];
+    for (const it of initialData.items) {
+      if (it.id == null || !shipmentIdsWatch.includes(it.id)) continue;
+      out.push({ id: it.id, awbNo: it.awbNo ?? String(it.id) });
+    }
+    return out;
+  }, [initialData?.items, shipmentIdsWatch]);
+
+  const {
+    data: shipmentPages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["manifest-form", "shipment-options", debouncedShipmentSearch],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      shipmentService.getShipments({
+        page: pageParam,
+        limit: DB_ASYNC_SELECT_PAGE_SIZE,
+        search: debouncedShipmentSearch || undefined,
+        sortBy: "id",
+        sortOrder: "desc",
+      }),
+    getNextPageParam: (lastPage) => {
+      const m = lastPage.meta;
+      if (m && typeof m.page === "number" && typeof m.totalPages === "number" && m.page < m.totalPages) {
+        return m.page + 1;
+      }
+      return undefined;
+    },
+    enabled: shipmentMultiOpen,
+  });
+
+  const shipmentOptions = useMemo(() => {
+    const fromPages = shipmentPages?.pages.flatMap((p) => p.data) ?? [];
+    const seen = new Set(fromPages.map((s) => s.id));
+    const extras = extraShipments.filter((e) => !seen.has(e.id));
+    return [
+      ...fromPages.map((s) => ({ label: s.awbNo ?? String(s.id), value: s.id })),
+      ...extras.map((e) => ({ label: e.awbNo, value: e.id })),
+    ];
+  }, [shipmentPages?.pages, extraShipments]);
+
+  const onShipmentListScroll = useSelectContentInfiniteScroll({
+    hasNextPage: Boolean(hasNextPage),
+    isFetchingNextPage,
+    fetchNextPage: useCallback(() => {
+      void fetchNextPage();
+    }, [fetchNextPage]),
   });
 
   const mutation = useMutation({
@@ -134,6 +189,18 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
                     placeholder="Select shipments..."
                     searchPlaceholder="Search AWB..."
                     className={FLOATING_INNER_COMBO}
+                    enableClientFilter={false}
+                    onSearchChange={setShipmentSearch}
+                    onListScroll={onShipmentListScroll}
+                    onOpenChange={(open) => {
+                      setShipmentMultiOpen(open);
+                      if (!open) setShipmentSearch("");
+                    }}
+                    listFooter={
+                      isFetchingNextPage ? (
+                        <span className="block px-2 py-1.5 text-xs text-muted-foreground">Loading more…</span>
+                      ) : null
+                    }
                   />
                 </FormControl>
               </FloatingFormItem>

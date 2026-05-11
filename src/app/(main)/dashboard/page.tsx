@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ServiceCenterMasterFilterDbAsync, MASTER_FILTER_ALL } from "@/components/masters/master-db-async-selects";
 import {
   RefreshCw,
   Package,
@@ -16,11 +17,9 @@ import { format, subDays } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Combobox } from "@/components/ui/combobox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { dashboardService } from "@/services/dashboard-service";
-import { serviceCenterService } from "@/services/masters/service-center-service";
 import { StatsCard } from "@/components/dashboard/dashboard-metrics";
 import { SalesTrendChart, ServiceCenterSalesChart } from "@/components/dashboard/dashboard-charts";
 import { ExpressInboundSummary, ExpressOutboundSummary } from "@/components/dashboard/express-operation-summary";
@@ -34,16 +33,6 @@ export default function DashboardPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  const { data: serviceCentersData } = useQuery({
-    queryKey: ["service-centers-master"],
-    queryFn: () => serviceCenterService.getServiceCenters({ limit: 100 }),
-  });
-
-  const serviceCenterOptions = serviceCentersData?.data.map((sc) => ({
-    label: `${sc.name} (${sc.code})`,
-    value: sc.id,
-  })) || [];
 
   const { data: opsData, isLoading: isLoadingOps, refetch: refetchOps } = useQuery({
     queryKey: ["dashboard-ops", fromDate, toDate, serviceCenterId],
@@ -164,14 +153,13 @@ export default function DashboardPage() {
                     Service Center
                   </label>
                   <div className="flex gap-1">
-                    <Combobox
-                      options={serviceCenterOptions}
-                      value={serviceCenterId}
-                      onChange={(value) =>
-                        setServiceCenterId(value === "" ? undefined : typeof value === "number" ? value : Number(value))
+                    <ServiceCenterMasterFilterDbAsync
+                      queryScope="dashboard"
+                      allLabel="All"
+                      value={serviceCenterId != null ? String(serviceCenterId) : MASTER_FILTER_ALL}
+                      onValueChange={(v) =>
+                        setServiceCenterId(v === MASTER_FILTER_ALL ? undefined : Number(v))
                       }
-                      placeholder="All"
-                      className="h-9 flex-1 border bg-background"
                     />
                     <Button type="button" size="icon" variant="default" className="h-9 w-9 shrink-0" title="Search">
                       <Search className="h-4 w-4" />

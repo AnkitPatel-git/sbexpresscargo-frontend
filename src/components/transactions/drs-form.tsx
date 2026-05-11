@@ -3,7 +3,8 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
@@ -15,18 +16,21 @@ import {
 } from "@/components/ui/form";
 import {
   FloatingFormItem,
-  FLOATING_INNER_COMBO,
   FLOATING_INNER_CONTROL,
   FLOATING_INNER_TEXTAREA,
 } from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Combobox } from "@/components/ui/combobox";
+import {
+  AreaFloatingAsyncSelect,
+  ServiceCenterOptionalFloatingAsyncSelect,
+  VendorFloatingAsyncSelect,
+} from "@/components/masters/floating-master-async-selects";
 import { drsFormSchema, DrsFormValues, Drs } from "@/types/transactions/drs";
 import { drsService } from "@/services/transactions/drs-service";
-import { serviceCenterService } from "@/services/masters/service-center-service";
-import { vendorService } from "@/services/masters/vendor-service";
-import { areaService } from "@/services/masters/area-service";
+import type { Area } from "@/types/masters/area";
+import type { ServiceCenter } from "@/types/masters/service-center";
+import type { Vendor } from "@/types/masters/vendor";
 
 interface DrsFormProps {
   initialData?: Drs | null;
@@ -37,35 +41,18 @@ export function DrsForm({ initialData }: DrsFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
 
-  const { data: serviceCentersData } = useQuery({
-    queryKey: ["service-centers"],
-    queryFn: () => serviceCenterService.getServiceCenters(),
-  });
-
-  const { data: vendorsData } = useQuery({
-    queryKey: ["vendors"],
-    queryFn: () => vendorService.getVendors({ limit: 100 }),
-  });
-
-  const { data: areasData } = useQuery({
-    queryKey: ["areas"],
-    queryFn: () => areaService.getAreas({ limit: 100 }),
-  });
-
-  const serviceCenterOptions = serviceCentersData?.data?.map(sc => ({
-    label: sc.name,
-    value: sc.id
-  })) || [];
-
-  const vendorOptions = vendorsData?.data?.map((vendor) => ({
-    label: vendor.vendorName,
-    value: vendor.id
-  })) || [];
-
-  const areaOptions = areasData?.data?.map(a => ({
-    label: a.areaName,
-    value: a.id
-  })) || [];
+  const extraVendor = useMemo(
+    () => (initialData?.courier ? ([initialData.courier] as unknown as Vendor[]) : undefined),
+    [initialData?.courier],
+  );
+  const extraArea = useMemo(
+    () => (initialData?.area ? ([initialData.area] as unknown as Area[]) : undefined),
+    [initialData?.area],
+  );
+  const extraServiceCenter = useMemo(
+    () => (initialData?.serviceCenter ? ([initialData.serviceCenter] as unknown as ServiceCenter[]) : undefined),
+    [initialData?.serviceCenter],
+  );
 
   const form = useForm<DrsFormValues>({
     resolver: zodResolver(drsFormSchema),
@@ -148,12 +135,13 @@ export function DrsForm({ initialData }: DrsFormProps) {
             render={({ field }) => (
               <FloatingFormItem label="Vendor">
                 <FormControl>
-                  <Combobox
-                    options={vendorOptions}
+                  <VendorFloatingAsyncSelect
+                    triggerRef={field.ref}
+                    allowClear
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Select Vendor"
-                    className={FLOATING_INNER_COMBO}
+                    queryKeyScope={isEditing && initialData ? `drs-${initialData.id}` : "drs-new"}
+                    extraVendors={extraVendor}
                   />
                 </FormControl>
               </FloatingFormItem>
@@ -166,12 +154,13 @@ export function DrsForm({ initialData }: DrsFormProps) {
             render={({ field }) => (
               <FloatingFormItem label="Area">
                 <FormControl>
-                  <Combobox
-                    options={areaOptions}
+                  <AreaFloatingAsyncSelect
+                    triggerRef={field.ref}
+                    allowClear
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Select Area"
-                    className={FLOATING_INNER_COMBO}
+                    queryKeyScope={isEditing && initialData ? `drs-${initialData.id}` : "drs-new"}
+                    extraAreas={extraArea}
                   />
                 </FormControl>
               </FloatingFormItem>
@@ -184,12 +173,12 @@ export function DrsForm({ initialData }: DrsFormProps) {
             render={({ field }) => (
               <FloatingFormItem label="Service Center">
                 <FormControl>
-                  <Combobox
-                    options={serviceCenterOptions}
+                  <ServiceCenterOptionalFloatingAsyncSelect
+                    triggerRef={field.ref}
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Select Service Center"
-                    className={FLOATING_INNER_COMBO}
+                    queryKeyScope={isEditing && initialData ? `drs-${initialData.id}` : "drs-new"}
+                    extraCenters={extraServiceCenter}
                   />
                 </FormControl>
               </FloatingFormItem>

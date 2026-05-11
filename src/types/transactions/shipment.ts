@@ -280,6 +280,19 @@ export const shipmentSchema = z.object({
     })
   }
 
+  const bookingTotal = Number(values.shipmentTotalValue)
+  if (Number.isFinite(bookingTotal) && bookingTotal > 50_000) {
+    const ewb =
+      typeof values.ewaybillNumber === "string" ? values.ewaybillNumber.trim() : ""
+    if (!ewb) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ewaybillNumber"],
+        message: "E-waybill number is required when booking total value exceeds ₹50,000",
+      })
+    }
+  }
+
   if (values.km == null || Number(values.km) <= 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

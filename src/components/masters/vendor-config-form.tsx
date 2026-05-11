@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { Resolver, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
@@ -16,26 +16,25 @@ import {
     FormField,
 } from "@/components/ui/form"
 import {
+    CustomerNullableFloatingAsyncSelect,
+    ServiceMapFloatingAsyncSelect,
+    VendorFloatingAsyncSelect,
+} from "@/components/masters/floating-master-async-selects"
+import {
     FloatingFormItem,
     FLOATING_INNER_CONTROL,
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
 import { Switch } from "@/components/ui/switch"
 
 import { vendorConfigService } from "@/services/masters/vendor-config-service"
-import { vendorService } from "@/services/masters/vendor-service"
-import { customerService } from "@/services/masters/customer-service"
-import { serviceMapService } from "@/services/masters/service-map-service"
 import { VendorConfig } from "@/types/masters/vendor-config"
+import type { Customer } from "@/types/masters/customer"
+import type { ServiceMap } from "@/types/masters/service-map"
+import type { Vendor } from "@/types/masters/vendor"
 
 const vendorConfigSchema = z.object({
     vendorId: z.coerce.number().int().positive("Vendor is required"),
@@ -59,20 +58,40 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
     const queryClient = useQueryClient()
     const isEdit = !!initialData
 
-    const { data: vendorsResponse } = useQuery({
-        queryKey: ["vendor-config-form-vendors"],
-        queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: "vendorName", sortOrder: "asc" }),
-    })
+    const extraVendor = useMemo(
+        () => (initialData?.vendor ? ([initialData.vendor] as unknown as Vendor[]) : undefined),
+        [initialData?.vendor],
+    )
 
-    const { data: customersResponse } = useQuery({
-        queryKey: ["vendor-config-form-customers"],
-        queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
-    })
+    const extraCustomer = useMemo(
+        () => (initialData?.customer ? ([initialData.customer] as Customer[]) : undefined),
+        [initialData?.customer],
+    )
 
-    const { data: serviceMapsResponse } = useQuery({
-        queryKey: ["vendor-config-form-service-maps"],
-        queryFn: () => serviceMapService.getServiceMaps({ page: 1, limit: 100, sortBy: "vendor", sortOrder: "asc" }),
-    })
+    const extraServiceMap = useMemo((): ServiceMap[] | undefined => {
+        if (!initialData?.serviceMap) return undefined
+        const sm = initialData.serviceMap
+        const v = initialData.vendor
+        return [
+            {
+                id: sm.id,
+                vendorId: initialData.vendorId,
+                serviceType: sm.serviceType as ServiceMap["serviceType"],
+                minWeight: 0,
+                maxWeight: 0,
+                status: "ACTIVE",
+                vendorLink: sm.vendorLink,
+                isSinglePiece: false,
+                createdAt: "",
+                updatedAt: "",
+                createdById: null,
+                updatedById: null,
+                deletedAt: null,
+                deletedById: null,
+                vendor: v ? { id: v.id, vendorCode: v.vendorCode, vendorName: v.vendorName } : null,
+            } as ServiceMap,
+        ]
+    }, [initialData?.serviceMap, initialData?.vendor, initialData?.vendorId])
 
     const form = useForm<VendorConfigFormValues>({
         resolver: zodResolver(vendorConfigSchema) as Resolver<VendorConfigFormValues>,
@@ -159,20 +178,16 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             name="vendorId"
                             render={({ field }) => (
                                 <FloatingFormItem required label="Vendor*">
-                                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
-                                        <FormControl>
-                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select vendor" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {vendorsResponse?.data?.map((vendor) => (
-                                                <SelectItem key={vendor.id} value={String(vendor.id)}>
-                                                    {vendor.vendorName}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <FormControl>
+                                        <VendorFloatingAsyncSelect
+                                            triggerRef={field.ref}
+                                            allowClear={false}
+                                            value={field.value > 0 ? field.value : undefined}
+                                            onChange={(v) => field.onChange(v ?? 0)}
+                                            queryKeyScope={isEdit && initialData ? `vendor-config-${initialData.id}` : "vendor-config-new"}
+                                            extraVendors={extraVendor}
+                                        />
+                                    </FormControl>
                                 </FloatingFormItem>
                             )}
                         />
@@ -182,22 +197,15 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             name="serviceMapId"
                             render={({ field }) => (
                                 <FloatingFormItem required label="Service Map*">
-                                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
-                                        <FormControl>
-                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select service map" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {serviceMapsResponse?.data?.map((serviceMap) => (
-                                                <SelectItem key={serviceMap.id} value={String(serviceMap.id)}>
-                                                    {serviceMap.vendor?.vendorName
-                                                        ? `${serviceMap.vendor.vendorName} - ${serviceMap.serviceType}`
-                                                        : `${serviceMap.serviceType} - ${serviceMap.id}`}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <FormControl>
+                                        <ServiceMapFloatingAsyncSelect
+                                            triggerRef={field.ref}
+                                            value={field.value > 0 ? field.value : undefined}
+                                            onChange={(v) => field.onChange(v ?? 0)}
+                                            queryKeyScope={isEdit && initialData ? `vendor-config-${initialData.id}` : "vendor-config-new"}
+                                            extraServiceMaps={extraServiceMap}
+                                        />
+                                    </FormControl>
                                 </FloatingFormItem>
                             )}
                         />
@@ -241,24 +249,15 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             name="customerId"
                             render={({ field }) => (
                                 <FloatingFormItem label="Customer">
-                                    <Select
-                                        onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
-                                        value={field.value ? String(field.value) : "none"}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select customer" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="none">None</SelectItem>
-                                            {customersResponse?.data?.map((customer) => (
-                                                <SelectItem key={customer.id} value={String(customer.id)}>
-                                                    {customer.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <FormControl>
+                                        <CustomerNullableFloatingAsyncSelect
+                                            triggerRef={field.ref}
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            queryKeyScope={isEdit && initialData ? `vendor-config-${initialData.id}` : "vendor-config-new"}
+                                            extraCustomers={extraCustomer}
+                                        />
+                                    </FormControl>
                                 </FloatingFormItem>
                             )}
                         />

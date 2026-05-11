@@ -980,6 +980,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const watchedReversePickup = form.watch('reversePickup')
     const watchedAppointmentDelivery = form.watch('appointmentDelivery')
     const watchedShipmentTotalValue = form.watch('shipmentTotalValue')
+    const ewaybillRequiredOver50k = Number(watchedShipmentTotalValue) > 50_000
     const watchedActualWeight = form.watch('actualWeight')
     const watchedVolumetricWeight = form.watch('volumetricWeight')
     const watchedKm = form.watch('km')
@@ -1794,9 +1795,19 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="ewaybillNumber"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Ewaybill No (optional)" itemClassName="md:col-span-1">
+                                            <FloatingFormItem
+                                                required={ewaybillRequiredOver50k}
+                                                label={
+                                                    ewaybillRequiredOver50k ? (
+                                                        <>E-waybill No (required over ₹50,000)</>
+                                                    ) : (
+                                                        <>E-waybill No (optional)</>
+                                                    )
+                                                }
+                                                itemClassName="md:col-span-1"
+                                            >
                                                 <FormControl>
-                                                    <Input {...field} value={field.value || ""} placeholder="Enter ewaybill number" className={FLOATING_INNER_CONTROL} />
+                                                    <Input {...field} value={field.value || ""} placeholder="Enter e-waybill number" className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
                                             </FloatingFormItem>
                                         )}

@@ -39,7 +39,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 import { serviceMapService } from "@/services/masters/service-map-service"
-import { vendorService } from "@/services/masters/vendor-service"
+import { ServiceMapVendorFilterDbAsync, SERVICE_MAP_VENDOR_ALL } from "@/components/masters/master-db-async-selects"
 import { ServiceMap } from "@/types/masters/service-map"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
@@ -64,11 +64,6 @@ export default function ServiceMapPage() {
     useEffect(() => {
         if (filtersOpen) setDraftFilters(appliedFilters)
     }, [appliedFilters, filtersOpen])
-
-    const { data: vendorsData } = useQuery({
-        queryKey: ["vendors-list"],
-        queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: "vendorName", sortOrder: "asc" }),
-    })
 
     const { data, isLoading } = useQuery({
         queryKey: ["service-maps", page, debouncedSearch, appliedFilters.vendorId, appliedFilters.serviceType, appliedFilters.status, sortBy, sortOrder],
@@ -197,12 +192,16 @@ export default function ServiceMapPage() {
                             </DialogHeader>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <Input placeholder="Search" className="h-9 bg-background" value={draftFilters.search} onChange={(e) => setDraftFilters((prev) => ({ ...prev, search: e.target.value }))} />
-                                <select className="h-9 rounded-md border border-border bg-background px-2 text-sm" value={draftFilters.vendorId} onChange={(e) => setDraftFilters((prev) => ({ ...prev, vendorId: e.target.value }))}>
-                                    <option value="">All vendors</option>
-                                    {vendorsData?.data?.map((vendor) => (
-                                        <option key={vendor.id} value={String(vendor.id)}>{vendor.vendorName}</option>
-                                    ))}
-                                </select>
+                                <ServiceMapVendorFilterDbAsync
+                                    queryScope="service-map-page"
+                                    value={draftFilters.vendorId}
+                                    onValueChange={(v) =>
+                                        setDraftFilters((prev) => ({
+                                            ...prev,
+                                            vendorId: v === SERVICE_MAP_VENDOR_ALL ? "" : v,
+                                        }))
+                                    }
+                                />
                                 <Input placeholder="Service Type" className="h-9 bg-background" value={draftFilters.serviceType} onChange={(e) => setDraftFilters((prev) => ({ ...prev, serviceType: e.target.value }))} />
                                 <Input placeholder="Status" className="h-9 bg-background" value={draftFilters.status} onChange={(e) => setDraftFilters((prev) => ({ ...prev, status: e.target.value }))} />
                             </div>

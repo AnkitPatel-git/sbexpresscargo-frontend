@@ -9,7 +9,13 @@ import { PermissionGuard } from "@/components/auth/permission-guard";
 import { SortableColumnHeader } from "@/components/ui/sortable-column-header";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Combobox } from "@/components/ui/combobox";
+import {
+  MisCustomerFilterDbAsync,
+  MisProductFilterDbAsync,
+  MisServiceCenterFilterDbAsync,
+  MisShipperFilterDbAsync,
+  MisZoneFilterDbAsync,
+} from "@/components/masters/master-db-async-selects";
 import {
   Dialog,
   DialogContent,
@@ -29,11 +35,6 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { customerService } from "@/services/masters/customer-service";
-import { productService } from "@/services/masters/product-service";
-import { serviceCenterService } from "@/services/masters/service-center-service";
-import { shipperService } from "@/services/masters/shipper-service";
-import { zoneService } from "@/services/masters/zone-service";
 import { misReportService } from "@/services/reports/mis-report-service";
 import { MIS_REPORT_COLUMNS, type MisReportColumn } from "@/types/reports/mis-report";
 
@@ -115,28 +116,6 @@ export default function MisReportPage() {
   const [selectedColumns, setSelectedColumns] = useState<MisReportColumn[]>(DEFAULT_COLUMNS);
   const [draftColumns, setDraftColumns] = useState<MisReportColumn[]>(DEFAULT_COLUMNS);
 
-  const { data: customerData } = useQuery({
-    queryKey: ["mis-report-customer-options"],
-    queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
-  });
-  const { data: shipperData } = useQuery({
-    queryKey: ["mis-report-shipper-options"],
-    queryFn: () => shipperService.getShippers({ page: 1, limit: 100, sortBy: "shipperName", sortOrder: "asc" }),
-  });
-  const { data: zoneData } = useQuery({
-    queryKey: ["mis-report-zone-options"],
-    queryFn: () => zoneService.getZones({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
-  });
-  const { data: productData } = useQuery({
-    queryKey: ["mis-report-product-options"],
-    queryFn: () => productService.getProducts({ page: 1, limit: 100, sortBy: "productName", sortOrder: "asc" }),
-  });
-  const { data: serviceCenterData } = useQuery({
-    queryKey: ["mis-report-service-center-options"],
-    queryFn: () =>
-      serviceCenterService.getServiceCenters({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
-  });
-
   useEffect(() => {
     if (filtersOpen) setDraftFilters(appliedFilters);
   }, [appliedFilters, filtersOpen]);
@@ -175,27 +154,6 @@ export default function MisReportPage() {
 
   const allColumns = data?.availableColumns?.length ? data.availableColumns : MIS_REPORT_COLUMNS;
   const displayColumns = data?.columns?.length ? data.columns : selectedColumns;
-
-  const customerOptions = (customerData?.data ?? []).map((customer) => ({
-    value: String(customer.id),
-    label: customer.code ? `${customer.code} - ${customer.name}` : customer.name,
-  }));
-  const shipperOptions = (shipperData?.data ?? []).map((shipper) => ({
-    value: String(shipper.id),
-    label: shipper.shipperCode ? `${shipper.shipperCode} - ${shipper.shipperName}` : shipper.shipperName,
-  }));
-  const zoneOptions = (zoneData?.data ?? []).map((zone) => ({
-    value: String(zone.id),
-    label: zone.code ? `${zone.code} - ${zone.name}` : zone.name,
-  }));
-  const productOptions = (productData?.data ?? []).map((product) => ({
-    value: String(product.id),
-    label: product.productCode ? `${product.productCode} - ${product.productName}` : product.productName,
-  }));
-  const serviceCenterOptions = (serviceCenterData?.data ?? []).map((center) => ({
-    value: String(center.id),
-    label: center.code ? `${center.code} - ${center.name}` : center.name,
-  }));
 
   const onSort = (field: string) => {
     if (sortBy === field) {
@@ -379,89 +337,37 @@ export default function MisReportPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Combobox
-                  className="w-full"
-                  placeholder="Select customer"
-                  searchPlaceholder="Search customer..."
-                  emptyMessage="No customer found."
-                  value={draftFilters.customerId ? String(draftFilters.customerId) : ""}
-                  onChange={(value) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      customerId: value ? Number(value) : undefined,
-                    }))
-                  }
-                  options={customerOptions}
+                <MisCustomerFilterDbAsync
+                  queryScope="mis-dialog"
+                  valueNum={draftFilters.customerId}
+                  onPick={(id) => setDraftFilters((prev) => ({ ...prev, customerId: id }))}
                 />
-                <Combobox
-                  className="w-full"
-                  placeholder="Select shipper"
-                  searchPlaceholder="Search shipper..."
-                  emptyMessage="No shipper found."
-                  value={draftFilters.shipperId ? String(draftFilters.shipperId) : ""}
-                  onChange={(value) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      shipperId: value ? Number(value) : undefined,
-                    }))
-                  }
-                  options={shipperOptions}
+                <MisShipperFilterDbAsync
+                  queryScope="mis-dialog"
+                  valueNum={draftFilters.shipperId}
+                  onPick={(id) => setDraftFilters((prev) => ({ ...prev, shipperId: id }))}
                 />
-                <Combobox
-                  className="w-full"
-                  placeholder="Select service center"
-                  searchPlaceholder="Search service center..."
-                  emptyMessage="No service center found."
-                  value={draftFilters.serviceCenterId ? String(draftFilters.serviceCenterId) : ""}
-                  onChange={(value) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      serviceCenterId: value ? Number(value) : undefined,
-                    }))
-                  }
-                  options={serviceCenterOptions}
+                <MisServiceCenterFilterDbAsync
+                  queryScope="mis-dialog"
+                  valueNum={draftFilters.serviceCenterId}
+                  onPick={(id) => setDraftFilters((prev) => ({ ...prev, serviceCenterId: id }))}
                 />
-                <Combobox
-                  className="w-full"
-                  placeholder="Select product"
-                  searchPlaceholder="Search product..."
-                  emptyMessage="No product found."
-                  value={draftFilters.productId ? String(draftFilters.productId) : ""}
-                  onChange={(value) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      productId: value ? Number(value) : undefined,
-                    }))
-                  }
-                  options={productOptions}
+                <MisProductFilterDbAsync
+                  queryScope="mis-dialog"
+                  valueNum={draftFilters.productId}
+                  onPick={(id) => setDraftFilters((prev) => ({ ...prev, productId: id }))}
                 />
-                <Combobox
-                  className="w-full"
-                  placeholder="From Zone"
-                  searchPlaceholder="Search zone..."
-                  emptyMessage="No zone found."
-                  value={draftFilters.fromZoneId ? String(draftFilters.fromZoneId) : ""}
-                  onChange={(value) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      fromZoneId: value ? Number(value) : undefined,
-                    }))
-                  }
-                  options={zoneOptions}
+                <MisZoneFilterDbAsync
+                  queryScope="mis-dialog-from"
+                  valueNum={draftFilters.fromZoneId}
+                  onPick={(id) => setDraftFilters((prev) => ({ ...prev, fromZoneId: id }))}
+                  anyLabel="Any from zone"
                 />
-                <Combobox
-                  className="w-full"
-                  placeholder="To Zone"
-                  searchPlaceholder="Search zone..."
-                  emptyMessage="No zone found."
-                  value={draftFilters.toZoneId ? String(draftFilters.toZoneId) : ""}
-                  onChange={(value) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      toZoneId: value ? Number(value) : undefined,
-                    }))
-                  }
-                  options={zoneOptions}
+                <MisZoneFilterDbAsync
+                  queryScope="mis-dialog-to"
+                  valueNum={draftFilters.toZoneId}
+                  onPick={(id) => setDraftFilters((prev) => ({ ...prev, toZoneId: id }))}
+                  anyLabel="Any to zone"
                 />
               </div>
               <DialogFooter className="gap-2 sm:gap-2">

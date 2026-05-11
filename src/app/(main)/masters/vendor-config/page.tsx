@@ -39,10 +39,12 @@ import {
 } from "@/components/ui/table"
 import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
-import { customerService } from "@/services/masters/customer-service"
-import { serviceMapService } from "@/services/masters/service-map-service"
 import { vendorConfigService } from "@/services/masters/vendor-config-service"
-import { vendorService } from "@/services/masters/vendor-service"
+import {
+    CustomerMasterFilterDbAsync,
+    ServiceMapMasterFilterDbAsync,
+    VendorMasterFilterDbAsync,
+} from "@/components/masters/master-db-async-selects"
 import { VendorConfig } from "@/types/masters/vendor-config"
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
@@ -90,21 +92,6 @@ export default function VendorConfigPage() {
                         ? undefined
                         : appliedFilters.isActive === "true",
             }),
-    })
-
-    const { data: vendorsResponse } = useQuery({
-        queryKey: ["vendor-config-page-vendors"],
-        queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: "vendorName", sortOrder: "asc" }),
-    })
-
-    const { data: customersResponse } = useQuery({
-        queryKey: ["vendor-config-page-customers"],
-        queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
-    })
-
-    const { data: serviceMapsResponse } = useQuery({
-        queryKey: ["vendor-config-page-service-maps"],
-        queryFn: () => serviceMapService.getServiceMaps({ page: 1, limit: 100, sortBy: "vendor", sortOrder: "asc" }),
     })
 
     const deleteMutation = useMutation({
@@ -167,39 +154,24 @@ export default function VendorConfigPage() {
                             </DialogHeader>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <Input placeholder="Search configs..." className="h-9 bg-background sm:col-span-2" value={draftFilters.search} onChange={(event) => setDraftFilters((current) => ({ ...current, search: event.target.value }))} />
-                                <Select value={draftFilters.vendorId} onValueChange={(value) => setDraftFilters((current) => ({ ...current, vendorId: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Vendor" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All vendors</SelectItem>
-                                        {vendorsResponse?.data?.map((vendor) => (
-                                            <SelectItem key={vendor.id} value={String(vendor.id)}>
-                                                {vendor.vendorName}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={draftFilters.serviceMapId} onValueChange={(value) => setDraftFilters((current) => ({ ...current, serviceMapId: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Service map" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All service maps</SelectItem>
-                                        {serviceMapsResponse?.data?.map((serviceMap) => (
-                                            <SelectItem key={serviceMap.id} value={String(serviceMap.id)}>
-                                                {serviceMap.vendor?.vendorName ? `${serviceMap.vendor.vendorName} - ${serviceMap.serviceType}` : `${serviceMap.serviceType} - ${serviceMap.id}`}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={draftFilters.customerId} onValueChange={(value) => setDraftFilters((current) => ({ ...current, customerId: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Customer" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All customers</SelectItem>
-                                        {customersResponse?.data?.map((customer) => (
-                                            <SelectItem key={customer.id} value={String(customer.id)}>
-                                                {customer.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <VendorMasterFilterDbAsync
+                                    queryScope="vendor-config-page"
+                                    value={draftFilters.vendorId}
+                                    onValueChange={(value) => setDraftFilters((current) => ({ ...current, vendorId: value }))}
+                                    allLabel="All vendors"
+                                />
+                                <ServiceMapMasterFilterDbAsync
+                                    queryScope="vendor-config-page"
+                                    value={draftFilters.serviceMapId}
+                                    onValueChange={(value) => setDraftFilters((current) => ({ ...current, serviceMapId: value }))}
+                                    allLabel="All service maps"
+                                />
+                                <CustomerMasterFilterDbAsync
+                                    queryScope="vendor-config-page"
+                                    value={draftFilters.customerId}
+                                    onValueChange={(value) => setDraftFilters((current) => ({ ...current, customerId: value }))}
+                                    allLabel="All customers"
+                                />
                                 <Select value={draftFilters.environment} onValueChange={(value) => setDraftFilters((current) => ({ ...current, environment: value }))}>
                                     <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Environment" /></SelectTrigger>
                                     <SelectContent>

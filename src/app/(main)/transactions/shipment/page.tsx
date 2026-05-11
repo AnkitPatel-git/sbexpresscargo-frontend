@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Edit, FilePlus, FileSpreadsheet, FileUp, Filter, RefreshCw, Search } from "lucide-react";
@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
+import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PermissionGuard } from "@/components/auth/permission-guard";
@@ -18,11 +18,14 @@ import { useIsClient } from "@/hooks/use-is-client";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import type { Shipment } from "@/types/transactions/shipment";
+import type { Customer } from "@/types/masters/customer";
 
 type ShipmentFilters = {
   awbNo: string;
   ewaybillNumber: string;
   clientName: string;
+  /** UI only: binds client row picker to API `clientName`. */
+  clientFilterCustomerId?: number;
   origin: string;
   destination: string;
   paymentType: string;
@@ -34,12 +37,15 @@ const defaultFilters: ShipmentFilters = {
   awbNo: "",
   ewaybillNumber: "",
   clientName: "",
+  clientFilterCustomerId: undefined,
   origin: "",
   destination: "",
   paymentType: "",
   bookDateFrom: "",
   bookDateTo: "",
 };
+
+const SHIPMENT_CLIENT_ANY = "__all__";
 
 export default function ShipmentsPage() {
   const isClient = useIsClient();
@@ -51,16 +57,39 @@ export default function ShipmentsPage() {
   const [appliedFilters, setAppliedFilters] = useState<ShipmentFilters>(defaultFilters);
   const [draftFilters, setDraftFilters] = useState<ShipmentFilters>(defaultFilters);
 
-  const { data: customerData } = useQuery({
-    queryKey: ["shipment-client-options"],
-    queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
-  });
-
   useEffect(() => {
     if (filtersOpen) {
       setDraftFilters(appliedFilters);
     }
   }, [appliedFilters, filtersOpen]);
+
+  useEffect(() => {
+    if (!filtersOpen || !draftFilters.clientName?.trim() || draftFilters.clientFilterCustomerId != null) return;
+    let cancelled = false;
+    void customerService
+      .getCustomers({
+        search: draftFilters.clientName.trim(),
+        page: 1,
+        limit: 20,
+        sortBy: "name",
+        sortOrder: "asc",
+      })
+      .then((res) => {
+        if (cancelled) return;
+        const match = res.data.find((c) => c.name === draftFilters.clientName.trim());
+        if (match) setDraftFilters((p) => ({ ...p, clientFilterCustomerId: match.id }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filtersOpen, draftFilters.clientName, draftFilters.clientFilterCustomerId]);
+
+  const extraShipmentFilterCustomer = useMemo((): Customer[] | undefined => {
+    const id = draftFilters.clientFilterCustomerId;
+    const name = draftFilters.clientName?.trim();
+    if (id == null || !name) return undefined;
+    return [{ id, name, code: "" }] as unknown as Customer[];
+  }, [draftFilters.clientFilterCustomerId, draftFilters.clientName]);
 
   const listParams = {
     page,
@@ -68,7 +97,9 @@ export default function ShipmentsPage() {
     sortBy: "id",
     sortOrder: "desc" as const,
     ...Object.fromEntries(
-      Object.entries(appliedFilters).map(([key, value]) => [key, value.trim() ? value : undefined]),
+      Object.entries(appliedFilters)
+        .filter(([key]) => key !== "clientFilterCustomerId")
+        .map(([key, value]) => [key, typeof value === "string" && value.trim() ? value : undefined]),
     ),
   };
 
@@ -146,18 +177,43 @@ export default function ShipmentsPage() {
                     value={draftFilters.ewaybillNumber}
                     onChange={(e) => setDraftFilters((prev) => ({ ...prev, ewaybillNumber: e.target.value }))}
                   />
-                  <div className="sm:col-span-2">
-                    <Combobox
-                      className="w-full"
-                      placeholder="Select client"
-                      searchPlaceholder="Search client..."
-                      emptyMessage="No client found."
-                      value={draftFilters.clientName}
-                      onChange={(value) => setDraftFilters((prev) => ({ ...prev, clientName: String(value || "") }))}
-                      options={(customerData?.data ?? []).map((customer) => ({
-                        value: customer.name,
-                        label: customer.code ? `${customer.code} - ${customer.name}` : customer.name,
-                      }))}
+                  <div className="sm:col-span-2 space-y-1">
+                    <span className="text-xs font-medium text-muted-foreground">Client</span>
+                    <DbAsyncSelect<Customer>
+                      queryKey={["shipment-booking", "client-filter"]}
+                      fetchPage={(page, search) =>
+                        customerService.getCustomers({
+                          page,
+                          limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                          sortBy: "name",
+                          sortOrder: "asc",
+                          search: search || undefined,
+                        })
+                      }
+                      getItemLabel={(c) => (c.code ? `${c.code} - ${c.name}` : c.name)}
+                      extraItems={extraShipmentFilterCustomer}
+                      clearOption={{ value: SHIPMENT_CLIENT_ANY, label: "Any client" }}
+                      value={
+                        draftFilters.clientFilterCustomerId != null
+                          ? String(draftFilters.clientFilterCustomerId)
+                          : SHIPMENT_CLIENT_ANY
+                      }
+                      onValueChange={(v) => {
+                        if (v === SHIPMENT_CLIENT_ANY) {
+                          setDraftFilters((p) => ({ ...p, clientName: "", clientFilterCustomerId: undefined }));
+                          return;
+                        }
+                        void customerService.getCustomerById(Number(v)).then((res) => {
+                          setDraftFilters((p) => ({
+                            ...p,
+                            clientName: res.data.name,
+                            clientFilterCustomerId: res.data.id,
+                          }));
+                        });
+                      }}
+                      placeholder="Any client"
+                      searchPlaceholder="Search client…"
+                      triggerClassName="w-full"
                     />
                   </div>
                   <Input

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Calendar, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/auth/permission-guard";
@@ -17,6 +16,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  CustomerMasterFilterDbAsync,
+  MASTER_FILTER_ALL,
+  ServiceCenterMasterFilterDbAsync,
+} from "@/components/masters/master-db-async-selects";
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,8 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { customerService } from "@/services/masters/customer-service";
-import { serviceCenterService } from "@/services/masters/service-center-service";
 import { attendanceRegisterService } from "@/services/reports/attendance-register-service";
 
 function istCalendarParts(): { year: number; month: number } {
@@ -62,28 +64,6 @@ function AttendanceRegisterPanel() {
       toast.error(error.message);
     }
   }, [isError, error]);
-
-  const { data: serviceCenters } = useQuery({
-    queryKey: ["attendance-register-service-centers"],
-    queryFn: () =>
-      serviceCenterService.getServiceCenters({
-        page: 1,
-        limit: 500,
-        sortBy: "name",
-        sortOrder: "asc",
-      }),
-  });
-
-  const { data: customers } = useQuery({
-    queryKey: ["attendance-register-customers"],
-    queryFn: () =>
-      customerService.getCustomers({
-        page: 1,
-        limit: 500,
-        sortBy: "name",
-        sortOrder: "asc",
-      }),
-  });
 
   const yearOptions = useMemo(() => {
     const y = defaults.year;
@@ -147,35 +127,23 @@ function AttendanceRegisterPanel() {
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label>Service center (optional)</Label>
-          <Select value={serviceCenterId} onValueChange={setServiceCenterId}>
-            <SelectTrigger>
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              {(serviceCenters?.data ?? []).map((sc) => (
-                <SelectItem key={sc.id} value={String(sc.id)}>
-                  {sc.name} ({sc.code})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ServiceCenterMasterFilterDbAsync
+            queryScope="attendance-register"
+            value={serviceCenterId}
+            onValueChange={setServiceCenterId}
+            allValue={MASTER_FILTER_ALL}
+            allLabel="All"
+          />
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label>Customer / company (optional)</Label>
-          <Select value={customerId} onValueChange={setCustomerId}>
-            <SelectTrigger>
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              {(customers?.data ?? []).map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {c.name} ({c.code})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <CustomerMasterFilterDbAsync
+            queryScope="attendance-register"
+            value={customerId}
+            onValueChange={setCustomerId}
+            allValue={MASTER_FILTER_ALL}
+            allLabel="All"
+          />
         </div>
       </div>
 
@@ -321,30 +289,6 @@ function AttendanceRegisterPanel() {
 export default function AttendanceRegisterPage() {
   return (
     <div className="mx-auto max-w-[min(100%,120rem)] space-y-6 p-4 lg:p-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="ghost" size="sm" asChild>
-          <Link href="/report/mis" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to reports
-          </Link>
-        </Button>
-      </div>
-
-      <div>
-        <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <Calendar className="h-5 w-5" />
-          Attendance register
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          View the monthly matrix on this page, then download the same filtered report as Excel. One
-          row per active user (with a profile), day columns with codes from mobile check-in data, and
-          summary counts. <strong>P</strong> present, <strong>HD</strong> short shift (&lt; 4h
-          worked), <strong>A</strong> absent, <strong>WO</strong> weekend with no punch,{" "}
-          <strong>L</strong> late flag, <strong>LEAVE</strong> / <strong>LEFT</strong> from remarks.
-          Requires <span className="font-mono">mobile.attendance.admin</span>.
-        </p>
-      </div>
-
       <PermissionGuard
         permission="mobile.attendance.admin"
         fallback={

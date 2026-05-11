@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { FieldErrors, Resolver, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { cn } from "@/lib/utils"
+import { VendorFloatingAsyncSelect } from "@/components/masters/floating-master-async-selects"
 import {
     Form,
     FormControl,
@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/form"
 import {
     FloatingFormItem,
-    FLOATING_INNER_COMBO,
     FLOATING_INNER_CONTROL,
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
@@ -30,23 +29,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { serviceMapService } from '@/services/masters/service-map-service'
-import { vendorService } from '@/services/masters/vendor-service'
 import { ServiceMap } from '@/types/masters/service-map'
+import type { Vendor } from '@/types/masters/vendor'
 
 const serviceMapSchema = z.object({
     vendorId: z.coerce.number().min(1, "Vendor is required"),
@@ -69,12 +55,10 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
-    const [vendorOpen, setVendorOpen] = useState(false)
-
-    const { data: vendorsData } = useQuery({
-        queryKey: ['vendors-list'],
-        queryFn: () => vendorService.getVendors({ limit: 100 }),
-    })
+    const extraVendor = useMemo(
+        () => (initialData?.vendor ? ([initialData.vendor] as unknown as Vendor[]) : undefined),
+        [initialData?.vendor],
+    )
 
     const form = useForm<ServiceMapFormValues>({
         resolver: zodResolver(serviceMapSchema) as Resolver<ServiceMapFormValues>,
@@ -138,59 +122,16 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                         name="vendorId"
                         render={({ field }) => (
                             <FloatingFormItem label="Vendor" itemClassName="flex flex-col">
-                                <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                className={cn(
-                                                    FLOATING_INNER_COMBO,
-                                                    (!field.value || field.value <= 0) && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <span className="truncate">
-                                                    {field.value && field.value > 0
-                                                        ? vendorsData?.data?.find(
-                                                            (vendor) => vendor.id === field.value
-                                                        )?.vendorName
-                                                        : "Select vendor"}
-                                                </span>
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search vendor..." />
-                                            <CommandList>
-                                                <CommandEmpty>No vendor found.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {vendorsData?.data?.map((vendor) => (
-                                                        <CommandItem
-                                                            key={vendor.id}
-                                                            value={vendor.vendorName}
-                                                            onSelect={() => {
-                                                                form.setValue("vendorId", vendor.id)
-                                                                setVendorOpen(false)
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    vendor.id === field.value
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {vendor.vendorName} ({vendor.vendorCode})
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
+                                <FormControl>
+                                    <VendorFloatingAsyncSelect
+                                        triggerRef={field.ref}
+                                        allowClear={false}
+                                        value={field.value > 0 ? field.value : undefined}
+                                        onChange={(v) => field.onChange(v ?? 0)}
+                                        queryKeyScope={isEdit && initialData ? `service-map-${initialData.id}` : 'service-map-new'}
+                                        extraVendors={extraVendor}
+                                    />
+                                </FormControl>
                             </FloatingFormItem>
                         )}
                     />
