@@ -44,6 +44,7 @@ import {
   Bike,
   Navigation,
   CheckSquare,
+  Calendar,
   CreditCard,
   Receipt,
   RefreshCw,
@@ -107,6 +108,7 @@ const headerNavItems = [
   { href: "/transactions/customer-payment", label: "Customer Payment" },
   { href: "/transactions/receipt", label: "Receipts" },
   { href: "/report/mis", label: "MIS Report" },
+  { href: "/report/attendance-register", label: "Attendance register" },
   { href: "/document/invoice-generation", label: "Invoice Generation" },
   { href: "/document/invoice-print", label: "Invoice Print" },
   { href: "/document/invoice-finalise", label: "Invoice Finalise" },
@@ -474,6 +476,7 @@ const SidebarContent = ({
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + "/");
+  const isShipmentBookingNavActive = pathname.startsWith("/transactions/shipment");
   const isDocumentsActive = pathname.startsWith("/document");
   const isReportsActive = pathname.startsWith("/report");
   const isMastersActive = pathname.startsWith("/masters");
@@ -894,7 +897,7 @@ const SidebarContent = ({
               <LinkItem
                 href="/transactions/shipment"
                 subItem
-                active={isActive("/transactions/shipment")}
+                active={isShipmentBookingNavActive}
                 icon={Package}
               >
                 Shipment Booking
@@ -977,7 +980,7 @@ const SidebarContent = ({
                   <LinkItem
                     href="/transactions/shipment"
                     subItem
-                    active={isActive("/transactions/shipment")}
+                    active={isShipmentBookingNavActive}
                     icon={Package}
                     showTextOverride
                     inFlyout
@@ -1243,6 +1246,17 @@ const SidebarContent = ({
                 MIS Report
               </LinkItem>
             </PermissionGuard>
+            <PermissionGuard permission="mobile.attendance.admin">
+              <LinkItem
+                href="/report/attendance-register"
+                active={isActive("/report/attendance-register")}
+                icon={Calendar}
+                showTextOverride
+                inFlyout
+              >
+                Attendance register
+              </LinkItem>
+            </PermissionGuard>
           </div>
         )}
 
@@ -1265,6 +1279,17 @@ const SidebarContent = ({
                     inFlyout
                   >
                     MIS Report
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="mobile.attendance.admin">
+                  <LinkItem
+                    href="/report/attendance-register"
+                    active={isActive("/report/attendance-register")}
+                    icon={Calendar}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Attendance register
                   </LinkItem>
                 </PermissionGuard>
               </div>

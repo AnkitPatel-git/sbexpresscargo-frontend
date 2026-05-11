@@ -1628,6 +1628,8 @@ model Shipment {
   // Used for billing and rate lookup. Do NOT recalculate on read - use this stored value.
   declaredWeight      Decimal            @map("declared_weight") @db.Decimal(10, 3)
   chargeWeight        Decimal?           @map("charge_weight") @db.Decimal(10, 3)
+  invoiceDate         DateTime?          @map("invoice_date") @db.Date
+  invoiceNumber       String?            @map("invoice_number") @db.VarChar(64)
   paymentType         PaymentType        @map("payment_type")
   currentStatus       ShipmentStatusType @default(CREATED) @map("current_status")
   version             Int                @default(1)
@@ -1876,8 +1878,6 @@ model ShipmentPieceItem {
   measureValue  Decimal?  @map("measure_value") @db.Decimal(10, 3)
   measureUnit   String?   @map("measure_unit") @db.VarChar(20)
   totalValue    Decimal?  @map("total_value") @db.Decimal(14, 4)
-  invoiceDate   DateTime? @map("invoice_date") @db.Date
-  invoiceNumber String?   @map("invoice_number") @db.VarChar(64)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
   deletedAt     DateTime? @map("deleted_at") @db.DateTime(6)

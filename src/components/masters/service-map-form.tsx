@@ -21,6 +21,7 @@ import {
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
+import { IntegerInput } from "@/components/ui/integer-input"
 import { Button } from "@/components/ui/button"
 import {
     Select,
@@ -226,7 +227,15 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                             render={({ field }) => (
                                 <FloatingFormItem label="Min Weight (kg)">
                                     <FormControl>
-                                        <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
+                                        <IntegerInput
+                                            className={FLOATING_INNER_CONTROL}
+                                            name={field.name}
+                                            ref={field.ref}
+                                            onBlur={field.onBlur}
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                            min={0}
+                                        />
                                     </FormControl>
                                 </FloatingFormItem>
                             )}
@@ -237,7 +246,15 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                             render={({ field }) => (
                                 <FloatingFormItem label="Max Weight (kg)">
                                     <FormControl>
-                                        <Input type="number" step="0.01" {...field} className={FLOATING_INNER_CONTROL} />
+                                        <IntegerInput
+                                            className={FLOATING_INNER_CONTROL}
+                                            name={field.name}
+                                            ref={field.ref}
+                                            onBlur={field.onBlur}
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                            min={0}
+                                        />
                                     </FormControl>
                                 </FloatingFormItem>
                             )}

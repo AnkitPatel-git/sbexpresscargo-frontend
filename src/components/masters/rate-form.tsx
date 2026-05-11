@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { FloatingFormItem, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item";
 import { Form, FormControl, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { IntegerInput } from "@/components/ui/integer-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -795,7 +796,16 @@ export function RateForm({ initialData }: RateFormProps) {
                 render={({ field }) => (
                   <FloatingFormItem label="Flat rate (optional)">
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="Flat freight amount" {...field} className={FLOATING_INNER_CONTROL} />
+                      <IntegerInput
+                        placeholder="Flat freight amount"
+                        className={FLOATING_INNER_CONTROL}
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        min={0}
+                      />
                     </FormControl>
                   </FloatingFormItem>
                 )}
@@ -1287,19 +1297,19 @@ function RouteSlabsEditor({
         ) : null}
         {showKmBands ? (
           <>
-            <Input
-              type="number"
+            <IntegerInput
               placeholder={requireKmBands ? "Min km (required)" : "Min km (optional)"}
               className={FLOATING_INNER_CONTROL}
               value={draft.minKm}
-              onChange={(e) => setDraft((current) => ({ ...current, minKm: e.target.value }))}
+              onValueChange={(n) => setDraft((current) => ({ ...current, minKm: n === undefined ? "" : String(n) }))}
+              min={0}
             />
-            <Input
-              type="number"
+            <IntegerInput
               placeholder={requireKmBands ? "Max km (required)" : "Max km (optional)"}
               className={FLOATING_INNER_CONTROL}
               value={draft.maxKm}
-              onChange={(e) => setDraft((current) => ({ ...current, maxKm: e.target.value }))}
+              onValueChange={(n) => setDraft((current) => ({ ...current, maxKm: n === undefined ? "" : String(n) }))}
+              min={0}
             />
           </>
         ) : null}
@@ -1316,19 +1326,19 @@ function RouteSlabsEditor({
         <div className="space-y-3">
           {draft.weightSlabs.map((item, index) => (
             <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">
-              <Input
-                type="number"
+              <IntegerInput
                 placeholder="Min weight"
                 className={FLOATING_INNER_CONTROL}
                 value={item.minWeight}
-                onChange={(e) => updateWeightSlab(index, "minWeight", e.target.value)}
+                onValueChange={(n) => updateWeightSlab(index, "minWeight", n === undefined ? "" : String(n))}
+                min={0}
               />
-              <Input
-                type="number"
+              <IntegerInput
                 placeholder="Max weight"
                 className={FLOATING_INNER_CONTROL}
                 value={item.maxWeight}
-                onChange={(e) => updateWeightSlab(index, "maxWeight", e.target.value)}
+                onValueChange={(n) => updateWeightSlab(index, "maxWeight", n === undefined ? "" : String(n))}
+                min={0}
               />
               <Select
                 value={item.pricingMode ?? "FLAT"}
@@ -1342,13 +1352,12 @@ function RouteSlabsEditor({
                   <SelectItem value="PER_KG">Per kg</SelectItem>
                 </SelectContent>
               </Select>
-              <Input
-                type="number"
-                step="0.01"
+              <IntegerInput
                 placeholder={item.pricingMode === "PER_KG" ? "Rate per kg" : "Total rate"}
                 className={FLOATING_INNER_CONTROL}
                 value={item.rate}
-                onChange={(e) => updateWeightSlab(index, "rate", e.target.value)}
+                onValueChange={(n) => updateWeightSlab(index, "rate", n === undefined ? "" : String(n))}
+                min={0}
               />
               <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
                 <Checkbox
@@ -1748,12 +1757,12 @@ function RateChargesEditor({
             ))}
           </SelectContent>
         </Select>
-        <Input type="number" step="0.01" placeholder="Value" className={FLOATING_INNER_CONTROL} value={draft.value} onChange={(e) => setDraft((current) => ({ ...current, value: e.target.value }))} />
+        <IntegerInput placeholder="Value" className={FLOATING_INNER_CONTROL} value={draft.value} onValueChange={(n) => setDraft((current) => ({ ...current, value: n === undefined ? "" : String(n) }))} min={0} />
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Input type="number" placeholder="Sequence (optional)" className={FLOATING_INNER_CONTROL} value={draft.sequence} onChange={(e) => setDraft((current) => ({ ...current, sequence: e.target.value }))} />
-        <Input type="number" step="0.01" placeholder="Min value (optional)" className={FLOATING_INNER_CONTROL} value={draft.minValue} onChange={(e) => setDraft((current) => ({ ...current, minValue: e.target.value }))} />
-        <Input type="number" step="0.01" placeholder="Max value (optional)" className={FLOATING_INNER_CONTROL} value={draft.maxValue} onChange={(e) => setDraft((current) => ({ ...current, maxValue: e.target.value }))} />
+        <IntegerInput placeholder="Sequence (optional)" className={FLOATING_INNER_CONTROL} value={draft.sequence} onValueChange={(n) => setDraft((current) => ({ ...current, sequence: n === undefined ? "" : String(n) }))} min={0} />
+        <IntegerInput placeholder="Min value (optional)" className={FLOATING_INNER_CONTROL} value={draft.minValue} onValueChange={(n) => setDraft((current) => ({ ...current, minValue: n === undefined ? "" : String(n) }))} min={0} />
+        <IntegerInput placeholder="Max value (optional)" className={FLOATING_INNER_CONTROL} value={draft.maxValue} onValueChange={(n) => setDraft((current) => ({ ...current, maxValue: n === undefined ? "" : String(n) }))} min={0} />
         <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
           <Checkbox checked={draft.isPercentage} onCheckedChange={(checked) => setDraft((current) => ({ ...current, isPercentage: Boolean(checked) }))} />
           <span className="text-sm font-medium text-foreground">Is percentage</span>
@@ -1779,9 +1788,9 @@ function RateChargesEditor({
         <div className="space-y-3">
           {draft.chargeSlabs.map((item, index) => (
             <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <Input type="number" step="0.01" placeholder="Min value" className={FLOATING_INNER_CONTROL} value={item.minValue} onChange={(e) => updateChargeSlab(index, "minValue", e.target.value)} />
-              <Input type="number" step="0.01" placeholder="Max value" className={FLOATING_INNER_CONTROL} value={item.maxValue} onChange={(e) => updateChargeSlab(index, "maxValue", e.target.value)} />
-              <Input type="number" step="0.01" placeholder="Rate" className={FLOATING_INNER_CONTROL} value={item.rate} onChange={(e) => updateChargeSlab(index, "rate", e.target.value)} />
+              <IntegerInput placeholder="Min value" className={FLOATING_INNER_CONTROL} value={item.minValue} onValueChange={(n) => updateChargeSlab(index, "minValue", n === undefined ? "" : String(n))} min={0} />
+              <IntegerInput placeholder="Max value" className={FLOATING_INNER_CONTROL} value={item.maxValue} onValueChange={(n) => updateChargeSlab(index, "maxValue", n === undefined ? "" : String(n))} min={0} />
+              <IntegerInput placeholder="Rate" className={FLOATING_INNER_CONTROL} value={item.rate} onValueChange={(n) => updateChargeSlab(index, "rate", n === undefined ? "" : String(n))} min={0} />
               <div className="flex items-center gap-2">
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeChargeSlabRow(index)} disabled={draft.chargeSlabs.length === 1}>
                   <Trash2 className="h-4 w-4" />
@@ -2250,7 +2259,7 @@ function RateConditionsEditor({
               ))}
             </SelectContent>
           </Select>
-          <Input type="number" step="0.01" placeholder="Compare value" className={FLOATING_INNER_CONTROL} value={draft.value} onChange={(e) => setDraft((current) => ({ ...current, value: e.target.value }))} />
+          <IntegerInput placeholder="Compare value" className={FLOATING_INNER_CONTROL} value={draft.value} onValueChange={(n) => setDraft((current) => ({ ...current, value: n === undefined ? "" : String(n) }))} min={0} />
           <Select value={draft.chargeId || "__none__"} onValueChange={onConditionChargeChange}>
             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
               <SelectValue placeholder="Linked charge (master)" />
@@ -2269,22 +2278,20 @@ function RateConditionsEditor({
           </Select>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Input type="number" step="0.01" placeholder="Charge amount" className={FLOATING_INNER_CONTROL} value={draft.chargeAmount} onChange={(e) => setDraft((current) => ({ ...current, chargeAmount: e.target.value }))} />
-          <Input
-            type="number"
-            step="0.01"
+          <IntegerInput placeholder="Charge amount" className={FLOATING_INNER_CONTROL} value={draft.chargeAmount} onValueChange={(n) => setDraft((current) => ({ ...current, chargeAmount: n === undefined ? "" : String(n) }))} min={0} />
+          <IntegerInput
             placeholder="Minimum charge (optional)"
             className={FLOATING_INNER_CONTROL}
             value={draft.minValue}
-            onChange={(e) => setDraft((current) => ({ ...current, minValue: e.target.value }))}
+            onValueChange={(n) => setDraft((current) => ({ ...current, minValue: n === undefined ? "" : String(n) }))}
+            min={0}
           />
-          <Input
-            type="number"
-            step="0.01"
+          <IntegerInput
             placeholder="Maximum charge (optional)"
             className={FLOATING_INNER_CONTROL}
             value={draft.maxValue}
-            onChange={(e) => setDraft((current) => ({ ...current, maxValue: e.target.value }))}
+            onValueChange={(n) => setDraft((current) => ({ ...current, maxValue: n === undefined ? "" : String(n) }))}
+            min={0}
           />
           <Select value={draft.calculationBase || "__cb__"} onValueChange={(v) => setDraft((c) => ({ ...c, calculationBase: v === "__cb__" ? "" : v }))}>
             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
@@ -2339,29 +2346,26 @@ function RateConditionsEditor({
             <div className="space-y-3">
               {draft.slabs.map((slab, slabIndex) => (
                 <div key={slabIndex} className="grid grid-cols-1 gap-3 md:grid-cols-5">
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <IntegerInput
                     placeholder="Min (e.g. 0)"
                     className={FLOATING_INNER_CONTROL}
                     value={slab.minValue}
-                    onChange={(e) => updateConditionSlabRow(slabIndex, { minValue: e.target.value })}
+                    onValueChange={(n) => updateConditionSlabRow(slabIndex, { minValue: n === undefined ? "" : String(n) })}
+                    min={0}
                   />
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <IntegerInput
                     placeholder="Max (e.g. 50)"
                     className={FLOATING_INNER_CONTROL}
                     value={slab.maxValue}
-                    onChange={(e) => updateConditionSlabRow(slabIndex, { maxValue: e.target.value })}
+                    onValueChange={(n) => updateConditionSlabRow(slabIndex, { maxValue: n === undefined ? "" : String(n) })}
+                    min={0}
                   />
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <IntegerInput
                     placeholder="Rate"
                     className={FLOATING_INNER_CONTROL}
                     value={slab.rate}
-                    onChange={(e) => updateConditionSlabRow(slabIndex, { rate: e.target.value })}
+                    onValueChange={(n) => updateConditionSlabRow(slabIndex, { rate: n === undefined ? "" : String(n) })}
+                    min={0}
                   />
                   <Select
                     value={slab.pricingMode}

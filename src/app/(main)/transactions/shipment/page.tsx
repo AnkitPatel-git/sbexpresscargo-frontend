@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Edit, FilePlus, FileUp, Filter, RefreshCw, Search } from "lucide-react";
+import { Edit, FilePlus, FileSpreadsheet, FileUp, Filter, RefreshCw, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useIsClient } from "@/hooks/use-is-client";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import type { Shipment } from "@/types/transactions/shipment";
@@ -41,6 +42,7 @@ const defaultFilters: ShipmentFilters = {
 };
 
 export default function ShipmentsPage() {
+  const isClient = useIsClient();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -119,50 +121,94 @@ export default function ShipmentsPage() {
       </div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-1 self-start rounded-md border border-border p-1 sm:self-auto">
-          <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <DialogTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Shipment Booking Filters</DialogTitle>
-                <DialogDescription>Choose one or more filters, then apply them to the shipment booking list.</DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Input placeholder="AWB no" value={draftFilters.awbNo} onChange={(e) => setDraftFilters((prev) => ({ ...prev, awbNo: e.target.value }))} />
-                <Input placeholder="E-waybill no" value={draftFilters.ewaybillNumber} onChange={(e) => setDraftFilters((prev) => ({ ...prev, ewaybillNumber: e.target.value }))} />
-                <div className="sm:col-span-2">
-                  <Combobox
-                    className="w-full"
-                    placeholder="Select client"
-                    searchPlaceholder="Search client..."
-                    emptyMessage="No client found."
-                    value={draftFilters.clientName}
-                    onChange={(value) => setDraftFilters((prev) => ({ ...prev, clientName: String(value || "") }))}
-                    options={(customerData?.data ?? []).map((customer) => ({
-                      value: customer.name,
-                      label: customer.code ? `${customer.code} - ${customer.name}` : customer.name,
-                    }))}
+          {isClient ? (
+            <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <DialogTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Filters">
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Shipment Booking Filters</DialogTitle>
+                  <DialogDescription>
+                    Choose one or more filters, then apply them to the shipment booking list.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Input
+                    placeholder="AWB no"
+                    value={draftFilters.awbNo}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, awbNo: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="E-waybill no"
+                    value={draftFilters.ewaybillNumber}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, ewaybillNumber: e.target.value }))}
+                  />
+                  <div className="sm:col-span-2">
+                    <Combobox
+                      className="w-full"
+                      placeholder="Select client"
+                      searchPlaceholder="Search client..."
+                      emptyMessage="No client found."
+                      value={draftFilters.clientName}
+                      onChange={(value) => setDraftFilters((prev) => ({ ...prev, clientName: String(value || "") }))}
+                      options={(customerData?.data ?? []).map((customer) => ({
+                        value: customer.name,
+                        label: customer.code ? `${customer.code} - ${customer.name}` : customer.name,
+                      }))}
+                    />
+                  </div>
+                  <Input
+                    placeholder="Payment type"
+                    value={draftFilters.paymentType}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, paymentType: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Origin"
+                    value={draftFilters.origin}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, origin: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Destination"
+                    value={draftFilters.destination}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, destination: e.target.value }))}
+                  />
+                  <Input
+                    type="date"
+                    value={draftFilters.bookDateFrom}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, bookDateFrom: e.target.value }))}
+                  />
+                  <Input
+                    type="date"
+                    value={draftFilters.bookDateTo}
+                    onChange={(e) => setDraftFilters((prev) => ({ ...prev, bookDateTo: e.target.value }))}
                   />
                 </div>
-                <Input placeholder="Payment type" value={draftFilters.paymentType} onChange={(e) => setDraftFilters((prev) => ({ ...prev, paymentType: e.target.value }))} />
-                <Input placeholder="Origin" value={draftFilters.origin} onChange={(e) => setDraftFilters((prev) => ({ ...prev, origin: e.target.value }))} />
-                <Input placeholder="Destination" value={draftFilters.destination} onChange={(e) => setDraftFilters((prev) => ({ ...prev, destination: e.target.value }))} />
-                <Input type="date" value={draftFilters.bookDateFrom} onChange={(e) => setDraftFilters((prev) => ({ ...prev, bookDateFrom: e.target.value }))} />
-                <Input type="date" value={draftFilters.bookDateTo} onChange={(e) => setDraftFilters((prev) => ({ ...prev, bookDateTo: e.target.value }))} />
-              </div>
-              <DialogFooter className="gap-2 sm:gap-2">
-                <Button type="button" variant="outline" onClick={resetFilters}>
-                  Reset
-                </Button>
-                <Button type="button" onClick={applyFilters}>
-                  Apply
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter className="gap-2 sm:gap-2">
+                  <Button type="button" variant="outline" onClick={resetFilters}>
+                    Reset
+                  </Button>
+                  <Button type="button" onClick={applyFilters}>
+                    Apply
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-primary opacity-60"
+              disabled
+              title="Filters (loading)"
+              aria-label="Filters, loading"
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          )}
           <PermissionGuard permission="transaction.shipment.read">
             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => void handleExport()} title="Export CSV">
               <FileUp className="h-4 w-4" />
@@ -174,16 +220,28 @@ export default function ShipmentsPage() {
         </div>
 
         <PermissionGuard permission="transaction.shipment.create">
-          <Button
-            type="button"
-            variant="default"
-            className="h-8 gap-2 px-3 font-semibold"
-            onClick={handleCreate}
-            title="Create shipment booking"
-          >
-            <FilePlus className="h-4 w-4" />
-            Create Booking
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 gap-2 px-3 font-semibold"
+              onClick={() => router.push("/transactions/shipment/bulk-import")}
+              title="Bulk import from Excel"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Bulk import
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              className="h-8 gap-2 px-3 font-semibold"
+              onClick={handleCreate}
+              title="Create shipment booking"
+            >
+              <FilePlus className="h-4 w-4" />
+              Create Booking
+            </Button>
+          </div>
         </PermissionGuard>
       </div>
 

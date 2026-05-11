@@ -136,6 +136,51 @@ export const shipmentService = {
     return { blob: await response.blob(), filename: parseFilename(response, "shipment-pieces-template.csv") };
   },
 
+  async downloadBulkImportTemplate(): Promise<{ blob: Blob; filename: string }> {
+    const response = await apiFetch(`${API_URL}/transaction/shipment/bulk-import/template`, { headers: authHeaders() });
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to download bulk import template"));
+    }
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, "shipment-bulk-import-template.xlsx"),
+    };
+  },
+
+  async bulkImportFromExcel(file: File): Promise<{
+    created: number;
+    failed: number;
+    failures: Array<{ row: number; message: string }>;
+    successes: Array<{ row: number; awbNo: string }>;
+    bulkUploadLogId?: number;
+  }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiFetch(`${API_URL}/transaction/shipment/bulk-import`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      body: formData,
+    });
+    const json = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      data?: {
+        created: number;
+        failed: number;
+        failures: Array<{ row: number; message: string }>;
+        successes: Array<{ row: number; awbNo: string }>;
+        bulkUploadLogId?: number;
+      };
+      message?: string;
+    };
+    if (!response.ok) {
+      throw new Error(json.message || "Bulk import failed");
+    }
+    if (!json.success || json.data == null) {
+      throw new Error("Invalid bulk import response");
+    }
+    return json.data;
+  },
+
   async exportShipmentsCsv(params?: ShipmentListQueryParams): Promise<{ blob: Blob; filename: string }> {
     const queryParams = new URLSearchParams();
     appendListFilters(queryParams, params);

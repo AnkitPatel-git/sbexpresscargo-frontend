@@ -160,7 +160,7 @@ export interface CustomerFuelSurchargeFormData {
     fuelChargeType: string;
     fromDate: string;
     toDate: string;
-    fuelSurcharge: number;
+    fuelSurcharge?: number;
 }
 
 export interface CustomerVolumetric {
@@ -173,7 +173,7 @@ export interface CustomerVolumetric {
 
 export interface CustomerVolumetricFormData {
     productId: number;
-    cft: number;
+    cft?: number;
 }
 
 export interface CustomerKycDocument {

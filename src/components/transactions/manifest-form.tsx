@@ -20,6 +20,7 @@ import {
   FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
+import { IntegerInput } from "@/components/ui/integer-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -338,7 +339,15 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
                   render={({ field }) => (
                     <FloatingFormItem label="Pieces" itemClassName="w-24 shrink-0">
                       <FormControl>
-                        <Input type="number" {...field} className={FLOATING_INNER_CONTROL} onChange={e => field.onChange(parseInt(e.target.value, 10))} />
+                        <IntegerInput
+                          className={FLOATING_INNER_CONTROL}
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          min={1}
+                        />
                       </FormControl>
                     </FloatingFormItem>
                   )}
@@ -349,7 +358,15 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
                   render={({ field }) => (
                     <FloatingFormItem label="Weight" itemClassName="w-32 shrink-0">
                       <FormControl>
-                        <Input type="number" step="0.1" {...field} className={FLOATING_INNER_CONTROL} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                        <IntegerInput
+                          className={FLOATING_INNER_CONTROL}
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          min={0}
+                        />
                       </FormControl>
                     </FloatingFormItem>
                   )}

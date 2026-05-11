@@ -20,6 +20,7 @@ import {
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
+import { IntegerInput } from "@/components/ui/integer-input"
 import { Button } from "@/components/ui/button"
 import {
     Select,
@@ -796,7 +797,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
         fuelChargeType: 'PERCENTAGE',
         fromDate: '',
         toDate: '',
-        fuelSurcharge: 0,
+        fuelSurcharge: undefined,
     })
 
     const { data } = useQuery({
@@ -815,7 +816,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
             queryClient.invalidateQueries({ queryKey: ['customer-fuel-surcharges', customerId] })
             setOpen(false)
             setEditing(null)
-            setForm({ productId: undefined, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
+            setForm({ productId: undefined, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: undefined })
             toast.success(`Fuel surcharge ${editing ? 'updated' : 'added'} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -836,7 +837,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
             title="Fuel Surcharges"
             onAdd={() => {
                 setEditing(null)
-                setForm({ productId: undefined, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: 0 })
+                setForm({ productId: undefined, fuelChargeType: 'PERCENTAGE', fromDate: '', toDate: '', fuelSurcharge: undefined })
                 setOpen(true)
             }}
             columns={['Product', 'Type', 'From Date', 'To Date', 'Percentage', 'Action']}
@@ -869,7 +870,13 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                 open={open}
                 onOpenChange={setOpen}
                 title={editing ? 'Edit Fuel Surcharge' : 'Add Fuel Surcharge'}
-                onSave={() => mutation.mutate(form)}
+                onSave={() => {
+                    if (!Number.isFinite(form.fuelSurcharge)) {
+                        toast.error('Enter fuel surcharge')
+                        return
+                    }
+                    mutation.mutate({ ...form, fuelSurcharge: form.fuelSurcharge })
+                }}
                 saving={mutation.isPending}
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -945,7 +952,14 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                             { value: 'FLAT', label: 'FLAT' },
                         ]}
                     />
-                    <SimpleInput label="Fuel Surcharge" type="number" value={String(form.fuelSurcharge)} onChange={(value) => setForm((prev) => ({ ...prev, fuelSurcharge: Number(value) }))} />
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">Fuel Surcharge</div>
+                        <IntegerInput
+                            value={form.fuelSurcharge}
+                            onValueChange={(n) => setForm((prev) => ({ ...prev, fuelSurcharge: n }))}
+                            min={0}
+                        />
+                    </div>
                     <SimpleInput label="From Date" type="date" value={form.fromDate} onChange={(value) => setForm((prev) => ({ ...prev, fromDate: value }))} />
                     <SimpleInput label="To Date" type="date" value={form.toDate} onChange={(value) => setForm((prev) => ({ ...prev, toDate: value }))} />
                 </div>
@@ -964,7 +978,7 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
     const volumetricProductSelectId = useId()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<CustomerVolumetric | null>(null)
-    const [form, setForm] = useState<CustomerVolumetricFormData>({ productId: 0, cft: 5000 })
+    const [form, setForm] = useState<CustomerVolumetricFormData>({ productId: 0, cft: undefined })
     const { data } = useQuery({
         queryKey: ['customer-volumetrics', customerId],
         queryFn: () => customerService.getCustomerVolumetrics(customerId!),
@@ -985,7 +999,7 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
             queryClient.invalidateQueries({ queryKey: ['customer-volumetrics', customerId] })
             setOpen(false)
             setEditing(null)
-            setForm({ productId: 0, cft: 5000 })
+            setForm({ productId: 0, cft: undefined })
             toast.success(`Volumetric ${editing ? 'updated' : 'added'} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -1004,7 +1018,7 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
             title="Customer Volumetric"
             onAdd={() => {
                 setEditing(null)
-                setForm({ productId: 0, cft: 5000 })
+                setForm({ productId: 0, cft: undefined })
                 setOpen(true)
             }}
             columns={['Product', 'CFT', 'Action']}
@@ -1035,11 +1049,11 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
                         toast.error('Select a product')
                         return
                     }
-                    if (!Number.isFinite(form.cft) || form.cft <= 0) {
-                        toast.error('CFT must be greater than 0')
+                    if (!Number.isFinite(form.cft) || (form.cft as number) <= 0) {
+                        toast.error('CFT must be a whole number greater than 0')
                         return
                     }
-                    mutation.mutate(form)
+                    mutation.mutate({ ...form, cft: form.cft as number })
                 }}
                 saving={mutation.isPending}
             >
@@ -1092,7 +1106,14 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
                             triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
                         />
                     </div>
-                    <SimpleInput label="CFT" type="number" value={String(form.cft)} onChange={(value) => setForm((prev) => ({ ...prev, cft: Number(value) }))} />
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">CFT</div>
+                        <IntegerInput
+                            value={form.cft}
+                            onValueChange={(n) => setForm((prev) => ({ ...prev, cft: n }))}
+                            min={1}
+                        />
+                    </div>
                 </div>
             </CustomerEntityDialog>
         </CustomerChildTableCard>
