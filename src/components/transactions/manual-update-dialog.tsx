@@ -39,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trackingService } from "@/services/transactions/tracking-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
 import { Combobox } from "@/components/ui/combobox";
+import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
 
 const formSchema = z
     .object({
@@ -66,6 +67,8 @@ interface ManualUpdateDialogProps {
         status: string;
         remark?: string;
         serviceCenterId?: number;
+        subStatus?: string;
+        location?: string;
     };
 }
 
@@ -105,8 +108,8 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
             status: initialData?.status || "",
             remark: initialData?.remark || "",
             serviceCenterId: initialData?.serviceCenterId,
-            subStatus: "",
-            location: "",
+            subStatus: initialData?.subStatus || "",
+            location: initialData?.location || "",
         },
     });
 
@@ -119,8 +122,8 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                 status: initialData.status,
                 remark: initialData.remark || "",
                 serviceCenterId: initialData.serviceCenterId,
-                subStatus: "",
-                location: "",
+                subStatus: initialData.subStatus || "",
+                location: initialData.location || "",
             });
         }
     }, [isOpen, initialData, form]);
@@ -222,13 +225,20 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                                 name="subStatus"
                                 render={({ field }) => (
                                     <FloatingFormItem label="NDR / reason code">
-                                        <FormControl>
-                                            <Textarea
-                                                placeholder="e.g. HOUSE_LOCKED, vendor code 4"
-                                                {...field}
-                                                className={FLOATING_INNER_TEXTAREA}
-                                            />
-                                        </FormControl>
+                                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                            <FormControl>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                    <SelectValue placeholder="Select reason code" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {SHIPMENT_SUB_STATUS_CODES.map((code) => (
+                                                    <SelectItem key={code} value={code}>
+                                                        {code.replace(/_/g, " ")}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </FloatingFormItem>
                                 )}
                             />

@@ -7,6 +7,8 @@ export interface TrackingListItem {
     shipper: string | null;
     consignee: string | null;
     city: string | null;
+    /** Derived shipper / origin label (same as `city` when API sends both). */
+    origin?: string | null;
     destination: string | null;
     pieces: number;
     chargeWeight: number;
@@ -15,6 +17,7 @@ export interface TrackingListItem {
     deliveryDate: string | null;
     paymentType: string;
     manifestType: string | null;
+    currentStatus?: string | null;
 }
 
 export interface TrackingListResponse {
@@ -28,10 +31,35 @@ export interface TrackingListResponse {
     };
 }
 
+/** One row in the shipment status timeline (`shipment_statuses`). */
+export interface ShipmentTrackingStatusRow {
+    id: number;
+    sequence: number;
+    eventAt: string;
+    recordedAt: string;
+    date: string;
+    time: string;
+    status: string;
+    subStatus: string | null;
+    location: string | null;
+    remark: string;
+    remarks: string;
+    externalStatus: string | null;
+    source: string | null;
+    userId: number | null;
+    user: number | null;
+    userName: string | null;
+    serviceCenterId: number | null;
+    serviceCenterCode: string | null;
+    serviceCenterName: string | null;
+    receiverName: string | null;
+}
+
 export interface TrackingDetailResponse {
     success: boolean;
     data: {
         awbNo: string;
+        currentStatus?: string | null;
         customerDetails: any;
         podDetails: any;
         forwardingDetails: any;
@@ -45,6 +73,15 @@ export interface TrackingDetailResponse {
             serviceCenter: string | null;
             statusDetails: string;
             remark: string;
+            subStatus?: string | null;
+            location?: string | null;
+            externalStatus?: string | null;
+            sequence?: number;
+            eventAt?: string;
+            recordedAt?: string;
+            userName?: string | null;
+            serviceCenterCode?: string | null;
+            status?: string;
         }>;
         comment: any[];
         shipmentLog: any[];
@@ -84,13 +121,7 @@ export interface TrackingDetailResponse {
         manifest: any[];
         manifestInscan: any[];
         manifestDetails: any[];
-        statusDetails: Array<{
-            user: number | null;
-            date: string;
-            time: string;
-            status: string;
-            remarks: string;
-        }>;
+        statusDetails: ShipmentTrackingStatusRow[];
         ndrProgress: any[];
     }
 }

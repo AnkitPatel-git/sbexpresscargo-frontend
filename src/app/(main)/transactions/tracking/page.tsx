@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, ChevronUp, ChevronDown, FilePlus, FileUp, Plus } from "lucide-react";
 import { format } from "date-fns";
@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { trackingService } from "@/services/transactions/tracking-service";
-import { TrackingListItem, DeadLetterLog } from "@/types/transactions/tracking";
+import { TrackingListItem, DeadLetterLog, type ShipmentTrackingStatusRow } from "@/types/transactions/tracking";
+import { formatShipmentStatusLabel } from "@/lib/shipment-status-label";
 import { ManualUpdateDialog } from "@/components/transactions/manual-update-dialog";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
@@ -33,6 +34,15 @@ function SortArrows() {
     );
 }
 
+function safeFormatDate(iso: string | null | undefined, fmt: string) {
+    if (!iso) return "—";
+    try {
+        return format(new Date(iso), fmt);
+    } catch {
+        return "—";
+    }
+}
+
 export default function TrackingPage() {
     const [searchInput, setSearchInput] = useState("");
     const [searchTerm, setSearchTerm] = useState(""); // Submitted search term
@@ -41,7 +51,7 @@ export default function TrackingPage() {
     const [activeView, setActiveView] = useState<'search' | 'logs'>('search');
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [selectedAwb, setSelectedAwb] = useState<string | null>(null);
-    const [listFilters, setListFilters] = useState({ awb: "", origin: "", destination: "", payment: "" });
+    const [listFilters, setListFilters] = useState({ awb: "", origin: "", destination: "", payment: "", status: "" });
     const [logFilters, setLogFilters] = useState({ awb: "", carrier: "", error: "" });
 
     const { data: metricsData } = useQuery({
@@ -56,7 +66,7 @@ export default function TrackingPage() {
 
     // Use detailed query only if searchTerm exactly matches an AWB No (for quick detail view)
     // Here we'll just implement the list/search view for now, as it's the primary way to track.
-    const { data: detailData, isLoading: isDetailLoading } = useQuery({
+    const { data: detailData } = useQuery({
         queryKey: ["trackingDetail", searchTerm],
         queryFn: () => trackingService.getTrackingByAwb(searchTerm),
         enabled: searchTerm.length > 5, // Only trigger if it looks like a full AWB
@@ -124,9 +134,11 @@ export default function TrackingPage() {
     const listFilteredRows =
         listData?.data.filter((item) => {
             if (listFilters.awb && !(item.awbNo || "").toLowerCase().includes(listFilters.awb.toLowerCase())) return false;
-            if (listFilters.origin && !(item.city || "").toLowerCase().includes(listFilters.origin.toLowerCase())) return false;
+            const originLabel = (item.origin ?? item.city ?? "").toLowerCase();
+            if (listFilters.origin && !originLabel.includes(listFilters.origin.toLowerCase())) return false;
             if (listFilters.destination && !(item.destination || "").toLowerCase().includes(listFilters.destination.toLowerCase())) return false;
             if (listFilters.payment && !(item.paymentType || "").toLowerCase().includes(listFilters.payment.toLowerCase())) return false;
+            if (listFilters.status && !(item.currentStatus || "").toLowerCase().includes(listFilters.status.toLowerCase())) return false;
             return true;
         }) ?? [];
 
@@ -264,16 +276,22 @@ export default function TrackingPage() {
                     </Card>
 
                     {/* Render Detail View if specific AWB found */}
-                    {detailData?.success && detailData.data && (
+                    {detailData?.success && detailData.data && (() => {
+                        const d = detailData.data;
+                        const timeline: ShipmentTrackingStatusRow[] = d.statusDetails ?? [];
+                        const latest = timeline.length > 0 ? timeline[timeline.length - 1] : undefined;
+                        const badgeStatus = d.currentStatus ?? latest?.status ?? "UNKNOWN";
+                        const badgeSub = latest?.subStatus;
+                        return (
                         <Card>
                             <CardHeader>
-                                <div className="flex justify-between items-center w-full">
-                                    <CardTitle>Shipment Details: {detailData.data.awbNo}</CardTitle>
-                                    <div className="flex gap-2">
+                                <div className="flex justify-between items-center w-full flex-wrap gap-2">
+                                    <CardTitle>Shipment Details: {d.awbNo}</CardTitle>
+                                    <div className="flex flex-wrap gap-2 items-center">
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => handleExport(detailData.data.awbNo)}
+                                            onClick={() => handleExport(d.awbNo)}
                                         >
                                             <Download className="h-4 w-4 mr-2" />
                                             Export
@@ -281,14 +299,19 @@ export default function TrackingPage() {
                                         <Button
                                             size="sm"
                                             onClick={() => {
-                                                setSelectedAwb(detailData.data.awbNo);
+                                                setSelectedAwb(d.awbNo);
                                                 setIsUpdateModalOpen(true);
                                             }}
                                         >
                                             Update Status
                                         </Button>
-                                        <Badge variant="outline" className="ml-2 text-blue-700 bg-blue-50 border-blue-200">
-                                            {detailData.data.statusDetails?.[detailData.data.statusDetails.length - 1]?.status || 'UNKNOWN'}
+                                        <Badge variant="outline" className="text-blue-700 bg-blue-50 border-blue-200 max-w-[min(100%,22rem)] whitespace-normal text-left">
+                                            <span className="font-medium">{formatShipmentStatusLabel(badgeStatus)}</span>
+                                            {badgeSub ? (
+                                                <span className="mt-0.5 block text-xs opacity-80">
+                                                    {formatShipmentStatusLabel(badgeSub)}
+                                                </span>
+                                            ) : null}
                                         </Badge>
                                     </div>
                                 </div>
@@ -296,51 +319,82 @@ export default function TrackingPage() {
                             <CardContent className="space-y-6">
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">Booking Date</p>
-                                        <p>{detailData.data.shipmentDetails.date ? format(new Date(detailData.data.shipmentDetails.date), "dd MMM yyyy, HH:mm") : '-'}</p>
+                                        <p className="text-sm font-medium text-gray-500">Current status</p>
+                                        <p className="font-medium">{formatShipmentStatusLabel(d.currentStatus ?? latest?.status)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">Origin - Destination</p>
-                                        <p>{detailData.data.shipmentDetails.origin} - {detailData.data.shipmentDetails.destination}</p>
+                                        <p className="text-sm font-medium text-gray-500">Booking date</p>
+                                        <p>{d.shipmentDetails.date ? format(new Date(d.shipmentDetails.date), "dd MMM yyyy, HH:mm") : "—"}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">Pieces / Weight</p>
-                                        <p>{detailData.data.shipmentDetails.pcs} / {detailData.data.shipmentDetails.weight} kg</p>
+                                        <p className="text-sm font-medium text-gray-500">Origin — destination</p>
+                                        <p>{d.shipmentDetails.origin} — {d.shipmentDetails.destination}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">Payment Type</p>
-                                        <p>{detailData.data.shipmentDetails.payment}</p>
+                                        <p className="text-sm font-medium text-gray-500">Pieces / weight</p>
+                                        <p>{d.shipmentDetails.pcs} / {String(d.shipmentDetails.weight)} kg</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-500">Payment</p>
+                                        <p>{d.shipmentDetails.payment}</p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h3 className="text-lg font-medium mb-4">Tracking History</h3>
-                                    <div className="space-y-4">
-                                        {detailData.data.progress?.map((p, idx) => (
-                                            <div key={idx} className="flex gap-4 relative">
-                                                <div className="flex flex-col items-center">
-                                                    <div className="h-3 w-3 rounded-full bg-primary z-10"></div>
-                                                    {idx !== detailData.data.progress.length - 1 && (
-                                                        <div className="w-0.5 h-full bg-blue-200 absolute top-3"></div>
-                                                    )}
-                                                </div>
-                                                <div className="pb-6">
-                                                    <p className="font-semibold">{p.statusDetails}</p>
-                                                    <p className="text-sm text-gray-600">{p.remark}</p>
-                                                    <p className="text-xs text-gray-400 mt-1">
-                                                        {format(new Date(p.date), "dd MMM yyyy")} {p.time && `at ${format(new Date(p.time), "HH:mm")}`}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {(!detailData.data.progress || detailData.data.progress.length === 0) && (
-                                            <p className="text-sm text-gray-500">No tracking history available.</p>
-                                        )}
+                                    <h3 className="text-lg font-medium mb-3">Tracking history</h3>
+                                    <div className="overflow-x-auto rounded-md border border-border">
+                                        <Table className="min-w-[960px]">
+                                            <TableHeader>
+                                                <TableRow className="bg-muted/50">
+                                                    <TableHead className="w-12">#</TableHead>
+                                                    <TableHead>Event time</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>Sub-status</TableHead>
+                                                    <TableHead>Location</TableHead>
+                                                    <TableHead>Remark</TableHead>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Service center</TableHead>
+                                                    <TableHead>External</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {timeline.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                                                            No tracking events yet.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ) : (
+                                                    timeline.map((row, idx) => (
+                                                        <TableRow key={row.id ?? idx} className={idx % 2 === 1 ? "bg-muted/30" : ""}>
+                                                            <TableCell className="text-muted-foreground">{row.sequence ?? idx + 1}</TableCell>
+                                                            <TableCell className="whitespace-nowrap text-sm">
+                                                                {safeFormatDate(row.eventAt, "dd MMM yyyy, HH:mm")}
+                                                            </TableCell>
+                                                            <TableCell className="font-medium">{formatShipmentStatusLabel(row.status)}</TableCell>
+                                                            <TableCell className="text-sm">{row.subStatus ? formatShipmentStatusLabel(row.subStatus) : "—"}</TableCell>
+                                                            <TableCell className="text-sm max-w-[180px] truncate" title={row.location ?? ""}>{row.location || "—"}</TableCell>
+                                                            <TableCell className="text-sm max-w-[220px] truncate" title={row.remarks || row.remark}>{row.remarks || row.remark || "—"}</TableCell>
+                                                            <TableCell className="text-sm whitespace-nowrap">
+                                                                {row.userName ?? (row.userId != null ? `#${row.userId}` : "—")}
+                                                            </TableCell>
+                                                            <TableCell className="text-sm max-w-[160px] truncate" title={row.serviceCenterName ?? ""}>
+                                                                {row.serviceCenterName || row.serviceCenterCode || "—"}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs max-w-[140px] truncate" title={row.externalStatus ?? ""}>
+                                                                {row.externalStatus || "—"}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                )}
+                                            </TableBody>
+                                        </Table>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
-                    )}
+                        );
+                    })()}
 
                     {/* Render List View */}
                     {!detailData?.success && (
@@ -350,39 +404,43 @@ export default function TrackingPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="border rounded-md">
-                                    <Table className="min-w-[920px] border-0">
+                                    <Table className="min-w-[1040px] border-0">
                                         <TableHeader>
                                             <TableRow className="border-0 bg-primary hover:bg-primary">
                                                 <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">AWB No <SortArrows /></span></TableHead>
                                                 <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Date <SortArrows /></span></TableHead>
-                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Origin / Dest <SortArrows /></span></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Origin <SortArrows /></span></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Destination <SortArrows /></span></TableHead>
                                                 <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Pcs / Wt <SortArrows /></span></TableHead>
                                                 <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Payment <SortArrows /></span></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Status <SortArrows /></span></TableHead>
                                             </TableRow>
                                             <TableRow>
                                                 <TableHead className="p-2"><Input placeholder="AWB No" className="h-8 border-border bg-background text-xs" value={listFilters.awb} onChange={(e) => setListFilters((f) => ({ ...f, awb: e.target.value }))} /></TableHead>
                                                 <TableHead className="p-2"><Input placeholder="Date" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
-                                                <TableHead className="p-2"><Input placeholder="Origin / Dest" className="h-8 border-border bg-background text-xs" value={listFilters.destination} onChange={(e) => setListFilters((f) => ({ ...f, destination: e.target.value }))} /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Origin" className="h-8 border-border bg-background text-xs" value={listFilters.origin} onChange={(e) => setListFilters((f) => ({ ...f, origin: e.target.value }))} /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Destination" className="h-8 border-border bg-background text-xs" value={listFilters.destination} onChange={(e) => setListFilters((f) => ({ ...f, destination: e.target.value }))} /></TableHead>
                                                 <TableHead className="p-2"><Input placeholder="Pcs / Wt" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                                                 <TableHead className="p-2"><Input placeholder="Payment" className="h-8 border-border bg-background text-xs" value={listFilters.payment} onChange={(e) => setListFilters((f) => ({ ...f, payment: e.target.value }))} /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Status" className="h-8 border-border bg-background text-xs" value={listFilters.status} onChange={(e) => setListFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {isListLoading ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={5} className="text-center py-10">
+                                                    <TableCell colSpan={7} className="text-center py-10">
                                                         <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
                                                     </TableCell>
                                                 </TableRow>
                                             ) : listError ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={5} className="text-center py-10 text-red-500">
+                                                    <TableCell colSpan={7} className="text-center py-10 text-red-500">
                                                         Failed to load tracking list
                                                     </TableCell>
                                                 </TableRow>
                                             ) : listFilteredRows.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={5} className="text-center py-10">
+                                                    <TableCell colSpan={7} className="text-center py-10">
                                                         No shipments found.
                                                     </TableCell>
                                                 </TableRow>
@@ -402,15 +460,22 @@ export default function TrackingPage() {
                                                         <TableCell>
                                                             {item.bookingDate ? format(new Date(item.bookingDate), "dd MMM yyyy") : "-"}
                                                         </TableCell>
-                                                        <TableCell>
-                                                            <span className="text-gray-500">{item.city || 'Origin'} → </span>
-                                                            {item.destination}
+                                                        <TableCell className="max-w-[200px] truncate" title={item.origin ?? item.city ?? ""}>
+                                                            {item.origin ?? item.city ?? "—"}
+                                                        </TableCell>
+                                                        <TableCell className="max-w-[200px] truncate" title={item.destination ?? ""}>
+                                                            {item.destination ?? "—"}
                                                         </TableCell>
                                                         <TableCell>
                                                             {item.pieces} / {item.chargeWeight}
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge variant="secondary">{item.paymentType}</Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline" className="font-normal">
+                                                                {formatShipmentStatusLabel(item.currentStatus)}
+                                                            </Badge>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))
@@ -537,12 +602,17 @@ export default function TrackingPage() {
                     isOpen={isUpdateModalOpen}
                     onClose={() => setIsUpdateModalOpen(false)}
                     initialData={(() => {
-                        const latestStatus = detailData?.data?.statusDetails?.[detailData.data.statusDetails.length - 1];
-                        return latestStatus ? {
-                            status: latestStatus.status,
-                            remark: latestStatus.remarks,
-                            // serviceCenterId is not currently returned in statusDetails, but if it was, we'd map it here
-                        } : undefined;
+                        const rows = detailData?.data?.statusDetails;
+                        const latestStatus = rows && rows.length > 0 ? rows[rows.length - 1] : undefined;
+                        return latestStatus
+                            ? {
+                                status: latestStatus.status,
+                                remark: latestStatus.remarks || latestStatus.remark || "",
+                                serviceCenterId: latestStatus.serviceCenterId ?? undefined,
+                                subStatus: latestStatus.subStatus ?? "",
+                                location: latestStatus.location ?? "",
+                            }
+                            : undefined;
                     })()}
                 />
             )}
