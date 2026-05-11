@@ -98,7 +98,6 @@ const headerNavItems = [
   { href: "/masters/exception", label: "Exception Master" },
   { href: "/masters/charge", label: "Charge Master" },
   { href: "/masters/vehicle", label: "Vehicle Master" },
-  { href: "/masters/courier", label: "Courier Master" },
   { href: "/masters/vendor-config", label: "Vendor Config Master" },
   { href: "/transactions/shipment", label: "Shipment Booking" },
   { href: "/transactions/manifest", label: "Manifest" },
@@ -254,12 +253,6 @@ const MASTER_GROUP_ITEMS = {
       label: "Vehicle",
       icon: Truck,
       permission: "master.vehicle.read",
-    },
-    {
-      href: "/masters/courier",
-      label: "Courier",
-      icon: Bike,
-      permission: "master.courier.read",
     },
   ],
 } as const;

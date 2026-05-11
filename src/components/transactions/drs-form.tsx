@@ -25,7 +25,6 @@ import { Combobox } from "@/components/ui/combobox";
 import { drsFormSchema, DrsFormValues, Drs } from "@/types/transactions/drs";
 import { drsService } from "@/services/transactions/drs-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
-import { vendorService } from "@/services/masters/vendor-service";
 import { areaService } from "@/services/masters/area-service";
 
 interface DrsFormProps {
@@ -42,11 +41,6 @@ export function DrsForm({ initialData }: DrsFormProps) {
     queryFn: () => serviceCenterService.getServiceCenters(),
   });
 
-  const { data: vendorsData } = useQuery({
-    queryKey: ["vendors"],
-    queryFn: () => vendorService.getVendors({ limit: 100 }),
-  });
-
   const { data: areasData } = useQuery({
     queryKey: ["areas"],
     queryFn: () => areaService.getAreas({ limit: 100 }),
@@ -55,11 +49,6 @@ export function DrsForm({ initialData }: DrsFormProps) {
   const serviceCenterOptions = serviceCentersData?.data?.map(sc => ({
     label: sc.name,
     value: sc.id
-  })) || [];
-
-  const vendorOptions = vendorsData?.data?.map((vendor) => ({
-    label: vendor.vendorName,
-    value: vendor.id
   })) || [];
 
   const areaOptions = areasData?.data?.map(a => ({
@@ -73,7 +62,6 @@ export function DrsForm({ initialData }: DrsFormProps) {
       drsNo: initialData?.drsNo || "",
       drsDate: initialData?.drsDate ? initialData.drsDate.split("T")[0] : new Date().toISOString().split("T")[0],
       drsTime: initialData?.drsTime || "10:00",
-      courierId: initialData?.courierId || undefined,
       areaId: initialData?.areaId || undefined,
       serviceCenterId: initialData?.serviceCenterId || undefined,
       remark: initialData?.remark || "",
@@ -137,24 +125,6 @@ export function DrsForm({ initialData }: DrsFormProps) {
               <FloatingFormItem label="DRS Time">
                 <FormControl>
                   <Input type="time" {...field} className={FLOATING_INNER_CONTROL} />
-                </FormControl>
-              </FloatingFormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="courierId"
-            render={({ field }) => (
-              <FloatingFormItem label="Vendor">
-                <FormControl>
-                  <Combobox
-                    options={vendorOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Select Vendor"
-                    className={FLOATING_INNER_COMBO}
-                  />
                 </FormControl>
               </FloatingFormItem>
             )}

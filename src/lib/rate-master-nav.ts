@@ -51,8 +51,7 @@ export function resolveMastersNavSection(
   }
   if (
     path.startsWith("/masters/exception") ||
-    path.startsWith("/masters/vehicle") ||
-    path.startsWith("/masters/courier")
+    path.startsWith("/masters/vehicle")
   ) {
     return "operations";
   }
