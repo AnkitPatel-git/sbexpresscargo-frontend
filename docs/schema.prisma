@@ -1358,7 +1358,6 @@ model ServiceCenter {
   userProfiles              UserProfile[]
   manifests                 Manifest[]
   drsScans                  DrsScan[]
-  eventScans                EventScan[]
   localBranches             LocalBranch[]
   manifestProgresses        ManifestProgress[]
   manifestInscans           ManifestInscan[]
@@ -1663,7 +1662,6 @@ model Shipment {
   manifestShipments   ManifestShipment[]
   manifestInscanItems ManifestInscanItem[]
   drsScanItems        DrsScanItem[]
-  eventScanItems      EventScanItem[]
   statuses            ShipmentStatus[]
   comments            ShipmentComment[]
   logs                ShipmentLog[]
@@ -2295,51 +2293,10 @@ model DrsScanItem {
   @@map("drs_scan_items")
 }
 
-// Event scan (Undelivered Received / Misrouted). Header: Scan Date, Time, Service Center, Event Type.
 enum DrsStatus {
   CREATED
   IN_PROGRESS
   COMPLETED
-}
-
-model EventScan {
-  id              Int       @id @default(autoincrement())
-  eventType       String    @map("event_type") @db.VarChar(32)
-  scanAt          DateTime  @map("scan_at") @db.DateTime(6)
-  serviceCenterId Int?      @map("service_center_id")
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
-  createdById     Int?      @map("created_by_id")
-  updatedById     Int?      @map("updated_by_id")
-  deletedAt       DateTime? @map("deleted_at") @db.DateTime(6)
-  deletedById     Int?      @map("deleted_by_id")
-
-  items EventScanItem[]
-
-  serviceCenter ServiceCenter? @relation(fields: [serviceCenterId], references: [id])
-
-  @@index([serviceCenterId, scanAt])
-  @@map("event_scans")
-}
-
-// Event scan item: AWB line (links to Shipment when present).
-model EventScanItem {
-  id          Int       @id @default(autoincrement())
-  eventScanId Int       @map("event_scan_id")
-  shipmentId  Int?      @map("shipment_id")
-  awbNo       String    @map("awb_no") @db.VarChar(64)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
-  createdById Int?      @map("created_by_id")
-  updatedById Int?      @map("updated_by_id")
-  deletedAt   DateTime? @map("deleted_at") @db.DateTime(6)
-  deletedById Int?      @map("deleted_by_id")
-
-  eventScan EventScan @relation(fields: [eventScanId], references: [id], onDelete: Cascade)
-  shipment  Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
-
-  @@index([shipmentId])
-  @@map("event_scan_items")
 }
 
 // Customer Payment: register payments (date, paid date, amount, remark, customer, optional image, approved).
