@@ -66,8 +66,8 @@ export interface ConsigneeFormData {
     address2?: string
     pinCodeId: string
     telephone?: string
-    email: string
-    mobile: string
+    email?: string
+    mobile?: string
 }
 
 export interface ConsigneeListResponse {

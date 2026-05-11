@@ -60,8 +60,8 @@ export interface ShipperFormData {
     address2?: string
     pinCodeId: string
     telephone?: string
-    email: string
-    mobile: string
+    email?: string
+    mobile?: string
     aadhaarNo?: string
     panNo?: string
     firmType?: 'GOV' | 'NON_GOV' | string

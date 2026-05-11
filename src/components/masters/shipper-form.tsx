@@ -47,8 +47,13 @@ const shipperSchema = z.object({
     address2: z.string().optional().or(z.literal("")),
     pinCodeId: requiredPincodeField(),
     telephone: z.string().optional().or(z.literal("")),
-    email: z.string().min(1, "Email is required").email("Invalid email address"),
-    mobile: z.string().min(1, "Mobile is required"),
+    email: z
+        .string()
+        .refine((v) => {
+            const t = v.trim()
+            return !t || z.string().email().safeParse(t).success
+        }, { message: "Invalid email address" }),
+    mobile: z.string(),
     aadhaarNo: z.string().optional().or(z.literal("")),
     panNo: z.string().optional().or(z.literal("")),
     firmType: z.enum(["GOV", "NON_GOV"]),
@@ -104,7 +109,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
 
     const mutation = useMutation({
         mutationFn: (values: ShipperFormValues) => {
-            const payload = omitEmptyCodeFields(values, ["shipperCode"]) as ShipperFormData
+            const payload = omitEmptyCodeFields(values, ["shipperCode", "email", "mobile"]) as ShipperFormData
             return isEdit && initialData
                 ? shipperService.updateShipper(initialData.id, payload)
                 : shipperService.createShipper(payload)
@@ -191,7 +196,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                 control={form.control}
                                 name="mobile"
                                 render={({ field }) => (
-                                    <FloatingFormItem required label="Mobile">
+                                    <FloatingFormItem label="Mobile">
                                         <FormControl>
                                             <Input placeholder="Mobile no" {...field} className={FLOATING_INNER_CONTROL} />
                                         </FormControl>
@@ -214,7 +219,7 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                             control={form.control}
                             name="email"
                             render={({ field }) => (
-                                <FloatingFormItem required label="Email">
+                                <FloatingFormItem label="Email">
                                     <FormControl>
                                         <Input placeholder="shipper@example.com" {...field} className={FLOATING_INNER_CONTROL} />
                                     </FormControl>

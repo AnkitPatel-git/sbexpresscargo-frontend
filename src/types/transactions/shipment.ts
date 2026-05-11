@@ -217,8 +217,6 @@ export const shipmentSchema = z.object({
   requireFields(values.shipper, "shipper", [
     ["shipperName", "Company Name"],
     ["contactPerson", "Contact Person Name"],
-    ["mobile", "Mobile No."],
-    ["email", "E-Mail"],
     ["address1", "Address"],
     ["pinCode", "Pincode"],
   ], values.shipperId)
@@ -226,8 +224,6 @@ export const shipmentSchema = z.object({
   requireFields(values.consignee, "consignee", [
     ["name", "Company Name"],
     ["contactPerson", "Contact Person Name"],
-    ["mobile", "Mobile No."],
-    ["email", "E-Mail"],
     ["address1", "Address"],
     ["pinCode", "Pincode"],
   ], values.consigneeId)

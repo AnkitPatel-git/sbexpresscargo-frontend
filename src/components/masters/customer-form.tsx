@@ -669,21 +669,26 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                         </FloatingFormItem>
                                     )}
                                 />
-                                {!isEdit ? (
-                                    <FormField
-                                        control={form.control}
-                                        name="createDefaultShipper"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Create Default Shipper">
+                                <FormField
+                                    control={form.control}
+                                    name="createDefaultShipper"
+                                    render={({ field }) => (
+                                        <div className="space-y-1">
+                                            <FloatingFormItem label="Default shipper">
                                                 <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                                     <FormControl>
                                                         <Checkbox checked={field.value ?? false} onCheckedChange={(value) => field.onChange(Boolean(value))} />
                                                     </FormControl>
                                                 </div>
                                             </FloatingFormItem>
-                                        )}
-                                    />
-                                ) : null}
+                                            <p className="px-1 text-xs text-muted-foreground">
+                                                {isEdit && initialData?.defaultShipper
+                                                    ? `Linked: ${initialData.defaultShipper.shipperCode} — ${initialData.defaultShipper.shipperName}. Check to create or refresh the default shipper from this address.`
+                                                    : "When checked, creates a shipper from this customer's address and links it as the default."}
+                                            </p>
+                                        </div>
+                                    )}
+                                />
                             </FormSection>
                         </div>
                     </TabsContent>
