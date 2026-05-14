@@ -73,7 +73,7 @@ interface ManualUpdateDialogProps {
 }
 
 const statusOptions = [
-    { label: "Created", value: "CREATED" },
+    { label: "Booked", value: "BOOKED" },
     { label: "Manifested", value: "MANIFESTED" },
     { label: "Picked up", value: "PICKED_UP" },
     { label: "Pickup failed", value: "PICKUP_FAILED" },

@@ -99,6 +99,7 @@ import type { Shipper } from '@/types/masters/shipper'
 import type { Consignee } from '@/types/masters/consignee'
 import type { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useAuth } from '@/context/auth-context'
 
 interface ShipmentFormProps {
     initialData?: Shipment | null
@@ -666,6 +667,7 @@ function consigneeFromMaster(c: Consignee): NonNullable<ShipmentFormValues['cons
 export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
+    const { isCustomerUser, defaultCustomerId, effectiveCustomerIds, isAllowedCustomer } = useAuth()
     const isEdit = !!initialData
     /** Ref avoids adding `isEdit` to effect deps (same hook must keep a constant-sized dep array across HMR). */
     const isEditRef = useRef(isEdit)
@@ -715,6 +717,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         label: string
         value: number
     } | null>(null)
+    const [customerPinnedOption, setCustomerPinnedOption] = useState<{
+        label: string
+        value: number
+    } | null>(null)
     const chargePreviewRows = useMemo(() => {
         if (!chargePreview) return []
         const baseRow = typeof chargePreview.baseFreight === 'number'
@@ -756,6 +762,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const { data: customersData } = useQuery({
         queryKey: ['customers-list', debouncedCustomerSearch],
         queryFn: () => customerService.getCustomers({ limit: 10, search: debouncedCustomerSearch || undefined }),
+    })
+    const { data: pinnedCustomerData } = useQuery({
+        queryKey: ['shipment-pinned-customer', defaultCustomerId],
+        queryFn: async () => {
+            const customerId = Number(defaultCustomerId)
+            if (!Number.isInteger(customerId) || customerId <= 0) return null
+            const res = await customerService.getCustomerById(customerId)
+            return res.data
+        },
+        enabled: isCustomerUser && Number(defaultCustomerId) > 0,
     })
 
     const { data: shippersData } = useQuery({
@@ -820,16 +836,24 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const consigneeOptions = sanitizeArray(consigneesData?.data)
     const productOptions = sanitizeArray(productsData?.data)
     const vendorOptions = sanitizeArray(vendorsData?.data)
-    const customerComboboxOptions = customerOptions
-        .map((customer) => {
-            const value = normalizeMasterSelectId(customer.id)
-            if (value <= 0) return null
-            return {
-                label: toSafeOptionLabel(customer.name, `Customer #${value}`),
-                value,
-            }
-        })
-        .filter((option): option is { label: string; value: number } => option != null)
+    const customerComboboxOptions = useMemo(() => {
+        const allowedIds = new Set(effectiveCustomerIds)
+        const base = customerOptions
+            .map((customer) => {
+                const value = normalizeMasterSelectId(customer.id)
+                if (value <= 0) return null
+                if (isCustomerUser && allowedIds.size > 0 && !allowedIds.has(value)) return null
+                return {
+                    label: toSafeOptionLabel(customer.name, `Customer #${value}`),
+                    value,
+                }
+            })
+            .filter((option): option is { label: string; value: number } => option != null)
+        if (customerPinnedOption && !base.some((option) => option.value === customerPinnedOption.value)) {
+            return [customerPinnedOption, ...base]
+        }
+        return base
+    }, [customerOptions, customerPinnedOption, effectiveCustomerIds, isCustomerUser])
     const consigneeComboboxOptions = consigneeOptions
         .map((consignee) => {
             const value = normalizeMasterSelectId(consignee.id)
@@ -995,7 +1019,33 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     const customerVolumetricOptions = sanitizeArray(customerVolumetricsData?.data)
 
+    useEffect(() => {
+        if (!isCustomerUser) {
+            setCustomerPinnedOption(null)
+            return
+        }
+        const customer = pinnedCustomerData
+        if (!customer) return
+        const customerId = normalizeMasterSelectId(customer.id)
+        if (customerId <= 0) return
+        setCustomerPinnedOption({
+            value: customerId,
+            label: toSafeOptionLabel(customer.name, `Customer #${customerId}`),
+        })
+    }, [isCustomerUser, pinnedCustomerData])
+
     const customerIdNum = normalizeMasterSelectId(watchedCustomerId)
+
+    useEffect(() => {
+        if (!isCustomerUser) return
+        const current = normalizeMasterSelectId(form.getValues('customerId'))
+        const fallbackCustomerId = normalizeMasterSelectId(defaultCustomerId)
+        if (fallbackCustomerId <= 0) return
+        if (current <= 0 || !isAllowedCustomer(current)) {
+            form.setValue('customerId', fallbackCustomerId, { shouldDirty: current > 0, shouldValidate: true })
+            form.setValue('clientId', fallbackCustomerId, { shouldDirty: current > 0, shouldValidate: false })
+        }
+    }, [defaultCustomerId, form, isAllowedCustomer, isCustomerUser])
     const { data: customerBookingDefaults, isFetching: customerBookingDefaultsLoading } = useQuery({
         queryKey: ['customer-booking-defaults', customerIdNum],
         queryFn: async () => {
@@ -1879,6 +1929,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         searchValue={customerSearch}
                                                         onSearchValueChange={setCustomerSearch}
                                                         className={FLOATING_INNER_COMBO}
+                                                        disabled={isCustomerUser}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>

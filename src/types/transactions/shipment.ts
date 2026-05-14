@@ -404,6 +404,8 @@ export interface Shipment {
   shipmentTotalValue?: number | null;
   invoiceDate?: string | null;
   invoiceNumber?: string | null;
+  /** Relative path under uploads for cached blank POD PDF (if generated). */
+  podBlankPdfPath?: string | null;
   origin?: string | null;
   destination?: string | null;
   pieces?: number | null;

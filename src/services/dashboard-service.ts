@@ -11,13 +11,16 @@ const getAuthHeaders = () => ({
 class DashboardService {
     private readonly baseUrl = `${API_URL}/dashboard`;
 
-    async getOperationSummary(params: { fromDate: string; toDate: string; serviceCenterId?: number }): Promise<{ success: boolean; data: OperationSummary }> {
+    async getOperationSummary(params: { fromDate: string; toDate: string; serviceCenterId?: number; customerId?: number }): Promise<{ success: boolean; data: OperationSummary }> {
         const queryParams = new URLSearchParams({
             fromDate: params.fromDate,
             toDate: params.toDate,
         });
         if (params.serviceCenterId) {
             queryParams.append('serviceCenterId', params.serviceCenterId.toString());
+        }
+        if (params.customerId) {
+            queryParams.append('customerId', params.customerId.toString());
         }
 
         const response = await apiFetch(`${this.baseUrl}/operation?${queryParams.toString()}`, { headers: getAuthHeaders() });
@@ -27,13 +30,16 @@ class DashboardService {
         return response.json();
     }
 
-    async getSalesSummary(params: { fromDate: string; toDate: string; serviceCenterId?: number }): Promise<SalesSummary> {
+    async getSalesSummary(params: { fromDate: string; toDate: string; serviceCenterId?: number; customerId?: number }): Promise<SalesSummary> {
         const queryParams = new URLSearchParams({
             fromDate: params.fromDate,
             toDate: params.toDate,
         });
         if (params.serviceCenterId) {
             queryParams.append('serviceCenterId', params.serviceCenterId.toString());
+        }
+        if (params.customerId) {
+            queryParams.append('customerId', params.customerId.toString());
         }
 
         const response = await apiFetch(`${this.baseUrl}/sales?${queryParams.toString()}`, { headers: getAuthHeaders() });

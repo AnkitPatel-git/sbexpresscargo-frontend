@@ -273,7 +273,10 @@ export const shipmentService = {
     );
   },
 
-  async addPod(shipmentId: number, data: string): Promise<ApiEnvelope<unknown>> {
+  async addPod(
+    shipmentId: number,
+    data: { podFilePath: string; remark?: string },
+  ): Promise<ApiEnvelope<unknown>> {
     return requestJson(
       `${API_URL}/transaction/shipment/${shipmentId}/pod`,
       {
@@ -283,6 +286,52 @@ export const shipmentService = {
       },
       "Failed to add POD",
     );
+  },
+
+  async downloadPodBlankForm(
+    shipmentId: number,
+    regenerate = false,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const q = regenerate ? "?regenerate=true" : "";
+    const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/pod-form${q}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to download POD form"));
+    }
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, `POD-${shipmentId}.pdf`),
+    };
+  },
+
+  async uploadPodProof(
+    shipmentId: number,
+    file: File,
+    options?: { remark?: string; markDelivered?: boolean },
+  ): Promise<ApiEnvelope<{ filePath: string; shipmentStatus: unknown | null }>> {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (options?.remark) formData.append("remark", options.remark);
+    if (options?.markDelivered === false) {
+      formData.append("markDelivered", "false");
+    }
+    const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/pod-upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      body: formData,
+    });
+    const json = (await response.json().catch(() => ({}))) as ApiEnvelope<{
+      filePath: string;
+      shipmentStatus: unknown | null;
+    }> & { message?: string };
+    if (!response.ok) {
+      throw new Error(json.message || "Failed to upload POD");
+    }
+    if (!json.success || json.data == null) {
+      throw new Error(json.message || "Invalid POD upload response");
+    }
+    return json;
   },
 
   async updateShipmentStatus(

@@ -24,8 +24,10 @@ import { serviceCenterService } from "@/services/masters/service-center-service"
 import { StatsCard } from "@/components/dashboard/dashboard-metrics";
 import { SalesTrendChart, ServiceCenterSalesChart } from "@/components/dashboard/dashboard-charts";
 import { ExpressInboundSummary, ExpressOutboundSummary } from "@/components/dashboard/express-operation-summary";
+import { useAuth } from "@/context/auth-context";
 
 export default function DashboardPage() {
+  const { isCustomerUser, defaultCustomerId } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
   const [fromDate, setFromDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -34,6 +36,8 @@ export default function DashboardPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const scopedCustomerId = isCustomerUser ? defaultCustomerId ?? undefined : undefined;
 
   const { data: serviceCentersData } = useQuery({
     queryKey: ["service-centers-master"],
@@ -47,21 +51,22 @@ export default function DashboardPage() {
 
   const { data: opsData, isLoading: isLoadingOps, refetch: refetchOps } = useQuery({
     queryKey: ["dashboard-ops", fromDate, toDate, serviceCenterId],
-    queryFn: () => dashboardService.getOperationSummary({ fromDate, toDate, serviceCenterId }),
+    queryFn: () => dashboardService.getOperationSummary({ fromDate, toDate, serviceCenterId, customerId: scopedCustomerId }),
   });
 
   const { data: salesData, isLoading: isLoadingSales, refetch: refetchSales } = useQuery({
     queryKey: ["dashboard-sales", fromDate, toDate, serviceCenterId],
-    queryFn: () => dashboardService.getSalesSummary({ fromDate, toDate, serviceCenterId }),
+    queryFn: () => dashboardService.getSalesSummary({ fromDate, toDate, serviceCenterId, customerId: scopedCustomerId }),
   });
 
   const currentYear = new Date(fromDate).getFullYear();
   const { data: scSalesData, isLoading: isLoadingScSales, refetch: refetchScSales } = useQuery({
-    queryKey: ["dashboard-sc-sales", currentYear, serviceCenterId],
+    queryKey: ["dashboard-sc-sales", currentYear, serviceCenterId, scopedCustomerId],
     queryFn: () =>
       dashboardService.getSalesByServiceCenters({
         year: currentYear,
         serviceCenterId,
+        customerId: scopedCustomerId,
       }),
   });
 
@@ -172,6 +177,7 @@ export default function DashboardPage() {
                       }
                       placeholder="All"
                       className="h-9 flex-1 border bg-background"
+                      disabled={isCustomerUser}
                     />
                     <Button type="button" size="icon" variant="default" className="h-9 w-9 shrink-0" title="Search">
                       <Search className="h-4 w-4" />

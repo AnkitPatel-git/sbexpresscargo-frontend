@@ -27,6 +27,7 @@ import {
 import { customerService } from "@/services/masters/customer-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
 import { attendanceRegisterService } from "@/services/reports/attendance-register-service";
+import { useAuth } from "@/context/auth-context";
 
 function istCalendarParts(): { year: number; month: number } {
   const now = new Date();
@@ -35,21 +36,37 @@ function istCalendarParts(): { year: number; month: number } {
 }
 
 function AttendanceRegisterPanel() {
+  const { isCustomerUser, defaultCustomerId, effectiveCustomerIds } = useAuth();
   const defaults = useMemo(() => istCalendarParts(), []);
   const [year, setYear] = useState(defaults.year);
   const [month, setMonth] = useState(defaults.month);
   const [serviceCenterId, setServiceCenterId] = useState<string>("all");
-  const [customerId, setCustomerId] = useState<string>("all");
+  const [customerId, setCustomerId] = useState<string>(
+    isCustomerUser && Number(defaultCustomerId) > 0 ? String(defaultCustomerId) : "all",
+  );
   const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    if (!isCustomerUser) return;
+    const scoped = Number(defaultCustomerId);
+    if (Number.isInteger(scoped) && scoped > 0) {
+      setCustomerId(String(scoped));
+    }
+  }, [defaultCustomerId, isCustomerUser]);
 
   const registerParams = useMemo(
     () => ({
       year,
       month,
       serviceCenterId: serviceCenterId === "all" ? undefined : Number(serviceCenterId),
-      customerId: customerId === "all" ? undefined : Number(customerId),
+      customerId:
+        isCustomerUser && Number(defaultCustomerId) > 0
+          ? Number(defaultCustomerId)
+          : customerId === "all"
+            ? undefined
+            : Number(customerId),
     }),
-    [year, month, serviceCenterId, customerId],
+    [year, month, serviceCenterId, customerId, isCustomerUser, defaultCustomerId],
   );
 
   const { data, isFetching, isError, error, isLoading } = useQuery({
@@ -84,6 +101,8 @@ function AttendanceRegisterPanel() {
         sortOrder: "asc",
       }),
   });
+
+  const allowedCustomerIds = new Set(effectiveCustomerIds);
 
   const yearOptions = useMemo(() => {
     const y = defaults.year;
@@ -163,13 +182,19 @@ function AttendanceRegisterPanel() {
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label>Customer / company (optional)</Label>
-          <Select value={customerId} onValueChange={setCustomerId}>
+          <Select value={customerId} onValueChange={setCustomerId} disabled={isCustomerUser}>
             <SelectTrigger>
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              {(customers?.data ?? []).map((c) => (
+              {!isCustomerUser && <SelectItem value="all">All</SelectItem>}
+              {(customers?.data ?? [])
+                .filter((customer) =>
+                  !isCustomerUser || allowedCustomerIds.size === 0
+                    ? true
+                    : allowedCustomerIds.has(customer.id),
+                )
+                .map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
                   {c.name} ({c.code})
                 </SelectItem>

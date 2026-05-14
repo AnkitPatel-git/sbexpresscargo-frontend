@@ -74,6 +74,7 @@ interface SidebarContentProps {
   onItemClick?: () => void;
   /** `contract` query on `/masters/rates` (null when absent = customer list). */
   rateContractQuery: string | null;
+  isCustomerUser?: boolean;
 }
 
 const headerNavItems = [
@@ -262,7 +263,11 @@ const SidebarContent = ({
   isCollapsed = false,
   onItemClick,
   rateContractQuery,
+  isCustomerUser = false,
 }: SidebarContentProps) => {
+  const showMasters = !isCustomerUser;
+  const showDocuments = !isCustomerUser;
+  const showUtilities = !isCustomerUser;
   const collapsedSubmenuScrollClass = "max-h-[20rem] overflow-y-auto pr-1";
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(
     !isCollapsed && pathname.startsWith("/document"),
@@ -618,7 +623,7 @@ const SidebarContent = ({
       </Link>
 
       {/* Masters Menu */}
-      <div
+      {showMasters && <div
         className="flex flex-col relative"
         onMouseEnter={() => {
           if (!isCollapsed) return;
@@ -832,7 +837,7 @@ const SidebarContent = ({
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Transactions Menu */}
       <div
@@ -896,17 +901,19 @@ const SidebarContent = ({
                 Shipment Booking
               </LinkItem>
             </PermissionGuard>
-            <PermissionGuard permission="transaction.manifest.read">
-              <LinkItem
-                href="/transactions/manifest"
-                subItem
-                active={isActive("/transactions/manifest")}
-                icon={ClipboardList}
-              >
-                Manifest
-              </LinkItem>
-            </PermissionGuard>
-            <PermissionGuard permission="transaction.drs.read">
+            {!isCustomerUser && (
+              <PermissionGuard permission="transaction.manifest.read">
+                <LinkItem
+                  href="/transactions/manifest"
+                  subItem
+                  active={isActive("/transactions/manifest")}
+                  icon={ClipboardList}
+                >
+                  Manifest
+                </LinkItem>
+              </PermissionGuard>
+            )}
+            {!isCustomerUser && <PermissionGuard permission="transaction.drs.read">
               <LinkItem
                 href="/transactions/drs"
                 subItem
@@ -915,7 +922,7 @@ const SidebarContent = ({
               >
                 DRS
               </LinkItem>
-            </PermissionGuard>
+            </PermissionGuard>}
             <PermissionGuard permission="transaction.tracking.read">
               <LinkItem
                 href="/transactions/tracking"
@@ -926,7 +933,7 @@ const SidebarContent = ({
                 Tracking
               </LinkItem>
             </PermissionGuard>
-            <PermissionGuard permission="transaction.pod.read">
+            {!isCustomerUser && <PermissionGuard permission="transaction.pod.read">
               <LinkItem
                 href="/transactions/pod"
                 subItem
@@ -935,8 +942,8 @@ const SidebarContent = ({
               >
                 POD
               </LinkItem>
-            </PermissionGuard>
-            <PermissionGuard permission="transaction.customer-payment.read">
+            </PermissionGuard>}
+            {!isCustomerUser && <PermissionGuard permission="transaction.customer-payment.read">
               <LinkItem
                 href="/transactions/customer-payment"
                 subItem
@@ -945,8 +952,8 @@ const SidebarContent = ({
               >
                 Customer Payment
               </LinkItem>
-            </PermissionGuard>
-            <PermissionGuard permission="transaction.shipment.read">
+            </PermissionGuard>}
+            {!isCustomerUser && <PermissionGuard permission="transaction.shipment.read">
               <LinkItem
                 href="/transactions/receipt"
                 subItem
@@ -955,7 +962,7 @@ const SidebarContent = ({
               >
                 Receipts
               </LinkItem>
-            </PermissionGuard>
+            </PermissionGuard>}
           </div>
         )}
 
@@ -981,7 +988,7 @@ const SidebarContent = ({
                     Shipment Booking
                   </LinkItem>
                 </PermissionGuard>
-                <PermissionGuard permission="transaction.manifest.read">
+                {!isCustomerUser && <PermissionGuard permission="transaction.manifest.read">
                   <LinkItem
                     href="/transactions/manifest"
                     subItem
@@ -992,8 +999,8 @@ const SidebarContent = ({
                   >
                     Manifest
                   </LinkItem>
-                </PermissionGuard>
-                <PermissionGuard permission="transaction.drs.read">
+                </PermissionGuard>}
+                {!isCustomerUser && <PermissionGuard permission="transaction.drs.read">
                   <LinkItem
                     href="/transactions/drs"
                     subItem
@@ -1004,7 +1011,7 @@ const SidebarContent = ({
                   >
                     DRS
                   </LinkItem>
-                </PermissionGuard>
+                </PermissionGuard>}
                 <PermissionGuard permission="transaction.tracking.read">
                   <LinkItem
                     href="/transactions/tracking"
@@ -1017,7 +1024,7 @@ const SidebarContent = ({
                     Tracking
                   </LinkItem>
                 </PermissionGuard>
-                <PermissionGuard permission="transaction.pod.read">
+                {!isCustomerUser && <PermissionGuard permission="transaction.pod.read">
                   <LinkItem
                     href="/transactions/pod"
                     subItem
@@ -1028,8 +1035,8 @@ const SidebarContent = ({
                   >
                     POD
                   </LinkItem>
-                </PermissionGuard>
-                <PermissionGuard permission="transaction.customer-payment.read">
+                </PermissionGuard>}
+                {!isCustomerUser && <PermissionGuard permission="transaction.customer-payment.read">
                   <LinkItem
                     href="/transactions/customer-payment"
                     subItem
@@ -1040,8 +1047,8 @@ const SidebarContent = ({
                   >
                     Customer Payment
                   </LinkItem>
-                </PermissionGuard>
-                <PermissionGuard permission="transaction.shipment.read">
+                </PermissionGuard>}
+                {!isCustomerUser && <PermissionGuard permission="transaction.shipment.read">
                   <LinkItem
                     href="/transactions/receipt"
                     subItem
@@ -1052,7 +1059,7 @@ const SidebarContent = ({
                   >
                     Receipts
                   </LinkItem>
-                </PermissionGuard>
+                </PermissionGuard>}
               </div>
             </div>
           </div>
@@ -1060,7 +1067,7 @@ const SidebarContent = ({
       </div>
 
       {/* Documents Menu */}
-      <div
+      {showDocuments && <div
         className="flex flex-col relative"
         onMouseEnter={() => {
           if (!isCollapsed) return;
@@ -1183,7 +1190,7 @@ const SidebarContent = ({
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Reports Menu */}
       <div
@@ -1292,7 +1299,7 @@ const SidebarContent = ({
       </div>
 
       {/* Utilities Menu */}
-      <div
+      {showUtilities && <div
         className="flex flex-col relative"
         onMouseEnter={() => {
           if (!isCollapsed) return;
@@ -1482,7 +1489,7 @@ const SidebarContent = ({
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </nav>
   );
 };
@@ -1492,7 +1499,7 @@ function DashboardLayoutClient({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isCustomerUser } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const rateContractQuery = useSearchParams().get("contract");
@@ -1502,15 +1509,26 @@ function DashboardLayoutClient({
   const [showMenuSuggestions, setShowMenuSuggestions] = useState(false);
   const searchBoxRef = useRef<HTMLDivElement | null>(null);
 
+  const isCustomerVisibleHref = (href: string) =>
+    href === "/dashboard" ||
+    href === "/profile" ||
+    href === "/change-password" ||
+    href.startsWith("/transactions/shipment") ||
+    href.startsWith("/transactions/tracking") ||
+    href.startsWith("/report/");
+
+  const visibleHeaderNavItems = isCustomerUser
+    ? headerNavItems.filter((item) => isCustomerVisibleHref(item.href))
+    : headerNavItems;
   const initials = user?.username?.substring(0, 2).toUpperCase() || "US";
   const activeHeaderItem =
-    [...headerNavItems]
+    [...visibleHeaderNavItems]
       .sort((a, b) => b.href.length - a.href.length)
       .find((item) =>
         masterNavItemActive(pathname, rateContractQuery, item.href),
-      ) ?? headerNavItems[0];
+      ) ?? visibleHeaderNavItems[0];
 
-  const filteredMenuItems = headerNavItems
+  const filteredMenuItems = visibleHeaderNavItems
     .filter((item) =>
       item.label.toLowerCase().includes(menuSearch.trim().toLowerCase()),
     )
@@ -1520,13 +1538,13 @@ function DashboardLayoutClient({
     const query = searchValue.trim().toLowerCase();
     if (!query) return;
 
-    const exact = headerNavItems.find(
+    const exact = visibleHeaderNavItems.find(
       (item) => item.label.toLowerCase() === query,
     );
-    const startsWith = headerNavItems.find((item) =>
+    const startsWith = visibleHeaderNavItems.find((item) =>
       item.label.toLowerCase().startsWith(query),
     );
-    const contains = headerNavItems.find((item) =>
+    const contains = visibleHeaderNavItems.find((item) =>
       item.label.toLowerCase().includes(query),
     );
     const target = exact ?? startsWith ?? contains;
@@ -1601,6 +1619,7 @@ function DashboardLayoutClient({
             pathname={pathname}
             isCollapsed={isSidebarCollapsed}
             rateContractQuery={rateContractQuery}
+            isCustomerUser={isCustomerUser}
           />
         </div>
       </aside>
@@ -1628,6 +1647,7 @@ function DashboardLayoutClient({
               pathname={pathname}
               onItemClick={() => setIsMobileMenuOpen(false)}
               rateContractQuery={rateContractQuery}
+              isCustomerUser={isCustomerUser}
             />
           </div>
         </SheetContent>
@@ -1780,7 +1800,11 @@ function DashboardLayoutClient({
                   label: "Activity",
                   href: "/transactions/tracking",
                 },
-              ].map((item, i) => (
+              ]
+                .filter((item) =>
+                  !isCustomerUser ? true : isCustomerVisibleHref(item.href),
+                )
+                .map((item, i) => (
                 <Button
                   key={i}
                   variant="ghost"

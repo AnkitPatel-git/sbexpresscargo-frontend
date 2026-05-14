@@ -5,17 +5,10 @@ import React, { createContext, useContext, useEffect, useState } from "react"
 import Cookies from "js-cookie"
 import { useRouter } from "next/navigation"
 import { userService } from "@/services/user-service"
+import type { UtilityUser } from "@/types/utilities/user"
 
-interface User {
-    id: number
-    username: string
-    email: string
-    roleId: number
-    role: {
-        id: number
-        name: string
-        identifier: string
-    }
+type User = UtilityUser & {
+    role: NonNullable<UtilityUser["role"]>
     permissions: string[]
 }
 
@@ -27,9 +20,26 @@ interface AuthContextType {
     logout: () => void
     isAuthenticated: boolean
     hasPermission: (permission: string) => boolean
+    isCustomerUser: boolean
+    effectiveCustomerIds: number[]
+    defaultCustomerId: number | null
+    isAllowedCustomer: (customerId?: number | null) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const normalizeCustomerIds = (user: User | null): number[] => {
+    if (!user) return []
+    const ids = new Set<number>()
+    const push = (value: unknown) => {
+        const num = Number(value)
+        if (Number.isInteger(num) && num > 0) ids.add(num)
+    }
+    ;(user.customerIds || []).forEach(push)
+    push(user.customerId)
+    push(user.profile?.customerId)
+    return Array.from(ids)
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
@@ -78,6 +88,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (user.role.identifier === "SUPER_ADMIN" || user.role.identifier === "superuser") return true
         return user.permissions.includes(permission)
     }
+    const isCustomerUser = user?.role?.identifier === "CUSTOMER"
+    const effectiveCustomerIds = normalizeCustomerIds(user)
+    const defaultCustomerId = effectiveCustomerIds[0] ?? null
+    const isAllowedCustomer = (customerId?: number | null) => {
+        const num = Number(customerId)
+        if (!Number.isInteger(num) || num <= 0) return false
+        if (!isCustomerUser) return true
+        return effectiveCustomerIds.includes(num)
+    }
 
     return (
         <AuthContext.Provider
@@ -89,6 +108,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 logout,
                 isAuthenticated: !!token,
                 hasPermission,
+                isCustomerUser,
+                effectiveCustomerIds,
+                defaultCustomerId,
+                isAllowedCustomer,
             }}
         >
             {children}

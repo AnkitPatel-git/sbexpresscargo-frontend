@@ -9,8 +9,10 @@ import { ArrowLeft, Loader2, Pencil, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import type { Shipment } from "@/types/transactions/shipment";
@@ -101,9 +103,11 @@ export default function ShipmentDetailsPage() {
   const params = useParams();
   const id = Number(params.id);
   const queryClient = useQueryClient();
-  const [statusValue, setStatusValue] = useState("CREATED");
+  const [statusValue, setStatusValue] = useState("BOOKED");
   const [statusReason, setStatusReason] = useState("");
-  const [podPath, setPodPath] = useState("");
+  const [podRemark, setPodRemark] = useState("");
+  const [podFile, setPodFile] = useState<File | null>(null);
+  const [markDeliveredWithPod, setMarkDeliveredWithPod] = useState(true);
   const [kycType, setKycType] = useState("AADHAAR");
   const [kycEntryType, setKycEntryType] = useState("ID_PROOF");
   const [kycEntryDate, setKycEntryDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
@@ -136,14 +140,37 @@ export default function ShipmentDetailsPage() {
     onError: (error: Error) => toast.error(error.message || "Failed to update shipment booking status"),
   });
 
-  const podMutation = useMutation({
-    mutationFn: () => shipmentService.addPod(id, podPath),
+  const podDownloadMutation = useMutation({
+    mutationFn: (regenerate: boolean) => shipmentService.downloadPodBlankForm(id, regenerate),
+    onSuccess: ({ blob, filename }) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("POD form downloaded");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to download POD form"),
+  });
+
+  const podUploadMutation = useMutation({
+    mutationFn: () => {
+      if (!podFile) {
+        return Promise.reject(new Error("Choose a POD file (PDF or image)"));
+      }
+      return shipmentService.uploadPodProof(id, podFile, {
+        remark: podRemark || undefined,
+        markDelivered: markDeliveredWithPod,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipment", id] });
-      toast.success("POD saved");
-      setPodPath("");
+      toast.success("POD uploaded");
+      setPodFile(null);
+      setPodRemark("");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to save POD"),
+    onError: (error: Error) => toast.error(error.message || "Failed to upload POD"),
   });
 
   const kycMutation = useMutation({
@@ -296,7 +323,7 @@ export default function ShipmentDetailsPage() {
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
-              {["CREATED", "BOOKED", "IN_TRANSIT", "DELIVERED", "CANCELLED"].map((value) => (
+              {["BOOKED", "IN_TRANSIT", "DELIVERED", "CANCELLED"].map((value) => (
                 <SelectItem key={value} value={value}>
                   {value}
                 </SelectItem>
@@ -309,10 +336,74 @@ export default function ShipmentDetailsPage() {
           </Button>
         </FormSection>
 
-        <FormSection title="Save POD" contentClassName="space-y-3 text-sm">
-          <Input placeholder="POD file path" value={podPath} onChange={(e) => setPodPath(e.target.value)} />
-          <Button type="button" className="w-full" onClick={() => podMutation.mutate()} disabled={podMutation.isPending}>
-            Save POD
+        <FormSection title="Proof of delivery (POD)" contentClassName="space-y-3 text-sm">
+          <p className="text-muted-foreground">
+            Download the prefilled POD form, collect the receiver signature, then upload the scan. Vendor POD files
+            can be uploaded the same way.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1 min-w-[140px]"
+              onClick={() => podDownloadMutation.mutate(false)}
+              disabled={podDownloadMutation.isPending}
+            >
+              {podDownloadMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Preparing…
+                </>
+              ) : (
+                "Download POD form"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 min-w-[140px]"
+              onClick={() => podDownloadMutation.mutate(true)}
+              disabled={podDownloadMutation.isPending}
+            >
+              Regenerate PDF
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pod-file">Upload signed / vendor POD</Label>
+            <Input
+              id="pod-file"
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+              onChange={(e) => setPodFile(e.target.files?.[0] ?? null)}
+            />
+            {podFile ? <p className="text-xs text-muted-foreground">Selected: {podFile.name}</p> : null}
+          </div>
+          <Input placeholder="Delivery remark (optional)" value={podRemark} onChange={(e) => setPodRemark(e.target.value)} />
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="pod-mark-delivered"
+              checked={markDeliveredWithPod}
+              onCheckedChange={(v) => setMarkDeliveredWithPod(v === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="pod-mark-delivered" className="text-xs font-normal leading-snug cursor-pointer">
+              Record shipment as delivered and attach this file as POD (uncheck to only store the file).
+            </Label>
+          </div>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => podUploadMutation.mutate()}
+            disabled={podUploadMutation.isPending || !podFile}
+          >
+            {podUploadMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Uploading…
+              </>
+            ) : (
+              "Upload POD"
+            )}
           </Button>
         </FormSection>
 

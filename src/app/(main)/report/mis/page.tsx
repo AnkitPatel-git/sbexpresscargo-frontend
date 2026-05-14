@@ -36,6 +36,7 @@ import { shipperService } from "@/services/masters/shipper-service";
 import { zoneService } from "@/services/masters/zone-service";
 import { misReportService } from "@/services/reports/mis-report-service";
 import { MIS_REPORT_COLUMNS, type MisReportColumn } from "@/types/reports/mis-report";
+import { useAuth } from "@/context/auth-context";
 
 type MisReportFilters = {
   awbNo: string;
@@ -99,7 +100,7 @@ const COLUMN_LABELS: Record<MisReportColumn, string> = {
 };
 
 const STATUS_OPTIONS = [
-  "CREATED",
+  "BOOKED",
   "MANIFESTED",
   "PICKED_UP",
   "PICKUP_FAILED",
@@ -116,6 +117,11 @@ const STATUS_OPTIONS = [
 ];
 
 export default function MisReportPage() {
+  const { isCustomerUser, defaultCustomerId, effectiveCustomerIds } = useAuth();
+  const scopedCustomerId =
+    isCustomerUser && Number.isInteger(Number(defaultCustomerId)) && Number(defaultCustomerId) > 0
+      ? Number(defaultCustomerId)
+      : undefined;
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -129,6 +135,12 @@ export default function MisReportPage() {
   const [draftFilters, setDraftFilters] = useState<MisReportFilters>(DEFAULT_FILTERS);
   const [selectedColumns, setSelectedColumns] = useState<MisReportColumn[]>(DEFAULT_COLUMNS);
   const [draftColumns, setDraftColumns] = useState<MisReportColumn[]>(DEFAULT_COLUMNS);
+
+  useEffect(() => {
+    if (!isCustomerUser || !scopedCustomerId) return;
+    setAppliedFilters((prev) => ({ ...prev, customerId: scopedCustomerId }));
+    setDraftFilters((prev) => ({ ...prev, customerId: scopedCustomerId }));
+  }, [isCustomerUser, scopedCustomerId]);
 
   const { data: customerData } = useQuery({
     queryKey: ["mis-report-customer-options"],
@@ -191,10 +203,15 @@ export default function MisReportPage() {
   const allColumns = data?.availableColumns?.length ? data.availableColumns : MIS_REPORT_COLUMNS;
   const displayColumns = data?.columns?.length ? data.columns : selectedColumns;
 
-  const customerOptions = (customerData?.data ?? []).map((customer) => ({
-    value: String(customer.id),
-    label: customer.code ? `${customer.code} - ${customer.name}` : customer.name,
-  }));
+  const allowedCustomerIds = new Set(effectiveCustomerIds);
+  const customerOptions = (customerData?.data ?? [])
+    .filter((customer) =>
+      !isCustomerUser || allowedCustomerIds.size === 0 ? true : allowedCustomerIds.has(customer.id),
+    )
+    .map((customer) => ({
+      value: String(customer.id),
+      label: customer.code ? `${customer.code} - ${customer.name}` : customer.name,
+    }));
   const shipperOptions = (shipperData?.data ?? []).map((shipper) => ({
     value: String(shipper.id),
     label: shipper.shipperCode ? `${shipper.shipperCode} - ${shipper.shipperName}` : shipper.shipperName,
@@ -403,10 +420,16 @@ export default function MisReportPage() {
                   onChange={(value) =>
                     setDraftFilters((prev) => ({
                       ...prev,
-                      customerId: value ? Number(value) : undefined,
+                      customerId:
+                        isCustomerUser && scopedCustomerId
+                          ? scopedCustomerId
+                          : value
+                            ? Number(value)
+                            : undefined,
                     }))
                   }
                   options={customerOptions}
+                  disabled={isCustomerUser}
                 />
                 <Combobox
                   className="w-full"
