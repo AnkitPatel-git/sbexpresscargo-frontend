@@ -273,6 +273,34 @@ function formatZonePickLabel(z: { id: number; code?: string; name?: string }): s
   return `Zone ${z.id}`;
 }
 
+/** Build API-shaped zone ref from a full Zone row (for slab row display after save). */
+function zoneRefFromZoneRow(z: Zone): RateZoneRef {
+  return { id: z.id, code: z.code, name: z.name };
+}
+
+function zoneRefFromExtras(zoneExtraRows: Zone[], id: number | undefined): RateZoneRef | undefined {
+  if (id == null || !Number.isFinite(id)) {
+    return undefined;
+  }
+  const z = zoneExtraRows.find((row) => row.id === id);
+  return z ? zoneRefFromZoneRow(z) : undefined;
+}
+
+/** Label for table / display: prefer embedded API ref, then lookup map, then id. */
+function routeSlabZoneCellLabel(
+  zoneId: number | null | undefined,
+  ref: RateZoneRef | null | undefined,
+  labelById: Map<number, string>,
+): string {
+  if (zoneId == null) {
+    return "—";
+  }
+  if (ref && ((ref.name ?? "").trim() !== "" || (ref.code ?? "").trim() !== "")) {
+    return formatZonePickLabel(ref);
+  }
+  return labelById.get(zoneId) ?? `Zone ${zoneId}`;
+}
+
 /** Merges base zone extras with a draft pick so the trigger label resolves before save. */
 function mergeZoneExtrasForPick(base: Zone[], selectedIdStr: string | undefined): Zone[] {
   if (!selectedIdStr || selectedIdStr === "__none__") return base;
@@ -1148,11 +1176,16 @@ function RouteSlabsEditor({
       }
     }
 
+    const fromZoneRef = showZones ? zoneRefFromExtras(zoneExtraRows, fromZoneId) : undefined;
+    const toZoneRef = showZones ? zoneRefFromExtras(zoneExtraRows, toZoneId) : undefined;
+
     const next: RouteSlabRow = {
       weightSlabs,
       ...(draft.id != null ? { id: draft.id } : {}),
       ...(showZones && fromZoneId !== undefined && Number.isFinite(fromZoneId) ? { fromZoneId } : {}),
       ...(showZones && toZoneId !== undefined && Number.isFinite(toZoneId) ? { toZoneId } : {}),
+      ...(showZones && fromZoneRef ? { fromZone: fromZoneRef } : {}),
+      ...(showZones && toZoneRef ? { toZone: toZoneRef } : {}),
       ...(showKmBands && minKmParsed !== undefined && Number.isFinite(minKmParsed) ? { minKm: minKmParsed } : {}),
       ...(showKmBands && maxKmParsed !== undefined && Number.isFinite(maxKmParsed) ? { maxKm: maxKmParsed } : {}),
     };
@@ -1422,10 +1455,12 @@ function RouteSlabsEditor({
                 <TableRow key={`${row.id ?? "new"}-${index}`} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                   {showZones ? (
                     <>
-                      <TableCell>
-                        {row.fromZoneId != null ? zoneLabelById.get(row.fromZoneId) || row.fromZoneId : "—"}
+                      <TableCell className="max-w-[12rem] truncate">
+                        {routeSlabZoneCellLabel(row.fromZoneId ?? null, row.fromZone ?? null, zoneLabelById)}
                       </TableCell>
-                      <TableCell>{row.toZoneId != null ? zoneLabelById.get(row.toZoneId) || row.toZoneId : "—"}</TableCell>
+                      <TableCell className="max-w-[12rem] truncate">
+                        {routeSlabZoneCellLabel(row.toZoneId ?? null, row.toZone ?? null, zoneLabelById)}
+                      </TableCell>
                     </>
                   ) : null}
                   {showKmBands ? (
