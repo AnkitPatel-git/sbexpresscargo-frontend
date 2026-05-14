@@ -55,6 +55,7 @@ function SelectContent({
   children,
   position = "item-aligned",
   align = "center",
+  onScroll,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -78,6 +79,7 @@ function SelectContent({
             position === "popper" &&
               "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
           )}
+          onScroll={onScroll}
         >
           {children}
         </SelectPrimitive.Viewport>

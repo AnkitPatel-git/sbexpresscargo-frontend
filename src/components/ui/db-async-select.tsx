@@ -8,8 +8,7 @@
  * In `fetchPage`, call your API with `{ page, limit: DB_ASYNC_SELECT_PAGE_SIZE, search }`.
  */
 
-import * as React from "react"
-import { useState } from "react"
+import { useMemo, useState, type Ref } from "react"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -59,7 +58,7 @@ export type DbAsyncSelectProps<T extends { id: number }> = {
   clearOption?: { value: string; label: string }
   id?: string
   "aria-invalid"?: boolean
-  triggerRef?: React.Ref<HTMLButtonElement>
+  triggerRef?: Ref<HTMLButtonElement>
 }
 
 export function DbAsyncSelect<T extends { id: number }>({
@@ -84,13 +83,32 @@ export function DbAsyncSelect<T extends { id: number }>({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const debouncedSearch = useDebounce(search, debounceMs)
+  const trimmedSearch = debouncedSearch.trim()
+  const selectedIdForExtras =
+    value && (!clearOption || value !== clearOption.value) ? Number(value) : NaN
+
+  const extraRowsForQuery = useMemo(() => {
+    if (!extraItems?.length) {
+      return extraItems
+    }
+    const q = trimmedSearch.toLowerCase()
+    if (!q) {
+      return extraItems
+    }
+    return extraItems.filter((item) => {
+      if (Number.isFinite(selectedIdForExtras) && item.id === selectedIdForExtras) {
+        return true
+      }
+      return getItemLabel(item).toLowerCase().includes(q)
+    })
+  }, [extraItems, getItemLabel, selectedIdForExtras, trimmedSearch])
 
   const { rows, fetchNextPage, hasNextPage, isFetchingNextPage, isInitialLoading } = useInfiniteSearchEntityList<T>({
     queryKey,
     pageSize: DB_ASYNC_SELECT_PAGE_SIZE,
-    search: debouncedSearch.trim(),
+    search: trimmedSearch,
     fetchPage,
-    extraRows: extraItems,
+    extraRows: extraRowsForQuery,
     enabled: open,
   })
 
