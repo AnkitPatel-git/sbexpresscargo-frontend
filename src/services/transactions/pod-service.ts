@@ -1,7 +1,13 @@
 import { apiFetch } from '@/lib/api-fetch';
-import { PodViewResponse } from '@/types/transactions/pod';
+import type { PodUploadResponse, PodViewResponse } from '@/types/transactions/pod';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+function parseFilename(response: Response, fallback: string): string {
+    const cd = response.headers.get('content-disposition');
+    const match = cd?.match(/filename="?([^";\n]+)"?/i);
+    return match?.[1]?.trim() || fallback;
+}
 
 const getAuthHeaders = (isFormData = false) => {
     const headers: Record<string, string> = {
@@ -38,7 +44,7 @@ class PodService {
         return response.blob();
     }
 
-    async uploadExcel(file: File): Promise<any> {
+    async uploadExcel(file: File): Promise<PodUploadResponse> {
         const formData = new FormData();
         formData.append('file', file);
 
@@ -52,6 +58,41 @@ class PodService {
             throw new Error(error.message || 'Failed to upload POD Excel file');
         }
         return response.json();
+    }
+
+    async downloadBlankPdf(
+        awbNo: string,
+        regenerate = false,
+    ): Promise<{ blob: Blob; filename: string }> {
+        const encoded = encodeURIComponent(awbNo.trim());
+        const q = regenerate ? '?regenerate=true' : '';
+        const response = await apiFetch(`${this.baseUrl}/blank-form/${encoded}${q}`, {
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Failed to download POD form');
+        }
+        return {
+            blob: await response.blob(),
+            filename: parseFilename(response, `POD-${awbNo.trim()}.pdf`),
+        };
+    }
+
+    async downloadBulkBlankZip(awbNos: string[]): Promise<{ blob: Blob; filename: string }> {
+        const response = await apiFetch(`${this.baseUrl}/bulk-blank-forms`, {
+            method: 'POST',
+            headers: getAuthHeaders(false),
+            body: JSON.stringify({ awbNos }),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Failed to download POD forms ZIP');
+        }
+        return {
+            blob: await response.blob(),
+            filename: parseFilename(response, 'pod-blank-forms.zip'),
+        };
     }
 
     async exportExcel(awbNos: string[]): Promise<Blob> {

@@ -16,3 +16,12 @@ export interface PodViewResponse {
         podRows: PodRow[];
     };
 }
+
+export interface PodUploadResponse {
+    success: boolean;
+    message: string;
+    data: {
+        awbNos: string[];
+        podRows: PodRow[];
+    };
+}
