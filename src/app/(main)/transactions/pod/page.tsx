@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, Download, FileDown, FilePlus, FileSpreadsheet, Loader2, Plus, Search, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, FileDown, FilePlus, Loader2, Plus, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -73,23 +73,6 @@ export default function PodPage() {
         viewMutation.mutate(awbList);
     };
 
-    const downloadMutation = useMutation({
-        mutationFn: () => podService.downloadTemplate(),
-        onSuccess: (blob) => {
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', 'POD_Template.xlsx');
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode?.removeChild(link);
-            toast.success("Template downloaded successfully");
-        },
-        onError: (error) => {
-            toast.error(error instanceof Error ? error.message : "Failed to download template");
-        }
-    });
-
     const uploadMutation = useMutation({
         mutationFn: (file: File) => podService.uploadExcel(file),
         onSuccess: (res) => {
@@ -147,30 +130,6 @@ export default function PodPage() {
         },
     });
 
-    const exportMutation = useMutation({
-        mutationFn: (awbNos: string[]) => podService.exportExcel(awbNos),
-        onSuccess: (blob, awbNos) => {
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            const timestamp = new Date().getTime();
-            link.setAttribute('download', `POD_Export_${timestamp}.xlsx`);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode?.removeChild(link);
-            toast.success(`Exported ${awbNos.length} records`);
-        },
-        onError: (error) => {
-            toast.error(error instanceof Error ? error.message : "Failed to export data");
-        }
-    });
-
-    const handleExport = () => {
-        if (!podData || podData.length === 0) return;
-        const awbNos = podData.map(row => row.AWBNo);
-        exportMutation.mutate(awbNos);
-    };
-
     const filteredRows =
         podData?.filter((row) => {
             if (colFilters.awbNo && !(row.AWBNo || "").toLowerCase().includes(colFilters.awbNo.toLowerCase())) return false;
@@ -197,8 +156,8 @@ export default function PodPage() {
             <div className="mb-3">
                 <h1 className="text-lg font-semibold text-foreground">POD</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Bulk import AWBs from Excel, view tracking/POD fields, export Excel, or download prefilled blank POD PDFs
-                    (single or ZIP up to 50 AWBs). Signed PODs are still uploaded from each shipment record.
+                    Bulk import AWBs from Excel, view tracking/POD fields, or download prefilled blank POD PDFs (single or ZIP
+                    up to 50 AWBs). Signed PODs are still uploaded from each shipment record.
                 </p>
             </div>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -208,19 +167,6 @@ export default function PodPage() {
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Add">
                         <FilePlus className="h-4 w-4" />
                     </Button>
-                    <PermissionGuard permission="transaction.pod.create">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-primary"
-                            title="Download AWB Excel template"
-                            onClick={() => downloadMutation.mutate()}
-                            disabled={downloadMutation.isPending}
-                        >
-                            {downloadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                        </Button>
-                    </PermissionGuard>
                     <PermissionGuard permission="transaction.pod.create">
                         <Button
                             type="button"
@@ -278,19 +224,9 @@ export default function PodPage() {
                                 Download blank PODs (ZIP)
                             </Button>
                         </PermissionGuard>
-                        <PermissionGuard permission="transaction.pod.download">
-                            <Button variant="outline" size="sm" onClick={handleExport} disabled={exportMutation.isPending || podData.length === 0}>
-                                {exportMutation.isPending ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-                                )}
-                                Export to Excel
-                            </Button>
-                        </PermissionGuard>
                     </div>
                     <div className="overflow-x-auto rounded-md border border-border">
-                        <Table className="min-w-[1080px] border-0">
+                        <Table className="min-w-[980px] border-0">
                             <TableHeader>
                                 <TableRow className="border-0 bg-primary hover:bg-primary">
                                     <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">AWB No <SortArrows /></span></TableHead>
@@ -300,7 +236,6 @@ export default function PodPage() {
                                     <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Comment <SortArrows /></span></TableHead>
                                     <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Status <SortArrows /></span></TableHead>
                                     <TableHead className="text-center font-semibold text-primary-foreground">POD PDF</TableHead>
-                                    <TableHead className="text-center font-semibold text-primary-foreground">Excel</TableHead>
                                 </TableRow>
                                 <TableRow className="border-b border-border bg-card hover:bg-card">
                                     <TableHead className="p-2">
@@ -318,7 +253,6 @@ export default function PodPage() {
                                     <TableHead className="p-2"><Textarea placeholder="Remark" className="h-8 min-h-0 resize-none border-border bg-background py-2 text-xs" value={colFilters.remark} onChange={(e) => setColFilters((f) => ({ ...f, remark: e.target.value }))} /></TableHead>
                                     <TableHead className="p-2"><Button variant="ghost" size="sm" className="h-8 w-full justify-start px-2 text-xs text-muted-foreground hover:bg-transparent">-</Button></TableHead>
                                     <TableHead className="p-2"><Textarea placeholder="Status" className="h-8 min-h-0 resize-none border-border bg-background py-2 text-xs" value={colFilters.status} onChange={(e) => setColFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
-                                    <TableHead className="p-2" />
                                     <TableHead className="p-2" />
                                 </TableRow>
                             </TableHeader>
@@ -359,28 +293,11 @@ export default function PodPage() {
                                                 </PermissionGuard>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center justify-center">
-                                                <PermissionGuard permission="transaction.pod.download">
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-primary hover:bg-primary/10"
-                                                        title="Export this AWB to Excel"
-                                                        onClick={() => exportMutation.mutate([row.AWBNo])}
-                                                        disabled={exportMutation.isPending}
-                                                    >
-                                                        <Download className="h-4 w-4" />
-                                                    </Button>
-                                                </PermissionGuard>
-                                            </div>
-                                        </TableCell>
                                     </TableRow>
                                 ))}
                                 {total === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                             No tracking information found for the entered AWBs.
                                         </TableCell>
                                     </TableRow>

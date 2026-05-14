@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { shipmentService } from "@/services/transactions/shipment-service";
+import { ShipmentPodFormPreview } from "@/components/transactions/shipment-pod-form-preview";
 import type { Shipment } from "@/types/transactions/shipment";
 
 const fallbackText = (value?: string | number | null) => {
@@ -338,9 +339,10 @@ export default function ShipmentDetailsPage() {
 
         <FormSection title="Proof of delivery (POD)" contentClassName="space-y-3 text-sm">
           <p className="text-muted-foreground">
-            Download the prefilled POD form, collect the receiver signature, then upload the scan. Vendor POD files
-            can be uploaded the same way.
+            Preview matches the printed POD layout. Download the PDF for barcode and signatures, then upload the signed scan.
+            Vendor POD files can be uploaded the same way.
           </p>
+          <ShipmentPodFormPreview shipment={shipment} />
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"

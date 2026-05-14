@@ -301,6 +301,7 @@ export interface PieceItem extends z.infer<typeof pieceItemSchema> {
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string | null;
+  content?: { contentName?: string | null } | null;
 }
 
 export interface PieceRow extends z.infer<typeof pieceRowSchema> {
@@ -436,18 +437,45 @@ export interface Shipment {
     id: number;
     code?: string;
     name?: string;
+    gstNo?: string | null;
   } | null;
   shipper?: {
     id: number;
     shipperCode?: string;
     shipperName?: string;
     name?: string;
+    contactPerson?: string | null;
+    address1?: string | null;
+    address2?: string | null;
+    mobile?: string | null;
+    telephone?: string | null;
+    serviceablePincode?: {
+      pinCode?: string | null;
+      cityName?: string | null;
+      areaName?: string | null;
+      state?: { stateName?: string | null } | null;
+    } | null;
+    stateMaster?: { stateName?: string | null } | null;
+    country?: { name?: string | null } | null;
   } | null;
   consignee?: {
     id: number;
     code?: string;
     name?: string;
     consigneeName?: string;
+    contactPerson?: string | null;
+    address1?: string | null;
+    address2?: string | null;
+    mobile?: string | null;
+    telephone?: string | null;
+    serviceablePincode?: {
+      pinCode?: string | null;
+      cityName?: string | null;
+      areaName?: string | null;
+      state?: { stateName?: string | null } | null;
+    } | null;
+    stateMaster?: { stateName?: string | null } | null;
+    country?: { name?: string | null } | null;
   } | null;
   vendor?: {
     id: number;

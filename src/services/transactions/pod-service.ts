@@ -36,14 +36,6 @@ class PodService {
         return response.json();
     }
 
-    async downloadTemplate(): Promise<Blob> {
-        const response = await apiFetch(`${this.baseUrl}/example`, { headers: getAuthHeaders() });
-        if (!response.ok) {
-            throw new Error('Failed to download POD template');
-        }
-        return response.blob();
-    }
-
     async uploadExcel(file: File): Promise<PodUploadResponse> {
         const formData = new FormData();
         formData.append('file', file);
@@ -95,16 +87,6 @@ class PodService {
         };
     }
 
-    async exportExcel(awbNos: string[]): Promise<Blob> {
-        const awbParams = awbNos.join(',');
-        const response = await apiFetch(`${this.baseUrl}/export?awbNos=${awbParams}`, {
-            headers: getAuthHeaders(),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to export POD Excel file');
-        }
-        return response.blob();
-    }
 }
 
 export const podService = new PodService();
