@@ -104,12 +104,13 @@ function FormLabel({
   )
 }
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
+function FormControl({ className, ...props }: React.ComponentProps<typeof Slot.Root>) {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
 
   return (
     <Slot.Root
       data-slot="form-control"
+      className={cn("min-w-0", className)}
       id={formItemId}
       aria-describedby={
         !error

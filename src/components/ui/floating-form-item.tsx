@@ -12,7 +12,7 @@ import {
 
 /** Inner field: value sits below the top border; label is on the border (see FloatingFieldSurface). */
 export const FLOATING_INNER_CONTROL = cn(
-  "h-auto min-h-[1.75rem] w-full border-0 bg-transparent px-0 py-0.5 text-sm shadow-none outline-none",
+  "h-auto min-h-[1.75rem] w-full min-w-0 border-0 bg-transparent px-0 py-0.5 text-sm shadow-none outline-none",
   "focus-visible:ring-0 focus-visible:ring-offset-0 rounded-sm",
   "dark:bg-transparent",
   "file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium"
@@ -35,7 +35,7 @@ export const FLOATING_INNER_TEXTAREA = cn(
 
 /** Outlined "notch": label straddles the top border (gap in border via label background). */
 const outlinedSurfaceClass = cn(
-  "relative rounded-md border bg-transparent px-2.5 pb-1.5 pt-2.5 shadow-xs transition-[color,box-shadow]",
+  "relative min-w-0 rounded-md border bg-transparent px-2.5 pb-1.5 pt-2.5 shadow-xs transition-[color,box-shadow]",
   "focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50"
 )
 
@@ -137,7 +137,7 @@ export function OutlinedFormSection({
       >
         {label}
       </span>
-      <div className="relative z-0 space-y-3 pt-0.5">{children}</div>
+      <div className="relative z-0 min-w-0 space-y-3 pt-0.5">{children}</div>
     </section>
   )
 }

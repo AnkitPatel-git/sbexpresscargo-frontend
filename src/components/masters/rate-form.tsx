@@ -660,7 +660,7 @@ export function RateForm({ initialData }: RateFormProps) {
           </TabsList>
 
           <TabsContent value="master" className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 [&>*]:min-w-0">
               <FormField
                 control={form.control}
                 name="fromDate"
@@ -695,7 +695,7 @@ export function RateForm({ initialData }: RateFormProps) {
                             <SelectValue placeholder="Select vendor" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="max-h-72" onScroll={onVendorSelectScroll}>
+                        <SelectContent onScroll={onVendorSelectScroll}>
                           {vendorOptions.map((vendor) => (
                             <SelectItem key={vendor.id} value={String(vendor.id)}>
                               {vendor.vendorName || vendor.vendorCode || `Vendor ${vendor.id}`}
@@ -721,7 +721,7 @@ export function RateForm({ initialData }: RateFormProps) {
                             <SelectValue placeholder="Select customer" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="max-h-72" onScroll={onCustomerSelectScroll}>
+                        <SelectContent onScroll={onCustomerSelectScroll}>
                           {customerOptions.map((customer) => (
                             <SelectItem key={customer.id} value={String(customer.id)}>
                               {customer.name || customer.code || `Customer ${customer.id}`}
@@ -747,10 +747,7 @@ export function RateForm({ initialData }: RateFormProps) {
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent
-                        className="max-h-72"
-                        onScroll={onProductSelectScroll}
-                      >
+                      <SelectContent onScroll={onProductSelectScroll}>
                         {productOptions.map((product) => (
                           <SelectItem key={product.id} value={String(product.id)}>
                             {product.productName || product.productCode || `Product ${product.id}`}
@@ -1257,7 +1254,7 @@ function RouteSlabsEditor({
 
       <div
         className={cn(
-          "grid grid-cols-1 gap-4",
+          "grid min-w-0 grid-cols-1 gap-4 [&>*]:min-w-0",
           showZones && showKmBands && "md:grid-cols-2 lg:grid-cols-4",
           showZones && !showKmBands && "md:grid-cols-2",
           !showZones && showKmBands && "md:grid-cols-2",
@@ -1731,7 +1728,7 @@ function RateChargesEditor({
           <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
             <SelectValue placeholder="Charge master" />
           </SelectTrigger>
-          <SelectContent className="max-h-72" onScroll={onRateChargeSelectScroll}>
+          <SelectContent onScroll={onRateChargeSelectScroll}>
             <SelectItem value="__none__">— None (manual name) —</SelectItem>
             {chargesForSelect.map((ch) => (
               <SelectItem key={ch.id} value={String(ch.id)}>
@@ -2264,7 +2261,7 @@ function RateConditionsEditor({
             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
               <SelectValue placeholder="Linked charge (master)" />
             </SelectTrigger>
-            <SelectContent className="max-h-72" onScroll={onConditionChargeSelectScroll}>
+            <SelectContent onScroll={onConditionChargeSelectScroll}>
               <SelectItem value="__none__">— Select charge —</SelectItem>
               {conditionChargeOptionsSorted.map((ch) => (
                 <SelectItem key={ch.id} value={String(ch.id)}>

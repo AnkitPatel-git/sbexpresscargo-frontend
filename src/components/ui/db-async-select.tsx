@@ -3,12 +3,13 @@
 /**
  * DB-backed single select — rules:
  * 1. Search is server-side (debounced before querying).
- * 2. Page size is always {@link DB_ASYNC_SELECT_PAGE_SIZE}; load more by scrolling the list.
+ * 2. Page size is always {@link DB_ASYNC_SELECT_PAGE_SIZE}; load more by scrolling the **option list**
+ *    (search stays fixed), or automatically when the first page is shorter than the panel.
  *
  * In `fetchPage`, call your API with `{ page, limit: DB_ASYNC_SELECT_PAGE_SIZE, search }`.
  */
 
-import { useMemo, useState, type Ref } from "react"
+import { useEffect, useMemo, useRef, useState, type Ref } from "react"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -22,6 +23,7 @@ import { useDebounce } from "@/hooks/use-debounce"
 import {
   DB_ASYNC_SELECT_PAGE_SIZE,
   useInfiniteSearchEntityList,
+  useIntersectLoadMoreInScrollRoot,
   useSelectContentInfiniteScroll,
 } from "@/hooks/use-infinite-entity-list"
 
@@ -82,6 +84,9 @@ export function DbAsyncSelect<T extends { id: number }>({
 }: DbAsyncSelectProps<T>) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const selectScrollRootRef = useRef<HTMLDivElement | null>(null)
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null)
   const debouncedSearch = useDebounce(search, debounceMs)
   const trimmedSearch = debouncedSearch.trim()
   const selectedIdForExtras =
@@ -112,6 +117,8 @@ export function DbAsyncSelect<T extends { id: number }>({
     enabled: open,
   })
 
+  const listRows = visibleItem ? rows.filter(visibleItem) : rows
+
   const onScroll = useSelectContentInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
@@ -120,64 +127,108 @@ export function DbAsyncSelect<T extends { id: number }>({
     },
   })
 
-  const listRows = visibleItem ? rows.filter(visibleItem) : rows
+  useIntersectLoadMoreInScrollRoot({
+    enabled: open,
+    scrollRootRef: selectScrollRootRef,
+    sentinelRef: loadMoreSentinelRef,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage: () => {
+      void fetchNextPage()
+    },
+    listLength: listRows.length,
+  })
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    const id = requestAnimationFrame(() => {
+      searchInputRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [open])
 
   return (
-    <Select
-      value={value}
-      onValueChange={onValueChange}
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next)
-        if (!next) {
-          setSearch("")
-        }
-      }}
-      disabled={disabled}
-    >
-      <SelectTrigger
-        ref={triggerRef}
-        id={id}
-        aria-invalid={ariaInvalid}
-        className={cn(triggerClassName)}
+    <div className="min-w-0 w-full max-w-full">
+      <Select
+        value={value}
+        onValueChange={onValueChange}
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next)
+          if (!next) {
+            setSearch("")
+          }
+        }}
         disabled={disabled}
       >
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent className={cn("max-h-72", contentClassName)} onScroll={onScroll}>
-        <div
-          className="sticky top-0 z-10 border-b border-border bg-popover p-2"
-          onPointerDown={(e) => e.preventDefault()}
+        <SelectTrigger
+          ref={triggerRef}
+          id={id}
+          aria-invalid={ariaInvalid}
+          className={cn(triggerClassName)}
+          disabled={disabled}
         >
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={searchPlaceholder}
-            className="h-8 bg-background"
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent
+          viewportClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+          className={cn(contentClassName)}
+        >
+          <div
+            className="shrink-0 border-b border-border bg-popover p-2"
+            onPointerDown={(e) => {
+              // Do not preventDefault when the click is on the input: bubbling would cancel
+              // focus and block typing after picking an item or refocusing the field.
+              if ((e.target as HTMLElement | null)?.closest("input")) {
+                return
+              }
+              e.preventDefault()
+            }}
             onKeyDown={(e) => e.stopPropagation()}
-          />
-        </div>
-        {clearOption ? (
-          <SelectItem value={clearOption.value} className="font-medium">
-            {clearOption.label}
-          </SelectItem>
-        ) : null}
-        {isInitialLoading ? (
-          <div className="px-2 py-2 text-center text-xs text-muted-foreground">Loading…</div>
-        ) : (
-          listRows.map((item) => (
-            <SelectItem key={item.id} value={String(item.id)}>
-              {getItemLabel(item)}
-            </SelectItem>
-          ))
-        )}
-        {!isInitialLoading && listRows.length === 0 && !clearOption ? (
-          <div className="px-2 py-2 text-center text-xs text-muted-foreground">No results</div>
-        ) : null}
-        {isFetchingNextPage ? (
-          <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
-        ) : null}
-      </SelectContent>
-    </Select>
+          >
+            <Input
+              ref={searchInputRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="h-8 bg-background"
+              onPointerDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div
+            ref={selectScrollRootRef}
+            className="min-h-0 flex-1 overflow-y-auto px-1 pb-1"
+            onScroll={onScroll}
+          >
+            {clearOption ? (
+              <SelectItem value={clearOption.value} className="font-medium">
+                {clearOption.label}
+              </SelectItem>
+            ) : null}
+            {isInitialLoading ? (
+              <div className="px-2 py-2 text-center text-xs text-muted-foreground">Loading…</div>
+            ) : (
+              listRows.map((item) => (
+                <SelectItem key={item.id} value={String(item.id)}>
+                  {getItemLabel(item)}
+                </SelectItem>
+              ))
+            )}
+            {!isInitialLoading && listRows.length === 0 && !clearOption ? (
+              <div className="px-2 py-2 text-center text-xs text-muted-foreground">No results</div>
+            ) : null}
+            {isFetchingNextPage ? (
+              <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+            ) : null}
+            {hasNextPage && !isInitialLoading ? (
+              <div ref={loadMoreSentinelRef} className="h-px w-full shrink-0" aria-hidden />
+            ) : null}
+          </div>
+        </SelectContent>
+      </Select>
+    </div>
   )
 }

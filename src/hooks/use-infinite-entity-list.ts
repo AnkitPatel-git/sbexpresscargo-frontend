@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type UIEvent } from "react";
+import { useCallback, useEffect, useMemo, type RefObject, type UIEvent } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -144,7 +144,10 @@ export function useInfiniteSearchEntityList<T extends { id: number }>(
 
 const SCROLL_END_THRESHOLD_PX = 40;
 
-/** Attach to `SelectContent` `onScroll` to load the next page when the user nears the bottom. */
+/**
+ * Handler for `SelectContent` `onScroll` (wired to the viewport / inner list). Near-bottom
+ * detection loads the next page when the user scrolls the option list.
+ */
 export function useSelectContentInfiniteScroll(options: {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
@@ -168,3 +171,58 @@ export { DEFAULT_PAGE_SIZE as INFINITE_LIST_PAGE_SIZE };
 
 /** Fixed page size for server-backed selects (`DbAsyncSelect`): use as API `limit` with search + scroll paging. */
 export const DB_ASYNC_SELECT_PAGE_SIZE = DEFAULT_PAGE_SIZE;
+
+/**
+ * When the first page fills fewer pixels than the dropdown max height, there is no scrollbar
+ * and `onScroll` never runs — use with a bottom sentinel and `SelectContent` ref as `root`.
+ */
+export function useIntersectLoadMoreInScrollRoot(options: {
+  enabled: boolean;
+  scrollRootRef: RefObject<Element | null>;
+  sentinelRef: RefObject<Element | null>;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => void;
+  /** Bumps the effect when list rows paint so the observer attaches after data load. */
+  listLength: number;
+}) {
+  const {
+    enabled,
+    scrollRootRef,
+    sentinelRef,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    listLength,
+  } = options;
+
+  useEffect(() => {
+    if (!enabled || !hasNextPage || isFetchingNextPage) {
+      return;
+    }
+    const root = scrollRootRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) {
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) {
+          return;
+        }
+        fetchNextPage();
+      },
+      { root, rootMargin: "80px", threshold: 0 },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, [
+    enabled,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    scrollRootRef,
+    sentinelRef,
+    listLength,
+  ]);
+}
