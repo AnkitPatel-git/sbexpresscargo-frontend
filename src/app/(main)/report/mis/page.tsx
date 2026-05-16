@@ -121,6 +121,7 @@ export default function MisReportPage() {
   const {
     isCustomerUser,
     defaultCustomerId,
+    effectiveCustomerIds,
     hasPermission,
     isLoading: authLoading,
   } = useAuth();
