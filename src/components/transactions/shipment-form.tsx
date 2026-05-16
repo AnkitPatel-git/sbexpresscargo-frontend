@@ -24,6 +24,7 @@ import {
 import * as XLSX from "xlsx"
 
 import { cn } from "@/lib/utils"
+import { optionLabelForSelect, PIECE_MEASURE_UNIT_OPTIONS } from "@/lib/select-closed-label"
 import {
     Form,
     FormControl,
@@ -100,6 +101,7 @@ import type { Consignee } from '@/types/masters/consignee'
 import type { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useAuth } from '@/context/auth-context'
+import { MASTER_READ, UTILITY_READ } from '@/lib/portal-permissions'
 
 interface ShipmentFormProps {
     initialData?: Shipment | null
@@ -667,7 +669,26 @@ function consigneeFromMaster(c: Consignee): NonNullable<ShipmentFormValues['cons
 export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const { isCustomerUser, defaultCustomerId, effectiveCustomerIds, isAllowedCustomer } = useAuth()
+    const {
+        isCustomerUser,
+        defaultCustomerId,
+        effectiveCustomerIds,
+        isAllowedCustomer,
+        hasPermission,
+        isLoading: authLoading,
+    } = useAuth()
+    const masterRead = {
+        customer: hasPermission(MASTER_READ.customer),
+        shipper: hasPermission(MASTER_READ.shipper),
+        consignee: hasPermission(MASTER_READ.consignee),
+        product: hasPermission(MASTER_READ.product),
+        vendor: hasPermission(MASTER_READ.vendor),
+        content: hasPermission(MASTER_READ.content),
+        serviceCenter: hasPermission(MASTER_READ.serviceCenter),
+        serviceMap: hasPermission(MASTER_READ.serviceMap),
+        pincode: hasPermission(UTILITY_READ.serviceablePincode),
+    }
+    const mastersReady = !authLoading
     const isEdit = !!initialData
     /** Ref avoids adding `isEdit` to effect deps (same hook must keep a constant-sized dep array across HMR). */
     const isEditRef = useRef(isEdit)
@@ -762,6 +783,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const { data: customersData } = useQuery({
         queryKey: ['customers-list', debouncedCustomerSearch],
         queryFn: () => customerService.getCustomers({ limit: 10, search: debouncedCustomerSearch || undefined }),
+        enabled: mastersReady && masterRead.customer && !isCustomerUser,
     })
     const { data: pinnedCustomerData } = useQuery({
         queryKey: ['shipment-pinned-customer', defaultCustomerId],
@@ -771,27 +793,35 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             const res = await customerService.getCustomerById(customerId)
             return res.data
         },
-        enabled: isCustomerUser && Number(defaultCustomerId) > 0,
+        enabled:
+            mastersReady &&
+            masterRead.customer &&
+            isCustomerUser &&
+            Number(defaultCustomerId) > 0,
     })
 
     const { data: shippersData } = useQuery({
         queryKey: ['shippers-list', debouncedShipperSearch],
         queryFn: () => shipperService.getShippers({ limit: 10, search: debouncedShipperSearch || undefined }),
+        enabled: mastersReady && masterRead.shipper,
     })
 
     const { data: consigneesData } = useQuery({
         queryKey: ['consignees-list', debouncedConsigneeSearch],
         queryFn: () => consigneeService.getConsignees({ limit: 10, search: debouncedConsigneeSearch || undefined }),
+        enabled: mastersReady && masterRead.consignee,
     })
 
     const { data: productsData } = useQuery({
         queryKey: ['products-list', debouncedProductSearch],
         queryFn: () => productService.getProducts({ limit: 10, search: debouncedProductSearch || undefined }),
+        enabled: mastersReady && masterRead.product,
     })
 
     const { data: vendorsData } = useQuery({
         queryKey: ['vendors-list', debouncedVendorSearch],
         queryFn: () => vendorService.getVendors({ limit: 10, search: debouncedVendorSearch || undefined }),
+        enabled: mastersReady && masterRead.vendor,
     })
 
     const contentsQuery = useQuery({
@@ -802,6 +832,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             sortBy: 'contentName',
             sortOrder: 'asc',
         }),
+        enabled: mastersReady && masterRead.content,
     })
 
     const { data: serviceCentersData } = useQuery({
@@ -813,18 +844,21 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             sortBy: 'code',
             sortOrder: 'asc',
         }),
+        enabled: mastersReady && masterRead.serviceCenter,
     })
 
     const { data: shipperPincodeOptionsData } = useQuery({
         queryKey: ['shipment-shipper-pincode-options', debouncedShipperPincodeSearch],
         queryFn: () => serviceablePincodeService.getServiceablePincodes({ limit: 10, page: 1, search: debouncedShipperPincodeSearch || undefined, sortBy: 'pinCode', sortOrder: 'asc' }),
         staleTime: 5 * 60 * 1000,
+        enabled: mastersReady && masterRead.pincode,
     })
 
     const { data: consigneePincodeOptionsData } = useQuery({
         queryKey: ['shipment-consignee-pincode-options', debouncedConsigneePincodeSearch],
         queryFn: () => serviceablePincodeService.getServiceablePincodes({ limit: 10, page: 1, search: debouncedConsigneePincodeSearch || undefined, sortBy: 'pinCode', sortOrder: 'asc' }),
         staleTime: 5 * 60 * 1000,
+        enabled: mastersReady && masterRead.pincode,
     })
 
     const shipperPincodeOptions = sanitizeArray(shipperPincodeOptionsData?.data)
@@ -924,6 +958,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 vendorId: vid > 0 ? vid : undefined,
             })
         },
+        enabled: mastersReady && masterRead.serviceMap,
     })
 
     const { fields: pieceFields, append: appendPiece, remove: removePiece } = useFieldArray({
@@ -1014,7 +1049,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const { data: customerVolumetricsData } = useQuery({
         queryKey: ['shipment-customer-volumetrics', watchedCustomerId],
         queryFn: () => customerService.getCustomerVolumetrics(normalizeMasterSelectId(watchedCustomerId)),
-        enabled: normalizeMasterSelectId(watchedCustomerId) > 0,
+        enabled:
+            mastersReady &&
+            masterRead.customer &&
+            normalizeMasterSelectId(watchedCustomerId) > 0,
     })
 
     const customerVolumetricOptions = sanitizeArray(customerVolumetricsData?.data)
@@ -1052,7 +1090,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             const res = await customerService.getCustomerById(customerIdNum)
             return res.data
         },
-        enabled: customerIdNum > 0,
+        enabled: mastersReady && masterRead.customer && customerIdNum > 0,
     })
 
     const shipperComboboxOptions = useMemo(() => {
@@ -1296,14 +1334,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const { data: shipperPincodeData } = useQuery({
         queryKey: ['shipment-shipper-pincode', debouncedShipperPinCode],
         queryFn: () => serviceablePincodeService.getServiceablePincodes({ pinCode: debouncedShipperPinCode, limit: 1, page: 1 }),
-        enabled: debouncedShipperPinCode.length >= 6,
+        enabled: mastersReady && masterRead.pincode && debouncedShipperPinCode.length >= 6,
         staleTime: 5 * 60 * 1000,
     })
 
     const { data: consigneePincodeData } = useQuery({
         queryKey: ['shipment-consignee-pincode', debouncedConsigneePinCode],
         queryFn: () => serviceablePincodeService.getServiceablePincodes({ pinCode: debouncedConsigneePinCode, limit: 1, page: 1 }),
-        enabled: debouncedConsigneePinCode.length >= 6,
+        enabled: mastersReady && masterRead.pincode && debouncedConsigneePinCode.length >= 6,
         staleTime: 5 * 60 * 1000,
     })
 
@@ -2920,7 +2958,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                                                     <Select value={itemField.value || ""} onValueChange={itemField.onChange}>
                                                                                         <FormControl>
                                                                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                                                                <SelectValue placeholder="Unit" />
+                                                                                                <SelectValue placeholder="Unit">
+                                                                                                    {optionLabelForSelect(itemField.value, PIECE_MEASURE_UNIT_OPTIONS)}
+                                                                                                </SelectValue>
                                                                                             </SelectTrigger>
                                                                                         </FormControl>
                                                                                         <SelectContent>

@@ -19,13 +19,6 @@ import {
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { stateService } from "@/services/masters/state-service"
 import { State, StateFormData } from "@/types/masters/state"

@@ -29,6 +29,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
+import { optionLabelForSelect, SHIPPER_FIRM_TYPE_OPTIONS } from "@/lib/select-closed-label"
 
 import { shipperService } from "@/services/masters/shipper-service"
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema"
@@ -173,10 +174,12 @@ export function ShipperForm({ initialData }: ShipperFormProps) {
                                 name="firmType"
                                 render={({ field }) => (
                                     <FloatingFormItem label="Firm Type">
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <Select key={`firmType-${field.value}`} onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                    <SelectValue placeholder="Select type" />
+                                                    <SelectValue placeholder="Select type">
+                                                        {optionLabelForSelect(field.value, SHIPPER_FIRM_TYPE_OPTIONS)}
+                                                    </SelectValue>
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>

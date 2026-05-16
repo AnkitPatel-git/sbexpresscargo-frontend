@@ -117,8 +117,6 @@ const headerNavItems = [
   { href: "/utilities/users/user-setup", label: "User Setup" },
   { href: "/utilities/users/access-rights", label: "Access Rights" },
   { href: "/utilities/users/logged-in-users", label: "LoggedIn Users" },
-  { href: "/utilities/permissions", label: "Permissions" },
-  { href: "/utilities/roles", label: "Roles" },
 ];
 
 const MASTER_GROUP_ITEMS = {
@@ -1385,28 +1383,6 @@ const SidebarContent = ({
                 </Link>
               </div>
             )}
-            <PermissionGuard permission="settings.permissions.read">
-              <Link
-                href="/utilities/permissions"
-                className={utilityMenuItemClasses(
-                  isActive("/utilities/permissions"),
-                )}
-                onClick={onItemClick}
-              >
-                Permissions
-              </Link>
-            </PermissionGuard>
-            <PermissionGuard permission="settings.permissions.read">
-              <Link
-                href="/utilities/roles"
-                className={utilityMenuItemClasses(
-                  isActive("/utilities/roles"),
-                )}
-                onClick={onItemClick}
-              >
-                Roles
-              </Link>
-            </PermissionGuard>
           </div>
         )}
 
@@ -1463,28 +1439,6 @@ const SidebarContent = ({
                     </Link>
                   </div>
                 )}
-                <PermissionGuard permission="settings.permissions.read">
-                  <Link
-                    href="/utilities/permissions"
-                    className={utilityMenuItemClasses(
-                      isActive("/utilities/permissions"),
-                    )}
-                    onClick={onItemClick}
-                  >
-                    Permissions
-                  </Link>
-                </PermissionGuard>
-                <PermissionGuard permission="settings.permissions.read">
-                  <Link
-                    href="/utilities/roles"
-                    className={utilityMenuItemClasses(
-                      isActive("/utilities/roles"),
-                    )}
-                    onClick={onItemClick}
-                  >
-                    Roles
-                  </Link>
-                </PermissionGuard>
               </div>
             </div>
           </div>

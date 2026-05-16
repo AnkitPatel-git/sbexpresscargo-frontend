@@ -15,6 +15,7 @@ import { IntegerInput } from "@/components/ui/integer-input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { chargeService } from "@/services/masters/charge-service";
 import { stateService } from "@/services/masters/state-service";
 import { serviceablePincodeService } from "@/services/utilities/serviceable-pincode-service";
@@ -315,9 +316,11 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
             render={({ field }) => (
               <FloatingFormItem required label="State scope">
                 <FormControl>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select key={`stateApp-${field.value}`} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className={FLOATING_INNER_CONTROL}>
-                      <SelectValue placeholder="State application" />
+                      <SelectValue placeholder="State application">
+                        {optionLabelForSelect(field.value, STATE_SCOPE_OPTIONS)}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {STATE_SCOPE_OPTIONS.map((opt) => (
@@ -337,9 +340,11 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
             render={({ field }) => (
               <FloatingFormItem required label="Pincode scope">
                 <FormControl>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select key={`pinApp-${field.value}`} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className={FLOATING_INNER_CONTROL}>
-                      <SelectValue placeholder="Pincode application" />
+                      <SelectValue placeholder="Pincode application">
+                        {optionLabelForSelect(field.value, PIN_SCOPE_OPTIONS)}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {PIN_SCOPE_OPTIONS.map((opt) => (

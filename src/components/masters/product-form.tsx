@@ -26,6 +26,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { optionLabelForSelect, PRODUCT_TYPE_OPTIONS, STATUS_ACTIVE_INACTIVE_OPTIONS } from "@/lib/select-closed-label"
 import { productService } from '@/services/masters/product-service'
 import {
     Product,
@@ -148,12 +149,15 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         render={({ field }) => (
                             <FloatingFormItem required label="Product Type">
                                 <Select
+                                    key={`productType-${field.value}`}
                                     onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select type" />
+                                            <SelectValue placeholder="Select type">
+                                                {optionLabelForSelect(field.value, PRODUCT_TYPE_OPTIONS)}
+                                            </SelectValue>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -174,12 +178,15 @@ export function ProductForm({ initialData }: ProductFormProps) {
                         render={({ field }) => (
                             <FloatingFormItem required label="Status">
                                 <Select
+                                    key={`status-${field.value}`}
                                     onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select status" />
+                                            <SelectValue placeholder="Select status">
+                                                {optionLabelForSelect(field.value, STATUS_ACTIVE_INACTIVE_OPTIONS)}
+                                            </SelectValue>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>

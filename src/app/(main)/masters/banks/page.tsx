@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { BANK_LIST_STATUS_FILTER_OPTIONS, optionLabelForSelect } from "@/lib/select-closed-label"
 import { useRouter } from "next/navigation"
 import { bankService } from "@/services/masters/bank-service"
 import { Bank } from "@/types/masters/bank"
@@ -174,9 +175,11 @@ export default function BanksPage() {
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <Input placeholder="Code" className="h-9 bg-background" value={draftFilters.code} onChange={(e) => setDraftFilters((prev) => ({ ...prev, code: e.target.value }))} />
                                 <Input placeholder="Bank Name" className="h-9 bg-background" value={draftFilters.name} onChange={(e) => setDraftFilters((prev) => ({ ...prev, name: e.target.value }))} />
-                                <Select value={draftFilters.status} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}>
+                                <Select key={`st-${draftFilters.status}`} value={draftFilters.status} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}>
                                     <SelectTrigger className="h-9 w-full bg-background">
-                                        <SelectValue placeholder="Status" />
+                                        <SelectValue placeholder="Status">
+                                            {optionLabelForSelect(draftFilters.status, BANK_LIST_STATUS_FILTER_OPTIONS)}
+                                        </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All</SelectItem>

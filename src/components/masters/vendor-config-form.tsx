@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
 import { Switch } from "@/components/ui/switch"
+import { optionLabelById, optionLabelForSelect, VENDOR_ENVIRONMENT_OPTIONS } from "@/lib/select-closed-label"
 
 import { vendorConfigService } from "@/services/masters/vendor-config-service"
 import { vendorService } from "@/services/masters/vendor-service"
@@ -159,10 +160,20 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             name="vendorId"
                             render={({ field }) => (
                                 <FloatingFormItem required label="Vendor*">
-                                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
+                                    <Select
+                                        key={`vendor-${field.value}`}
+                                        onValueChange={(value) => field.onChange(Number(value))}
+                                        value={field.value ? String(field.value) : ""}
+                                    >
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select vendor" />
+                                                <SelectValue placeholder="Select vendor">
+                                                    {optionLabelById(
+                                                        field.value ? String(field.value) : "",
+                                                        vendorsResponse?.data,
+                                                        (v) => v.vendorName,
+                                                    )}
+                                                </SelectValue>
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
@@ -182,10 +193,23 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             name="serviceMapId"
                             render={({ field }) => (
                                 <FloatingFormItem required label="Service Map*">
-                                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value ? String(field.value) : ""}>
+                                    <Select
+                                        key={`svcmap-${field.value}`}
+                                        onValueChange={(value) => field.onChange(Number(value))}
+                                        value={field.value ? String(field.value) : ""}
+                                    >
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select service map" />
+                                                <SelectValue placeholder="Select service map">
+                                                    {optionLabelById(
+                                                        field.value ? String(field.value) : "",
+                                                        serviceMapsResponse?.data,
+                                                        (sm) =>
+                                                            sm.vendor?.vendorName
+                                                                ? `${sm.vendor.vendorName} - ${sm.serviceType}`
+                                                                : `${sm.serviceType} - ${sm.id}`,
+                                                    )}
+                                                </SelectValue>
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
@@ -208,10 +232,12 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                                 name="environment"
                                 render={({ field }) => (
                                     <FloatingFormItem required label="Environment*">
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <Select key={`env-${field.value}`} onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                    <SelectValue placeholder="Select environment" />
+                                                    <SelectValue placeholder="Select environment">
+                                                        {optionLabelForSelect(field.value, VENDOR_ENVIRONMENT_OPTIONS)}
+                                                    </SelectValue>
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -242,12 +268,21 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             render={({ field }) => (
                                 <FloatingFormItem label="Customer">
                                     <Select
+                                        key={`cust-${field.value ?? "none"}`}
                                         onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                                         value={field.value ? String(field.value) : "none"}
                                     >
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select customer" />
+                                                <SelectValue placeholder="Select customer">
+                                                    {field.value
+                                                        ? optionLabelById(
+                                                              String(field.value),
+                                                              customersResponse?.data,
+                                                              (c) => c.name,
+                                                          )
+                                                        : "None"}
+                                                </SelectValue>
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>

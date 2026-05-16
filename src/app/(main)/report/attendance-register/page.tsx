@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { optionLabelById } from "@/lib/select-closed-label";
 import {
   Table,
   TableBody,
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { customerService } from "@/services/masters/customer-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
+import { AttendanceUserMonthLogDialog } from "@/components/reports/attendance-user-month-log-dialog";
 import { attendanceRegisterService } from "@/services/reports/attendance-register-service";
 import { useAuth } from "@/context/auth-context";
 
@@ -45,6 +47,10 @@ function AttendanceRegisterPanel() {
     isCustomerUser && Number(defaultCustomerId) > 0 ? String(defaultCustomerId) : "all",
   );
   const [downloading, setDownloading] = useState(false);
+  const [logDialog, setLogDialog] = useState<{
+    userId: number;
+    userName: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!isCustomerUser) return;
@@ -138,7 +144,7 @@ function AttendanceRegisterPanel() {
           <Label>Year</Label>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>{year}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {yearOptions.map((y) => (
@@ -153,7 +159,9 @@ function AttendanceRegisterPanel() {
           <Label>Month</Label>
           <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>
+                {new Date(2000, month - 1).toLocaleString("en-IN", { month: "long" })}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -168,7 +176,11 @@ function AttendanceRegisterPanel() {
           <Label>Service center (optional)</Label>
           <Select value={serviceCenterId} onValueChange={setServiceCenterId}>
             <SelectTrigger>
-              <SelectValue placeholder="All" />
+              <SelectValue placeholder="All">
+                {serviceCenterId === "all"
+                  ? "All"
+                  : optionLabelById(serviceCenterId, serviceCenters?.data, (sc) => `${sc.name} (${sc.code})`)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
@@ -184,7 +196,11 @@ function AttendanceRegisterPanel() {
           <Label>Customer / company (optional)</Label>
           <Select value={customerId} onValueChange={setCustomerId} disabled={isCustomerUser}>
             <SelectTrigger>
-              <SelectValue placeholder="All" />
+              <SelectValue placeholder="All">
+                {customerId === "all"
+                  ? "All"
+                  : optionLabelById(customerId, customers?.data, (c) => `${c.name} (${c.code})`)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {!isCustomerUser && <SelectItem value="all">All</SelectItem>}
@@ -294,8 +310,17 @@ function AttendanceRegisterPanel() {
                     <TableCell className="sticky left-0 z-10 bg-card font-mono text-xs shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       {row.serial}
                     </TableCell>
-                    <TableCell className="sticky left-[3rem] z-10 max-w-[10rem] truncate bg-card text-xs shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
-                      {row.name}
+                    <TableCell className="sticky left-[3rem] z-10 max-w-[10rem] bg-card text-xs shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <button
+                        type="button"
+                        className="max-w-full truncate text-left font-medium text-primary underline-offset-2 hover:underline"
+                        title={`View ${row.name} attendance log`}
+                        onClick={() =>
+                          setLogDialog({ userId: row.userId, userName: row.name })
+                        }
+                      >
+                        {row.name}
+                      </button>
                     </TableCell>
                     <TableCell className="sticky left-[12rem] z-10 max-w-[8rem] truncate bg-card text-xs text-muted-foreground shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
                       {row.location || "—"}
@@ -339,6 +364,17 @@ function AttendanceRegisterPanel() {
           </>
         ) : null}
       </div>
+
+      <AttendanceUserMonthLogDialog
+        open={logDialog != null}
+        onOpenChange={(open) => {
+          if (!open) setLogDialog(null);
+        }}
+        userId={logDialog?.userId ?? null}
+        userName={logDialog?.userName ?? ""}
+        year={year}
+        month={month}
+      />
     </div>
   );
 }
@@ -361,9 +397,10 @@ export default function AttendanceRegisterPage() {
           Attendance register
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          View the monthly matrix on this page, then download the same filtered report as Excel. One
-          row per active user (with a profile), day columns with codes from mobile check-in data, and
-          summary counts. <strong>P</strong> present, <strong>HD</strong> short shift (&lt; 4h
+          View the monthly matrix on this page, then download the same filtered report as Excel. Click
+          an employee name to open their punch log for the selected month (photos, times, and GPS).
+          One row per active user (with a profile), day columns with codes from mobile check-in data,
+          and summary counts. <strong>P</strong> present, <strong>HD</strong> short shift (&lt; 4h
           worked), <strong>A</strong> absent, <strong>WO</strong> weekend with no punch,{" "}
           <strong>L</strong> late flag, <strong>LEAVE</strong> / <strong>LEFT</strong> from remarks.
           Requires <span className="font-mono">mobile.attendance.admin</span>.

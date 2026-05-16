@@ -77,6 +77,12 @@ import {
     normalizePincodeInput,
     requiredPincodeField,
 } from '@/lib/pincode-field'
+import { optionLabelForSelect } from '@/lib/select-closed-label'
+
+function coerceCustomerEnum<T extends string>(allowed: readonly T[], fallback: T, raw: unknown): T {
+    const normalized = String(raw ?? '').trim().toUpperCase()
+    return ((allowed as readonly string[]).includes(normalized) ? normalized : fallback) as T
+}
 
 const optionalTrim = z.string().optional().or(z.literal(""))
 
@@ -199,14 +205,40 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
     }, [initialData?.bank, initialData?.bankId])
 
     const extraServiceCenters = useMemo((): ServiceCenter[] | undefined => {
+        const scId = initialData?.serviceCenterId ?? initialData?.serviceCenter?.id
+        if (!scId || scId <= 0) return undefined
         const sc = initialData?.serviceCenter
-        if (!sc || !initialData?.serviceCenterId) return undefined
+        if (sc) {
+            return [
+                {
+                    id: sc.id,
+                    code: sc.code,
+                    name: sc.name,
+                    subName: sc.subName ?? null,
+                    address1: null,
+                    address2: null,
+                    telephone: null,
+                    email: null,
+                    pinCodeId: null,
+                    countryId: null,
+                    stateId: null,
+                    localBranchId: null,
+                    version: 1,
+                    createdAt: "",
+                    updatedAt: "",
+                    createdById: null,
+                    updatedById: null,
+                    deletedAt: null,
+                    deletedById: null,
+                },
+            ]
+        }
         return [
             {
-                id: sc.id,
-                code: sc.code,
-                name: sc.name,
-                subName: sc.subName ?? null,
+                id: scId,
+                code: `#${scId}`,
+                name: "Selected service center",
+                subName: null,
                 address1: null,
                 address2: null,
                 telephone: null,
@@ -227,15 +259,33 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
     }, [initialData?.serviceCenter, initialData?.serviceCenterId])
 
     const extraCustomerGroups = useMemo((): CustomerGroup[] | undefined => {
+        const groupId = initialData?.customerGroupId ?? initialData?.customerGroup?.id
+        if (!groupId || groupId <= 0) return undefined
         const g = initialData?.customerGroup
-        if (!g || !initialData?.customerGroupId) return undefined
+        if (g) {
+            return [
+                {
+                    id: g.id,
+                    code: g.code,
+                    name: g.name,
+                    version: 1,
+                    status: (g.status ?? "ACTIVE") as "ACTIVE" | "INACTIVE",
+                    createdAt: "",
+                    updatedAt: "",
+                    createdById: null,
+                    updatedById: null,
+                    deletedAt: null,
+                    deletedById: null,
+                },
+            ]
+        }
         return [
             {
-                id: g.id,
-                code: g.code,
-                name: g.name,
+                id: groupId,
+                code: `#${groupId}`,
+                name: "Selected customer group",
                 version: 1,
-                status: (g.status ?? "ACTIVE") as "ACTIVE" | "INACTIVE",
+                status: "ACTIVE",
                 createdAt: "",
                 updatedAt: "",
                 createdById: null,
@@ -292,11 +342,15 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             email: initialData.email || '',
             mobile: initialData.mobile || '',
             serviceStartDate: initialData.serviceStartDate ? initialData.serviceStartDate.split('T')[0] : '',
-            status: initialData.status || 'ACTIVE',
+            status: coerceCustomerEnum(['ACTIVE', 'INACTIVE'] as const, 'ACTIVE', initialData.status),
             origin: initialData.origin || '',
             gstNo: initialData.gstNo || '',
-            customerType: (initialData.customerType as 'INDIVIDUAL' | 'CORPORATE') || 'INDIVIDUAL',
-            registerType: (initialData.registerType as 'REGISTERED' | 'UNREGISTERED') || 'REGISTERED',
+            customerType: coerceCustomerEnum(['INDIVIDUAL', 'CORPORATE'] as const, 'INDIVIDUAL', initialData.customerType),
+            registerType: coerceCustomerEnum(
+                ['REGISTERED', 'UNREGISTERED'] as const,
+                'REGISTERED',
+                initialData.registerType,
+            ),
             createDefaultShipper: false,
         })
     }, [initialData, form])
@@ -485,6 +539,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     render={({ field }) => (
                                         <FloatingFormItem label="Group">
                                             <CustomerGroupFloatingSelect
+                                                key={`customer-group-${String(customerId ?? "new")}-${field.value}`}
                                                 triggerRef={field.ref}
                                                 value={field.value}
                                                 onChange={field.onChange}
@@ -544,6 +599,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     render={({ field }) => (
                                         <FloatingFormItem required label="Service Center ID">
                                             <ServiceCenterFloatingAsyncSelect
+                                                key={`service-center-${String(customerId ?? "new")}-${field.value}`}
                                                 triggerRef={field.ref}
                                                 value={field.value}
                                                 onChange={field.onChange}
@@ -617,10 +673,21 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     name="customerType"
                                     render={({ field }) => (
                                         <FloatingFormItem required label="Customer Type">
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                                            <Select
+                                                key={`customerType-${field.value}`}
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                            >
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                        <SelectValue placeholder="Select type" />
+                                                        <SelectValue placeholder="Select type">
+                                                            {(() => {
+                                                                const t = String(field.value ?? '').toUpperCase()
+                                                                if (t === 'INDIVIDUAL') return 'Individual'
+                                                                if (t === 'CORPORATE') return 'Corporate'
+                                                                return undefined
+                                                            })()}
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
@@ -636,10 +703,21 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     name="registerType"
                                     render={({ field }) => (
                                         <FloatingFormItem required label="Register Type">
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                                            <Select
+                                                key={`registerType-${field.value}`}
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                            >
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                        <SelectValue placeholder="Select type" />
+                                                        <SelectValue placeholder="Select type">
+                                                            {(() => {
+                                                                const t = String(field.value ?? '').toUpperCase()
+                                                                if (t === 'REGISTERED') return 'Registered'
+                                                                if (t === 'UNREGISTERED') return 'Unregistered'
+                                                                return undefined
+                                                            })()}
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
@@ -655,10 +733,21 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     name="status"
                                     render={({ field }) => (
                                         <FloatingFormItem required label="Status">
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                                            <Select
+                                                key={`status-${field.value}`}
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                            >
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                        <SelectValue placeholder="Select status" />
+                                                        <SelectValue placeholder="Select status">
+                                                            {(() => {
+                                                                const t = String(field.value ?? '').toUpperCase()
+                                                                if (t === 'ACTIVE') return 'Active'
+                                                                if (t === 'INACTIVE') return 'Inactive'
+                                                                return undefined
+                                                            })()}
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
@@ -672,22 +761,35 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                 <FormField
                                     control={form.control}
                                     name="createDefaultShipper"
-                                    render={({ field }) => (
+                                    render={({ field }) => {
+                                        const hasDefaultShipper = !!(isEdit && initialData?.defaultShipper)
+                                        return (
                                         <div className="space-y-1">
                                             <FloatingFormItem label="Default shipper">
                                                 <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
                                                     <FormControl>
-                                                        <Checkbox checked={field.value ?? false} onCheckedChange={(value) => field.onChange(Boolean(value))} />
+                                                        <Checkbox
+                                                            checked={hasDefaultShipper ? true : (field.value ?? false)}
+                                                            disabled={hasDefaultShipper}
+                                                            onCheckedChange={
+                                                                hasDefaultShipper
+                                                                    ? undefined
+                                                                    : (value) => field.onChange(Boolean(value))
+                                                            }
+                                                        />
                                                     </FormControl>
                                                 </div>
                                             </FloatingFormItem>
                                             <p className="px-1 text-xs text-muted-foreground">
-                                                {isEdit && initialData?.defaultShipper
-                                                    ? `Linked: ${initialData.defaultShipper.shipperCode} — ${initialData.defaultShipper.shipperName}. Check to create or refresh the default shipper from this address.`
-                                                    : "When checked, creates a shipper from this customer's address and links it as the default."}
+                                                {hasDefaultShipper && initialData?.defaultShipper
+                                                    ? `Default shipper is linked: ${initialData.defaultShipper.shipperCode} — ${initialData.defaultShipper.shipperName}.`
+                                                    : isEdit
+                                                      ? "Check to create or refresh the default shipper from this address."
+                                                      : "When checked, creates a shipper from this customer's address and links it as the default."}
                                             </p>
                                         </div>
-                                    )}
+                                        )
+                                    }}
                                 />
                             </FormSection>
                         </div>
@@ -1390,7 +1492,9 @@ function SimpleSelect({
             <div className="text-sm font-medium">{label}</div>
             <Select onValueChange={onValueChange} value={value}>
                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                    <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                    <SelectValue placeholder={`Select ${label.toLowerCase()}`}>
+                        {optionLabelForSelect(value, options)}
+                    </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                     {options.map((option) => (

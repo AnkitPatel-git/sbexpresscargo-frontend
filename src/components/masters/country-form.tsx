@@ -27,6 +27,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { optionLabelForSelect, WEIGHT_UNIT_KGS_LBS_OPTIONS } from "@/lib/select-closed-label"
 import { countryService } from '@/services/masters/country-service'
 import { Country, CountryFormData } from '@/types/masters/country'
 
@@ -138,10 +139,12 @@ export function CountryForm({ initialData }: CountryFormProps) {
                         name="weightUnit"
                         render={({ field }) => (
                             <FloatingFormItem label={<>Weight Unit <span className="text-red-500">*</span></>}>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select key={`weight-${field.value}`} onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select unit" />
+                                            <SelectValue placeholder="Select unit">
+                                                {optionLabelForSelect(field.value, WEIGHT_UNIT_KGS_LBS_OPTIONS)}
+                                            </SelectValue>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>

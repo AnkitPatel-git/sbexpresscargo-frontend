@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { optionLabelById } from "@/lib/select-closed-label";
 import { OutlinedFieldShell, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
@@ -151,9 +152,11 @@ export default function UserSetupPage() {
                     </OutlinedFieldShell>
                   )}
                   <OutlinedFieldShell label="Role">
-                    <Select value={form.roleId} onValueChange={(value) => setForm((p) => ({ ...p, roleId: value }))}>
+                    <Select key={`role-${form.roleId}`} value={form.roleId} onValueChange={(value) => setForm((p) => ({ ...p, roleId: value }))}>
                       <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                        <SelectValue placeholder="Select role" />
+                        <SelectValue placeholder="Select role">
+                          {optionLabelById(form.roleId, roles, (r: { id: number; name: string }) => r.name)}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {roles.map((r: any) => (

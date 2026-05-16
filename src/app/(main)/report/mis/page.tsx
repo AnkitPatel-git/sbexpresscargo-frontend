@@ -37,6 +37,7 @@ import { zoneService } from "@/services/masters/zone-service";
 import { misReportService } from "@/services/reports/mis-report-service";
 import { MIS_REPORT_COLUMNS, type MisReportColumn } from "@/types/reports/mis-report";
 import { useAuth } from "@/context/auth-context";
+import { MASTER_READ } from "@/lib/portal-permissions";
 
 type MisReportFilters = {
   awbNo: string;
@@ -117,7 +118,17 @@ const STATUS_OPTIONS = [
 ];
 
 export default function MisReportPage() {
-  const { isCustomerUser, defaultCustomerId, effectiveCustomerIds } = useAuth();
+  const {
+    isCustomerUser,
+    defaultCustomerId,
+    hasPermission,
+    isLoading: authLoading,
+  } = useAuth();
+  const canReadCustomers = hasPermission(MASTER_READ.customer);
+  const canReadShippers = hasPermission(MASTER_READ.shipper);
+  const canReadZones = hasPermission(MASTER_READ.zone);
+  const canReadProducts = hasPermission(MASTER_READ.product);
+  const canReadServiceCenters = hasPermission(MASTER_READ.serviceCenter);
   const scopedCustomerId =
     isCustomerUser && Number.isInteger(Number(defaultCustomerId)) && Number(defaultCustomerId) > 0
       ? Number(defaultCustomerId)
@@ -145,23 +156,28 @@ export default function MisReportPage() {
   const { data: customerData } = useQuery({
     queryKey: ["mis-report-customer-options"],
     queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
+    enabled: !authLoading && canReadCustomers && !isCustomerUser,
   });
   const { data: shipperData } = useQuery({
     queryKey: ["mis-report-shipper-options"],
     queryFn: () => shipperService.getShippers({ page: 1, limit: 100, sortBy: "shipperName", sortOrder: "asc" }),
+    enabled: !authLoading && canReadShippers,
   });
   const { data: zoneData } = useQuery({
     queryKey: ["mis-report-zone-options"],
     queryFn: () => zoneService.getZones({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
+    enabled: !authLoading && canReadZones,
   });
   const { data: productData } = useQuery({
     queryKey: ["mis-report-product-options"],
     queryFn: () => productService.getProducts({ page: 1, limit: 100, sortBy: "productName", sortOrder: "asc" }),
+    enabled: !authLoading && canReadProducts,
   });
   const { data: serviceCenterData } = useQuery({
     queryKey: ["mis-report-service-center-options"],
     queryFn: () =>
       serviceCenterService.getServiceCenters({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
+    enabled: !authLoading && canReadServiceCenters && !isCustomerUser,
   });
 
   useEffect(() => {
@@ -400,7 +416,11 @@ export default function MisReportPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="Select status">
+                      {(draftFilters.currentStatus ?? "__ALL__") === "__ALL__"
+                        ? "All Status"
+                        : draftFilters.currentStatus}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__ALL__">All Status</SelectItem>
@@ -619,7 +639,7 @@ export default function MisReportPage() {
           }}
         >
           <SelectTrigger className="h-8 w-[90px]">
-            <SelectValue />
+            <SelectValue>{limit}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {[10, 20, 50, 100].map((size) => (

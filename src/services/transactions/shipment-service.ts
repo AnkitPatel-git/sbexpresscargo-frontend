@@ -305,6 +305,21 @@ export const shipmentService = {
     };
   },
 
+  async downloadUploadedPodProof(
+    shipmentId: number,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/pod-proof`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to download uploaded POD"));
+    }
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, `POD-proof-${shipmentId}`),
+    };
+  },
+
   async uploadPodProof(
     shipmentId: number,
     file: File,
@@ -340,6 +355,9 @@ export const shipmentService = {
       status: string;
       version: number;
       reason?: string;
+      location?: string;
+      subStatus?: string;
+      scannedAt?: string;
     },
   ): Promise<ApiEnvelope<unknown>> {
     return requestJson(

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
+import { optionLabelForSelect, STATUS_ACTIVE_INACTIVE_OPTIONS } from "@/lib/select-closed-label"
 import { customerGroupService } from "@/services/masters/customer-group-service"
 import type { CustomerGroup } from "@/types/masters/customer-group"
 
@@ -135,10 +136,12 @@ export function CustomerGroupForm({ initialData }: CustomerGroupFormProps) {
                         name="status"
                         render={({ field }) => (
                             <FloatingFormItem required label="Status" itemClassName="max-w-[200px]">
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select key={`status-${field.value}`} onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select status" />
+                                            <SelectValue placeholder="Select status">
+                                                {optionLabelForSelect(field.value, STATUS_ACTIVE_INACTIVE_OPTIONS)}
+                                            </SelectValue>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>

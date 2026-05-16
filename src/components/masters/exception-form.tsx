@@ -26,6 +26,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { optionLabelForSelect, EXCEPTION_TYPE_OPTIONS } from "@/lib/select-closed-label"
 import { exceptionService } from '@/services/masters/exception-service'
 import { ExceptionMaster } from '@/types/masters/exception'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
@@ -126,10 +127,12 @@ export function ExceptionForm({ initialData }: ExceptionFormProps) {
                         name="type"
                         render={({ field }) => (
                             <FloatingFormItem required label="Exception Type">
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select key={`type-${field.value}`} onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select type" />
+                                            <SelectValue placeholder="Select type">
+                                                {optionLabelForSelect(field.value, EXCEPTION_TYPE_OPTIONS)}
+                                            </SelectValue>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>

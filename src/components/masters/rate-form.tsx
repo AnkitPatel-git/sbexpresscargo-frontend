@@ -29,6 +29,12 @@ import { productService } from "@/services/masters/product-service";
 import { rateService } from "@/services/masters/rate-service";
 import { vendorService } from "@/services/masters/vendor-service";
 import { zoneService } from "@/services/masters/zone-service";
+import {
+  optionLabelById,
+  optionLabelForSelect,
+  PRICING_MODE_CONDITION_SLAB_OPTIONS,
+  PRICING_MODE_FLAT_PER_KG_OPTIONS,
+} from "@/lib/select-closed-label";
 import type {
   CreateRateMasterPayload,
   RateChargePayload,
@@ -119,6 +125,8 @@ const CALCULATION_BASE_OPTIONS = [
   "FREIGHT",
   "SHIPMENT_VALUE",
 ] as const;
+
+const CALCULATION_BASE_SELECT_OPTIONS = CALCULATION_BASE_OPTIONS.map((b) => ({ value: b, label: b }));
 
 const CONDITION_FIELD_OPTIONS = [
   "DIMENSION_LENGTH",
@@ -720,7 +728,11 @@ export function RateForm({ initialData }: RateFormProps) {
                       <Select key={field.value} onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                            <SelectValue placeholder="Select vendor" />
+                            <SelectValue placeholder="Select vendor">
+                              {optionLabelById(String(field.value), vendorOptions, (v) =>
+                                v.vendorName || v.vendorCode || `Vendor ${v.id}`,
+                              )}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent onScroll={onVendorSelectScroll}>
@@ -746,7 +758,11 @@ export function RateForm({ initialData }: RateFormProps) {
                       <Select key={field.value} onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                            <SelectValue placeholder="Select customer" />
+                            <SelectValue placeholder="Select customer">
+                              {optionLabelById(String(field.value), customerOptions, (c) =>
+                                c.name || c.code || `Customer ${c.id}`,
+                              )}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent onScroll={onCustomerSelectScroll}>
@@ -772,7 +788,11 @@ export function RateForm({ initialData }: RateFormProps) {
                     <Select key={field.value} onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                          <SelectValue placeholder="Select product" />
+                          <SelectValue placeholder="Select product">
+                            {optionLabelById(String(field.value), productOptions, (p) =>
+                              p.productName || p.productCode || `Product ${p.id}`,
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent onScroll={onProductSelectScroll}>
@@ -801,7 +821,12 @@ export function RateForm({ initialData }: RateFormProps) {
                     >
                       <FormControl>
                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                          <SelectValue placeholder="Select rate type" />
+                          <SelectValue placeholder="Select rate type">
+                            {optionLabelForSelect(
+                              field.value?.trim() ? field.value : RATE_TYPE_UNSET,
+                              RATE_TYPE_OPTIONS as unknown as readonly { value: string; label: string }[],
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -1375,7 +1400,9 @@ function RouteSlabsEditor({
                 onValueChange={(value) => updateWeightSlab(index, "pricingMode", value)}
               >
                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                  <SelectValue placeholder="Pricing" />
+                  <SelectValue placeholder="Pricing">
+                    {optionLabelForSelect(item.pricingMode ?? "FLAT", PRICING_MODE_FLAT_PER_KG_OPTIONS)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="FLAT">Flat</SelectItem>
@@ -1761,7 +1788,13 @@ function RateChargesEditor({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Select value={draft.chargeId || "__none__"} onValueChange={onChargeMasterChange}>
           <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="Charge master" />
+            <SelectValue placeholder="Charge master">
+              {draft.chargeId === "__none__" || !draft.chargeId
+                ? "— None (manual name) —"
+                : optionLabelById(draft.chargeId, chargesForSelect, (ch) =>
+                    ch.code ? `${ch.code} — ${ch.name}` : ch.name,
+                  )}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent onScroll={onRateChargeSelectScroll}>
             <SelectItem value="__none__">— None (manual name) —</SelectItem>
@@ -1778,7 +1811,11 @@ function RateChargesEditor({
         <Input placeholder="Name (fallback label)" className={FLOATING_INNER_CONTROL} value={draft.name} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} />
         <Select value={draft.calculationBase || "__pick__"} onValueChange={(v) => setDraft((c) => ({ ...c, calculationBase: v === "__pick__" ? "" : v }))}>
           <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-            <SelectValue placeholder="Calculation base" />
+            <SelectValue placeholder="Calculation base">
+              {draft.calculationBase === "" || draft.calculationBase === "__pick__"
+                ? "— Pick base —"
+                : optionLabelForSelect(draft.calculationBase, CALCULATION_BASE_SELECT_OPTIONS)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__pick__">— Pick base —</SelectItem>
@@ -2267,7 +2304,9 @@ function RateConditionsEditor({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Select value={draft.field || "__field__"} onValueChange={(v) => setDraft((c) => ({ ...c, field: v === "__field__" ? "" : v }))}>
             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-              <SelectValue placeholder="Condition field" />
+              <SelectValue placeholder="Condition field">
+                {draft.field === "" || draft.field === "__field__" ? "— Field —" : draft.field}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__field__">— Field —</SelectItem>
@@ -2280,7 +2319,12 @@ function RateConditionsEditor({
           </Select>
           <Select value={draft.operator || "__op__"} onValueChange={(v) => setDraft((c) => ({ ...c, operator: v === "__op__" ? "" : v }))}>
             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-              <SelectValue placeholder="Operator" />
+              <SelectValue placeholder="Operator">
+                {draft.operator === "" || draft.operator === "__op__"
+                  ? "— Operator —"
+                  : CONDITION_OPERATOR_LABELS[draft.operator as keyof typeof CONDITION_OPERATOR_LABELS] ??
+                    draft.operator}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__op__">— Operator —</SelectItem>
@@ -2294,7 +2338,13 @@ function RateConditionsEditor({
           <IntegerInput placeholder="Compare value" className={FLOATING_INNER_CONTROL} value={draft.value} onValueChange={(n) => setDraft((current) => ({ ...current, value: n === undefined ? "" : String(n) }))} min={0} />
           <Select value={draft.chargeId || "__none__"} onValueChange={onConditionChargeChange}>
             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-              <SelectValue placeholder="Linked charge (master)" />
+              <SelectValue placeholder="Linked charge (master)">
+                {draft.chargeId === "__none__" || !draft.chargeId
+                  ? "— Select charge —"
+                  : optionLabelById(draft.chargeId, conditionChargeOptionsSorted, (ch) =>
+                      ch.code ? `${ch.code} — ${ch.name}` : ch.name,
+                    )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent onScroll={onConditionChargeSelectScroll}>
               <SelectItem value="__none__">— Select charge —</SelectItem>
@@ -2327,7 +2377,11 @@ function RateConditionsEditor({
           />
           <Select value={draft.calculationBase || "__cb__"} onValueChange={(v) => setDraft((c) => ({ ...c, calculationBase: v === "__cb__" ? "" : v }))}>
             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-              <SelectValue placeholder="Calculation base (optional)" />
+              <SelectValue placeholder="Calculation base (optional)">
+                {draft.calculationBase === "" || draft.calculationBase === "__cb__"
+                  ? "— Calculation base —"
+                  : optionLabelForSelect(draft.calculationBase, CALCULATION_BASE_SELECT_OPTIONS)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__cb__">— Calculation base —</SelectItem>
@@ -2404,7 +2458,9 @@ function RateConditionsEditor({
                     onValueChange={(v) => updateConditionSlabRow(slabIndex, { pricingMode: v === "PER_KG" ? "PER_KG" : "FLAT" })}
                   >
                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                      <SelectValue placeholder="Pricing" />
+                      <SelectValue placeholder="Pricing">
+                        {optionLabelForSelect(slab.pricingMode, PRICING_MODE_CONDITION_SLAB_OPTIONS)}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="FLAT">Flat (fixed amount for band)</SelectItem>

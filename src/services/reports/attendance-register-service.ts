@@ -81,6 +81,55 @@ function buildQuery(params: AttendanceRegisterExportParams) {
   return q.toString();
 }
 
+export type AttendanceMonthLogRecord = {
+  hasRecord: boolean;
+  id: number;
+  date: string;
+  checkedIn: boolean;
+  checkedOut: boolean;
+  canCheckIn: boolean;
+  canCheckOut: boolean;
+  autoCloseWarning: boolean;
+  checkedInAt: string | null;
+  checkedOutAt: string | null;
+  checkInLat: number | null;
+  checkInLng: number | null;
+  checkInAddress: string | null;
+  checkInPhotoPath: string | null;
+  checkOutLat: number | null;
+  checkOutLng: number | null;
+  checkOutAddress: string | null;
+  checkOutPhotoPath: string | null;
+  workingMinutes: number | null;
+  workingHours: string | null;
+  status: string;
+  remarks: string | null;
+  autoCloseReason: string | null;
+  serviceCenter?: string | null;
+};
+
+export type AttendanceMonthLogDay = {
+  day: number;
+  date: string;
+  weekday: string;
+  dayCode: string;
+  attendance: AttendanceMonthLogRecord | null;
+};
+
+export type AttendanceUserMonthLog = {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  location: string;
+  company: string;
+  year: number;
+  month: number;
+  monthTitle: string;
+  daysInMonth: number;
+  summary: AttendanceRegisterSummary;
+  days: AttendanceMonthLogDay[];
+};
+
 export const attendanceRegisterService = {
   async fetchMonthRegisterPreview(
     params: AttendanceRegisterExportParams,
@@ -97,6 +146,42 @@ export const attendanceRegisterService = {
       throw new Error("Invalid attendance register response");
     }
     return body.data;
+  },
+
+  async fetchUserMonthLog(
+    userId: number,
+    params: Pick<AttendanceRegisterExportParams, "year" | "month">,
+  ): Promise<AttendanceUserMonthLog> {
+    const q = buildQuery({ year: params.year, month: params.month });
+    const response = await apiFetch(
+      `${API_URL}/mobile/attendance-admin/register/user/${userId}/month-log?${q}`,
+      { headers: authHeaders() },
+    );
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to load attendance log"));
+    }
+    const body = (await response.json()) as { data?: AttendanceUserMonthLog };
+    if (!body.data) {
+      throw new Error("Invalid attendance log response");
+    }
+    return body.data;
+  },
+
+  attendancePhotoUrl(attendanceId: number, type: "checkin" | "checkout"): string {
+    return `${API_URL}/mobile/attendance-admin/register/records/${attendanceId}/photo/${type}`;
+  },
+
+  async fetchAttendancePhoto(
+    attendanceId: number,
+    type: "checkin" | "checkout",
+  ): Promise<Blob> {
+    const response = await apiFetch(this.attendancePhotoUrl(attendanceId, type), {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to load photo"));
+    }
+    return response.blob();
   },
 
   async downloadMonthRegister(

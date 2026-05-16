@@ -39,6 +39,12 @@ import {
 } from "@/components/ui/table"
 import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
+import {
+    BOOLEAN_STRING_FILTER_OPTIONS,
+    optionLabelById,
+    optionLabelForSelect,
+    VENDOR_CONFIG_ENVIRONMENT_FILTER_OPTIONS,
+} from "@/lib/select-closed-label"
 import { customerService } from "@/services/masters/customer-service"
 import { serviceMapService } from "@/services/masters/service-map-service"
 import { vendorConfigService } from "@/services/masters/vendor-config-service"
@@ -168,7 +174,11 @@ export default function VendorConfigPage() {
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <Input placeholder="Search configs..." className="h-9 bg-background sm:col-span-2" value={draftFilters.search} onChange={(event) => setDraftFilters((current) => ({ ...current, search: event.target.value }))} />
                                 <Select value={draftFilters.vendorId} onValueChange={(value) => setDraftFilters((current) => ({ ...current, vendorId: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Vendor" /></SelectTrigger>
+                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Vendor">
+                                        {draftFilters.vendorId === "all"
+                                            ? "All vendors"
+                                            : optionLabelById(draftFilters.vendorId, vendorsResponse?.data, (v) => v.vendorName)}
+                                    </SelectValue></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All vendors</SelectItem>
                                         {vendorsResponse?.data?.map((vendor) => (
@@ -179,7 +189,15 @@ export default function VendorConfigPage() {
                                     </SelectContent>
                                 </Select>
                                 <Select value={draftFilters.serviceMapId} onValueChange={(value) => setDraftFilters((current) => ({ ...current, serviceMapId: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Service map" /></SelectTrigger>
+                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Service map">
+                                        {draftFilters.serviceMapId === "all"
+                                            ? "All service maps"
+                                            : optionLabelById(draftFilters.serviceMapId, serviceMapsResponse?.data, (sm) =>
+                                                  sm.vendor?.vendorName
+                                                      ? `${sm.vendor.vendorName} - ${sm.serviceType}`
+                                                      : `${sm.serviceType} - ${sm.id}`,
+                                              )}
+                                    </SelectValue></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All service maps</SelectItem>
                                         {serviceMapsResponse?.data?.map((serviceMap) => (
@@ -190,7 +208,11 @@ export default function VendorConfigPage() {
                                     </SelectContent>
                                 </Select>
                                 <Select value={draftFilters.customerId} onValueChange={(value) => setDraftFilters((current) => ({ ...current, customerId: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Customer" /></SelectTrigger>
+                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Customer">
+                                        {draftFilters.customerId === "all"
+                                            ? "All customers"
+                                            : optionLabelById(draftFilters.customerId, customersResponse?.data, (c) => c.name)}
+                                    </SelectValue></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All customers</SelectItem>
                                         {customersResponse?.data?.map((customer) => (
@@ -201,7 +223,9 @@ export default function VendorConfigPage() {
                                     </SelectContent>
                                 </Select>
                                 <Select value={draftFilters.environment} onValueChange={(value) => setDraftFilters((current) => ({ ...current, environment: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Environment" /></SelectTrigger>
+                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Environment">
+                                        {optionLabelForSelect(draftFilters.environment, VENDOR_CONFIG_ENVIRONMENT_FILTER_OPTIONS)}
+                                    </SelectValue></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All environments</SelectItem>
                                         <SelectItem value="SANDBOX">Sandbox</SelectItem>
@@ -209,7 +233,9 @@ export default function VendorConfigPage() {
                                     </SelectContent>
                                 </Select>
                                 <Select value={draftFilters.isActive} onValueChange={(value) => setDraftFilters((current) => ({ ...current, isActive: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Active" /></SelectTrigger>
+                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Active">
+                                        {optionLabelForSelect(draftFilters.isActive, BOOLEAN_STRING_FILTER_OPTIONS)}
+                                    </SelectValue></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All</SelectItem>
                                         <SelectItem value="true">Active</SelectItem>

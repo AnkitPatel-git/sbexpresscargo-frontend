@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { MASTER_LIST_STATUS_FILTER_OPTIONS, optionLabelForSelect } from "@/lib/select-closed-label"
 import { customerGroupService } from "@/services/masters/customer-group-service"
 import type { CustomerGroup } from "@/types/masters/customer-group"
 import { PermissionGuard } from "@/components/auth/permission-guard"
@@ -141,9 +142,11 @@ export default function CustomerGroupsPage() {
                                     value={draftFilters.name}
                                     onChange={(e) => setDraftFilters((p) => ({ ...p, name: e.target.value }))}
                                 />
-                                <Select value={draftFilters.status} onValueChange={(v) => setDraftFilters((p) => ({ ...p, status: v }))}>
+                                <Select key={`st-${draftFilters.status}`} value={draftFilters.status} onValueChange={(v) => setDraftFilters((p) => ({ ...p, status: v }))}>
                                     <SelectTrigger className="h-9 w-full bg-background">
-                                        <SelectValue placeholder="Status" />
+                                        <SelectValue placeholder="Status">
+                                            {optionLabelForSelect(draftFilters.status, MASTER_LIST_STATUS_FILTER_OPTIONS)}
+                                        </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All statuses</SelectItem>

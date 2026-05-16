@@ -92,6 +92,12 @@ export function DbAsyncSelect<T extends { id: number }>({
   const selectedIdForExtras =
     value && (!clearOption || value !== clearOption.value) ? Number(value) : NaN
 
+  /** Load at least one page while closed so the trigger can resolve labels (Radix content is not mounted when closed). */
+  const hasPersistedSelection =
+    value != null &&
+    value !== "" &&
+    !(clearOption != null && clearOption.value === value)
+
   const extraRowsForQuery = useMemo(() => {
     if (!extraItems?.length) {
       return extraItems
@@ -114,10 +120,34 @@ export function DbAsyncSelect<T extends { id: number }>({
     search: trimmedSearch,
     fetchPage,
     extraRows: extraRowsForQuery,
-    enabled: open,
+    enabled: open || hasPersistedSelection,
   })
 
   const listRows = visibleItem ? rows.filter(visibleItem) : rows
+
+  /** Radix `SelectValue` reads item text from mounted items; content unmounts when closed, so resolve the label explicitly. */
+  const closedTriggerLabel = useMemo(() => {
+    if (value == null || value === "") {
+      return undefined
+    }
+    if (clearOption && value === clearOption.value) {
+      return clearOption.label
+    }
+    const id = Number(value)
+    if (!Number.isFinite(id) || id <= 0) {
+      return undefined
+    }
+    const fromExtra = extraItems?.find((item) => item.id === id)
+    if (fromExtra) {
+      return getItemLabel(fromExtra)
+    }
+    /** Prefer full `rows` (merged server + extras) over `listRows` so `visibleItem` never hides the selected label. */
+    const fromRows = rows.find((item) => item.id === id)
+    return fromRows ? getItemLabel(fromRows) : undefined
+  }, [clearOption, extraItems, getItemLabel, rows, value])
+
+  const triggerDisplayText =
+    closedTriggerLabel ?? (hasPersistedSelection && isInitialLoading ? "Loading…" : undefined)
 
   const onScroll = useSelectContentInfiniteScroll({
     hasNextPage,
@@ -170,7 +200,9 @@ export function DbAsyncSelect<T extends { id: number }>({
           className={cn(triggerClassName)}
           disabled={disabled}
         >
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder}>
+            {triggerDisplayText ?? undefined}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent
           viewportClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"

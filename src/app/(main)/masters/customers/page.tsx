@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { MASTER_LIST_STATUS_FILTER_OPTIONS, optionLabelForSelect } from "@/lib/select-closed-label"
 
 import { customerService } from "@/services/masters/customer-service"
 import { customerGroupService } from "@/services/masters/customer-group-service"
@@ -259,9 +260,11 @@ export default function CustomersPage() {
                                             triggerClassName="h-9 w-full border border-input bg-background"
                                         />
                                     </div>
-                                    <Select value={draftFilters.status} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}>
+                                    <Select key={`st-${draftFilters.status}`} value={draftFilters.status} onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, status: value }))}>
                                         <SelectTrigger className="h-9 w-full bg-background">
-                                            <SelectValue placeholder="Status" />
+                                            <SelectValue placeholder="Status">
+                                                {optionLabelForSelect(draftFilters.status, MASTER_LIST_STATUS_FILTER_OPTIONS)}
+                                            </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All statuses</SelectItem>

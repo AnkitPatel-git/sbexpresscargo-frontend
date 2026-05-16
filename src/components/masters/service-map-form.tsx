@@ -30,6 +30,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { optionLabelForSelect, SERVICE_MAP_SERVICE_TYPE_OPTIONS, SERVICE_MAP_STATUS_OPTIONS } from "@/lib/select-closed-label"
 import {
     Popover,
     PopoverContent,
@@ -207,7 +208,9 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                 >
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select service" />
+                                            <SelectValue placeholder="Select service">
+                                                {optionLabelForSelect(field.value, SERVICE_MAP_SERVICE_TYPE_OPTIONS)}
+                                            </SelectValue>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -290,7 +293,9 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                     >
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select status" />
+                                                <SelectValue placeholder="Select status">
+                                                    {optionLabelForSelect(field.value, SERVICE_MAP_STATUS_OPTIONS)}
+                                                </SelectValue>
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>

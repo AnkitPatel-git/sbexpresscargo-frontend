@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
@@ -14,8 +14,10 @@ import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { shipmentService } from "@/services/transactions/shipment-service";
-import { ShipmentPodFormPreview } from "@/components/transactions/shipment-pod-form-preview";
+import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
+import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
 import type { Shipment } from "@/types/transactions/shipment";
 
 const fallbackText = (value?: string | number | null) => {
@@ -104,8 +106,11 @@ export default function ShipmentDetailsPage() {
   const params = useParams();
   const id = Number(params.id);
   const queryClient = useQueryClient();
-  const [statusValue, setStatusValue] = useState("BOOKED");
+  const [statusValue, setStatusValue] = useState("");
   const [statusReason, setStatusReason] = useState("");
+  const [statusLocation, setStatusLocation] = useState("");
+  const [statusSubStatus, setStatusSubStatus] = useState("");
+  const [statusScannedAt, setStatusScannedAt] = useState("");
   const [podRemark, setPodRemark] = useState("");
   const [podFile, setPodFile] = useState<File | null>(null);
   const [markDeliveredWithPod, setMarkDeliveredWithPod] = useState(true);
@@ -128,21 +133,36 @@ export default function ShipmentDetailsPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: () =>
-      shipmentService.updateShipmentStatus(id, {
+    mutationFn: () => {
+      if (statusValue === "DELIVERY_ATTEMPTED" && !statusSubStatus.trim()) {
+        return Promise.reject(
+          new Error("NDR / reason code is required when status is Delivery attempted"),
+        );
+      }
+      return shipmentService.updateShipmentStatus(id, {
         status: statusValue,
         version: shipmentResponse?.data.version ?? 1,
         reason: statusReason || undefined,
-      }),
+        location: statusLocation.trim() || undefined,
+        subStatus: statusSubStatus.trim() || undefined,
+        scannedAt: statusScannedAt
+          ? new Date(statusScannedAt).toISOString()
+          : undefined,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipment", id] });
       toast.success("Shipment booking status updated");
+      setStatusReason("");
+      setStatusLocation("");
+      setStatusSubStatus("");
+      setStatusScannedAt("");
     },
     onError: (error: Error) => toast.error(error.message || "Failed to update shipment booking status"),
   });
 
-  const podDownloadMutation = useMutation({
-    mutationFn: (regenerate: boolean) => shipmentService.downloadPodBlankForm(id, regenerate),
+  const podProofDownloadMutation = useMutation({
+    mutationFn: () => shipmentService.downloadUploadedPodProof(id),
     onSuccess: ({ blob, filename }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -150,9 +170,9 @@ export default function ShipmentDetailsPage() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("POD form downloaded");
+      toast.success("POD downloaded");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to download POD form"),
+    onError: (error: Error) => toast.error(error.message || "Failed to download POD"),
   });
 
   const podUploadMutation = useMutation({
@@ -193,7 +213,21 @@ export default function ShipmentDetailsPage() {
   const calcResult = calcMutation.data?.data;
   const statuses = useMemo(() => shipment?.statuses ?? [], [shipment?.statuses]);
 
-  const currentStatus = useMemo(() => statuses[0]?.status || shipment?.currentStatus || "—", [statuses, shipment?.currentStatus]);
+  const currentStatus = useMemo(
+    () => shipment?.currentStatus || statuses[statuses.length - 1]?.status || "—",
+    [statuses, shipment?.currentStatus],
+  );
+
+  const hasUploadedPod = useMemo(
+    () => statuses.some((s) => Boolean(s.podFilePath?.trim())),
+    [statuses],
+  );
+
+  useEffect(() => {
+    if (shipment?.currentStatus) {
+      setStatusValue(shipment.currentStatus);
+    }
+  }, [shipment?.currentStatus]);
 
   if (isLoading) {
     return (
@@ -319,57 +353,110 @@ export default function ShipmentDetailsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <FormSection title="Update Status" contentClassName="space-y-3 text-sm">
-          <Select value={statusValue} onValueChange={setStatusValue}>
+          <p className="text-xs text-muted-foreground">
+            Current: <span className="font-medium text-foreground">{currentStatus}</span>
+          </p>
+          <Select value={statusValue || undefined} onValueChange={setStatusValue}>
             <SelectTrigger>
-              <SelectValue placeholder="Select status" />
+              <SelectValue placeholder="Select status">
+                {optionLabelForSelect(statusValue, SHIPMENT_STATUS_OPTIONS)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {["BOOKED", "IN_TRANSIT", "DELIVERED", "CANCELLED"].map((value) => (
-                <SelectItem key={value} value={value}>
-                  {value}
+              {SHIPMENT_STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Input placeholder="Reason" value={statusReason} onChange={(e) => setStatusReason(e.target.value)} />
-          <Button type="button" className="w-full" onClick={() => statusMutation.mutate()} disabled={statusMutation.isPending}>
+          <Input placeholder="Reason / remark" value={statusReason} onChange={(e) => setStatusReason(e.target.value)} />
+          <div className="space-y-1">
+            <Label htmlFor="status-scanned-at" className="text-xs font-medium">
+              Scanned at (optional)
+            </Label>
+            <Input
+              id="status-scanned-at"
+              type="datetime-local"
+              value={statusScannedAt}
+              onChange={(e) => setStatusScannedAt(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="status-location" className="text-xs font-medium">
+              Location (optional)
+            </Label>
+            <Input
+              id="status-location"
+              placeholder="Hub, city, or PIN area"
+              value={statusLocation}
+              onChange={(e) => setStatusLocation(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="status-sub-status" className="text-xs font-medium">
+              {statusValue === "DELIVERY_ATTEMPTED"
+                ? "NDR / reason code"
+                : "Sub-status (optional)"}
+            </Label>
+            <Select value={statusSubStatus || undefined} onValueChange={setStatusSubStatus}>
+              <SelectTrigger id="status-sub-status">
+                <SelectValue
+                  placeholder={
+                    statusValue === "DELIVERY_ATTEMPTED"
+                      ? "Select reason code"
+                      : "Select sub-status (optional)"
+                  }
+                >
+                  {statusSubStatus ? statusSubStatus.replace(/_/g, " ") : undefined}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {SHIPMENT_SUB_STATUS_CODES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {code.replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => statusMutation.mutate()}
+            disabled={
+              statusMutation.isPending ||
+              !statusValue ||
+              (statusValue === "DELIVERY_ATTEMPTED" && !statusSubStatus.trim())
+            }
+          >
             Update Status
           </Button>
         </FormSection>
 
         <FormSection title="Proof of delivery (POD)" contentClassName="space-y-3 text-sm">
           <p className="text-muted-foreground">
-            Preview matches the printed POD layout. Download the PDF for barcode and signatures, then upload the signed scan.
-            Vendor POD files can be uploaded the same way.
+            Upload a signed or vendor POD scan. Blank POD forms are available from the POD transaction screen.
           </p>
-          <ShipmentPodFormPreview shipment={shipment} />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-1 min-w-[140px]"
-              onClick={() => podDownloadMutation.mutate(false)}
-              disabled={podDownloadMutation.isPending}
-            >
-              {podDownloadMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Preparing…
-                </>
-              ) : (
-                "Download POD form"
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 min-w-[140px]"
-              onClick={() => podDownloadMutation.mutate(true)}
-              disabled={podDownloadMutation.isPending}
-            >
-              Regenerate PDF
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full"
+            onClick={() => podProofDownloadMutation.mutate()}
+            disabled={!hasUploadedPod || podProofDownloadMutation.isPending}
+          >
+            {podProofDownloadMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Downloading…
+              </>
+            ) : (
+              "Download last uploaded POD"
+            )}
+          </Button>
+          {!hasUploadedPod ? (
+            <p className="text-xs text-muted-foreground">No POD file has been uploaded for this shipment yet.</p>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="pod-file">Upload signed / vendor POD</Label>
             <Input

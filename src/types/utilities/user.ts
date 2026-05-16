@@ -83,6 +83,7 @@ export interface LoginResponseData {
   user: UtilityUser & {
     role: UserRole;
     permissions: string[];
+    allowedPlatforms?: ("mobile" | "portal")[];
   };
 }
 

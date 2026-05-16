@@ -35,11 +35,13 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { Textarea } from "@/components/ui/textarea";
 import { trackingService } from "@/services/transactions/tracking-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
 import { Combobox } from "@/components/ui/combobox";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
+import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
 
 const formSchema = z
     .object({
@@ -71,23 +73,6 @@ interface ManualUpdateDialogProps {
         location?: string;
     };
 }
-
-const statusOptions = [
-    { label: "Booked", value: "BOOKED" },
-    { label: "Manifested", value: "MANIFESTED" },
-    { label: "Picked up", value: "PICKED_UP" },
-    { label: "Pickup failed", value: "PICKUP_FAILED" },
-    { label: "In transit", value: "IN_TRANSIT" },
-    { label: "Out for delivery", value: "OUT_FOR_DELIVERY" },
-    { label: "Delivery attempted (NDR)", value: "DELIVERY_ATTEMPTED" },
-    { label: "Partial delivered", value: "PARTIAL_DELIVERED" },
-    { label: "Delivered", value: "DELIVERED" },
-    { label: "Cancelled", value: "CANCELLED" },
-    { label: "Lost", value: "LOST" },
-    { label: "Return in transit", value: "RETURN_IN_TRANSIT" },
-    { label: "Return out for delivery", value: "RETURN_OUT_FOR_DELIVERY" },
-    { label: "Returned (RTO complete)", value: "RETURNED" },
-];
 
 export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: ManualUpdateDialogProps) {
     const queryClient = useQueryClient();
@@ -167,14 +152,16 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                             name="status"
                             render={({ field }) => (
                                 <FloatingFormItem label="Status">
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select key={`st-${field.value}`} onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select status" />
+                                                <SelectValue placeholder="Select status">
+                                                    {optionLabelForSelect(field.value, SHIPMENT_STATUS_OPTIONS)}
+                                                </SelectValue>
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {statusOptions.map((option) => (
+                                            {SHIPMENT_STATUS_OPTIONS.map((option) => (
                                                 <SelectItem key={option.value} value={option.value}>
                                                     {option.label}
                                                 </SelectItem>
@@ -225,10 +212,12 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                                 name="subStatus"
                                 render={({ field }) => (
                                     <FloatingFormItem label="NDR / reason code">
-                                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                        <Select key={`sub-${field.value}`} onValueChange={field.onChange} value={field.value || undefined}>
                                             <FormControl>
                                                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                    <SelectValue placeholder="Select reason code" />
+                                                    <SelectValue placeholder="Select reason code">
+                                                        {field.value ? field.value.replace(/_/g, " ") : undefined}
+                                                    </SelectValue>
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>

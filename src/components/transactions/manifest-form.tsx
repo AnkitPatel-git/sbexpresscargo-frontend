@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { MANIFEST_FORMAT_OPTIONS, MANIFEST_PDF_TYPE_OPTIONS, optionLabelForSelect } from "@/lib/select-closed-label";
 import { manifestFormSchema, ManifestFormValues, Manifest } from "@/types/transactions/manifest";
 import { manifestService } from "@/services/transactions/manifest-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
@@ -217,10 +218,12 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             name="format"
             render={({ field }) => (
               <FloatingFormItem label="Format">
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select key={`fmt-${field.value}`} onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                      <SelectValue placeholder="Select format" />
+                      <SelectValue placeholder="Select format">
+                        {optionLabelForSelect(field.value, MANIFEST_FORMAT_OPTIONS)}
+                      </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -237,10 +240,12 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             name="pdfType"
             render={({ field }) => (
               <FloatingFormItem label="PDF Type">
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select key={`pdf-${field.value}`} onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                      <SelectValue placeholder="Select PDF type" />
+                      <SelectValue placeholder="Select PDF type">
+                        {optionLabelForSelect(field.value, MANIFEST_PDF_TYPE_OPTIONS)}
+                      </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>

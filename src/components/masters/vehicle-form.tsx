@@ -30,6 +30,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
+import { optionLabelForSelect, STATUS_ACTIVE_INACTIVE_OPTIONS } from "@/lib/select-closed-label"
 
 import { vehicleService } from "@/services/masters/vehicle-service"
 import { Vehicle } from "@/types/masters/vehicle"
@@ -157,10 +158,12 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                                 name="vehicleType"
                                 render={({ field }) => (
                                     <FloatingFormItem required label="Vehicle Type*">
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <Select key={`vehicleType-${field.value}`} onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                    <SelectValue placeholder="Select type" />
+                                                    <SelectValue placeholder="Select type">
+                                                        {optionLabelForSelect(field.value, VEHICLE_TYPES)}
+                                                    </SelectValue>
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -189,10 +192,12 @@ export function VehicleForm({ initialData }: VehicleFormProps) {
                             name="status"
                             render={({ field }) => (
                                 <FloatingFormItem label="Status">
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select key={`status-${field.value}`} onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select status" />
+                                                <SelectValue placeholder="Select status">
+                                                    {optionLabelForSelect(field.value, STATUS_ACTIVE_INACTIVE_OPTIONS)}
+                                                </SelectValue>
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>

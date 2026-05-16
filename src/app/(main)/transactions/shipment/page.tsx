@@ -15,6 +15,8 @@ import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useIsClient } from "@/hooks/use-is-client";
+import { useAuth } from "@/context/auth-context";
+import { MASTER_READ } from "@/lib/portal-permissions";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import type { Shipment } from "@/types/transactions/shipment";
@@ -45,6 +47,8 @@ export default function ShipmentsPage() {
   const isClient = useIsClient();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
+  const canReadCustomers = hasPermission(MASTER_READ.customer);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -54,6 +58,7 @@ export default function ShipmentsPage() {
   const { data: customerData } = useQuery({
     queryKey: ["shipment-client-options"],
     queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
+    enabled: !authLoading && canReadCustomers && !isCustomerUser,
   });
 
   useEffect(() => {

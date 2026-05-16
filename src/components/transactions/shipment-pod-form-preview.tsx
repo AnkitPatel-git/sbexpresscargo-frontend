@@ -123,15 +123,18 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
             <div className="min-w-[520px] p-2 sm:min-w-0 sm:p-3">
                 {/* Header */}
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_158px] border border-black">
-                    <div className="flex items-center justify-center border-r border-black bg-white p-1.5">
-                        <Image
-                            src="/logo/logo.png"
-                            alt="SB Express Cargo Courier & Logistics"
-                            width={220}
-                            height={72}
-                            className="h-[52px] w-full max-w-[102px] object-contain object-center"
-                            priority
-                        />
+                    <div className="flex min-h-[58px] items-center justify-center border-r border-black bg-white p-1.5">
+                        <div className="flex w-full max-w-[110px] items-center justify-center bg-white px-1 py-0.5">
+                            <Image
+                                src="/logo/logo.png"
+                                alt="SB Express Cargo Courier & Logistics"
+                                width={220}
+                                height={72}
+                                className="h-[52px] w-full bg-white object-contain object-center"
+                                style={{ backgroundColor: "#ffffff" }}
+                                priority
+                            />
+                        </div>
                     </div>
                     <div className="flex flex-col items-center justify-center border-r border-black px-2 py-2 text-center">
                         {OFFICE_LINES.map((line) => (

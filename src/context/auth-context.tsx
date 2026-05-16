@@ -1,10 +1,12 @@
 
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from "react"
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react"
 import Cookies from "js-cookie"
 import { useRouter } from "next/navigation"
 import { userService } from "@/services/user-service"
+import { authApi } from "@/lib/api-client"
+import { hasPortalPermission } from "@/lib/portal-permissions"
 import type { UtilityUser } from "@/types/utilities/user"
 
 type User = UtilityUser & {
@@ -41,33 +43,94 @@ const normalizeCustomerIds = (user: User | null): number[] => {
     return Array.from(ids)
 }
 
+function mergeProfileUser(stored: User, fresh: UtilityUser): User {
+    return {
+        ...stored,
+        ...fresh,
+        role: fresh.role ?? stored.role,
+        permissions: fresh.permissions ?? stored.permissions,
+        profile: fresh.profile ?? stored.profile,
+        customerIds: fresh.customerIds ?? stored.customerIds,
+    }
+}
+
+function needsProfileHydration(user: User | null): boolean {
+    if (!user) return false
+    if (!user.permissions?.length) return true
+    if (user.role?.identifier !== "CUSTOMER") return false
+    const ids = normalizeCustomerIds(user)
+    return ids.length === 0
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
     const [token, setToken] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()
 
-    useEffect(() => {
-        // Load auth data from cookies/localStorage on mount
-        const storedToken = Cookies.get("accessToken")
-        const storedUser = localStorage.getItem("user")
-
-        if (storedToken && storedUser) {
-            setToken(storedToken)
-            setUser(JSON.parse(storedUser))
-        }
-        setIsLoading(false)
+    const persistUser = useCallback((next: User) => {
+        setUser(next)
+        localStorage.setItem("user", JSON.stringify(next))
     }, [])
+
+    useEffect(() => {
+        let cancelled = false
+
+        const bootstrap = async () => {
+            const storedToken = Cookies.get("accessToken")
+            const storedUserRaw = localStorage.getItem("user")
+
+            if (!storedToken || !storedUserRaw) {
+                if (!cancelled) setIsLoading(false)
+                return
+            }
+
+            let parsed: User
+            try {
+                parsed = JSON.parse(storedUserRaw) as User
+            } catch {
+                if (!cancelled) setIsLoading(false)
+                return
+            }
+
+            if (!cancelled) {
+                setToken(storedToken)
+                setUser(parsed)
+            }
+
+            if (!needsProfileHydration(parsed)) {
+                if (!cancelled) setIsLoading(false)
+                return
+            }
+
+            try {
+                const response = await authApi.getProfile()
+                if (cancelled || !response.success || !response.data) return
+                const merged = mergeProfileUser(parsed, {
+                    ...response.data,
+                    permissions: response.data.permissions ?? parsed.permissions,
+                    role: response.data.role ?? parsed.role,
+                } as User)
+                persistUser(merged)
+            } catch {
+                // Keep stored session; pages gate API calls on permissions.
+            } finally {
+                if (!cancelled) setIsLoading(false)
+            }
+        }
+
+        void bootstrap()
+        return () => {
+            cancelled = true
+        }
+    }, [persistUser])
 
     const login = (data: { accessToken: string; user: User }) => {
         setToken(data.accessToken)
-        setUser(data.user)
+        persistUser(data.user)
 
-        // Store in cookie for middleware (7 days)
         Cookies.set("accessToken", data.accessToken, { expires: 7 })
-        // Store user info in localStorage
         localStorage.setItem("accessToken", data.accessToken)
-        localStorage.setItem("user", JSON.stringify(data.user))
 
         router.push("/dashboard")
     }
@@ -82,12 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push("/login")
     }
 
-    const hasPermission = (permission: string) => {
-        if (!user) return false
-        // superuser has all permissions
-        if (user.role.identifier === "SUPER_ADMIN" || user.role.identifier === "superuser") return true
-        return user.permissions.includes(permission)
-    }
+    const hasPermission = useCallback(
+        (permission: string) =>
+            hasPortalPermission(user?.permissions, user?.role?.identifier, permission),
+        [user?.permissions, user?.role?.identifier],
+    )
+
     const isCustomerUser = user?.role?.identifier === "CUSTOMER"
     const effectiveCustomerIds = normalizeCustomerIds(user)
     const defaultCustomerId = effectiveCustomerIds[0] ?? null

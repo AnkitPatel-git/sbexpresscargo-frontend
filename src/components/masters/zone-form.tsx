@@ -26,6 +26,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { optionLabelForSelect, ZONE_TYPE_OPTIONS } from "@/lib/select-closed-label"
 import { Button } from "@/components/ui/button"
 import { zoneService } from "@/services/masters/zone-service"
 import { Zone, ZoneFormData } from "@/types/masters/zone"
@@ -145,12 +146,15 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                         render={({ field }) => (
                             <FloatingFormItem required label="Zone Type">
                                 <Select
+                                    key={`zoneType-${field.value}`}
                                     onValueChange={field.onChange}
                                     value={field.value || ""}
                                 >
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select zone type" />
+                                            <SelectValue placeholder="Select zone type">
+                                                {optionLabelForSelect(field.value, ZONE_TYPE_OPTIONS)}
+                                            </SelectValue>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
