@@ -1,0 +1,46 @@
+info:
+  name: GET /api/mobile/lookup/pincodes
+  type: http
+  seq: 9
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/mobile/lookup/pincodes"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "1"
+      type: query
+    - name: limit
+      value: "20"
+      type: query
+    - name: search
+      value: ""
+      type: query
+      description: Search pin code, city, or area
+    - name: countryId
+      value: ""
+      type: query
+      disabled: true
+    - name: stateId
+      value: ""
+      type: query
+      disabled: true
+    - name: cityId
+      value: ""
+      type: query
+      disabled: true
+    - name: serviceable
+      value: "true"
+      type: query
+      description: "true | false — omit for all"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
