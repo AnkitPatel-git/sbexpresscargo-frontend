@@ -9,6 +9,25 @@ function isLoginRequest(input: RequestInfo | URL): boolean {
     return urlStr.includes('/utilities/users/login') || urlStr.includes('/users/login');
 }
 
+function isAuthFailureMessage(message: unknown): boolean {
+    if (typeof message !== 'string') return false;
+    return /session expired|session no longer valid|please login again|logged in on another device|unauthorized/i.test(
+        message,
+    );
+}
+
+async function responseIndicatesAuthFailure(response: Response): Promise<boolean> {
+    if (response.status === 401) return true;
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) return false;
+    try {
+        const body = (await response.clone().json()) as { success?: boolean; message?: string };
+        return body.success === false && isAuthFailureMessage(body.message);
+    } catch {
+        return false;
+    }
+}
+
 function isHealthRequest(input: RequestInfo | URL): boolean {
     const urlStr = typeof input === 'string' ? input : input.toString();
     return urlStr.includes('/health');
@@ -74,7 +93,7 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
         throw error;
     }
 
-    if (response.status === 401) {
+    if (await responseIndicatesAuthFailure(response)) {
         if (!isLoginRequest(input)) redirectToLogin();
         return response;
     }

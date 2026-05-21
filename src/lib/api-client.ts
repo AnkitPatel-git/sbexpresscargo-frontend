@@ -28,8 +28,20 @@ export async function apiClient<T>(
 
     const data = await response.json();
 
-    if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong');
+    const authFailure =
+        !response.ok ||
+        (data &&
+            typeof data === 'object' &&
+            (data as ApiResponse<unknown>).success === false &&
+            typeof (data as ApiResponse<unknown>).message === 'string' &&
+            /session expired|session no longer valid|please login again|logged in on another device|unauthorized/i.test(
+                (data as ApiResponse<unknown>).message,
+            ));
+
+    if (authFailure) {
+        throw new Error(
+            (data as ApiResponse<unknown>)?.message || 'Something went wrong',
+        );
     }
 
     return data;

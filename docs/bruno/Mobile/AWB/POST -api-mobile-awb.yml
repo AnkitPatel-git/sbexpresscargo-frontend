@@ -21,7 +21,6 @@ http:
         "ewaybillNumber": "EWB2310045678901",
         "referenceNo": "REF/IND/2026/00891",
         "customerId": 1,
-        "clientId": 1,
         "serviceCenterId": 1,
         "productId": 1,
         "shipmentTotalValue": 45000,
@@ -32,6 +31,7 @@ http:
         "floorDelivery": true,
         "floorCount": 2,
         "km": 590,
+        "actualWeight": 12,
         "commercial": true,
         "instruction": "Handle with care. Keep dry. Do not stack more than 3 units.",
         "isCod": false,
@@ -60,13 +60,10 @@ http:
         },
         "piecesRows": [
           {
-            "actualWeight": 9500,
             "pieces": 3,
             "length": 60,
             "breadth": 40,
             "height": 30,
-            "volumetricWeight": 24000,
-            "chargeWeight": 28500,
             "items": [
               {
                 "contentId": 1,
