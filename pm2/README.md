@@ -1,80 +1,74 @@
-# PM2 — sbexpresscargo-frontend
+# PM2 deployment
 
-Production process manager setup for this Next.js app. The app name is **`sbexpresscargo-frontend`**.
+Run the Next.js app with [PM2](https://pm2.keymetrics.io/) for process management on a server.
+
+## Dev and prod on the same server (separate repos)
+
+Each deploy has its own repo and `.env`. PM2 process names are global on the host, so set a **unique** `PM2_APP_NAME` in each repo:
+
+**Dev repo `.env`:**
+
+```env
+PM2_APP_NAME=dev-sbexpresscargo-frontend
+NODE_ENV=production
+PORT=3000
+NEXT_PUBLIC_API_URL=https://dev.backend.portal.sbexpresscargo.com/api
+API_BACKEND_URL=https://dev.backend.portal.sbexpresscargo.com/api
+```
+
+**Prod repo `.env`:**
+
+```env
+PM2_APP_NAME=prod-sbexpresscargo-frontend
+NODE_ENV=production
+PORT=3001
+NEXT_PUBLIC_API_URL=https://backend.portal.sbexpresscargo.com/api
+API_BACKEND_URL=https://backend.portal.sbexpresscargo.com/api
+```
+
+`ecosystem.config.cjs` loads `.env` before start. Use a different `PORT` per repo. Next.js reads `NEXT_PUBLIC_*` and `API_BACKEND_URL` from the environment at build/runtime as usual.
 
 ## Prerequisites
 
-- [PM2](https://pm2.keymetrics.io/) installed globally: `npm install -g pm2`
-- Dependencies installed at the **project root**: `npm install`
-- A production build: **`npm run build`** (PM2 runs `next start`, which requires `.next` output from a prior build)
+- [PM2](https://pm2.keymetrics.io/): `npm install -g pm2`
+- Dependencies: `npm install`
+- **Build:** `npm run build` (PM2 runs `next start`, which needs `.next`)
 
-## Start
+## Commands
 
-From the **repository root** (parent of this `pm2/` folder):
-
-```bash
-pm2 start pm2/ecosystem.config.cjs
-```
-
-Or from inside `pm2/`:
-
-```bash
-cd pm2 && pm2 start ecosystem.config.cjs
-```
-
-The config sets `NODE_ENV=production` and **`PORT=3000`**. Override the port for a one-off start:
-
-```bash
-PORT=8080 pm2 start pm2/ecosystem.config.cjs
-```
-
-(For a permanent change, edit `env.PORT` in `ecosystem.config.cjs` or add a second `env_*` block as needed.)
-
-## Stop
-
-```bash
-pm2 stop sbexpresscargo-frontend
-```
-
-To remove it from PM2’s process list:
-
-```bash
-pm2 delete sbexpresscargo-frontend
-```
-
-## Restart
-
-After code or config changes (rebuild first if application code changed):
+From that repo’s project root:
 
 ```bash
 npm run build
-pm2 restart sbexpresscargo-frontend
+npm run pm2:start
+
+npm run pm2:stop
+npm run pm2:restart
+pm2 logs $PM2_APP_NAME
+pm2 status
+pm2 save
 ```
 
-Reload with zero-downtime is not typical for a single forked Next server; use **`restart`** for this app.
+Same as:
 
-## Monitor
+```bash
+pm2 start pm2/ecosystem.config.cjs
+pm2 stop pm2/ecosystem.config.cjs
+pm2 restart pm2/ecosystem.config.cjs
+```
 
-| Command | Purpose |
-|--------|---------|
-| `pm2 status` | List apps and CPU/memory/uptime |
-| `pm2 monit` | TUI dashboard (CPU, memory, logs tail) |
-| `pm2 logs sbexpresscargo-frontend` | Stream stdout/stderr |
-| `pm2 logs sbexpresscargo-frontend --lines 200` | Last 200 lines then stream |
-
-Log files are written under **`~/.pm2/logs/`** (see `out_file` / `error_file` in `ecosystem.config.cjs`).
+After code changes: `npm run build` then `npm run pm2:restart`.
 
 ## Config summary
 
-| Setting | Value |
+| Setting | Source |
 |--------|--------|
-| App name | `sbexpresscargo-frontend` |
-| Command | `next start` (via `node_modules/.bin/next`) |
-| Working directory | Project root |
-| `NODE_ENV` | `production` |
-| `PORT` | `3000` |
-| Max memory restart | `500MB` |
-| Auto-restart on crash | Yes (`autorestart: true`) |
+| App name | `PM2_APP_NAME` in `.env` |
+| Command | `next start` |
+| `PORT` | `.env` (default `3000`) |
+| `NODE_ENV` | `.env` (default `production`) |
+| Max memory restart | `800M` |
+| Logs | `~/.pm2/logs/<PM2_APP_NAME>-{out,error}.log` |
 
 ## Optional: persist across reboots
 
