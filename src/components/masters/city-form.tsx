@@ -145,18 +145,22 @@ export function CityForm({ initialData }: CityFormProps) {
                         control={form.control}
                         name="countryId"
                         render={({ field }) => (
-                            <CountryFloatingAsyncSelect
-                                value={field.value}
-                                onChange={(id) => field.onChange(id)}
-                                extraCountries={extraCountries}
-                            />
+                            <FloatingFormItem required label="Country*">
+                                <CountryFloatingAsyncSelect
+                                    triggerRef={field.ref}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    queryKeyScope={`city-${String(initialData?.id ?? "new")}`}
+                                    extraCountries={extraCountries}
+                                />
+                            </FloatingFormItem>
                         )}
                     />
                     <FormField
                         control={form.control}
                         name="stateId"
                         render={({ field }) => (
-                            <FloatingFormItem control={form.control} name="stateId" label="State *">
+                            <FloatingFormItem required label="State*">
                                 <Popover open={stateOpen} onOpenChange={setStateOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -222,7 +226,7 @@ export function CityForm({ initialData }: CityFormProps) {
                         control={form.control}
                         name="cityName"
                         render={({ field }) => (
-                            <FloatingFormItem control={form.control} name="cityName" label="City Name *">
+                            <FloatingFormItem required label="City Name*">
                                 <FormControl>
                                     <Input className={FLOATING_INNER_CONTROL} {...field} />
                                 </FormControl>
