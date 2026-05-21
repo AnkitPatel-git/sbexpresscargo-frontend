@@ -1,0 +1,42 @@
+info:
+  name: POST /api/utilities/users/login (mobile)
+  type: http
+  seq: 0
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/utilities/users/login"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "email": "field.executive@system.com",
+        "password": "Mobile@123",
+        "platform": "mobile"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: field executive (seed)
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Login successful",
+            "data": {
+              "accessToken": "<jwt>",
+              "user": { "email": "field.executive@system.com" }
+            }
+          }

@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge"
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
 import { countryService } from '@/services/masters/country-service'
 import { stateService } from '@/services/masters/state-service'
+import { cityService } from '@/services/masters/city-service'
 import { zoneService } from '@/services/masters/zone-service'
 import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
@@ -42,7 +43,7 @@ const pincodeSchema = z.object({
     stateId: z.number().min(1, "State is required"),
     zoneIds: z.array(z.number()).min(1, "At least one zone is required"),
     pinCode: z.string().min(1, "Pin Code is required"),
-    cityName: z.string().min(1, "City Name is required"),
+    cityId: z.number().min(1, "City is required"),
     areaName: z.string().min(1, "Area Name is required"),
     serviceable: z.boolean(),
     edl: z.boolean(),
@@ -77,13 +78,16 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     const isEdit = !!initialData
     const [countryOpen, setCountryOpen] = useState(false)
     const [stateOpen, setStateOpen] = useState(false)
+    const [cityOpen, setCityOpen] = useState(false)
     const [zoneOpen, setZoneOpen] = useState(false)
     const [countrySearch, setCountrySearch] = useState('')
     const [stateSearch, setStateSearch] = useState('')
+    const [citySearch, setCitySearch] = useState('')
     const [zoneSearch, setZoneSearch] = useState('')
 
     const debouncedCountrySearch = useDebounce(countrySearch, 300)
     const debouncedStateSearch = useDebounce(stateSearch, 300)
+    const debouncedCitySearch = useDebounce(citySearch, 300)
     const debouncedZoneSearch = useDebounce(zoneSearch, 300)
 
     const { data: countriesData } = useQuery({
@@ -121,7 +125,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             stateId: initialData?.stateId ?? 0,
             zoneIds: defaultZoneIds,
             pinCode: initialData?.pinCode ?? '',
-            cityName: initialData?.cityName ?? '',
+            cityId: initialData?.cityId ?? initialData?.city?.id ?? 0,
             areaName: initialData?.areaName ?? '',
             serviceable: initialData?.serviceable ?? true,
             edl: Boolean(initialData?.edl) || Boolean(initialData?.oda),
@@ -153,6 +157,21 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         staleTime: 5 * 60 * 1000,
     })
 
+    const { data: citiesData, isFetching: isCitiesFetching } = useQuery({
+        queryKey: ['cities-list-pincode', selectedCountryId, selectedStateId, debouncedCitySearch],
+        queryFn: () =>
+            cityService.getCities({
+                limit: 50,
+                search: debouncedCitySearch,
+                sortBy: 'cityName',
+                sortOrder: 'asc',
+                countryId: selectedCountryId || undefined,
+                stateId: selectedStateId || undefined,
+            }),
+        enabled: !!selectedCountryId && !!selectedStateId && (cityOpen || !!initialData?.cityId),
+        staleTime: 5 * 60 * 1000,
+    })
+
     const { data: zonesData, isFetching: isZonesFetching } = useQuery({
         queryKey: ['zones-list', selectedCountryId, debouncedZoneSearch],
         queryFn: () => zoneService.getZones({
@@ -172,7 +191,25 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         () => (statesData?.data ?? []).filter((state) => !selectedCountryId || state.countryId === selectedCountryId),
         [selectedCountryId, statesData?.data]
     )
+    const cityOptions = useMemo(() => citiesData?.data ?? [], [citiesData?.data])
     const zoneOptions = useMemo(() => zonesData?.data ?? [], [zonesData?.data])
+
+    const selectedCityId = useWatch({
+        control: form.control,
+        name: 'cityId',
+    })
+
+    const selectedCity = useMemo(() => {
+        const fromList = cityOptions.find((c) => c.id === selectedCityId)
+        if (fromList) return fromList
+        if (initialData?.cityId === selectedCityId && initialData.city) {
+            return { id: initialData.cityId!, cityName: initialData.city.cityName }
+        }
+        if (initialData?.cityId === selectedCityId && initialData.cityName) {
+            return { id: initialData.cityId!, cityName: initialData.cityName }
+        }
+        return null
+    }, [cityOptions, initialData, selectedCityId])
 
     const selectedCountry = useMemo(() => {
         if (countryOptions.length > 0) {
@@ -224,8 +261,19 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
 
         if (!stateBelongsToCountry) {
             form.setValue('stateId', 0, { shouldValidate: true })
+            form.setValue('cityId', 0, { shouldValidate: true })
         }
     }, [form, selectedCountryId, stateOptions])
+
+    useEffect(() => {
+        if (!selectedStateId) return
+        const cid = form.getValues('cityId')
+        if (!cid) return
+        const ok = cityOptions.some((c) => c.id === cid)
+        if (!ok && cityOptions.length > 0) {
+            form.setValue('cityId', 0, { shouldValidate: true })
+        }
+    }, [form, selectedStateId, cityOptions])
 
     useEffect(() => {
         if (!countryOpen) setCountrySearch('')
@@ -234,6 +282,10 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     useEffect(() => {
         if (!stateOpen) setStateSearch('')
     }, [stateOpen])
+
+    useEffect(() => {
+        if (!cityOpen) setCitySearch('')
+    }, [cityOpen])
 
     useEffect(() => {
         if (!zoneOpen) setZoneSearch('')
@@ -249,7 +301,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                 ? initialData.zoneIds
                 : initialData.zones?.map((z) => z.id) ?? [],
             pinCode: initialData.pinCode ?? '',
-            cityName: initialData.cityName ?? '',
+            cityId: initialData.cityId ?? initialData.city?.id ?? 0,
             areaName: initialData.areaName ?? '',
             serviceable: initialData.serviceable ?? true,
             edl: Boolean(initialData.edl) || Boolean(initialData.oda),
@@ -276,7 +328,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                 stateId: data.stateId,
                 zoneIds: data.zoneIds,
                 pinCode: data.pinCode,
-                cityName: data.cityName,
+                cityId: data.cityId,
                 areaName: data.areaName,
                 serviceable: data.serviceable,
                 edl: data.edl,
@@ -423,6 +475,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                                             value={state.stateName}
                                                             onSelect={() => {
                                                                 field.onChange(state.id)
+                                                                form.setValue('cityId', 0, { shouldValidate: true })
                                                                 setStateOpen(false)
                                                             }}
                                                         >
@@ -459,12 +512,54 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
 
                     <FormField
                         control={form.control}
-                        name="cityName"
+                        name="cityId"
                         render={({ field }) => (
-                            <FloatingFormItem required label="City Name">
-                                <FormControl>
-                                    <Input placeholder="e.g. Indore" {...field} className={FLOATING_INNER_CONTROL} />
-                                </FormControl>
+                            <FloatingFormItem required label="City">
+                                <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                role="combobox"
+                                                disabled={!selectedCountryId || !selectedStateId}
+                                                className={cn(FLOATING_INNER_COMBO, 'w-full justify-between font-normal', !field.value && 'text-muted-foreground')}
+                                            >
+                                                {selectedCity?.cityName || 'Select city'}
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                                        <Command shouldFilter={false}>
+                                            <CommandInput placeholder="Search city..." value={citySearch} onValueChange={setCitySearch} />
+                                            <CommandList>
+                                                {isCitiesFetching ? (
+                                                    <div className="py-6 text-center text-sm text-muted-foreground">Loading...</div>
+                                                ) : (
+                                                    <>
+                                                        <CommandEmpty>No city found. Add it in City Master.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {cityOptions.map((city) => (
+                                                                <CommandItem
+                                                                    key={city.id}
+                                                                    value={String(city.id)}
+                                                                    onSelect={() => {
+                                                                        field.onChange(city.id)
+                                                                        setCityOpen(false)
+                                                                    }}
+                                                                >
+                                                                    <Check className={cn('mr-2 h-4 w-4', field.value === city.id ? 'opacity-100' : 'opacity-0')} />
+                                                                    {city.cityName}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </>
+                                                )}
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </FloatingFormItem>
                         )}
                     />

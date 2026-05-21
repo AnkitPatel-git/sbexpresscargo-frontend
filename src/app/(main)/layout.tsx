@@ -84,6 +84,7 @@ const headerNavItems = [
   { href: "/utilities/serviceable-pincodes", label: "Serviceable Pincode" },
   { href: "/masters/countries", label: "Country" },
   { href: "/masters/states", label: "State Master" },
+  { href: "/masters/cities", label: "City Master" },
   { href: "/masters/contents", label: "Content Master" },
   { href: "/masters/banks", label: "Bank Master" },
   { href: "/masters/service-centers", label: "Service Center Master" },
@@ -138,6 +139,12 @@ const MASTER_GROUP_ITEMS = {
       label: "State",
       icon: Landmark,
       permission: "master.state.read",
+    },
+    {
+      href: "/masters/cities",
+      label: "City",
+      icon: Landmark,
+      permission: "master.city.read",
     },
     {
       href: "/masters/zones",
