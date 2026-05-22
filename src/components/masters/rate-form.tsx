@@ -1568,7 +1568,7 @@ function RateChargesEditor({
         calculationBase: (ch as { calculationBase?: string }).calculationBase ?? "FLAT",
         sequence: 0,
         stateApplicationMode: "ALL",
-        pincodeApplicationMode: "ALL",
+        cityApplicationMode: "ALL",
       });
     };
     for (const row of rateCharges) {
@@ -1972,7 +1972,7 @@ function RateConditionsEditor({
         calculationBase: (ch as { calculationBase?: string }).calculationBase ?? "FLAT",
         sequence: 0,
         stateApplicationMode: "ALL",
-        pincodeApplicationMode: "ALL",
+        cityApplicationMode: "ALL",
       });
     };
     for (const row of rateConditions) {

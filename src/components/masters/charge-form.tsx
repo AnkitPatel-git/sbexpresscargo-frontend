@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, Resolver, FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -18,15 +18,15 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { chargeService } from "@/services/masters/charge-service";
 import { stateService } from "@/services/masters/state-service";
-import { serviceablePincodeService } from "@/services/utilities/serviceable-pincode-service";
+import { cityService } from "@/services/masters/city-service";
 import type {
   Charge,
   ChargeFormData,
-  ChargePincodeApplicationMode,
+  ChargeCityApplicationMode,
   ChargeStateApplicationMode,
 } from "@/types/masters/charge";
 import type { State } from "@/types/masters/state";
-import type { ServiceablePincode } from "@/types/utilities/serviceable-pincode";
+import type { City } from "@/types/masters/city";
 import { omitEmptyCodeFields, optionalMasterCode } from "@/lib/master-code-schema";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useInfiniteEntityList, useSelectContentInfiniteScroll } from "@/hooks/use-infinite-entity-list";
@@ -38,11 +38,11 @@ const STATE_SCOPE_OPTIONS: { value: ChargeStateApplicationMode; label: string }[
   { value: "EITHER_STATE_ONCE", label: "Either pickup or delivery (once)" },
 ];
 
-const PIN_SCOPE_OPTIONS: { value: ChargePincodeApplicationMode; label: string }[] = [
-  { value: "ALL", label: "All pincodes" },
-  { value: "INWARD_DELIVERY_PINCODE", label: "Delivery pincode (inward)" },
-  { value: "OUTWARD_PICKUP_PINCODE", label: "Pickup pincode (outward)" },
-  { value: "EITHER_PINCODE_ONCE", label: "Either pickup or delivery pincode (once)" },
+const CITY_SCOPE_OPTIONS: { value: ChargeCityApplicationMode; label: string }[] = [
+  { value: "ALL", label: "All cities" },
+  { value: "INWARD_DELIVERY_CITY", label: "Delivery city (inward)" },
+  { value: "OUTWARD_PICKUP_CITY", label: "Pickup city (outward)" },
+  { value: "EITHER_CITY_ONCE", label: "Either pickup or delivery city (once)" },
 ];
 
 const chargeSchema = z
@@ -51,9 +51,9 @@ const chargeSchema = z
     name: z.string().min(1, "Name is required"),
     sequence: z.coerce.number().min(1, "Sequence must be at least 1"),
     stateApplicationMode: z.string().min(1),
-    pincodeApplicationMode: z.string().min(1),
+    cityApplicationMode: z.string().min(1),
     stateIds: z.array(z.number().int().positive()),
-    pincodeIds: z.array(z.number().int().positive()),
+    cityIds: z.array(z.number().int().positive()),
   })
   .superRefine((data, ctx) => {
     if (data.stateApplicationMode !== "ALL" && data.stateIds.length === 0) {
@@ -63,11 +63,11 @@ const chargeSchema = z
         path: ["stateIds"],
       });
     }
-    if (data.pincodeApplicationMode !== "ALL" && data.pincodeIds.length === 0) {
+    if (data.cityApplicationMode !== "ALL" && data.cityIds.length === 0) {
       ctx.addIssue({
         code: "custom",
-        message: "Select at least one serviceable pincode, or set pincode scope to All",
-        path: ["pincodeIds"],
+        message: "Select at least one city, or set city scope to All",
+        path: ["cityIds"],
       });
     }
   });
@@ -78,9 +78,9 @@ interface ChargeFormProps {
   initialData?: Charge | null;
 }
 
-function pincodeOptionLabel(p: ServiceablePincode): string {
-  const parts = [p.pinCode, p.areaName, p.cityName].filter(Boolean);
-  return parts.join(" · ");
+function cityOptionLabel(c: City): string {
+  const stateName = c.state?.stateName;
+  return stateName ? `${c.cityName} · ${stateName}` : c.cityName;
 }
 
 export function ChargeForm({ initialData }: ChargeFormProps) {
@@ -95,9 +95,9 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
       name: "",
       sequence: 1,
       stateApplicationMode: "ALL",
-      pincodeApplicationMode: "ALL",
+      cityApplicationMode: "ALL",
       stateIds: [],
-      pincodeIds: [],
+      cityIds: [],
     },
     values: initialData
       ? {
@@ -105,36 +105,41 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
           name: initialData.name,
           sequence: initialData.sequence,
           stateApplicationMode: initialData.stateApplicationMode ?? "ALL",
-          pincodeApplicationMode: initialData.pincodeApplicationMode ?? "ALL",
+          cityApplicationMode: initialData.cityApplicationMode ?? "ALL",
           stateIds: initialData.applicableStates?.map((r) => r.stateId) ?? [],
-          pincodeIds: initialData.applicablePincodes?.map((r) => r.pinCodeId) ?? [],
+          cityIds: initialData.applicableCities?.map((r) => r.cityId) ?? [],
         }
       : undefined,
   });
 
   const stateMode = form.watch("stateApplicationMode");
-  const pinMode = form.watch("pincodeApplicationMode");
+  const cityMode = form.watch("cityApplicationMode");
   const selectedStateIds = form.watch("stateIds");
-  const selectedPincodeIds = form.watch("pincodeIds");
+  const selectedCityIds = form.watch("cityIds");
 
   const [stateSearch, setStateSearch] = useState("");
-  const [pincodeSearch, setPincodeSearch] = useState("");
+  const [citySearch, setCitySearch] = useState("");
   const debouncedStateSearch = useDebounce(stateSearch.trim(), 300);
-  const debouncedPincodeSearch = useDebounce(pincodeSearch.trim(), 300);
+  const debouncedCitySearch = useDebounce(citySearch.trim(), 300);
+
+  const prevStateMode = useRef(stateMode);
+  const prevCityMode = useRef(cityMode);
 
   useEffect(() => {
-    if (stateMode === "ALL") {
+    if (prevStateMode.current !== "ALL" && stateMode === "ALL") {
       form.setValue("stateIds", []);
       setStateSearch("");
     }
+    prevStateMode.current = stateMode;
   }, [stateMode, form]);
 
   useEffect(() => {
-    if (pinMode === "ALL") {
-      form.setValue("pincodeIds", []);
-      setPincodeSearch("");
+    if (prevCityMode.current !== "ALL" && cityMode === "ALL") {
+      form.setValue("cityIds", []);
+      setCitySearch("");
     }
-  }, [pinMode, form]);
+    prevCityMode.current = cityMode;
+  }, [cityMode, form]);
 
   const stateInfinite = useInfiniteEntityList<State>({
     queryKey: ["charge-form-states", debouncedStateSearch],
@@ -150,16 +155,16 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
       }),
   });
 
-  const pincodeInfinite = useInfiniteEntityList<ServiceablePincode>({
-    queryKey: ["charge-form-serviceable-pincodes", debouncedPincodeSearch],
+  const cityInfinite = useInfiniteEntityList<City>({
+    queryKey: ["charge-form-cities", debouncedCitySearch],
     pageSize: 10,
-    enabled: pinMode !== "ALL",
+    enabled: cityMode !== "ALL",
     fetchPage: (page) =>
-      serviceablePincodeService.getServiceablePincodes({
+      cityService.getCities({
         page,
         limit: 10,
-        search: debouncedPincodeSearch,
-        sortBy: "pinCode",
+        ...(debouncedCitySearch ? { search: debouncedCitySearch } : {}),
+        sortBy: "cityName",
         sortOrder: "asc",
       }),
   });
@@ -172,16 +177,20 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
     },
   });
 
-  const onPincodeListScroll = useSelectContentInfiniteScroll({
-    hasNextPage: pincodeInfinite.hasNextPage,
-    isFetchingNextPage: pincodeInfinite.isFetchingNextPage,
+  const onCityListScroll = useSelectContentInfiniteScroll({
+    hasNextPage: cityInfinite.hasNextPage,
+    isFetchingNextPage: cityInfinite.isFetchingNextPage,
     fetchNextPage: () => {
-      void pincodeInfinite.fetchNextPage();
+      void cityInfinite.fetchNextPage();
     },
   });
 
   const stateOptions = useMemo(() => {
     const loaded = new Map<number, { value: number; label: string }>();
+    for (const row of initialData?.applicableStates ?? []) {
+      const name = row.state?.stateName;
+      if (name) loaded.set(row.stateId, { value: row.stateId, label: name });
+    }
     for (const s of stateInfinite.rows) {
       loaded.set(s.id, { value: s.id, label: s.stateName || `State ${s.id}` });
     }
@@ -191,20 +200,25 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
       }
     }
     return Array.from(loaded.values());
-  }, [stateInfinite.rows, selectedStateIds]);
+  }, [initialData?.applicableStates, stateInfinite.rows, selectedStateIds]);
 
-  const pincodeOptions = useMemo(() => {
+  const cityOptions = useMemo(() => {
     const loaded = new Map<number, { value: number; label: string }>();
-    for (const p of pincodeInfinite.rows) {
-      loaded.set(p.id, { value: p.id, label: pincodeOptionLabel(p) });
+    for (const row of initialData?.applicableCities ?? []) {
+      if (row.city) {
+        loaded.set(row.cityId, { value: row.cityId, label: cityOptionLabel(row.city) });
+      }
     }
-    for (const id of selectedPincodeIds) {
+    for (const c of cityInfinite.rows) {
+      loaded.set(c.id, { value: c.id, label: cityOptionLabel(c) });
+    }
+    for (const id of selectedCityIds) {
       if (!loaded.has(id)) {
-        loaded.set(id, { value: id, label: `Pincode #${id}` });
+        loaded.set(id, { value: id, label: `City #${id}` });
       }
     }
     return Array.from(loaded.values());
-  }, [pincodeInfinite.rows, selectedPincodeIds]);
+  }, [initialData?.applicableCities, cityInfinite.rows, selectedCityIds]);
 
   const mutation = useMutation({
     mutationFn: (data: ChargeFormValues) => {
@@ -215,9 +229,9 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
         name: trimmedName,
         sequence: payload.sequence,
         stateApplicationMode: payload.stateApplicationMode as ChargeStateApplicationMode,
-        pincodeApplicationMode: payload.pincodeApplicationMode as ChargePincodeApplicationMode,
+        cityApplicationMode: payload.cityApplicationMode as ChargeCityApplicationMode,
         stateIds: payload.stateApplicationMode === "ALL" ? [] : payload.stateIds,
-        pincodeIds: payload.pincodeApplicationMode === "ALL" ? [] : payload.pincodeIds,
+        cityIds: payload.cityApplicationMode === "ALL" ? [] : payload.cityIds,
       };
       if (codeTrimmed.length > 0) {
         body.code = codeTrimmed;
@@ -260,8 +274,8 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
       <div className="px-2 py-2 text-center text-xs text-muted-foreground">Loading more…</div>
     ) : null;
 
-  const pincodeListFooter =
-    pincodeInfinite.isFetchingNextPage ? (
+  const cityListFooter =
+    cityInfinite.isFetchingNextPage ? (
       <div className="px-2 py-2 text-center text-xs text-muted-foreground">Loading more…</div>
     ) : null;
 
@@ -336,18 +350,18 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
           />
           <FormField
             control={form.control}
-            name="pincodeApplicationMode"
+            name="cityApplicationMode"
             render={({ field }) => (
-              <FloatingFormItem required label="Pincode scope">
+              <FloatingFormItem required label="City scope">
                 <FormControl>
-                  <Select key={`pinApp-${field.value}`} value={field.value} onValueChange={field.onChange}>
+                  <Select key={`cityApp-${field.value}`} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className={FLOATING_INNER_CONTROL}>
-                      <SelectValue placeholder="Pincode application">
-                        {optionLabelForSelect(field.value, PIN_SCOPE_OPTIONS)}
+                      <SelectValue placeholder="City application">
+                        {optionLabelForSelect(field.value, CITY_SCOPE_OPTIONS)}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {PIN_SCOPE_OPTIONS.map((opt) => (
+                      {CITY_SCOPE_OPTIONS.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
                         </SelectItem>
@@ -396,30 +410,30 @@ export function ChargeForm({ initialData }: ChargeFormProps) {
           />
           <FormField
             control={form.control}
-            name="pincodeIds"
+            name="cityIds"
             render={({ field }) => (
-              <FloatingFormItem label="Serviceable pincodes (when scoped)">
+              <FloatingFormItem label="Cities (when scoped)">
                 <FormControl>
-                  {pinMode === "ALL" ? (
+                  {cityMode === "ALL" ? (
                     <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                      Not used when pincode scope is &quot;All pincodes&quot;.
+                      Not used when city scope is &quot;All cities&quot;.
                     </p>
                   ) : (
                     <MultiSelect
                       enableClientFilter={false}
-                      options={pincodeOptions}
+                      options={cityOptions}
                       selected={field.value}
                       onChange={(next) => field.onChange(next as number[])}
-                      placeholder="Select pincodes…"
-                      searchPlaceholder="Search pincode / area / city…"
+                      placeholder="Select cities…"
+                      searchPlaceholder="Search cities…"
                       emptyMessage={
-                        pincodeInfinite.isInitialLoading ? "Loading…" : "No pincodes match. Try another search."
+                        cityInfinite.isInitialLoading ? "Loading…" : "No cities match. Try another search."
                       }
-                      onSearchChange={setPincodeSearch}
-                      onListScroll={onPincodeListScroll}
-                      listFooter={pincodeListFooter}
+                      onSearchChange={setCitySearch}
+                      onListScroll={onCityListScroll}
+                      listFooter={cityListFooter}
                       onOpenChange={(open) => {
-                        if (!open) setPincodeSearch("");
+                        if (!open) setCitySearch("");
                       }}
                     />
                   )}
