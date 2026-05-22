@@ -78,7 +78,10 @@ interface ChargeFormProps {
   initialData?: Charge | null;
 }
 
-function cityOptionLabel(c: City): string {
+function cityOptionLabel(c: {
+  cityName: string;
+  state?: { stateName: string } | null;
+}): string {
   const stateName = c.state?.stateName;
   return stateName ? `${c.cityName} · ${stateName}` : c.cityName;
 }
