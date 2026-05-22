@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { FloatingFormItem, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item";
 import { Form, FormControl, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/ui/decimal-input";
 import { IntegerInput } from "@/components/ui/integer-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -846,14 +847,16 @@ export function RateForm({ initialData }: RateFormProps) {
                 render={({ field }) => (
                   <FloatingFormItem label="Flat rate (optional)">
                     <FormControl>
-                      <IntegerInput
+                      <DecimalInput
                         placeholder="Flat freight amount"
                         className={FLOATING_INNER_CONTROL}
                         name={field.name}
                         ref={field.ref}
                         onBlur={field.onBlur}
                         value={field.value}
-                        onValueChange={field.onChange}
+                        onValueChange={(n) =>
+                          field.onChange(n === undefined ? "" : String(n))
+                        }
                         min={0}
                       />
                     </FormControl>
@@ -1409,7 +1412,7 @@ function RouteSlabsEditor({
                   <SelectItem value="PER_KG">Per kg</SelectItem>
                 </SelectContent>
               </Select>
-              <IntegerInput
+              <DecimalInput
                 placeholder={item.pricingMode === "PER_KG" ? "Rate per kg" : "Total rate"}
                 className={FLOATING_INNER_CONTROL}
                 value={item.rate}
@@ -1826,12 +1829,12 @@ function RateChargesEditor({
             ))}
           </SelectContent>
         </Select>
-        <IntegerInput placeholder="Value" className={FLOATING_INNER_CONTROL} value={draft.value} onValueChange={(n) => setDraft((current) => ({ ...current, value: n === undefined ? "" : String(n) }))} min={0} />
+        <DecimalInput placeholder="Value" className={FLOATING_INNER_CONTROL} value={draft.value} onValueChange={(n) => setDraft((current) => ({ ...current, value: n === undefined ? "" : String(n) }))} min={0} />
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <IntegerInput placeholder="Sequence (optional)" className={FLOATING_INNER_CONTROL} value={draft.sequence} onValueChange={(n) => setDraft((current) => ({ ...current, sequence: n === undefined ? "" : String(n) }))} min={0} />
-        <IntegerInput placeholder="Min value (optional)" className={FLOATING_INNER_CONTROL} value={draft.minValue} onValueChange={(n) => setDraft((current) => ({ ...current, minValue: n === undefined ? "" : String(n) }))} min={0} />
-        <IntegerInput placeholder="Max value (optional)" className={FLOATING_INNER_CONTROL} value={draft.maxValue} onValueChange={(n) => setDraft((current) => ({ ...current, maxValue: n === undefined ? "" : String(n) }))} min={0} />
+        <DecimalInput placeholder="Min value (optional)" className={FLOATING_INNER_CONTROL} value={draft.minValue} onValueChange={(n) => setDraft((current) => ({ ...current, minValue: n === undefined ? "" : String(n) }))} min={0} />
+        <DecimalInput placeholder="Max value (optional)" className={FLOATING_INNER_CONTROL} value={draft.maxValue} onValueChange={(n) => setDraft((current) => ({ ...current, maxValue: n === undefined ? "" : String(n) }))} min={0} />
         <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
           <Checkbox checked={draft.isPercentage} onCheckedChange={(checked) => setDraft((current) => ({ ...current, isPercentage: Boolean(checked) }))} />
           <span className="text-sm font-medium text-foreground">Is percentage</span>
@@ -1859,7 +1862,7 @@ function RateChargesEditor({
             <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <IntegerInput placeholder="Min value" className={FLOATING_INNER_CONTROL} value={item.minValue} onValueChange={(n) => updateChargeSlab(index, "minValue", n === undefined ? "" : String(n))} min={0} />
               <IntegerInput placeholder="Max value" className={FLOATING_INNER_CONTROL} value={item.maxValue} onValueChange={(n) => updateChargeSlab(index, "maxValue", n === undefined ? "" : String(n))} min={0} />
-              <IntegerInput placeholder="Rate" className={FLOATING_INNER_CONTROL} value={item.rate} onValueChange={(n) => updateChargeSlab(index, "rate", n === undefined ? "" : String(n))} min={0} />
+              <DecimalInput placeholder="Rate" className={FLOATING_INNER_CONTROL} value={item.rate} onValueChange={(n) => updateChargeSlab(index, "rate", n === undefined ? "" : String(n))} min={0} />
               <div className="flex items-center gap-2">
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeChargeSlabRow(index)} disabled={draft.chargeSlabs.length === 1}>
                   <Trash2 className="h-4 w-4" />
@@ -2360,15 +2363,15 @@ function RateConditionsEditor({
           </Select>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <IntegerInput placeholder="Charge amount" className={FLOATING_INNER_CONTROL} value={draft.chargeAmount} onValueChange={(n) => setDraft((current) => ({ ...current, chargeAmount: n === undefined ? "" : String(n) }))} min={0} />
-          <IntegerInput
+          <DecimalInput placeholder="Charge amount" className={FLOATING_INNER_CONTROL} value={draft.chargeAmount} onValueChange={(n) => setDraft((current) => ({ ...current, chargeAmount: n === undefined ? "" : String(n) }))} min={0} />
+          <DecimalInput
             placeholder="Minimum charge (optional)"
             className={FLOATING_INNER_CONTROL}
             value={draft.minValue}
             onValueChange={(n) => setDraft((current) => ({ ...current, minValue: n === undefined ? "" : String(n) }))}
             min={0}
           />
-          <IntegerInput
+          <DecimalInput
             placeholder="Maximum charge (optional)"
             className={FLOATING_INNER_CONTROL}
             value={draft.maxValue}
@@ -2446,7 +2449,7 @@ function RateConditionsEditor({
                     onValueChange={(n) => updateConditionSlabRow(slabIndex, { maxValue: n === undefined ? "" : String(n) })}
                     min={0}
                   />
-                  <IntegerInput
+                  <DecimalInput
                     placeholder="Rate"
                     className={FLOATING_INNER_CONTROL}
                     value={slab.rate}
