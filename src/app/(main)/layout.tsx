@@ -118,6 +118,7 @@ const headerNavItems = [
   { href: "/utilities/users/user-setup", label: "User Setup" },
   { href: "/utilities/users/access-rights", label: "Access Rights" },
   { href: "/utilities/users/logged-in-users", label: "LoggedIn Users" },
+  { href: "/utilities/holiday-settings", label: "Holiday settings" },
 ];
 
 const MASTER_GROUP_ITEMS = {
@@ -1390,6 +1391,17 @@ const SidebarContent = ({
                 </Link>
               </div>
             )}
+            <PermissionGuard permission="utility.holiday.read">
+              <Link
+                href="/utilities/holiday-settings"
+                className={utilitySubmenuItemClasses(
+                  isActive("/utilities/holiday-settings"),
+                )}
+                onClick={onItemClick}
+              >
+                Holiday settings
+              </Link>
+            </PermissionGuard>
           </div>
         )}
 
@@ -1446,6 +1458,17 @@ const SidebarContent = ({
                     </Link>
                   </div>
                 )}
+                <PermissionGuard permission="utility.holiday.read">
+                  <Link
+                    href="/utilities/holiday-settings"
+                    className={utilitySubmenuItemClasses(
+                      isActive("/utilities/holiday-settings"),
+                    )}
+                    onClick={onItemClick}
+                  >
+                    Holiday settings
+                  </Link>
+                </PermissionGuard>
               </div>
             </div>
           </div>

@@ -401,8 +401,9 @@ export default function AttendanceRegisterPage() {
           an employee name to open their punch log for the selected month (photos, times, and GPS).
           One row per active user (with a profile), day columns with codes from mobile check-in data,
           and summary counts. <strong>P</strong> present, <strong>HD</strong> short shift (&lt; 4h
-          worked), <strong>A</strong> absent, <strong>WO</strong> weekend with no punch,{" "}
-          <strong>L</strong> late flag, <strong>LEAVE</strong> / <strong>LEFT</strong> from remarks.
+          worked), <strong>A</strong> absent (Mon–Sat with no punch), <strong>WO</strong> Sunday with
+          no punch (optional work day), <strong>HOLIDAY</strong> configured off days, <strong>L</strong>{" "}
+          late flag, <strong>LEAVE</strong> / <strong>LEFT</strong> from remarks.
           Requires <span className="font-mono">report.attendance.read</span>.
         </p>
       </div>
