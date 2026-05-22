@@ -10,6 +10,7 @@ export interface ServiceablePincode {
     id: number;
     countryId: number;
     stateId: number;
+    cityId?: number | null;
     pinCode: string;
     cityName: string;
     areaName: string;
@@ -29,6 +30,10 @@ export interface ServiceablePincode {
         id: number;
         stateName: string;
     } | null;
+    city?: {
+        id: number;
+        cityName: string;
+    } | null;
     zones?: ServiceablePincodeZone[];
     createdAt?: string;
     updatedAt?: string;
@@ -44,7 +49,8 @@ export interface ServiceablePincodeFormData {
     stateId: number;
     zoneIds: number[];
     pinCode: string;
-    cityName: string;
+    cityId: number;
+    cityName?: string;
     areaName: string;
     serviceable: boolean;
     edl: boolean;

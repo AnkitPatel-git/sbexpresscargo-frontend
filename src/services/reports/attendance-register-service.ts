@@ -135,7 +135,7 @@ export const attendanceRegisterService = {
     params: AttendanceRegisterExportParams,
   ): Promise<AttendanceRegisterPreview> {
     const response = await apiFetch(
-      `${API_URL}/mobile/attendance-admin/register?${buildQuery(params)}`,
+      `${API_URL}/report/attendance-register?${buildQuery(params)}`,
       { headers: authHeaders() },
     );
     if (!response.ok) {
@@ -154,7 +154,7 @@ export const attendanceRegisterService = {
   ): Promise<AttendanceUserMonthLog> {
     const q = buildQuery({ year: params.year, month: params.month });
     const response = await apiFetch(
-      `${API_URL}/mobile/attendance-admin/register/user/${userId}/month-log?${q}`,
+      `${API_URL}/report/attendance-register/user/${userId}/month-log?${q}`,
       { headers: authHeaders() },
     );
     if (!response.ok) {
@@ -168,7 +168,7 @@ export const attendanceRegisterService = {
   },
 
   attendancePhotoUrl(attendanceId: number, type: "checkin" | "checkout"): string {
-    return `${API_URL}/mobile/attendance-admin/register/records/${attendanceId}/photo/${type}`;
+    return `${API_URL}/report/attendance-register/records/${attendanceId}/photo/${type}`;
   },
 
   async fetchAttendancePhoto(
@@ -188,7 +188,7 @@ export const attendanceRegisterService = {
     params: AttendanceRegisterExportParams,
   ): Promise<{ blob: Blob; filename: string }> {
     const response = await apiFetch(
-      `${API_URL}/mobile/attendance-admin/register.xlsx?${buildQuery(params)}`,
+      `${API_URL}/report/attendance-register/export.xlsx?${buildQuery(params)}`,
       { headers: authHeaders() },
     );
     if (!response.ok) {

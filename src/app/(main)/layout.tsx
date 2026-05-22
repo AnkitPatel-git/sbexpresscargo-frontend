@@ -84,6 +84,7 @@ const headerNavItems = [
   { href: "/utilities/serviceable-pincodes", label: "Serviceable Pincode" },
   { href: "/masters/countries", label: "Country" },
   { href: "/masters/states", label: "State Master" },
+  { href: "/masters/cities", label: "City Master" },
   { href: "/masters/contents", label: "Content Master" },
   { href: "/masters/banks", label: "Bank Master" },
   { href: "/masters/service-centers", label: "Service Center Master" },
@@ -117,6 +118,7 @@ const headerNavItems = [
   { href: "/utilities/users/user-setup", label: "User Setup" },
   { href: "/utilities/users/access-rights", label: "Access Rights" },
   { href: "/utilities/users/logged-in-users", label: "LoggedIn Users" },
+  { href: "/utilities/holiday-settings", label: "Holiday settings" },
 ];
 
 const MASTER_GROUP_ITEMS = {
@@ -138,6 +140,12 @@ const MASTER_GROUP_ITEMS = {
       label: "State",
       icon: Landmark,
       permission: "master.state.read",
+    },
+    {
+      href: "/masters/cities",
+      label: "City",
+      icon: Landmark,
+      permission: "master.city.read",
     },
     {
       href: "/masters/zones",
@@ -1244,7 +1252,7 @@ const SidebarContent = ({
                 MIS Report
               </LinkItem>
             </PermissionGuard>
-            <PermissionGuard permission="mobile.attendance.admin">
+            <PermissionGuard permission="report.attendance.read">
               <LinkItem
                 href="/report/attendance-register"
                 active={isActive("/report/attendance-register")}
@@ -1279,7 +1287,7 @@ const SidebarContent = ({
                     MIS Report
                   </LinkItem>
                 </PermissionGuard>
-                <PermissionGuard permission="mobile.attendance.admin">
+                <PermissionGuard permission="report.attendance.read">
                   <LinkItem
                     href="/report/attendance-register"
                     active={isActive("/report/attendance-register")}
@@ -1383,6 +1391,17 @@ const SidebarContent = ({
                 </Link>
               </div>
             )}
+            <PermissionGuard permission="utility.holiday.read">
+              <Link
+                href="/utilities/holiday-settings"
+                className={utilitySubmenuItemClasses(
+                  isActive("/utilities/holiday-settings"),
+                )}
+                onClick={onItemClick}
+              >
+                Holiday settings
+              </Link>
+            </PermissionGuard>
           </div>
         )}
 
@@ -1439,6 +1458,17 @@ const SidebarContent = ({
                     </Link>
                   </div>
                 )}
+                <PermissionGuard permission="utility.holiday.read">
+                  <Link
+                    href="/utilities/holiday-settings"
+                    className={utilitySubmenuItemClasses(
+                      isActive("/utilities/holiday-settings"),
+                    )}
+                    onClick={onItemClick}
+                  >
+                    Holiday settings
+                  </Link>
+                </PermissionGuard>
               </div>
             </div>
           </div>

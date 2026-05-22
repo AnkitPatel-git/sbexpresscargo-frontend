@@ -1,0 +1,110 @@
+info:
+  name: GET /api/mobile/lookup/pin-zones
+  type: http
+  seq: 8
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/mobile/lookup/pin-zones"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: pincode
+      value: "452001"
+      type: query
+      description: Required. Exactly 6 digits (Indian pincode).
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: found — serviceable pincode with zones
+    request:
+      url: "{{baseUrl}}/api/mobile/lookup/pin-zones"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      params:
+        - name: pincode
+          value: "452001"
+          type: query
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Success",
+            "data": {
+              "pincode": "452001",
+              "found": true,
+              "serviceable": true,
+              "countryId": 1,
+              "stateId": 1,
+              "cityId": 1,
+              "cityName": "DEWASH",
+              "areaName": "ANIL SHREE NAGAR",
+              "country": { "id": 1, "code": "IN", "name": "India" },
+              "state": { "id": 1, "stateName": "Madhya Pradesh" },
+              "city": { "id": 1, "cityName": "DEWASH" },
+              "zones": [
+                {
+                  "zoneId": 1,
+                  "code": "CZ",
+                  "name": "CENTRAL ZONE",
+                  "zoneType": "DOMESTIC"
+                }
+              ]
+            }
+          }
+  - name: not found
+    request:
+      url: "{{baseUrl}}/api/mobile/lookup/pin-zones"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      params:
+        - name: pincode
+          value: "560001"
+          type: query
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Success",
+            "data": {
+              "pincode": "560001",
+              "found": false,
+              "serviceable": null,
+              "zones": []
+            }
+          }
+  - name: validation — missing pincode
+    request:
+      url: "{{baseUrl}}/api/mobile/lookup/pin-zones"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "success": false,
+            "message": "pincode must be exactly 6 digits, pincode must be a string",
+            "data": {}
+          }

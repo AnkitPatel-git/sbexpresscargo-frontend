@@ -21,7 +21,6 @@ http:
         "ewaybillNumber": "EWB2310045678901",
         "referenceNo": "REF/IND/2026/00891",
         "customerId": 1,
-        "clientId": 1,
         "serviceCenterId": 1,
         "productId": 1,
         "shipmentTotalValue": 45000,
@@ -32,6 +31,7 @@ http:
         "floorDelivery": true,
         "floorCount": 2,
         "km": 590,
+        "actualWeight": 12,
         "commercial": true,
         "instruction": "Handle with care. Keep dry. Do not stack more than 3 units.",
         "isCod": false,
@@ -43,6 +43,7 @@ http:
           "address1": "Plot No. 15, Scheme 78, Part-II, Vijay Nagar",
           "address2": "Near Palasia Square, Indore",
           "pinCodeId": 400001,
+          "zoneId": 1,
           "telephone": "07314823100",
           "mobile": "9826712345",
           "email": "amit.malviya@indoretextile.com"
@@ -54,19 +55,17 @@ http:
           "address1": "Shop No. 12, Kalbadevi Cloth Market",
           "address2": "Near Mangaldas Market, Mumbai",
           "pinCodeId": 110001,
+          "zoneId": 2,
           "telephone": "02223456789",
           "mobile": "9820456789",
           "email": "nitin.desai@mumbaifabric.com"
         },
         "piecesRows": [
           {
-            "actualWeight": 9500,
             "pieces": 3,
             "length": 60,
             "breadth": 40,
             "height": 30,
-            "volumetricWeight": 24000,
-            "chargeWeight": 28500,
             "items": [
               {
                 "contentId": 1,

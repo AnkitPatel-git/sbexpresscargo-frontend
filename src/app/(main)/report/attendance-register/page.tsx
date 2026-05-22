@@ -401,18 +401,19 @@ export default function AttendanceRegisterPage() {
           an employee name to open their punch log for the selected month (photos, times, and GPS).
           One row per active user (with a profile), day columns with codes from mobile check-in data,
           and summary counts. <strong>P</strong> present, <strong>HD</strong> short shift (&lt; 4h
-          worked), <strong>A</strong> absent, <strong>WO</strong> weekend with no punch,{" "}
-          <strong>L</strong> late flag, <strong>LEAVE</strong> / <strong>LEFT</strong> from remarks.
-          Requires <span className="font-mono">mobile.attendance.admin</span>.
+          worked), <strong>A</strong> absent (Mon–Sat with no punch), <strong>WO</strong> Sunday with
+          no punch (optional work day), <strong>HOLIDAY</strong> configured off days, <strong>L</strong>{" "}
+          late flag, <strong>LEAVE</strong> / <strong>LEFT</strong> from remarks.
+          Requires <span className="font-mono">report.attendance.read</span>.
         </p>
       </div>
 
       <PermissionGuard
-        permission="mobile.attendance.admin"
+        permission="report.attendance.read"
         fallback={
           <p className="text-sm text-muted-foreground">
-            You need the <span className="font-mono">mobile.attendance.admin</span> permission
-            (typically Super Admin) to view and download the register.
+            You need the <span className="font-mono">report.attendance.read</span> permission
+            (e.g. Human Resource or Super Admin) to view and download the register.
           </p>
         }
       >

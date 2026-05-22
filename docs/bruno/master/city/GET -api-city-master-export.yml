@@ -1,0 +1,44 @@
+info:
+  name: GET /api/city-master/export
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/city-master/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: page
+      value: "1"
+      type: query
+      disabled: true
+    - name: limit
+      value: "1000"
+      type: query
+      disabled: true
+    - name: search
+      value: ""
+      type: query
+      disabled: true
+    - name: countryId
+      value: "1"
+      type: query
+      disabled: true
+    - name: stateId
+      value: "1"
+      type: query
+      disabled: true
+    - name: cityName
+      value: ""
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
