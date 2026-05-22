@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Check, ChevronsUpDown, Loader2, X } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import {
     Form,
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
 import { countryService } from '@/services/masters/country-service'
 import { stateService } from '@/services/masters/state-service'
@@ -41,7 +40,7 @@ const pincodeSchema = z.object({
     countryId: z.number().min(1, "Country is required"),
     countryCode: z.string().min(1, "Country code is required"),
     stateId: z.number().min(1, "State is required"),
-    zoneIds: z.array(z.number()).min(1, "At least one zone is required"),
+    zoneIds: z.array(z.number()).length(1, "Zone is required"),
     pinCode: z.string().min(1, "Pin Code is required"),
     cityId: z.number().min(1, "City is required"),
     areaName: z.string().min(1, "Area Name is required"),
@@ -99,8 +98,9 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
 
     const defaultZoneIds = useMemo(() => {
         if (!initialData) return []
-        if (initialData.zoneIds?.length) return initialData.zoneIds
-        return initialData.zones?.map((z) => z.id) ?? []
+        if (initialData.zoneIds?.length) return [initialData.zoneIds[0]]
+        const fromZones = initialData.zones?.map((z) => z.id) ?? []
+        return fromZones.length ? [fromZones[0]] : []
     }, [initialData])
 
     function formatDistanceInitial(value: unknown): string {
@@ -182,7 +182,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             zoneType: 'DOMESTIC',
             countryId: selectedCountryId || undefined,
         }),
-        enabled: zoneOpen || selectedZoneIds.length > 0,
+        enabled: zoneOpen || selectedZoneIds.length > 0 || !!initialData?.zones?.length,
         staleTime: 5 * 60 * 1000,
     })
 
@@ -240,14 +240,13 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         return null
     }, [initialData, selectedStateId, stateOptions])
 
-    const selectedZones = useMemo(() => {
-        const zoneMap = new Map(zoneOptions.map((zone) => [zone.id, zone]))
-        return selectedZoneIds.map((zoneId) => {
-            const fromOptions = zoneMap.get(zoneId)
-            if (fromOptions) return fromOptions
-            return initialData?.zones?.find((zone) => zone.id === zoneId)
-        }).filter((zone): zone is NonNullable<typeof zone> => Boolean(zone))
-    }, [initialData?.zones, selectedZoneIds, zoneOptions])
+    const selectedZoneId = selectedZoneIds[0] ?? 0
+
+    const selectedZone = useMemo(() => {
+        const fromOptions = zoneOptions.find((zone) => zone.id === selectedZoneId)
+        if (fromOptions) return fromOptions
+        return initialData?.zones?.find((zone) => zone.id === selectedZoneId) ?? null
+    }, [initialData?.zones, selectedZoneId, zoneOptions])
 
     useEffect(() => {
         if (!selectedCountryId) return
@@ -298,8 +297,10 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             countryCode: initialData.country?.code ?? '',
             stateId: initialData.stateId ?? 0,
             zoneIds: initialData.zoneIds?.length
-                ? initialData.zoneIds
-                : initialData.zones?.map((z) => z.id) ?? [],
+                ? [initialData.zoneIds[0]]
+                : initialData.zones?.length
+                  ? [initialData.zones[0].id]
+                  : [],
             pinCode: initialData.pinCode ?? '',
             cityId: initialData.cityId ?? initialData.city?.id ?? 0,
             areaName: initialData.areaName ?? '',
@@ -311,13 +312,9 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         })
     }, [initialData])
 
-    function toggleZone(zoneId: number) {
-        const currentZoneIds = form.getValues('zoneIds')
-        if (currentZoneIds.includes(zoneId)) {
-            form.setValue('zoneIds', currentZoneIds.filter((id) => id !== zoneId), { shouldValidate: true })
-            return
-        }
-        form.setValue('zoneIds', [...currentZoneIds, zoneId], { shouldValidate: true })
+    function selectZone(zoneId: number) {
+        form.setValue('zoneIds', [zoneId], { shouldValidate: true })
+        setZoneOpen(false)
     }
 
     const mutation = useMutation({
@@ -618,7 +615,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                         control={form.control}
                         name="zoneIds"
                         render={({ field }) => (
-                            <FloatingFormItem required label="Zones">
+                            <FloatingFormItem required label="Zone">
                                 <Popover open={zoneOpen} onOpenChange={setZoneOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
@@ -627,29 +624,14 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                                 role="combobox"
                                                 className={cn(
                                                     FLOATING_INNER_COMBO,
-                                                    field.value.length === 0 && "text-muted-foreground"
+                                                    !selectedZone && "text-muted-foreground"
                                                 )}
                                             >
-                                                <div className="flex flex-wrap gap-1">
-                                                    {selectedZones.length > 0 ? (
-                                                        selectedZones.map((zone) => (
-                                                            <Badge
-                                                                variant="secondary"
-                                                                key={zone.id}
-                                                                className="mr-1 mb-1"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    toggleZone(zone.id)
-                                                                }}
-                                                            >
-                                                                {zone.name} ({zone.code})
-                                                                <X className="ml-1 h-3 w-3 text-muted-foreground" />
-                                                            </Badge>
-                                                        ))
-                                                    ) : (
-                                                        <span>Select zones</span>
-                                                    )}
-                                                </div>
+                                                <span className="truncate">
+                                                    {selectedZone
+                                                        ? `${selectedZone.name} (${selectedZone.code})`
+                                                        : "Search zone"}
+                                                </span>
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </FormControl>
@@ -657,7 +639,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                                         <Command shouldFilter={false}>
                                             <CommandInput
-                                                placeholder="Search zones..."
+                                                placeholder="Search zone..."
                                                 value={zoneSearch}
                                                 onValueChange={setZoneSearch}
                                             />
@@ -668,18 +650,14 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                                         <CommandItem
                                                             key={zone.id}
                                                             value={`${zone.name} ${zone.code}`}
-                                                            onSelect={() => toggleZone(zone.id)}
+                                                            onSelect={() => selectZone(zone.id)}
                                                         >
-                                                            <div
+                                                            <Check
                                                                 className={cn(
-                                                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                                                    field.value.includes(zone.id)
-                                                                        ? "bg-primary text-primary-foreground"
-                                                                        : "opacity-50 [&_svg]:invisible"
+                                                                    "mr-2 h-4 w-4",
+                                                                    field.value[0] === zone.id ? "opacity-100" : "opacity-0"
                                                                 )}
-                                                            >
-                                                                <Check className="h-4 w-4" />
-                                                            </div>
+                                                            />
                                                             {zone.name} ({zone.code})
                                                         </CommandItem>
                                                     ))}
