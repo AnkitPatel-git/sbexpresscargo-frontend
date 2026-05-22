@@ -1251,7 +1251,7 @@ const SidebarContent = ({
                 MIS Report
               </LinkItem>
             </PermissionGuard>
-            <PermissionGuard permission="mobile.attendance.admin">
+            <PermissionGuard permission="report.attendance.read">
               <LinkItem
                 href="/report/attendance-register"
                 active={isActive("/report/attendance-register")}
@@ -1286,7 +1286,7 @@ const SidebarContent = ({
                     MIS Report
                   </LinkItem>
                 </PermissionGuard>
-                <PermissionGuard permission="mobile.attendance.admin">
+                <PermissionGuard permission="report.attendance.read">
                   <LinkItem
                     href="/report/attendance-register"
                     active={isActive("/report/attendance-register")}
