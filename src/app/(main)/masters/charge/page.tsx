@@ -202,7 +202,7 @@ export default function ChargePage() {
               <TableHead className="font-semibold text-primary-foreground">Code</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Name</TableHead>
               <TableHead className="font-semibold text-primary-foreground">State scope</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Pincode scope</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">City scope</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Sequence</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Version</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
@@ -232,10 +232,10 @@ export default function ChargePage() {
                       ? "All"
                       : `${charge.stateApplicationMode} (${charge.applicableStates?.length ?? 0})`}
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-xs text-foreground" title={charge.pincodeApplicationMode}>
-                    {charge.pincodeApplicationMode === "ALL"
+                  <TableCell className="max-w-[200px] truncate text-xs text-foreground" title={charge.cityApplicationMode}>
+                    {charge.cityApplicationMode === "ALL"
                       ? "All"
-                      : `${charge.pincodeApplicationMode} (${charge.applicablePincodes?.length ?? 0})`}
+                      : `${charge.cityApplicationMode} (${charge.applicableCities?.length ?? 0})`}
                   </TableCell>
                   <TableCell className="text-center text-foreground">{charge.sequence}</TableCell>
                   <TableCell className="text-center text-foreground">{charge.version}</TableCell>

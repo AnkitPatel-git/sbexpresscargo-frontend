@@ -15,21 +15,27 @@ export type ChargeStateApplicationMode =
   | "EITHER_STATE_ONCE"
   | string;
 
-export type ChargePincodeApplicationMode =
+export type ChargeCityApplicationMode =
   | "ALL"
-  | "INWARD_DELIVERY_PINCODE"
-  | "OUTWARD_PICKUP_PINCODE"
-  | "EITHER_PINCODE_ONCE"
+  | "INWARD_DELIVERY_CITY"
+  | "OUTWARD_PICKUP_CITY"
+  | "EITHER_CITY_ONCE"
   | string;
 
 export interface ChargeApplicableStateRow {
   chargeId: number;
   stateId: number;
+  state?: { id: number; stateName: string } | null;
 }
 
-export interface ChargeApplicablePincodeRow {
+export interface ChargeApplicableCityRow {
   chargeId: number;
-  pinCodeId: number;
+  cityId: number;
+  city?: {
+    id: number;
+    cityName: string;
+    state?: { id: number; stateName: string } | null;
+  } | null;
 }
 
 export interface Charge {
@@ -40,9 +46,9 @@ export interface Charge {
   calculationBase: ChargeCalculationBase;
   sequence: number;
   stateApplicationMode: ChargeStateApplicationMode;
-  pincodeApplicationMode: ChargePincodeApplicationMode;
+  cityApplicationMode: ChargeCityApplicationMode;
   applicableStates?: ChargeApplicableStateRow[];
-  applicablePincodes?: ChargeApplicablePincodeRow[];
+  applicableCities?: ChargeApplicableCityRow[];
   createdAt?: string;
   updatedAt?: string;
   createdById?: number | null;
@@ -56,9 +62,9 @@ export interface ChargeFormData {
   name: string;
   sequence: number;
   stateApplicationMode: ChargeStateApplicationMode;
-  pincodeApplicationMode: ChargePincodeApplicationMode;
+  cityApplicationMode: ChargeCityApplicationMode;
   stateIds: number[];
-  pincodeIds: number[];
+  cityIds: number[];
 }
 
 export interface ChargeListResponse {

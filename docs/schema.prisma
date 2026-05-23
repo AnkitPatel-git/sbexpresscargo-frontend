@@ -530,7 +530,7 @@ model ServiceablePincodeZone {
   serviceablePincode ServiceablePincode @relation(fields: [serviceablePincodeId], references: [id], onDelete: Cascade)
   zone               Zone               @relation(fields: [zoneId], references: [id], onDelete: Restrict)
 
-  @@unique([serviceablePincodeId, zoneId])
+  @@unique([serviceablePincodeId])
   @@index([zoneId])
   @@map("serviceable_pincode_zones")
 }

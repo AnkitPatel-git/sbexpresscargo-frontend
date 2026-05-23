@@ -20,6 +20,7 @@ import {
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
+import { DecimalInput } from "@/components/ui/decimal-input"
 import { IntegerInput } from "@/components/ui/integer-input"
 import { Button } from "@/components/ui/button"
 import {
@@ -1061,7 +1062,7 @@ function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null })
                     />
                     <div className="space-y-2">
                         <div className="text-sm font-medium">Fuel Surcharge</div>
-                        <IntegerInput
+                        <DecimalInput
                             value={form.fuelSurcharge}
                             onValueChange={(n) => setForm((prev) => ({ ...prev, fuelSurcharge: n }))}
                             min={0}
@@ -1157,7 +1158,7 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
                         return
                     }
                     if (!Number.isFinite(form.cft) || (form.cft as number) <= 0) {
-                        toast.error('CFT must be a whole number greater than 0')
+                        toast.error('CFT must be greater than 0 (up to 2 decimal places)')
                         return
                     }
                     mutation.mutate({ ...form, cft: form.cft as number })
@@ -1215,10 +1216,10 @@ function CustomerVolumetricTab({ customerId }: { customerId: number | null }) {
                     </div>
                     <div className="space-y-2">
                         <div className="text-sm font-medium">CFT</div>
-                        <IntegerInput
+                        <DecimalInput
                             value={form.cft}
                             onValueChange={(n) => setForm((prev) => ({ ...prev, cft: n }))}
-                            min={1}
+                            min={0.01}
                         />
                     </div>
                 </div>
