@@ -11,6 +11,7 @@ export interface Zone {
     updatedById: number | null;
     deletedAt: string | null;
     deletedById: number | null;
+    country?: { id: number; code: string; name: string } | null;
 }
 
 export interface ZoneFormData {

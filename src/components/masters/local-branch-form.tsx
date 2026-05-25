@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
-import { useForm, Resolver, useWatch } from 'react-hook-form'
+import { useEffect, useMemo } from 'react'
+import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 import {
     Form,
@@ -16,27 +16,16 @@ import {
 } from "@/components/ui/form"
 import {
     FloatingFormItem,
-    FLOATING_INNER_COMBO,
     FLOATING_INNER_CONTROL,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { FormSection } from "@/components/ui/form-section"
 import { localBranchService } from '@/services/masters/local-branch-service'
-import { serviceCenterService } from '@/services/masters/service-center-service'
 import { LocalBranch, type LocalBranchFormData } from '@/types/masters/local-branch'
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
-import { useDebounce } from '@/hooks/use-debounce'
-import { cn } from '@/lib/utils'
+import { ServiceCenterFloatingAsyncSelect } from '@/components/masters/floating-master-async-selects'
+import type { ServiceCenter } from '@/types/masters/service-center'
 import {
     getInitialPincode,
     normalizePincodeInput,
@@ -67,21 +56,12 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
-    const [serviceCenterOpen, setServiceCenterOpen] = useState(false)
-    const [serviceCenterSearch, setServiceCenterSearch] = useState('')
-    const debouncedServiceCenterSearch = useDebounce(serviceCenterSearch, 300)
 
-    const { data: serviceCentersData, isFetching: isServiceCentersFetching } = useQuery({
-        queryKey: ['local-branch-service-centers', debouncedServiceCenterSearch],
-        queryFn: () => serviceCenterService.getServiceCenters({
-            limit: 25,
-            search: debouncedServiceCenterSearch,
-            sortBy: 'code',
-            sortOrder: 'asc',
-        }),
-        enabled: serviceCenterOpen || !!initialData?.serviceCenterId,
-        staleTime: 5 * 60 * 1000,
-    })
+    const extraServiceCenters = useMemo((): ServiceCenter[] | undefined => {
+        const sc = initialData?.serviceCenter
+        if (!sc || !initialData?.serviceCenterId) return undefined
+        return [sc as ServiceCenter]
+    }, [initialData?.serviceCenter, initialData?.serviceCenterId])
 
     const form = useForm<LocalBranchFormValues>({
         resolver: zodResolver(localBranchSchema) as Resolver<LocalBranchFormValues>,
@@ -116,24 +96,6 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
             gstNo: initialData.gstNo || '',
         })
     }, [initialData, form])
-
-    useEffect(() => {
-        if (!serviceCenterOpen) setServiceCenterSearch('')
-    }, [serviceCenterOpen])
-
-    const selectedServiceCenterId = useWatch({
-        control: form.control,
-        name: 'serviceCenterId',
-    })
-
-    const selectedServiceCenter = useMemo(() => {
-        const match = serviceCentersData?.data?.find((serviceCenter) => serviceCenter.id === selectedServiceCenterId)
-        if (match) return match
-        if (initialData?.serviceCenterId === selectedServiceCenterId && initialData.serviceCenter) {
-            return initialData.serviceCenter
-        }
-        return null
-    }, [initialData, selectedServiceCenterId, serviceCentersData?.data])
 
     const mutation = useMutation({
         mutationFn: (values: LocalBranchFormValues) => {
@@ -205,66 +167,13 @@ export function LocalBranchForm({ initialData }: LocalBranchFormProps) {
                             name="serviceCenterId"
                             render={({ field }) => (
                                 <FloatingFormItem required label="Service Center">
-                                    <Popover open={serviceCenterOpen} onOpenChange={setServiceCenterOpen}>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    aria-expanded={serviceCenterOpen}
-                                                    className={cn(
-                                                        FLOATING_INNER_COMBO,
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    <span className="truncate">
-                                                        {selectedServiceCenter
-                                                            ? `${selectedServiceCenter.name} (${selectedServiceCenter.code})`
-                                                            : "Search service center..."}
-                                                    </span>
-                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                            <Command shouldFilter={false}>
-                                                <CommandInput
-                                                    placeholder="Search service center..."
-                                                    value={serviceCenterSearch}
-                                                    onValueChange={setServiceCenterSearch}
-                                                />
-                                                <CommandList>
-                                                    <CommandEmpty>No service center found.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {serviceCentersData?.data?.map((serviceCenter) => (
-                                                            <CommandItem
-                                                                key={serviceCenter.id}
-                                                                value={`${serviceCenter.name} ${serviceCenter.code}`}
-                                                                onSelect={() => {
-                                                                    form.setValue("serviceCenterId", serviceCenter.id)
-                                                                    setServiceCenterOpen(false)
-                                                                }}
-                                                            >
-                                                                <Check
-                                                                    className={cn(
-                                                                        "mr-2 h-4 w-4",
-                                                                        field.value === serviceCenter.id ? "opacity-100" : "opacity-0"
-                                                                    )}
-                                                                />
-                                                                {serviceCenter.name} ({serviceCenter.code})
-                                                            </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                    {isServiceCentersFetching ? (
-                                                        <div className="flex items-center justify-center p-3 text-sm text-muted-foreground">
-                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                            Loading service centers...
-                                                        </div>
-                                                    ) : null}
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <ServiceCenterFloatingAsyncSelect
+                                        triggerRef={field.ref}
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        queryKeyScope={`local-branch-${String(initialData?.id ?? "new")}`}
+                                        extraCenters={extraServiceCenters}
+                                    />
                                 </FloatingFormItem>
                             )}
                         />

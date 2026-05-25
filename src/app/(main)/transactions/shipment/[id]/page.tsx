@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2, Pencil, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,88 +18,15 @@ import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
-import type { Shipment } from "@/types/transactions/shipment";
+import type { Shipment, ShipmentCharge } from "@/types/transactions/shipment";
 
 const fallbackText = (value?: string | number | null) => {
   if (value === null || value === undefined || value === "") return "—";
   return String(value);
 };
 
-function buildCalculationPayload(shipment: Shipment) {
-  const actualWeight = Math.max(0, Number(shipment.declaredWeight ?? 0));
-  const volumetricWeight = Math.round(
-    (shipment.piecesRows || []).reduce(
-      (sum, row) => sum + (Number(row.volumetricWeight) || 0),
-      0,
-    ),
-  );
-  const chargeWeight = Math.max(actualWeight, volumetricWeight);
-  return {
-    awbNo: shipment.awbNo,
-    ewaybillNumber: shipment.ewaybillNumber || undefined,
-    bookDate: shipment.bookDate,
-    bookTime: shipment.bookTime,
-    referenceNo: shipment.referenceNo,
-    customerId: shipment.customerId,
-    clientId: shipment.customerId,
-    shipperId: shipment.shipperId || undefined,
-    consigneeId: shipment.consigneeId || undefined,
-    shipper: shipment.shipper
-      ? {
-          shipperCode: shipment.shipper.shipperCode || shipment.shipper.name || "",
-          shipperName: shipment.shipper.shipperName || shipment.shipper.name || "",
-        }
-      : undefined,
-    consignee: shipment.consignee
-      ? {
-          code: shipment.consignee.code || shipment.consignee.consigneeName || "",
-          name: shipment.consignee.consigneeName || shipment.consignee.name || "",
-        }
-      : undefined,
-    productId: shipment.productId,
-    fromZoneId: shipment.fromZoneId ?? undefined,
-    toZoneId: shipment.toZoneId ?? undefined,
-    shipmentTotalValue: shipment.shipmentTotalValue ?? shipment.totalAmount ?? undefined,
-    actualWeight,
-    volumetricWeight,
-    chargeWeight,
-    reversePickup: shipment.reversePickup ?? false,
-    appointmentDelivery: shipment.appointmentDelivery ?? false,
-    floorDelivery: shipment.floorDelivery ?? false,
-    floorCount: shipment.floorCount ?? undefined,
-    km: shipment.km ?? undefined,
-    isEdl: shipment.isEdl ?? false,
-    odaEdlDistanceKm:
-      shipment.odaEdlDistanceKm != null && shipment.odaEdlDistanceKm !== ""
-        ? Number(shipment.odaEdlDistanceKm)
-        : undefined,
-    commercial: shipment.commercial ?? false,
-    paymentType: shipment.paymentType,
-    instruction: shipment.instruction || undefined,
-    serviceCenterId: shipment.serviceCenterId ?? undefined,
-    isCod: shipment.isCod,
-    codAmount: shipment.codAmount ?? undefined,
-    invoiceDate: shipment.invoiceDate?.split("T")[0],
-    invoiceNumber: shipment.invoiceNumber ?? undefined,
-    piecesRows: (shipment.piecesRows || []).map((row) => ({
-      actualWeight: Number(row.actualWeight) || 0,
-      pieces: Number(row.pieces) || 0,
-      length: row.length ?? undefined,
-      breadth: row.breadth ?? undefined,
-      height: row.height ?? undefined,
-      division: row.division ?? undefined,
-      volumetricWeight: row.volumetricWeight ?? undefined,
-      chargeWeight: row.chargeWeight ?? undefined,
-      items: (row.items || []).map((item) => ({
-        contentId: Number(item.contentId) || 0,
-        quantity: item.quantity ?? undefined,
-        measureValue: item.measureValue ?? undefined,
-        measureUnit: item.measureUnit ?? undefined,
-        totalValue: item.totalValue ?? undefined,
-      })),
-    })),
-    charges: shipment.charges || [],
-  };
+function chargeRowLabel(row: ShipmentCharge) {
+  return row.description?.trim() || row.chargeType?.trim() || (row.chargeId ? `Charge #${row.chargeId}` : "Charge");
 }
 
 export default function ShipmentDetailsPage() {
@@ -122,14 +49,6 @@ export default function ShipmentDetailsPage() {
     queryKey: ["shipment", id],
     queryFn: () => shipmentService.getShipmentById(id),
     enabled: Number.isFinite(id) && id > 0,
-  });
-
-  const calcMutation = useMutation({
-    mutationFn: () => shipmentService.calculateCharges(buildCalculationPayload(shipmentResponse!.data)),
-    onSuccess: () => {
-      toast.success("Charges calculated");
-    },
-    onError: (error: Error) => toast.error(error.message || "Failed to calculate charges"),
   });
 
   const statusMutation = useMutation({
@@ -159,6 +78,21 @@ export default function ShipmentDetailsPage() {
       setStatusScannedAt("");
     },
     onError: (error: Error) => toast.error(error.message || "Failed to update shipment booking status"),
+  });
+
+  const labelDownloadMutation = useMutation({
+    mutationFn: (awbNo: string) =>
+      shipmentService.downloadShippingLabel(awbNo, { regenerate: true }),
+    onSuccess: ({ blob, filename }) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Shipping label downloaded");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to download shipping label"),
   });
 
   const podProofDownloadMutation = useMutation({
@@ -209,9 +143,15 @@ export default function ShipmentDetailsPage() {
   });
 
   const shipment = shipmentResponse?.data;
+  const appliedCharges = useMemo(() => shipment?.charges ?? [], [shipment?.charges]);
   const kycDocuments = shipment?.kycDocuments ?? [];
-  const calcResult = calcMutation.data?.data;
   const statuses = useMemo(() => shipment?.statuses ?? [], [shipment?.statuses]);
+
+  const appliedChargesTotal = useMemo(
+    () =>
+      appliedCharges.reduce((sum, row) => sum + (Number(row.total ?? row.amount) || 0), 0),
+    [appliedCharges],
+  );
 
   const currentStatus = useMemo(
     () => shipment?.currentStatus || statuses[statuses.length - 1]?.status || "—",
@@ -253,6 +193,25 @@ export default function ShipmentDetailsPage() {
           <p className="text-xs text-muted-foreground">AWB: {shipment.awbNo}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => labelDownloadMutation.mutate(shipment.awbNo)}
+            disabled={!shipment.awbNo?.trim() || labelDownloadMutation.isPending}
+          >
+            {labelDownloadMutation.isPending ? (
+              <>
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                Downloading…
+              </>
+            ) : (
+              <>
+                <Download className="mr-1 h-4 w-4" />
+                Shipment Label
+              </>
+            )}
+          </Button>
           <Button asChild type="button" variant="outline" size="sm">
             <Link href="/transactions/shipment">
               <ArrowLeft className="mr-1 h-4 w-4" />
@@ -264,10 +223,6 @@ export default function ShipmentDetailsPage() {
               <Pencil className="mr-1 h-4 w-4" />
               Edit
             </Link>
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => void calcMutation.mutate()} disabled={calcMutation.isPending}>
-            <RefreshCw className="mr-1 h-4 w-4" />
-            Calculate
           </Button>
         </div>
       </div>
@@ -328,25 +283,24 @@ export default function ShipmentDetailsPage() {
           )}
         </FormSection>
 
-        <FormSection title="Charge Preview" contentClassName="space-y-2 text-sm">
-          {calcResult ? (
-            <>
-              <p><span className="text-muted-foreground">Base Freight:</span> {fallbackText(calcResult.baseFreight)}</p>
-              <p><span className="text-muted-foreground">Total Charges:</span> {fallbackText(calcResult.totalCharges)}</p>
-              <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(calcResult.totalAmount)}</p>
-              <div className="space-y-1 pt-2">
-                {calcResult.rows?.map((row, index) => (
-                  <div key={`${row.type}-${index}`} className="rounded-md border border-border bg-muted/20 p-2 text-xs">
-                    <div className="font-medium">{row.name}</div>
-                    <div className="text-muted-foreground">
-                      {row.type} | {fallbackText(row.amount)}
-                    </div>
+        <FormSection title="Applied Charge" contentClassName="space-y-2 text-sm">
+          <p><span className="text-muted-foreground">Base Freight:</span> {fallbackText(shipment.baseFreight)}</p>
+          <p><span className="text-muted-foreground">Charge lines total:</span> {appliedCharges.length > 0 ? fallbackText(appliedChargesTotal) : "—"}</p>
+          <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(shipment.totalAmount)}</p>
+          {appliedCharges.length > 0 ? (
+            <div className="space-y-1 pt-2">
+              {appliedCharges.map((row, index) => (
+                <div key={row.id ?? `${chargeRowLabel(row)}-${index}`} className="rounded-md border border-border bg-muted/20 p-2 text-xs">
+                  <div className="font-medium">{chargeRowLabel(row)}</div>
+                  <div className="text-muted-foreground">
+                    Amount: {fallbackText(row.amount)} | Total: {fallbackText(row.total ?? row.amount)}
+                    {row.fuelApply ? " | Fuel applied" : ""}
                   </div>
-                ))}
-              </div>
-            </>
+                </div>
+              ))}
+            </div>
           ) : (
-            <p className="text-muted-foreground">Use Calculate to fetch the backend charge breakdown.</p>
+            <p className="text-muted-foreground">No applied shipment charges on this booking.</p>
           )}
         </FormSection>
       </div>

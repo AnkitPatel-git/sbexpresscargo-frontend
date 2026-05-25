@@ -40,7 +40,6 @@ import {
   BarChart3,
   Menu,
   ClipboardList,
-  Car,
   Bike,
   Navigation,
   CheckSquare,
@@ -103,12 +102,12 @@ const headerNavItems = [
   { href: "/masters/vendor-config", label: "Vendor Config Master" },
   { href: "/transactions/shipment", label: "Shipment Booking" },
   { href: "/transactions/manifest", label: "Manifest" },
-  { href: "/transactions/drs", label: "DRS" },
   { href: "/transactions/tracking", label: "Tracking" },
   { href: "/transactions/pod", label: "POD" },
   { href: "/transactions/customer-payment", label: "Customer Payment" },
   { href: "/transactions/receipt", label: "Receipts" },
   { href: "/report/mis", label: "MIS Report" },
+  { href: "/report/dp-batch", label: "DP Batch Report" },
   { href: "/report/attendance-register", label: "Attendance register" },
   { href: "/document/invoice-generation", label: "Invoice Generation" },
   { href: "/document/invoice-print", label: "Invoice Print" },
@@ -919,16 +918,6 @@ const SidebarContent = ({
                 </LinkItem>
               </PermissionGuard>
             )}
-            {!isCustomerUser && <PermissionGuard permission="transaction.drs.read">
-              <LinkItem
-                href="/transactions/drs"
-                subItem
-                active={isActive("/transactions/drs")}
-                icon={Car}
-              >
-                DRS
-              </LinkItem>
-            </PermissionGuard>}
             <PermissionGuard permission="transaction.tracking.read">
               <LinkItem
                 href="/transactions/tracking"
@@ -1004,18 +993,6 @@ const SidebarContent = ({
                     inFlyout
                   >
                     Manifest
-                  </LinkItem>
-                </PermissionGuard>}
-                {!isCustomerUser && <PermissionGuard permission="transaction.drs.read">
-                  <LinkItem
-                    href="/transactions/drs"
-                    subItem
-                    active={isActive("/transactions/drs")}
-                    icon={Car}
-                    showTextOverride
-                    inFlyout
-                  >
-                    DRS
                   </LinkItem>
                 </PermissionGuard>}
                 <PermissionGuard permission="transaction.tracking.read">
@@ -1252,6 +1229,17 @@ const SidebarContent = ({
                 MIS Report
               </LinkItem>
             </PermissionGuard>
+            <PermissionGuard permission="transaction.shipment.read">
+              <LinkItem
+                href="/report/dp-batch"
+                active={isActive("/report/dp-batch")}
+                icon={ClipboardList}
+                showTextOverride
+                inFlyout
+              >
+                DP Batch Report
+              </LinkItem>
+            </PermissionGuard>
             <PermissionGuard permission="report.attendance.read">
               <LinkItem
                 href="/report/attendance-register"
@@ -1285,6 +1273,17 @@ const SidebarContent = ({
                     inFlyout
                   >
                     MIS Report
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="transaction.shipment.read">
+                  <LinkItem
+                    href="/report/dp-batch"
+                    active={isActive("/report/dp-batch")}
+                    icon={ClipboardList}
+                    showTextOverride
+                    inFlyout
+                  >
+                    DP Batch Report
                   </LinkItem>
                 </PermissionGuard>
                 <PermissionGuard permission="report.attendance.read">

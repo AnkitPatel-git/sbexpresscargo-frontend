@@ -1,5 +1,10 @@
 import { apiFetch } from '@/lib/api-fetch';
-import type { PodUploadResponse, PodViewResponse } from '@/types/transactions/pod';
+import type {
+    PodBulkProofUploadResponse,
+    PodProofUploadResult,
+    PodUploadResponse,
+    PodViewResponse,
+} from '@/types/transactions/pod';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -69,6 +74,54 @@ class PodService {
             blob: await response.blob(),
             filename: parseFilename(response, `POD-${awbNo.trim()}.pdf`),
         };
+    }
+
+    async uploadProofByAwb(
+        awbNo: string,
+        file: File,
+        options?: { remark?: string; markDelivered?: boolean },
+    ): Promise<{ success: boolean; message: string; data: PodProofUploadResult }> {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (options?.remark) formData.append('remark', options.remark);
+        if (options?.markDelivered === false) {
+            formData.append('markDelivered', 'false');
+        }
+        const encoded = encodeURIComponent(awbNo.trim());
+        const response = await apiFetch(`${this.baseUrl}/upload-proof/${encoded}`, {
+            method: 'POST',
+            headers: getAuthHeaders(true),
+            body: formData,
+        });
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error((json as { message?: string }).message || 'Failed to upload POD');
+        }
+        return json as { success: boolean; message: string; data: PodProofUploadResult };
+    }
+
+    async bulkUploadProofs(
+        files: File[],
+        options?: { remark?: string; markDelivered?: boolean },
+    ): Promise<PodBulkProofUploadResponse> {
+        const formData = new FormData();
+        for (const file of files) {
+            formData.append('files', file);
+        }
+        if (options?.remark) formData.append('remark', options.remark);
+        if (options?.markDelivered === false) {
+            formData.append('markDelivered', 'false');
+        }
+        const response = await apiFetch(`${this.baseUrl}/bulk-upload-proofs`, {
+            method: 'POST',
+            headers: getAuthHeaders(true),
+            body: formData,
+        });
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error((json as { message?: string }).message || 'Failed to upload POD files');
+        }
+        return json as PodBulkProofUploadResponse;
     }
 
     async downloadBulkBlankZip(awbNos: string[]): Promise<{ blob: Blob; filename: string }> {

@@ -305,6 +305,26 @@ export const shipmentService = {
     };
   },
 
+  async downloadShippingLabel(
+    awbNo: string,
+    options?: { regenerate?: boolean },
+  ): Promise<{ blob: Blob; filename: string }> {
+    const encoded = encodeURIComponent(awbNo.trim());
+    const q =
+      options?.regenerate === true ? '?regenerate=true' : '';
+    const response = await apiFetch(
+      `${API_URL}/transaction/shipment/awb/${encoded}/shipping-label${q}`,
+      { headers: authHeaders() },
+    );
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to download shipping label"));
+    }
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, `label-${awbNo}.pdf`),
+    };
+  },
+
   async downloadUploadedPodProof(
     shipmentId: number,
   ): Promise<{ blob: Blob; filename: string }> {

@@ -48,9 +48,21 @@ export function Combobox({
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [localSearchValue, setLocalSearchValue] = React.useState("")
+  /** Keeps label visible when `options` no longer includes the selected value (e.g. after search clears). */
+  const [pickedLabel, setPickedLabel] = React.useState<string | null>(null)
 
   const selectedOption = options.find((option) => String(option.value) === String(value ?? ""))
   const currentSearchValue = searchValue ?? localSearchValue
+
+  React.useEffect(() => {
+    if (value === undefined || value === null || value === "") {
+      setPickedLabel(null)
+      return
+    }
+    if (selectedOption) {
+      setPickedLabel(selectedOption.label)
+    }
+  }, [selectedOption, value])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -67,7 +79,7 @@ export function Combobox({
           disabled={disabled}
         >
           <span className="min-w-0 flex-1 truncate text-left">
-            {selectedOption ? selectedOption.label : placeholder}
+            {pickedLabel ?? selectedOption?.label ?? placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -93,7 +105,14 @@ export function Combobox({
                   key={option.value}
                   value={option.label}
                   onSelect={() => {
-                    onChange(String(option.value) === String(value ?? "") ? "" : option.value)
+                    const next =
+                      String(option.value) === String(value ?? "") ? "" : option.value
+                    if (next === "" || next === undefined || next === null) {
+                      setPickedLabel(null)
+                    } else {
+                      setPickedLabel(option.label)
+                    }
+                    onChange(next)
                     if (onSearchValueChange) onSearchValueChange("")
                     else setLocalSearchValue("")
                     setOpen(false)
