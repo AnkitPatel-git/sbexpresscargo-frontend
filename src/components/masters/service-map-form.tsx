@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { FieldErrors, Resolver, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -71,6 +71,19 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
     const queryClient = useQueryClient()
     const isEdit = !!initialData
     const [vendorOpen, setVendorOpen] = useState(false)
+    const [pickedVendor, setPickedVendor] = useState<{
+        id: number
+        vendorName: string
+        vendorCode: string
+    } | null>(() =>
+        initialData?.vendorId && initialData.vendor
+            ? {
+                  id: initialData.vendorId,
+                  vendorName: initialData.vendor.vendorName,
+                  vendorCode: initialData.vendor.vendorCode,
+              }
+            : null,
+    )
 
     const { data: vendorsData } = useQuery({
         queryKey: ['vendors-list'],
@@ -98,6 +111,19 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
             isSinglePiece: initialData.isSinglePiece,
         } : undefined
     })
+
+    const selectedVendorId = form.watch('vendorId')
+
+    const selectedVendorLabel = useMemo(() => {
+        if (pickedVendor && pickedVendor.id === selectedVendorId) {
+            return `${pickedVendor.vendorName} (${pickedVendor.vendorCode})`
+        }
+        const fromList = vendorsData?.data?.find((v) => v.id === selectedVendorId)
+        if (fromList) {
+            return `${fromList.vendorName} (${fromList.vendorCode})`
+        }
+        return null
+    }, [pickedVendor, selectedVendorId, vendorsData?.data])
 
     const mutation = useMutation({
         mutationFn: (data: ServiceMapPayload) => {
@@ -152,9 +178,7 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                             >
                                                 <span className="truncate">
                                                     {field.value && field.value > 0
-                                                        ? vendorsData?.data?.find(
-                                                            (vendor) => vendor.id === field.value
-                                                        )?.vendorName
+                                                        ? selectedVendorLabel ?? "Select vendor"
                                                         : "Select vendor"}
                                                 </span>
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -173,6 +197,11 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                                                             value={vendor.vendorName}
                                                             onSelect={() => {
                                                                 form.setValue("vendorId", vendor.id)
+                                                                setPickedVendor({
+                                                                    id: vendor.id,
+                                                                    vendorName: vendor.vendorName,
+                                                                    vendorCode: vendor.vendorCode,
+                                                                })
                                                                 setVendorOpen(false)
                                                             }}
                                                         >

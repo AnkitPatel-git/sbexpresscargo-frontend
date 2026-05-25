@@ -47,6 +47,14 @@ export function CityForm({ initialData }: CityFormProps) {
     const isEdit = !!initialData
     const [stateOpen, setStateOpen] = useState(false)
     const [stateSearch, setStateSearch] = useState("")
+    const [pickedState, setPickedState] = useState<{
+        id: number
+        stateName: string
+    } | null>(() =>
+        initialData?.state && initialData.stateId
+            ? { id: initialData.stateId, stateName: initialData.state.stateName }
+            : null,
+    )
     const debouncedStateSearch = useDebounce(stateSearch, 300)
 
     const extraCountries = useMemo((): Country[] | undefined => {
@@ -65,6 +73,7 @@ export function CityForm({ initialData }: CityFormProps) {
     })
 
     const selectedCountryId = form.watch("countryId")
+    const selectedStateId = form.watch("stateId")
 
     const { data: statesData, isFetching: isStatesFetching } = useQuery({
         queryKey: ["states-list-city-form", selectedCountryId, debouncedStateSearch],
@@ -75,7 +84,7 @@ export function CityForm({ initialData }: CityFormProps) {
                 sortBy: "stateName",
                 sortOrder: "asc",
             }),
-        enabled: !!selectedCountryId && (stateOpen || !!initialData?.stateId),
+        enabled: !!selectedCountryId && (stateOpen || !!selectedStateId),
         staleTime: 5 * 60 * 1000,
     })
 
@@ -87,15 +96,17 @@ export function CityForm({ initialData }: CityFormProps) {
         [selectedCountryId, statesData?.data],
     )
 
-    const selectedStateId = form.watch("stateId")
     const selectedState = useMemo(() => {
+        if (pickedState && pickedState.id === selectedStateId) {
+            return { ...pickedState, countryId: selectedCountryId }
+        }
         const fromList = stateOptions.find((s) => s.id === selectedStateId)
         if (fromList) return fromList
         if (initialData?.stateId === selectedStateId && initialData.state) {
             return { id: initialData.stateId, stateName: initialData.state.stateName, countryId: initialData.countryId }
         }
         return null
-    }, [initialData, selectedStateId, stateOptions])
+    }, [initialData, pickedState, selectedCountryId, selectedStateId, stateOptions])
 
     useEffect(() => {
         if (initialData) {
@@ -108,12 +119,16 @@ export function CityForm({ initialData }: CityFormProps) {
     }, [initialData, form])
 
     useEffect(() => {
-        if (!selectedCountryId) return
+        if (!selectedCountryId) {
+            setPickedState(null)
+            return
+        }
         const sid = form.getValues("stateId")
         if (!sid) return
         const ok = stateOptions.some((s) => s.id === sid && s.countryId === selectedCountryId)
         if (!ok && stateOptions.length > 0) {
             form.setValue("stateId", 0, { shouldValidate: true })
+            setPickedState(null)
         }
     }, [form, selectedCountryId, stateOptions])
 
@@ -200,6 +215,10 @@ export function CityForm({ initialData }: CityFormProps) {
                                                                     value={String(state.id)}
                                                                     onSelect={() => {
                                                                         field.onChange(state.id)
+                                                                        setPickedState({
+                                                                            id: state.id,
+                                                                            stateName: state.stateName,
+                                                                        })
                                                                         setStateOpen(false)
                                                                     }}
                                                                 >

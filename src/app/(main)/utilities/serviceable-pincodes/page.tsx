@@ -461,7 +461,7 @@ export default function ServiceablePincodesPage() {
                     <DialogHeader>
                         <DialogTitle>Import serviceable pincodes</DialogTitle>
                         <DialogDescription>
-                            Download the Excel template (sheet &quot;Pincodes&quot;). Use country and state names, zone codes (multiple allowed with | or comma), and Yes/No for serviceable / EDL / embargo. Then upload a .xlsx or .xls file; the result shows how many rows succeeded and any per-row errors.
+                            Download the Excel template (sheet &quot;Pincodes&quot;). Use country, state, and city names (missing countries, states, and cities are created automatically), zone codes, and Yes/No for serviceable / EDL / embargo. Then upload a .xlsx or .xls file; the result shows how many rows succeeded and any per-row errors.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col gap-4 py-2">

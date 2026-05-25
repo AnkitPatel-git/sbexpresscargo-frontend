@@ -234,6 +234,11 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                     </div>
                 </div>
 
+                <div className={cn(cell, "border border-t-0 border-black")}>
+                    <div className={lbl}>REFERENCE NUMBER:</div>
+                    <div className={cn(val, "py-0.5")}>{fb(shipment.referenceNo) || "—"}</div>
+                </div>
+
                 {/* Goods / pieces — row height follows description */}
                 <div className="grid auto-rows-min grid-cols-[28%_22%_14%_18%_18%] items-stretch border border-t-0 border-black">
                     <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black")}>
@@ -242,7 +247,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                     </div>
                     <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black")}>
                         <div className={lbl}>PIECES:</div>
-                        <div className="flex min-h-[2.5rem] flex-1 items-center justify-center text-3xl font-bold">
+                        <div className="flex min-h-[2.5rem] flex-1 items-center justify-center text-lg font-bold">
                             {piecesTotal}
                         </div>
                     </div>
@@ -297,7 +302,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                         </ol>
                         <div className="mt-2 grid grid-cols-2 gap-0 border border-black">
                             <div className={cn(cell, "border-r border-black border-t-0 border-l-0 border-b-0")}>
-                                <div className={lbl}>SHIPPER&apos;S SIGNATURE</div>
+                                <div className={lbl}>CONSIGNEE SIGNATURE</div>
                             </div>
                             <div className={cn(cell, "border-0")}>
                                 <div className={lbl}>DATE</div>
@@ -323,22 +328,6 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                     <div className={cn(cell, "border-0 p-0")}>
                         <div className="bg-black px-2 py-1.5 text-center text-[10px] font-bold text-white">METHOD OF PAYMENT</div>
                         <div className="px-2 py-1 text-sm font-bold">{paymentLabel(shipment.paymentType)}</div>
-                        <div className="border-t border-black">
-                            {(
-                                [
-                                    ["FREIGHT", fb(shipment.baseFreight)],
-                                    ["OTHER CH.", ""],
-                                    ["TOTAL", fb(shipment.totalAmount)],
-                                    ["GST 18%", ""],
-                                    ["G.TOTAL", fb(shipment.totalAmount)],
-                                ] as const
-                            ).map(([k, v]) => (
-                                <div key={k} className="flex justify-between border-b border-black px-2 py-1 text-[10px] last:border-b-0">
-                                    <span className="font-bold">{k}</span>
-                                    <span>{v || ""}</span>
-                                </div>
-                            ))}
-                        </div>
                     </div>
                 </div>
 

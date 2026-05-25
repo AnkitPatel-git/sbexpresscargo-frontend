@@ -84,6 +84,8 @@ export function DbAsyncSelect<T extends { id: number }>({
 }: DbAsyncSelectProps<T>) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
+  /** Keeps label visible after close when the selected row is not on the current search page. */
+  const [selectedItem, setSelectedItem] = useState<T | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const selectScrollRootRef = useRef<HTMLDivElement | null>(null)
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null)
@@ -125,6 +127,30 @@ export function DbAsyncSelect<T extends { id: number }>({
 
   const listRows = visibleItem ? rows.filter(visibleItem) : rows
 
+  useEffect(() => {
+    if (value == null || value === "" || (clearOption != null && clearOption.value === value)) {
+      setSelectedItem(null)
+      return
+    }
+    const id = Number(value)
+    if (!Number.isFinite(id) || id <= 0) {
+      setSelectedItem(null)
+      return
+    }
+    if (selectedItem?.id === id) {
+      return
+    }
+    const fromExtra = extraItems?.find((item) => item.id === id)
+    if (fromExtra) {
+      setSelectedItem(fromExtra)
+      return
+    }
+    const fromRows = rows.find((item) => item.id === id)
+    if (fromRows) {
+      setSelectedItem(fromRows)
+    }
+  }, [clearOption, extraItems, rows, selectedItem?.id, value])
+
   /** Radix `SelectValue` reads item text from mounted items; content unmounts when closed, so resolve the label explicitly. */
   const closedTriggerLabel = useMemo(() => {
     if (value == null || value === "") {
@@ -137,6 +163,9 @@ export function DbAsyncSelect<T extends { id: number }>({
     if (!Number.isFinite(id) || id <= 0) {
       return undefined
     }
+    if (selectedItem?.id === id) {
+      return getItemLabel(selectedItem)
+    }
     const fromExtra = extraItems?.find((item) => item.id === id)
     if (fromExtra) {
       return getItemLabel(fromExtra)
@@ -144,7 +173,7 @@ export function DbAsyncSelect<T extends { id: number }>({
     /** Prefer full `rows` (merged server + extras) over `listRows` so `visibleItem` never hides the selected label. */
     const fromRows = rows.find((item) => item.id === id)
     return fromRows ? getItemLabel(fromRows) : undefined
-  }, [clearOption, extraItems, getItemLabel, rows, value])
+  }, [clearOption, extraItems, getItemLabel, rows, selectedItem, value])
 
   const triggerDisplayText =
     closedTriggerLabel ?? (hasPersistedSelection && isInitialLoading ? "Loading…" : undefined)
@@ -183,7 +212,24 @@ export function DbAsyncSelect<T extends { id: number }>({
     <div className="min-w-0 w-full max-w-full">
       <Select
         value={value}
-        onValueChange={onValueChange}
+        onValueChange={(next) => {
+          if (clearOption && next === clearOption.value) {
+            setSelectedItem(null)
+          } else {
+            const id = Number(next)
+            if (Number.isFinite(id) && id > 0) {
+              const picked =
+                listRows.find((item) => item.id === id) ??
+                rows.find((item) => item.id === id) ??
+                extraItems?.find((item) => item.id === id) ??
+                null
+              if (picked) {
+                setSelectedItem(picked)
+              }
+            }
+          }
+          onValueChange(next)
+        }}
         open={open}
         onOpenChange={(next) => {
           setOpen(next)
@@ -200,8 +246,21 @@ export function DbAsyncSelect<T extends { id: number }>({
           className={cn(triggerClassName)}
           disabled={disabled}
         >
-          <SelectValue placeholder={placeholder}>
-            {triggerDisplayText ?? undefined}
+          {/*
+            Radix SelectValue only shows SelectItem text while the menu is mounted.
+            After close, pass an explicit visible label (create/edit async selects).
+          */}
+          <span
+            data-slot="select-value"
+            className={cn(
+              "min-w-0 flex-1 truncate text-left",
+              !triggerDisplayText && "text-muted-foreground",
+            )}
+          >
+            {triggerDisplayText ?? placeholder}
+          </span>
+          <SelectValue className="sr-only" aria-hidden>
+            {triggerDisplayText ?? placeholder}
           </SelectValue>
         </SelectTrigger>
         <SelectContent

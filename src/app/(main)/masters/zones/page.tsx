@@ -94,7 +94,14 @@ export default function ZonesPage() {
     const filteredRows = data?.data.filter((zone) => {
         if (appliedFilters.code && !(zone.code || "").toLowerCase().includes(appliedFilters.code.toLowerCase())) return false
         if (appliedFilters.name && !(zone.name || "").toLowerCase().includes(appliedFilters.name.toLowerCase())) return false
-        if (appliedFilters.country && !(zone.countryId != null ? String(zone.countryId) : "").includes(appliedFilters.country)) return false
+        if (
+            appliedFilters.country &&
+            !(zone.country?.name || "")
+                .toLowerCase()
+                .includes(appliedFilters.country.toLowerCase())
+        ) {
+            return false
+        }
         if (appliedFilters.type && !(zone.zoneType || "").toLowerCase().includes(appliedFilters.type.toLowerCase())) return false
         return true
     }) ?? []
@@ -179,7 +186,7 @@ export default function ZonesPage() {
                                             <TableRow key={zone.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                                 <TableCell className="font-medium text-primary">{zone.code}</TableCell>
                                                 <TableCell className="font-medium">{zone.name}</TableCell>
-                                                <TableCell>{zone.countryId ?? "-"}</TableCell>
+                                                <TableCell>{zone.country?.name ?? "-"}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline" className="capitalize">
                                                         {zone.zoneType.toLowerCase()}

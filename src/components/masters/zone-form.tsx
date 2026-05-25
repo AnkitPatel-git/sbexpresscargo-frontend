@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useRouter } from 'next/navigation'
 import { useForm, Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -30,6 +30,7 @@ import { optionLabelForSelect, ZONE_TYPE_OPTIONS } from "@/lib/select-closed-lab
 import { Button } from "@/components/ui/button"
 import { zoneService } from "@/services/masters/zone-service"
 import { Zone, ZoneFormData } from "@/types/masters/zone"
+import type { Country } from "@/types/masters/country"
 import { CountryFloatingAsyncSelect } from "@/components/masters/floating-master-async-selects"
 import { omitEmptyCodeFields, optionalMasterCode } from '@/lib/master-code-schema'
 
@@ -48,6 +49,20 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
+
+    const extraCountries = useMemo((): Country[] | undefined => {
+        const c = initialData?.country
+        if (!c || !initialData?.countryId) return undefined
+        return [
+            {
+                id: c.id,
+                code: c.code,
+                name: c.name,
+                weightUnit: "KGS" as const,
+            },
+        ]
+    }, [initialData?.country, initialData?.countryId])
+
     const form = useForm<ZoneFormData>({
         resolver: zodResolver(zoneSchema) as Resolver<ZoneFormData>,
         defaultValues: {
@@ -136,6 +151,7 @@ export function ZoneForm({ initialData }: ZoneFormProps) {
                                     value={field.value}
                                     onChange={field.onChange}
                                     queryKeyScope={`zone-${String(initialData?.id ?? "new")}`}
+                                    extraCountries={extraCountries}
                                 />
                             </FloatingFormItem>
                         )}

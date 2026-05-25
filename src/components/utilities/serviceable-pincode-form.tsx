@@ -84,17 +84,42 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     const [citySearch, setCitySearch] = useState('')
     const [zoneSearch, setZoneSearch] = useState('')
 
+    const [pickedCountry, setPickedCountry] = useState<{
+        id: number
+        name: string
+        code: string
+    } | null>(() =>
+        initialData?.country && initialData.countryId
+            ? {
+                  id: initialData.countryId,
+                  name: initialData.country.name,
+                  code: initialData.country.code,
+              }
+            : null,
+    )
+    const [pickedState, setPickedState] = useState<{ id: number; stateName: string } | null>(() =>
+        initialData?.state && initialData.stateId
+            ? { id: initialData.stateId, stateName: initialData.state.stateName }
+            : null,
+    )
+    const [pickedCity, setPickedCity] = useState<{ id: number; cityName: string } | null>(() =>
+        initialData?.cityId && (initialData.city?.cityName || initialData.cityName)
+            ? {
+                  id: initialData.cityId,
+                  cityName: initialData.city?.cityName ?? initialData.cityName ?? '',
+              }
+            : null,
+    )
+    const [pickedZone, setPickedZone] = useState<{ id: number; name: string; code: string } | null>(() => {
+        const z = initialData?.zones?.[0]
+        if (!z) return null
+        return { id: z.id, name: z.name, code: z.code }
+    })
+
     const debouncedCountrySearch = useDebounce(countrySearch, 300)
     const debouncedStateSearch = useDebounce(stateSearch, 300)
     const debouncedCitySearch = useDebounce(citySearch, 300)
     const debouncedZoneSearch = useDebounce(zoneSearch, 300)
-
-    const { data: countriesData } = useQuery({
-        queryKey: ['countries-list', debouncedCountrySearch],
-        queryFn: () => countryService.getCountries({ limit: 25, search: debouncedCountrySearch, sortBy: 'name', sortOrder: 'asc' }),
-        enabled: countryOpen || !!initialData?.countryId,
-        staleTime: 5 * 60 * 1000,
-    })
 
     const defaultZoneIds = useMemo(() => {
         if (!initialData) return []
@@ -150,10 +175,22 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         name: 'zoneIds',
     })
 
+    const selectedCityId = useWatch({
+        control: form.control,
+        name: 'cityId',
+    })
+
+    const { data: countriesData } = useQuery({
+        queryKey: ['countries-list', debouncedCountrySearch],
+        queryFn: () => countryService.getCountries({ limit: 25, search: debouncedCountrySearch, sortBy: 'name', sortOrder: 'asc' }),
+        enabled: countryOpen || !!selectedCountryId,
+        staleTime: 5 * 60 * 1000,
+    })
+
     const { data: statesData, isFetching: isStatesFetching } = useQuery({
         queryKey: ['states-list', selectedCountryId, debouncedStateSearch],
         queryFn: () => stateService.getStates({ limit: 25, search: debouncedStateSearch, sortBy: 'stateName', sortOrder: 'asc' }),
-        enabled: !!selectedCountryId && (stateOpen || !!initialData?.stateId),
+        enabled: !!selectedCountryId && (stateOpen || !!selectedStateId),
         staleTime: 5 * 60 * 1000,
     })
 
@@ -168,7 +205,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                 countryId: selectedCountryId || undefined,
                 stateId: selectedStateId || undefined,
             }),
-        enabled: !!selectedCountryId && !!selectedStateId && (cityOpen || !!initialData?.cityId),
+        enabled: !!selectedCountryId && !!selectedStateId && (cityOpen || !!selectedCityId),
         staleTime: 5 * 60 * 1000,
     })
 
@@ -182,7 +219,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             zoneType: 'DOMESTIC',
             countryId: selectedCountryId || undefined,
         }),
-        enabled: zoneOpen || selectedZoneIds.length > 0 || !!initialData?.zones?.length,
+        enabled: zoneOpen || selectedZoneIds.length > 0,
         staleTime: 5 * 60 * 1000,
     })
 
@@ -194,12 +231,10 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     const cityOptions = useMemo(() => citiesData?.data ?? [], [citiesData?.data])
     const zoneOptions = useMemo(() => zonesData?.data ?? [], [zonesData?.data])
 
-    const selectedCityId = useWatch({
-        control: form.control,
-        name: 'cityId',
-    })
-
     const selectedCity = useMemo(() => {
+        if (pickedCity && pickedCity.id === selectedCityId) {
+            return pickedCity
+        }
         const fromList = cityOptions.find((c) => c.id === selectedCityId)
         if (fromList) return fromList
         if (initialData?.cityId === selectedCityId && initialData.city) {
@@ -209,9 +244,12 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             return { id: initialData.cityId!, cityName: initialData.cityName }
         }
         return null
-    }, [cityOptions, initialData, selectedCityId])
+    }, [cityOptions, initialData, pickedCity, selectedCityId])
 
     const selectedCountry = useMemo(() => {
+        if (pickedCountry && pickedCountry.id === selectedCountryId) {
+            return pickedCountry
+        }
         if (countryOptions.length > 0) {
             const country = countryOptions.find((item) => item.id === selectedCountryId)
             if (country) return country
@@ -224,9 +262,12 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             }
         }
         return null
-    }, [countryOptions, initialData, selectedCountryId])
+    }, [countryOptions, initialData, pickedCountry, selectedCountryId])
 
     const selectedState = useMemo(() => {
+        if (pickedState && pickedState.id === selectedStateId) {
+            return pickedState
+        }
         if (stateOptions.length > 0) {
             const state = stateOptions.find((item) => item.id === selectedStateId)
             if (state) return state
@@ -238,31 +279,45 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             }
         }
         return null
-    }, [initialData, selectedStateId, stateOptions])
+    }, [initialData, pickedState, selectedStateId, stateOptions])
 
     const selectedZoneId = selectedZoneIds[0] ?? 0
 
     const selectedZone = useMemo(() => {
+        if (pickedZone && pickedZone.id === selectedZoneId) {
+            return pickedZone
+        }
         const fromOptions = zoneOptions.find((zone) => zone.id === selectedZoneId)
         if (fromOptions) return fromOptions
         return initialData?.zones?.find((zone) => zone.id === selectedZoneId) ?? null
-    }, [initialData?.zones, selectedZoneId, zoneOptions])
+    }, [initialData?.zones, pickedZone, selectedZoneId, zoneOptions])
 
     useEffect(() => {
-        if (!selectedCountryId) return
+        if (!selectedCountryId) {
+            setPickedCountry(null)
+            setPickedState(null)
+            setPickedCity(null)
+            return
+        }
+        if (pickedCountry && pickedCountry.id !== selectedCountryId) {
+            setPickedState(null)
+            setPickedCity(null)
+        }
 
-        const selectedStateId = form.getValues('stateId')
-        if (!selectedStateId) return
+        const sid = form.getValues('stateId')
+        if (!sid) return
 
         const stateBelongsToCountry = stateOptions.some(
-            (state) => state.id === selectedStateId && state.countryId === selectedCountryId
+            (state) => state.id === sid && state.countryId === selectedCountryId,
         )
 
-        if (!stateBelongsToCountry) {
+        if (!stateBelongsToCountry && stateOptions.length > 0) {
             form.setValue('stateId', 0, { shouldValidate: true })
             form.setValue('cityId', 0, { shouldValidate: true })
+            setPickedState(null)
+            setPickedCity(null)
         }
-    }, [form, selectedCountryId, stateOptions])
+    }, [form, pickedCountry, selectedCountryId, stateOptions])
 
     useEffect(() => {
         if (!selectedStateId) return
@@ -312,8 +367,11 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
         })
     }, [initialData])
 
-    function selectZone(zoneId: number) {
+    function selectZone(zoneId: number, zone?: { id: number; name: string; code: string }) {
         form.setValue('zoneIds', [zoneId], { shouldValidate: true })
+        if (zone) {
+            setPickedZone({ id: zone.id, name: zone.name, code: zone.code })
+        }
         setZoneOpen(false)
     }
 
@@ -410,6 +468,15 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                                             onSelect={() => {
                                                                 field.onChange(country.id)
                                                                 form.setValue('countryCode', country.code, { shouldValidate: true })
+                                                                setPickedCountry({
+                                                                    id: country.id,
+                                                                    name: country.name,
+                                                                    code: country.code,
+                                                                })
+                                                                setPickedState(null)
+                                                                setPickedCity(null)
+                                                                form.setValue('stateId', 0, { shouldValidate: true })
+                                                                form.setValue('cityId', 0, { shouldValidate: true })
                                                                 setCountryOpen(false)
                                                             }}
                                                         >
@@ -472,6 +539,11 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                                             value={state.stateName}
                                                             onSelect={() => {
                                                                 field.onChange(state.id)
+                                                                setPickedState({
+                                                                    id: state.id,
+                                                                    stateName: state.stateName,
+                                                                })
+                                                                setPickedCity(null)
                                                                 form.setValue('cityId', 0, { shouldValidate: true })
                                                                 setStateOpen(false)
                                                             }}
@@ -543,6 +615,10 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                                                     value={String(city.id)}
                                                                     onSelect={() => {
                                                                         field.onChange(city.id)
+                                                                        setPickedCity({
+                                                                            id: city.id,
+                                                                            cityName: city.cityName,
+                                                                        })
                                                                         setCityOpen(false)
                                                                     }}
                                                                 >
@@ -650,7 +726,7 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
                                                         <CommandItem
                                                             key={zone.id}
                                                             value={`${zone.name} ${zone.code}`}
-                                                            onSelect={() => selectZone(zone.id)}
+                                                            onSelect={() => selectZone(zone.id, zone)}
                                                         >
                                                             <Check
                                                                 className={cn(
