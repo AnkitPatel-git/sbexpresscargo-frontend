@@ -9,10 +9,12 @@ import type {
   RateConditionPayload,
   RateDistanceSlab,
   RateDistanceSlabPayload,
+  DuplicateRateToCustomerGroupResponse,
   RateMasterListResponse,
   RateMasterReviewResponse,
   RateMasterSingleResponse,
   RateZoneRate,
+  RateRouteSlabPayload,
   RateZoneRatePayload,
   UpdateRateMasterPayload,
   UpdateRateMasterReviewPayload,
@@ -134,6 +136,24 @@ export const rateService = {
         body: JSON.stringify(payload),
       },
       "Failed to duplicate rate master",
+    );
+  },
+
+  async duplicateRateMasterToCustomerGroup(payload: {
+    sourceRateMasterId: number;
+    fromDate: string;
+    toDate: string;
+    productId: number;
+    includeSourceCustomer?: boolean;
+  }): Promise<DuplicateRateToCustomerGroupResponse> {
+    return requestJson(
+      `${API_URL}/rate-master/duplicate-to-customer-group`,
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify(payload),
+      },
+      "Failed to duplicate rate master to customer group",
     );
   },
 
@@ -317,5 +337,84 @@ export const rateService = {
 
   async deleteRateCondition(rateMasterId: number, id: number): Promise<{ success: boolean; message: string }> {
     return requestJson(`${API_URL}/rate-master/${rateMasterId}/rate-conditions/${id}`, { method: "DELETE", headers: authHeaders() }, "Failed to delete rate condition");
+  },
+
+  async downloadBaseRateMatrixTemplate(): Promise<{ blob: Blob; filename: string }> {
+    const response = await apiFetch(`${API_URL}/rate-master/base-rate-matrix/template`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to download base rate matrix template"));
+    }
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, "base-rate-matrix-template.xlsx"),
+    };
+  },
+
+  async exportBaseRateMatrix(rateMasterId: number): Promise<{ blob: Blob; filename: string }> {
+    const response = await apiFetch(`${API_URL}/rate-master/${rateMasterId}/base-rate-matrix/export`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to export base rate matrix"));
+    }
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, `base-rate-matrix-${rateMasterId}.xlsx`),
+    };
+  },
+
+  async parseBaseRateMatrix(file: File): Promise<{
+    importedPairs: number;
+    rateSlabs: RateRouteSlabPayload[];
+  }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiFetch(`${API_URL}/rate-master/base-rate-matrix/parse`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: formData,
+    });
+    const json = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      data?: { importedPairs: number; rateSlabs: RateRouteSlabPayload[] };
+      message?: string;
+    };
+    if (!response.ok) {
+      throw new Error(json.message || "Failed to parse base rate matrix");
+    }
+    if (!json.success || json.data == null) {
+      throw new Error("Invalid parse response");
+    }
+    return json.data;
+  },
+
+  async importBaseRateMatrix(
+    rateMasterId: number,
+    file: File,
+  ): Promise<{
+    importedPairs: number;
+    rateMaster: RateMasterSingleResponse["data"];
+  }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiFetch(`${API_URL}/rate-master/${rateMasterId}/base-rate-matrix/import`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: formData,
+    });
+    const json = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      data?: { importedPairs: number; rateMaster: RateMasterSingleResponse["data"] };
+      message?: string;
+    };
+    if (!response.ok) {
+      throw new Error(json.message || "Failed to import base rate matrix");
+    }
+    if (!json.success || json.data == null) {
+      throw new Error("Invalid import response");
+    }
+    return json.data;
   },
 };

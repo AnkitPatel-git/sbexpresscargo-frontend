@@ -11,6 +11,14 @@ export function rateMasterListPath(contract: RateMasterContract): string {
     : "/masters/rates?contract=customer";
 }
 
+export function rateMasterCreatePath(contract: RateMasterContract): string {
+  return `/masters/rates/create?contract=${contract === "vendor" ? "vendor" : "customer"}`;
+}
+
+export function rateMasterDuplicatePath(contract: RateMasterContract): string {
+  return `/masters/rates/duplicate?contract=${contract === "vendor" ? "vendor" : "customer"}`;
+}
+
 /** Default list filter `updateType` per contract (user can change in filters dialog). */
 export function defaultRateListUpdateType(contract: RateMasterContract): string {
   return contract === "vendor" ? "VENDOR_RATE" : "AWB_ENTRY_RATE";

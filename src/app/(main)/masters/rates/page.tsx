@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit, FilePlus, FileDown, Filter, Trash2 } from "lucide-react";
+import { Copy, Edit, FilePlus, FileDown, Filter, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -20,6 +20,8 @@ import {
   defaultRateListUpdateType,
   isVendorRateMasterRow,
   parseRateContractParam,
+  rateMasterCreatePath,
+  rateMasterDuplicatePath,
   type RateMasterContract,
 } from "@/lib/rate-master-nav";
 
@@ -241,20 +243,30 @@ export default function RateMasterPage() {
             </Button>
           </PermissionGuard>
         </div>
-        <Button
-          type="button"
-          variant="default"
-          className="h-8 gap-2 px-3 font-semibold"
-          onClick={() =>
-            router.push(
-              `/masters/rates/create?contract=${contract === "vendor" ? "vendor" : "customer"}`,
-            )
-          }
-          title="Create rate master"
-        >
-          <FilePlus className="h-4 w-4" />
-          Create Rate
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="default"
+            className="h-8 gap-2 px-3 font-semibold"
+            onClick={() => router.push(rateMasterCreatePath(contract))}
+            title="Create rate master"
+          >
+            <FilePlus className="h-4 w-4" />
+            Create Rate
+          </Button>
+          <PermissionGuard permission="master.rate.create">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 gap-2 px-3 font-semibold"
+              onClick={() => router.push(rateMasterDuplicatePath(contract))}
+              title="Duplicate from existing rate"
+            >
+              <Copy className="h-4 w-4" />
+              Duplicate Rate
+            </Button>
+          </PermissionGuard>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
@@ -263,25 +275,23 @@ export default function RateMasterPage() {
             <TableRow className="border-0 bg-primary hover:bg-primary">
               <TableHead className="font-semibold text-primary-foreground">ID</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Update type</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Rate type</TableHead>
               <TableHead className="font-semibold text-primary-foreground">{partyColumnLabel}</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Product</TableHead>
               <TableHead className="font-semibold text-primary-foreground">From</TableHead>
               <TableHead className="font-semibold text-primary-foreground">To</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Flat rate</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Loading rates…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   No rate masters found.
                 </TableCell>
               </TableRow>
@@ -290,7 +300,6 @@ export default function RateMasterPage() {
                 <TableRow key={row.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                   <TableCell className="font-medium">{row.id}</TableCell>
                   <TableCell>{row.updateType}</TableCell>
-                  <TableCell>{row.rateType || "—"}</TableCell>
                   <TableCell>
                     {contract === "vendor"
                       ? displayName(
@@ -307,7 +316,6 @@ export default function RateMasterPage() {
                   <TableCell>{displayName(row.product)}</TableCell>
                   <TableCell>{row.fromDate?.slice(0, 10)}</TableCell>
                   <TableCell>{row.toDate?.slice(0, 10)}</TableCell>
-                  <TableCell>{row.flatRate != null ? String(row.flatRate) : "—"}</TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
                       <Button

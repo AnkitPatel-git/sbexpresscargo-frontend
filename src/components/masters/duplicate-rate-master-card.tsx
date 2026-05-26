@@ -4,15 +4,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { addDays, format } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDebounce } from "@/hooks/use-debounce";
 import { customerService } from "@/services/masters/customer-service";
 import { productService } from "@/services/masters/product-service";
@@ -24,6 +32,8 @@ import {
   parseRateContractParam,
   rateMasterListPath,
 } from "@/lib/rate-master-nav";
+
+type DuplicateTargetMode = "single" | "customer_group";
 
 function rateTemplateLabel(rm: RateMaster) {
   const party = isVendorRateMasterRow(rm)
@@ -41,6 +51,8 @@ export function DuplicateRateMasterCard() {
   const contract = parseRateContractParam(searchParams.get("contract"));
   const contractQs = contract === "vendor" ? "vendor" : "customer";
   const isVendorContract = contract === "vendor";
+  const [targetMode, setTargetMode] = useState<DuplicateTargetMode>("single");
+  const [includeSourceCustomer, setIncludeSourceCustomer] = useState(false);
   const [fromDate, setFromDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(() => format(addDays(new Date(), 30), "yyyy-MM-dd"));
   const [customerId, setCustomerId] = useState(0);
@@ -70,6 +82,8 @@ export function DuplicateRateMasterCard() {
     setCustomerSearch("");
     setVendorSearch("");
     setRateSearch("");
+    setTargetMode("single");
+    setIncludeSourceCustomer(false);
   }, [isVendorContract]);
 
   const { data: customersData } = useQuery({
@@ -82,7 +96,7 @@ export function DuplicateRateMasterCard() {
         sortBy: "name",
         sortOrder: "asc",
       }),
-    enabled: !isVendorContract,
+    enabled: !isVendorContract && targetMode === "single",
   });
 
   const { data: vendorsData } = useQuery({
@@ -122,6 +136,43 @@ export function DuplicateRateMasterCard() {
         updateType: isVendorContract ? "VENDOR_RATE" : "AWB_ENTRY_RATE",
       }),
   });
+
+  const isGroupMode = !isVendorContract && targetMode === "customer_group";
+
+  const { data: sourceRateResponse, isFetching: sourceRateLoading } = useQuery({
+    queryKey: ["duplicate-source-rate", sourceRateMasterId],
+    queryFn: () => rateService.getRateMasterById(sourceRateMasterId),
+    enabled: isGroupMode && sourceRateMasterId > 0,
+  });
+
+  const sourceRate = sourceRateResponse?.data;
+  const sourceGroupId = sourceRate?.customer?.customerGroupId ?? null;
+  const sourceGroupLabel =
+    sourceRate?.customer?.customerGroup?.name ||
+    sourceRate?.customer?.customerGroup?.code ||
+    (sourceGroupId != null ? `Group #${sourceGroupId}` : null);
+
+  const { data: groupCustomersData, isFetching: groupCustomersLoading } = useQuery({
+    queryKey: ["duplicate-group-customers", sourceGroupId, includeSourceCustomer, sourceRate?.customerId],
+    queryFn: () =>
+      customerService.getCustomers({
+        page: 1,
+        limit: 200,
+        customerGroupId: sourceGroupId!,
+        sortBy: "name",
+        sortOrder: "asc",
+      }),
+    enabled: isGroupMode && sourceGroupId != null && sourceGroupId > 0,
+  });
+
+  const groupPreviewCustomers = useMemo(() => {
+    const rows = groupCustomersData?.data ?? [];
+    if (!isGroupMode) return [];
+    if (includeSourceCustomer) return rows;
+    const sourceId = sourceRate?.customerId;
+    if (sourceId == null) return rows;
+    return rows.filter((c) => c.id !== sourceId);
+  }, [groupCustomersData?.data, includeSourceCustomer, isGroupMode, sourceRate?.customerId]);
 
   const customerOptions = useMemo(
     () =>
@@ -165,9 +216,7 @@ export function DuplicateRateMasterCard() {
         sourceRateMasterId: sourceRateMasterId,
         fromDate,
         toDate,
-        ...(isVendorContract
-          ? { targetVendorId: vendorId }
-          : { customerId }),
+        ...(isVendorContract ? { targetVendorId: vendorId } : { customerId }),
         productId,
       }),
     onSuccess: (res) => {
@@ -185,12 +234,55 @@ export function DuplicateRateMasterCard() {
     },
   });
 
-  const canSubmit =
+  const duplicateGroupMutation = useMutation({
+    mutationFn: () =>
+      rateService.duplicateRateMasterToCustomerGroup({
+        sourceRateMasterId,
+        fromDate,
+        toDate,
+        productId,
+        includeSourceCustomer,
+      }),
+    onSuccess: (res) => {
+      const result = res?.data;
+      const created = result?.created?.length ?? 0;
+      const skipped = result?.skipped?.length ?? 0;
+      if (created === 0) {
+        toast.error(
+          skipped > 0
+            ? `No rates created — ${skipped} customer(s) skipped (often overlapping contracts)`
+            : "No rates were created",
+        );
+        return;
+      }
+      const skippedNote = skipped > 0 ? `, ${skipped} skipped` : "";
+      toast.success(`Created ${created} rate master(s) for ${result?.customerGroupName ?? "group"}${skippedNote}`);
+      router.push(rateMasterListPath(contract));
+    },
+    onError: (e: Error) => {
+      toast.error(e.message || "Group duplicate failed");
+    },
+  });
+
+  const isPending = duplicateMutation.isPending || duplicateGroupMutation.isPending;
+
+  const canSubmitSingle =
     fromDate &&
     toDate &&
     (isVendorContract ? vendorId > 0 : customerId > 0) &&
     productId > 0 &&
     sourceRateMasterId > 0;
+
+  const canSubmitGroup =
+    fromDate &&
+    toDate &&
+    productId > 0 &&
+    sourceRateMasterId > 0 &&
+    sourceGroupId != null &&
+    sourceGroupId > 0 &&
+    groupPreviewCustomers.length > 0;
+
+  const canSubmit = isGroupMode ? canSubmitGroup : canSubmitSingle;
 
   return (
     <Card className="border-dashed">
@@ -202,7 +294,7 @@ export function DuplicateRateMasterCard() {
         <CardDescription>
           {isVendorContract
             ? "Choose dates, vendor, and product for the new buy-rate contract, pick a vendor rate to copy slabs and charges from, then submit. You can adjust details on the next screen."
-            : "Choose dates and customer/product for the new contract, pick a saved rate to copy slabs and charges from, then submit. You can adjust details on the next screen."}
+            : "Choose dates and product, pick a saved rate to copy from, then duplicate to one customer or to every customer in the template customer's group."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -221,6 +313,25 @@ export function DuplicateRateMasterCard() {
             <Input id="dup-to-date" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
           </div>
         </div>
+
+        {!isVendorContract ? (
+          <div className="space-y-2">
+            <Label htmlFor="dup-target-mode">Duplicate to</Label>
+            <Select
+              value={targetMode}
+              onValueChange={(v) => setTargetMode(v as DuplicateTargetMode)}
+            >
+              <SelectTrigger id="dup-target-mode" className="w-full sm:max-w-md">
+                <SelectValue placeholder="Select target" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Single customer</SelectItem>
+                <SelectItem value="customer_group">All customers in same group</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
         {isVendorContract ? (
           <div className="space-y-2">
             <Label>Vendor (new rate)</Label>
@@ -234,7 +345,7 @@ export function DuplicateRateMasterCard() {
               onSearchValueChange={setVendorSearch}
             />
           </div>
-        ) : (
+        ) : isGroupMode ? null : (
           <div className="space-y-2">
             <Label>Customer (new rate)</Label>
             <Combobox
@@ -248,6 +359,7 @@ export function DuplicateRateMasterCard() {
             />
           </div>
         )}
+
         <div className="space-y-2">
           <Label>Product (new rate)</Label>
           <Combobox
@@ -277,18 +389,90 @@ export function DuplicateRateMasterCard() {
             isSearching={ratesLoading}
           />
         </div>
+
+        {isGroupMode ? (
+          <div className="space-y-3 rounded-md border border-border/80 bg-muted/30 p-4">
+            <div className="flex items-start gap-2">
+              <Users className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">Customer group copy</p>
+                <p className="text-muted-foreground">
+                  Creates one new rate per customer in the template customer&apos;s group, using the
+                  same slabs and charges. Customers who already have an overlapping contract for
+                  this product and date range are skipped.
+                </p>
+              </div>
+            </div>
+
+            {sourceRateMasterId > 0 && sourceRateLoading ? (
+              <p className="text-sm text-muted-foreground">Loading template customer group…</p>
+            ) : null}
+
+            {sourceRateMasterId > 0 && !sourceRateLoading && sourceGroupId == null ? (
+              <p className="text-sm font-medium text-destructive">
+                The template rate&apos;s customer is not in a customer group. Assign a group on the
+                customer master, or use single-customer duplicate.
+              </p>
+            ) : null}
+
+            {sourceGroupId != null && sourceGroupLabel ? (
+              <p className="text-sm">
+                Group: <span className="font-medium">{sourceGroupLabel}</span>
+              </p>
+            ) : null}
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="dup-include-source"
+                checked={includeSourceCustomer}
+                onCheckedChange={(checked) => setIncludeSourceCustomer(Boolean(checked))}
+              />
+              <Label htmlFor="dup-include-source" className="cursor-pointer font-normal">
+                Also duplicate for the template customer (they already have this rate)
+              </Label>
+            </div>
+
+            {sourceGroupId != null ? (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Will target ({groupPreviewCustomers.length} customer
+                  {groupPreviewCustomers.length === 1 ? "" : "s"})
+                </p>
+                {groupCustomersLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading customers…</p>
+                ) : groupPreviewCustomers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No customers to copy to. Enable &quot;template customer&quot; above or add more
+                    customers to the group.
+                  </p>
+                ) : (
+                  <ul className="max-h-36 list-inside list-disc overflow-y-auto text-sm text-muted-foreground">
+                    {groupPreviewCustomers.map((c) => (
+                      <li key={c.id}>{c.name || c.code || `Customer #${c.id}`}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <PermissionGuard permission="master.rate.create">
           <Button
             type="button"
             className="w-full sm:w-auto"
-            disabled={!canSubmit || duplicateMutation.isPending}
-            onClick={() => duplicateMutation.mutate()}
+            disabled={!canSubmit || isPending}
+            onClick={() =>
+              isGroupMode ? duplicateGroupMutation.mutate() : duplicateMutation.mutate()
+            }
           >
-            {duplicateMutation.isPending ? (
+            {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                Duplicating…
+                {isGroupMode ? "Duplicating to group…" : "Duplicating…"}
               </>
+            ) : isGroupMode ? (
+              `Duplicate to ${groupPreviewCustomers.length} customer${groupPreviewCustomers.length === 1 ? "" : "s"}`
             ) : (
               "Duplicate & open editor"
             )}

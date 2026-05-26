@@ -57,6 +57,7 @@ import {
   parseRateContractParam,
   rateMasterListPath,
 } from "@/lib/rate-master-nav";
+import { BaseRateMatrixExcel } from "@/components/masters/base-rate-matrix-excel";
 
 const DEFAULT_RATE_UPDATE_TYPE = "AWB_ENTRY_RATE";
 
@@ -68,8 +69,6 @@ function buildRateMasterSchema(isVendorContract: boolean) {
       customerId: z.string().optional(),
       vendorId: z.string().optional(),
       productId: z.string().min(1, "Product is required"),
-      rateType: z.string().optional().or(z.literal("")),
-      flatRate: z.string().optional().or(z.literal("")),
     })
     .superRefine((data, ctx) => {
       if (isVendorContract) {
@@ -96,8 +95,6 @@ type RateMasterFormValues = {
   customerId?: string;
   vendorId?: string;
   productId: string;
-  rateType?: string;
-  flatRate?: string;
 };
 
 type TabValue = "master" | "route-slabs" | "oda-slabs" | "rate-conditions";
@@ -108,14 +105,6 @@ const RATE_TABS: Array<{ value: TabValue; label: string }> = [
   { value: "oda-slabs", label: "ODA / EDL" },
   { value: "rate-conditions", label: "Rate conditions" },
 ];
-
-/** Radix Select forbids `value=""` on SelectItem; map this to cleared rate type in the form. */
-const RATE_TYPE_UNSET = "__rate_type_unset__";
-
-const RATE_TYPE_OPTIONS = [
-  { value: RATE_TYPE_UNSET, label: "Not set" },
-  { value: "FLAT", label: "Flat" },
-] as const;
 
 const CALCULATION_BASE_OPTIONS = [
   "CHARGE_WEIGHT",
@@ -406,8 +395,6 @@ export function RateForm({ initialData }: RateFormProps) {
       customerId: "",
       vendorId: "",
       productId: "",
-      rateType: "",
-      flatRate: "",
     },
   });
 
@@ -419,8 +406,6 @@ export function RateForm({ initialData }: RateFormProps) {
         customerId: "",
         vendorId: "",
         productId: "",
-        rateType: "",
-        flatRate: "",
       });
       setRouteSlabs([]);
       setOdaSlabs([]);
@@ -440,8 +425,6 @@ export function RateForm({ initialData }: RateFormProps) {
         initialData.vendorId != null && isVendorRateMasterRow(initialData)
           ? String(initialData.vendorId)
           : "",
-      rateType: initialData.rateType || "",
-      flatRate: initialData.flatRate != null && initialData.flatRate !== undefined ? String(initialData.flatRate) : "",
       productId: initialData.productId != null ? String(initialData.productId) : "",
     });
     setRouteSlabs(initialData.routeRateSlabs ?? []);
@@ -810,66 +793,17 @@ export function RateForm({ initialData }: RateFormProps) {
                   </FloatingFormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="rateType"
-                render={({ field }) => (
-                  <FloatingFormItem label="Rate type (optional)">
-                    <Select
-                      key={field.value || RATE_TYPE_UNSET}
-                      value={field.value?.trim() ? field.value : RATE_TYPE_UNSET}
-                      onValueChange={(v) => field.onChange(v === RATE_TYPE_UNSET ? "" : v)}
-                    >
-                      <FormControl>
-                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                          <SelectValue placeholder="Select rate type">
-                            {optionLabelForSelect(
-                              field.value?.trim() ? field.value : RATE_TYPE_UNSET,
-                              RATE_TYPE_OPTIONS as unknown as readonly { value: string; label: string }[],
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {RATE_TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FloatingFormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="flatRate"
-                render={({ field }) => (
-                  <FloatingFormItem label="Flat rate (optional)">
-                    <FormControl>
-                      <DecimalInput
-                        placeholder="Flat freight amount"
-                        className={FLOATING_INNER_CONTROL}
-                        name={field.name}
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        value={field.value}
-                        onValueChange={(n) =>
-                          field.onChange(n === undefined ? "" : String(n))
-                        }
-                        min={0}
-                      />
-                    </FormControl>
-                  </FloatingFormItem>
-                )}
-              />
             </div>
           </TabsContent>
 
           <TabsContent value="route-slabs" className="space-y-4">
+            <BaseRateMatrixExcel
+              rateMasterId={initialData?.id}
+              onImported={(slabs) => setRouteSlabs(slabs)}
+            />
             <RouteSlabsEditor
               title="Base rate"
-              description="Match by From Zone and To Zone; each slab needs at least one weight slab (Flat or Per kg)."
+              description="Match by From Zone and To Zone; each slab needs at least one weight slab (Flat or Per kg). Use Excel above for bulk entry."
               showKmBands={false}
               slabs={routeSlabs}
               setSlabs={setRouteSlabs}
@@ -1047,10 +981,6 @@ function buildPayload(
   rateCharges: RateChargeRow[],
   isVendorContract: boolean,
 ): CreateRateMasterPayload {
-  const flatRaw = values.flatRate?.trim();
-  const flatRate =
-    flatRaw !== undefined && flatRaw !== "" && Number.isFinite(Number(flatRaw)) ? Number(flatRaw) : undefined;
-
   const resolvedUpdateType = isVendorContract ? "VENDOR_RATE" : updateType;
 
   const payload: CreateRateMasterPayload = {
@@ -1089,10 +1019,6 @@ function buildPayload(
       ...mapSlabConditionRulesToRateChargePayloads(rateConditions),
     ]),
   };
-
-  const rt = values.rateType?.trim();
-  if (rt) payload.rateType = rt;
-  if (flatRate !== undefined) payload.flatRate = flatRate;
 
   if (isVendorContract) {
     payload.vendorId = Number(values.vendorId);
