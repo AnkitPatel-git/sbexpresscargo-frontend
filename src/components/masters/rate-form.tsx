@@ -528,7 +528,7 @@ export function RateForm({ initialData }: RateFormProps) {
         status: "ACTIVE",
         origin: null,
         gstNo: null,
-        customerType: null,
+        customerType: "CREDIT",
         registerType: null,
         createdAt: "",
         updatedAt: "",
