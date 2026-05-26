@@ -166,10 +166,47 @@ export interface RateCondition extends RateConditionPayload {
   charge?: RateChargeRef | null;
 }
 
+export interface RateCustomerGroupRef {
+  id: number;
+  code?: string;
+  name?: string;
+}
+
 export interface RateCustomerRef {
   id: number;
   code?: string;
   name?: string;
+  customerGroupId?: number | null;
+  customerGroup?: RateCustomerGroupRef | null;
+}
+
+export interface DuplicateRateToCustomerGroupCreated {
+  customerId: number;
+  customerName: string;
+  rateMasterId: number;
+}
+
+export interface DuplicateRateToCustomerGroupSkipped {
+  customerId: number;
+  customerName: string;
+  reason: string;
+}
+
+export interface DuplicateRateToCustomerGroupResult {
+  customerGroupId: number;
+  customerGroupCode?: string;
+  customerGroupName: string;
+  sourceCustomerId: number;
+  sourceRateMasterId: number;
+  totalTargets: number;
+  created: DuplicateRateToCustomerGroupCreated[];
+  skipped: DuplicateRateToCustomerGroupSkipped[];
+}
+
+export interface DuplicateRateToCustomerGroupResponse {
+  success: boolean;
+  message?: string;
+  data: DuplicateRateToCustomerGroupResult;
 }
 
 export interface RateVendorRef {
@@ -230,13 +267,11 @@ export interface RateMasterReviewHeader {
   id: number;
   version: number;
   updateType?: RateUpdateType;
-  rateType?: RateTypeValue;
   fromDate?: string;
   toDate?: string;
   customerId?: number;
   vendorId?: number;
   productId?: number;
-  flatRate?: number | null;
   weightUnitStep?: number | null;
 }
 
@@ -274,8 +309,6 @@ export interface CreateRateMasterPayload {
   /** Vendor buy-rate contract; mutually exclusive with `customerId`. */
   vendorId?: number;
   productId: number;
-  rateType?: string;
-  flatRate?: number;
   weightUnitStep?: number;
   zoneRates?: RateZoneRatePayload[];
   distanceSlabs?: RateDistanceSlabPayload[];
