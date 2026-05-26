@@ -64,6 +64,11 @@ export const ZONE_TYPE_OPTIONS = [
   { value: "VENDOR" as const, label: "Vendor" },
 ] as const
 
+export const CUSTOMER_ACCOUNT_TYPE_OPTIONS = [
+  { value: "CREDIT" as const, label: "Credit" },
+  { value: "DEBIT" as const, label: "Debit" },
+] as const
+
 export const PRICING_MODE_FLAT_PER_KG_OPTIONS = [
   { value: "FLAT" as const, label: "Flat" },
   { value: "PER_KG" as const, label: "Per kg" },

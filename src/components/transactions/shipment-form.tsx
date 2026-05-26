@@ -1255,6 +1255,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const clearShipperBlock = () => {
         form.setValue('shipperId', 0, { shouldDirty: true, shouldValidate: false })
         form.setValue('fromZoneId', 0, { shouldDirty: true, shouldValidate: false })
+        setShipperSearch('')
         ;([
             'shipper.shipperName',
             'shipper.pinCodeId',
@@ -1283,6 +1284,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const clearConsigneeBlock = () => {
         form.setValue('consigneeId', 0, { shouldDirty: true, shouldValidate: false })
         form.setValue('toZoneId', 0, { shouldDirty: true, shouldValidate: false })
+        setConsigneeSearch('')
         ;([
             'consignee.name',
             'consignee.pinCodeId',
@@ -1420,6 +1422,22 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (consigneeZoneOptions.some((zone) => zone.id === watchedToZoneId)) return
         form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
     }, [consigneeZoneOptions, form, watchedToZoneId])
+
+    useEffect(() => {
+        if (shipperZoneOptions.length !== 1) return
+        const zoneId = normalizeMasterSelectId(shipperZoneOptions[0]?.id)
+        if (zoneId <= 0) return
+        if (normalizeMasterSelectId(form.getValues('fromZoneId')) === zoneId) return
+        form.setValue('fromZoneId', zoneId, { shouldDirty: false, shouldValidate: false })
+    }, [form, shipperZoneOptions])
+
+    useEffect(() => {
+        if (consigneeZoneOptions.length !== 1) return
+        const zoneId = normalizeMasterSelectId(consigneeZoneOptions[0]?.id)
+        if (zoneId <= 0) return
+        if (normalizeMasterSelectId(form.getValues('toZoneId')) === zoneId) return
+        form.setValue('toZoneId', zoneId, { shouldDirty: false, shouldValidate: false })
+    }, [consigneeZoneOptions, form])
 
     useEffect(() => {
         if (!watchedFloorDelivery && (form.getValues('floorCount') || 0) !== 0) {
@@ -1998,7 +2016,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     <FormControl>
                                                         <Combobox
                                                             options={shipperComboboxOptions}
-                                                            value={field.value}
+                                                            value={normalizeMasterSelectId(field.value) || undefined}
                                                             onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
                                                             placeholder="Select shipper"
                                                             searchPlaceholder="Search shipper..."
@@ -2177,7 +2195,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     <FormControl>
                                                         <Combobox
                                                             options={consigneeComboboxOptions}
-                                                            value={field.value}
+                                                            value={normalizeMasterSelectId(field.value) || undefined}
                                                             onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
                                                             placeholder="Select consignee"
                                                             searchPlaceholder="Search consignee..."
@@ -2372,7 +2390,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="shipmentTotalValue"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Booking Total Value">
+                                            <FloatingFormItem label="Invoice Value">
                                                 <FormControl>
                                                     <IntegerInput
                                                         className={FLOATING_INNER_CONTROL}

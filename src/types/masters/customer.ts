@@ -89,7 +89,7 @@ export interface Customer {
     status: 'ACTIVE' | 'INACTIVE';
     origin: string | null;
     gstNo: string | null;
-    customerType: 'INDIVIDUAL' | 'CORPORATE' | string | null;
+    customerType: 'CREDIT' | 'DEBIT' | string;
     registerType: 'REGISTERED' | 'UNREGISTERED' | string | null;
     defaultShipperId?: number | null;
     onboardingDefaultShipperRequested?: boolean;
@@ -127,7 +127,7 @@ export interface CustomerFormData {
     status?: 'ACTIVE' | 'INACTIVE';
     origin?: string;
     gstNo?: string;
-    customerType?: 'INDIVIDUAL' | 'CORPORATE' | string;
+    customerType?: 'CREDIT' | 'DEBIT' | string;
     registerType?: 'REGISTERED' | 'UNREGISTERED' | string;
     createDefaultShipper?: boolean;
     version?: number;

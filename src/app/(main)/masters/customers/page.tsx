@@ -339,7 +339,11 @@ export default function CustomersPage() {
                                     <TableCell className="text-foreground">
                                         {customer.serviceablePincode?.cityName || "-"}
                                     </TableCell>
-                                    <TableCell><Badge variant="outline">{customer.customerType}</Badge></TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline">
+                                            {customer.customerType === 'DEBIT' ? 'Debit' : 'Credit'}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell><Badge variant={customer.status === "ACTIVE" ? "success" : "secondary"} className={customer.status === "ACTIVE" ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200"}>{customer.status}</Badge></TableCell>
                                     <TableCell>
                                         <div className="flex items-center justify-center gap-1">

@@ -78,7 +78,10 @@ import {
     normalizePincodeInput,
     requiredPincodeField,
 } from '@/lib/pincode-field'
-import { optionLabelForSelect } from '@/lib/select-closed-label'
+import {
+    CUSTOMER_ACCOUNT_TYPE_OPTIONS,
+    optionLabelForSelect,
+} from '@/lib/select-closed-label'
 
 function coerceCustomerEnum<T extends string>(allowed: readonly T[], fallback: T, raw: unknown): T {
     const normalized = String(raw ?? '').trim().toUpperCase()
@@ -106,7 +109,7 @@ const customerSchema = z.object({
     status: z.enum(['ACTIVE', 'INACTIVE']),
     origin: z.string().optional().or(z.literal("")),
     gstNo: z.string().optional().or(z.literal("")),
-    customerType: z.enum(['INDIVIDUAL', 'CORPORATE']),
+    customerType: z.enum(['CREDIT', 'DEBIT']),
     registerType: z.enum(['REGISTERED', 'UNREGISTERED']),
     createDefaultShipper: z.boolean().default(false),
 })
@@ -318,7 +321,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             status: 'ACTIVE',
             origin: '',
             gstNo: '',
-            customerType: 'INDIVIDUAL',
+            customerType: 'CREDIT',
             registerType: 'REGISTERED',
             createDefaultShipper: false,
         },
@@ -346,7 +349,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             status: coerceCustomerEnum(['ACTIVE', 'INACTIVE'] as const, 'ACTIVE', initialData.status),
             origin: initialData.origin || '',
             gstNo: initialData.gstNo || '',
-            customerType: coerceCustomerEnum(['INDIVIDUAL', 'CORPORATE'] as const, 'INDIVIDUAL', initialData.customerType),
+            customerType: coerceCustomerEnum(['CREDIT', 'DEBIT'] as const, 'CREDIT', initialData.customerType),
             registerType: coerceCustomerEnum(
                 ['REGISTERED', 'UNREGISTERED'] as const,
                 'REGISTERED',
@@ -682,18 +685,16 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                 <FormControl>
                                                     <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                                                         <SelectValue placeholder="Select type">
-                                                            {(() => {
-                                                                const t = String(field.value ?? '').toUpperCase()
-                                                                if (t === 'INDIVIDUAL') return 'Individual'
-                                                                if (t === 'CORPORATE') return 'Corporate'
-                                                                return undefined
-                                                            })()}
+                                                            {optionLabelForSelect(
+                                                                field.value,
+                                                                CUSTOMER_ACCOUNT_TYPE_OPTIONS,
+                                                            )}
                                                         </SelectValue>
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="INDIVIDUAL">Individual</SelectItem>
-                                                    <SelectItem value="CORPORATE">Corporate</SelectItem>
+                                                    <SelectItem value="CREDIT">Credit</SelectItem>
+                                                    <SelectItem value="DEBIT">Debit</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </FloatingFormItem>
@@ -1279,6 +1280,19 @@ function CustomerKycTab({ customerId }: { customerId: number | null }) {
         },
         onError: (error: Error) => toast.error(error.message),
     })
+    const downloadMutation = useMutation({
+        mutationFn: (docId: number) => customerService.downloadCustomerKycDocument(customerId!, docId),
+        onSuccess: ({ blob, filename }) => {
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success('KYC document downloaded')
+        },
+        onError: (error: Error) => toast.error(error.message || 'Failed to download KYC document'),
+    })
     if (!customerId) return <DisabledCustomerTab title="KYC Details" />
     return (
         <CustomerChildTableCard
@@ -1299,7 +1313,18 @@ function CustomerKycTab({ customerId }: { customerId: number | null }) {
                 item.verified ? 'Yes' : 'No',
             ])}
             actions={kycRows.map((item) => (
-                <div className="flex gap-2" key={item.id}>
+                <div className="flex flex-wrap gap-2" key={item.id}>
+                    {item.filePath ? (
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={downloadMutation.isPending}
+                            onClick={() => downloadMutation.mutate(item.id)}
+                        >
+                            Download
+                        </Button>
+                    ) : null}
                     <Button type="button" variant="outline" size="sm" onClick={() => {
                         setEditing(item)
                         setKycFile(null)
