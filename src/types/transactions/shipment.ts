@@ -272,7 +272,7 @@ export const shipmentSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["shipmentTotalValue"],
-      message: "Booking Total Value is required",
+      message: "Invoice Value is required",
     })
   }
 

@@ -241,6 +241,25 @@ export const customerService = {
         return response.json() as Promise<CustomerChildSingleResponse<CustomerKycDocument>>;
     },
 
+    async downloadCustomerKycDocument(
+        customerId: number,
+        docId: number,
+    ): Promise<{ blob: Blob; filename: string }> {
+        const response = await apiFetch(
+            `${API_URL}/customer-master/${customerId}/kyc-documents/${docId}/download`,
+            {
+                headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+            },
+        );
+        if (!response.ok) {
+            throw new Error(await getErrorMessage(response, 'Failed to download KYC document'));
+        }
+        const disposition = response.headers.get('Content-Disposition');
+        const match = disposition?.match(/filename="([^"]+)"/i);
+        const filename = match?.[1] ?? `kyc-document-${docId}`;
+        return { blob: await response.blob(), filename };
+    },
+
     async deleteCustomerKycDocument(customerId: number, docId: number | string) {
         const response = await apiFetch(`${API_URL}/customer-master/${customerId}/kyc-documents/${docId}`, {
             method: 'DELETE',
