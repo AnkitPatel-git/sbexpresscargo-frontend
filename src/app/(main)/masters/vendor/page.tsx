@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, Loader2, FileDown, Filter, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Loader2, FileDown, Filter, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,7 @@ import { Vendor } from "@/types/masters/vendor"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function VendorPage() {
     const router = useRouter()
@@ -46,6 +47,8 @@ export default function VendorPage() {
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("vendorCode")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -54,11 +57,13 @@ export default function VendorPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["vendors", page, debouncedSearch, appliedFilters.vendorCode, appliedFilters.vendorName, appliedFilters.address, appliedFilters.telephone],
+        queryKey: ["vendors", page, debouncedSearch, appliedFilters.vendorCode, appliedFilters.vendorName, appliedFilters.address, appliedFilters.telephone, sortBy, sortOrder],
         queryFn: () => vendorService.getVendors({
             page,
             limit,
             search: debouncedSearch,
+            sortBy,
+            sortOrder,
             vendorCode: appliedFilters.vendorCode || undefined,
             vendorName: appliedFilters.vendorName || undefined,
             address: appliedFilters.address || undefined,
@@ -113,6 +118,16 @@ export default function VendorPage() {
         setFiltersOpen(false)
     }
 
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
+
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -146,22 +161,33 @@ export default function VendorPage() {
                         <MasterExcelImportButton master="vendors" label="Vendors" queryKey={["vendors"]} />
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.vendor.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add Vendor
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[980px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground">Code <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Vendor Name <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Address <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Telephone <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground text-center">Status <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Code" field="vendorCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Vendor Name" field="vendorName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Address</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Telephone</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground text-center">Status</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

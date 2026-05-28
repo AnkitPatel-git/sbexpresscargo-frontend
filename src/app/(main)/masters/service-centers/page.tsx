@@ -199,12 +199,23 @@ export default function ServiceCentersPage() {
                         </Button>
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.service_center.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add Service Center
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1250px] border-0">
@@ -212,7 +223,7 @@ export default function ServiceCentersPage() {
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Code" field="code" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="SC Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Sub Name" field="subName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Sub Name</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Pin Code</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">City</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">State</TableHead>

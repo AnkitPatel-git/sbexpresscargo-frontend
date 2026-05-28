@@ -56,7 +56,7 @@ export default function ServiceMapPage() {
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
-    const [sortBy, setSortBy] = useState("vendor")
+    const [sortBy, setSortBy] = useState("id")
     const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
@@ -229,19 +229,30 @@ export default function ServiceMapPage() {
                         </Button>
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.service_map.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add Service Map
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1200px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Vendor" field="vendor" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Service Type" field="serviceType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground">Vendor</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Service Type</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Weight (Min-Max)</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Single Pc</TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>

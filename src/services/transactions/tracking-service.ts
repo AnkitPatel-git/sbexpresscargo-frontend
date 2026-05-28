@@ -16,13 +16,21 @@ const getAuthHeaders = (isFormData = false) => {
 class TrackingService {
     private readonly baseUrl = `${API_URL}/transaction/tracking`;
 
-    async searchTracking(page: number, limit: number, search: string = ''): Promise<TrackingListResponse> {
+    async searchTracking(params: {
+        page: number;
+        limit: number;
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<TrackingListResponse> {
         const queryParams = new URLSearchParams({
-            page: page.toString(),
-            limit: limit.toString(),
+            page: params.page.toString(),
+            limit: params.limit.toString(),
             // Bruno: .../search?page=1&limit=20&search= (param present even when empty)
-            search: search ?? '',
+            search: params.search ?? '',
         });
+        if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
         const response = await apiFetch(`${this.baseUrl}/search?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
@@ -86,8 +94,17 @@ class TrackingService {
         return response.json();
     }
 
-    async getDeadLetters(limit: number = 100): Promise<DeadLettersResponse> {
-        const response = await apiFetch(`${this.baseUrl}/dead-letters?limit=${limit}`, { headers: getAuthHeaders() });
+    async getDeadLetters(params?: {
+        limit?: number;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<DeadLettersResponse> {
+        const queryParams = new URLSearchParams({
+            limit: String(params?.limit ?? 100),
+        });
+        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        const response = await apiFetch(`${this.baseUrl}/dead-letters?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch dead letters');
         }

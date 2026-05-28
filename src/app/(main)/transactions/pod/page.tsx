@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, ChevronDown, ChevronUp, FileDown, Loader2, Plus, Search, Upload } from "lucide-react";
+import { CheckCircle2, FileDown, Loader2, Plus, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,6 @@ import { PermissionGuard } from "@/components/auth/permission-guard";
 import { cn } from "@/lib/utils";
 
 const POD_PROOF_ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,image/*,application/pdf";
-
-function SortArrows() {
-    return (
-        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-            <ChevronDown className="h-2.5 w-2.5" />
-        </span>
-    );
-}
 
 function mergePodRows(current: PodRow[] | null, incoming: PodRow[]): PodRow[] {
     if (!current?.length) return incoming;
@@ -320,22 +311,22 @@ export default function PodPage() {
                             <TableHeader>
                                 <TableRow className="border-0 bg-primary hover:bg-primary">
                                     <TableHead className="h-11 font-semibold text-primary-foreground">
-                                        <span className="inline-flex items-center">AWB No <SortArrows /></span>
+                                        AWB No
                                     </TableHead>
                                     <TableHead className="font-semibold text-primary-foreground">
-                                        <span className="inline-flex items-center">Delivery Date/Time <SortArrows /></span>
+                                        Delivery Date/Time
                                     </TableHead>
                                     <TableHead className="font-semibold text-primary-foreground">
-                                        <span className="inline-flex items-center">Receiver <SortArrows /></span>
+                                        Receiver
                                     </TableHead>
                                     <TableHead className="font-semibold text-primary-foreground">
-                                        <span className="inline-flex items-center">Remark <SortArrows /></span>
+                                        Remark
                                     </TableHead>
                                     <TableHead className="font-semibold text-primary-foreground">
-                                        <span className="inline-flex items-center">Comment <SortArrows /></span>
+                                        Comment
                                     </TableHead>
                                     <TableHead className="font-semibold text-primary-foreground">
-                                        <span className="inline-flex items-center">Status <SortArrows /></span>
+                                        Status
                                     </TableHead>
                                     <TableHead className="text-center font-semibold text-primary-foreground">
                                         Upload POD

@@ -31,7 +31,7 @@ import { PermissionGuard } from "@/components/auth/permission-guard"
 import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 
 import { productService } from "@/services/masters/product-service"
-import { Product } from "@/types/masters/product"
+import type { Product } from "@/types/masters/product"
 import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
@@ -55,12 +55,15 @@ export default function ProductsPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["products", page, debouncedSearch, sortBy, sortOrder],
+        queryKey: ["products", page, debouncedSearch, appliedFilters.code, appliedFilters.name, appliedFilters.type, sortBy, sortOrder],
         queryFn: () =>
             productService.getProducts({
                 page,
                 limit,
                 search: debouncedSearch,
+                productCode: appliedFilters.code || undefined,
+                productName: appliedFilters.name || undefined,
+                productType: appliedFilters.type || undefined,
                 sortBy,
                 sortOrder,
             }),
@@ -127,14 +130,6 @@ export default function ProductsPage() {
     const total = data?.meta.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-
-    const filteredRows =
-        data?.data.filter((product) => {
-            if (appliedFilters.code && !(product.productCode || "").toLowerCase().includes(appliedFilters.code.toLowerCase())) return false
-            if (appliedFilters.name && !(product.productName || "").toLowerCase().includes(appliedFilters.name.toLowerCase())) return false
-            if (appliedFilters.type && !(product.productType || "").toLowerCase().includes(appliedFilters.type.toLowerCase())) return false
-            return true
-        }) ?? []
 
     const applyFilters = () => {
         setAppliedFilters(draftFilters)
@@ -203,12 +198,23 @@ export default function ProductsPage() {
                     </PermissionGuard>
                 </div>
 
-                <PermissionGuard permission="master.product.create">
-                    <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
-                        <FilePlus className="h-4 w-4" />
-                        Add Product
-                    </Button>
-                </PermissionGuard>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search products..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
+                    <PermissionGuard permission="master.product.create">
+                        <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
+                            <FilePlus className="h-4 w-4" />
+                            Add Product
+                        </Button>
+                    </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[640px] border-0">
@@ -221,7 +227,7 @@ export default function ProductsPage() {
                                 <SortableColumnHeader label="Product Name" field="productName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">
-                                <SortableColumnHeader label="Product Type" field="productType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                                Product Type
                             </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
@@ -233,14 +239,14 @@ export default function ProductsPage() {
                                     Loading products...
                                 </TableCell>
                             </TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : !data?.data.length ? (
                             <TableRow>
                                 <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                     No products found.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredRows.map((product, index) => (
+                            data.data.map((product, index) => (
                                 <TableRow
                                     key={product.id}
                                     className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}

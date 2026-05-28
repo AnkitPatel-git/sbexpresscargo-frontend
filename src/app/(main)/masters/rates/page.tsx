@@ -242,8 +242,19 @@ export default function RateMasterPage() {
               <FileDown className="h-4 w-4" />
             </Button>
           </PermissionGuard>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+          <Input
+            placeholder="Search..."
+            value={appliedFilters.search}
+            onChange={(e) => {
+              setAppliedFilters((prev) => ({ ...prev, search: e.target.value }));
+              setPage(1);
+            }}
+            className="h-8 w-full sm:w-[240px]"
+          />
+          <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="default"

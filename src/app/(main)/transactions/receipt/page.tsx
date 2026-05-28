@@ -135,14 +135,25 @@ export default function ReceiptsPage() {
             range on lines.
           </p>
         </div>
-        <PermissionGuard permission="transaction.receipt.create">
-          <Button type="button" asChild className="gap-2 self-start sm:self-auto">
-            <Link href="/transactions/receipt/create">
-              <FilePlus className="h-4 w-4" />
-              New receipt
-            </Link>
-          </Button>
-        </PermissionGuard>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Input
+            placeholder="Search receipt no..."
+            value={appliedReceiptNo}
+            onChange={(e) => {
+              setAppliedReceiptNo(e.target.value);
+              setPage(1);
+            }}
+            className="h-8 w-full sm:w-[220px]"
+          />
+          <PermissionGuard permission="transaction.receipt.create">
+            <Button type="button" asChild className="gap-2 self-start sm:self-auto">
+              <Link href="/transactions/receipt/create">
+                <FilePlus className="h-4 w-4" />
+                New receipt
+              </Link>
+            </Button>
+          </PermissionGuard>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

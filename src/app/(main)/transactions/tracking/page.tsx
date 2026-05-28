@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, ChevronUp, ChevronDown, FilePlus, FileUp, Plus } from "lucide-react";
+import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, FilePlus, FileUp, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 import { Input } from "@/components/ui/input";
@@ -31,15 +31,7 @@ import { formatShipmentStatusLabel } from "@/lib/shipment-status-label";
 import { ManualUpdateDialog } from "@/components/transactions/manual-update-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-function SortArrows() {
-    return (
-        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-            <ChevronDown className="h-2.5 w-2.5" />
-        </span>
-    );
-}
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
 
 function safeFormatDate(iso: string | null | undefined, fmt: string) {
     if (!iso) return "—";
@@ -64,6 +56,10 @@ export default function TrackingPage() {
     const [selectedAwb, setSelectedAwb] = useState<string | null>(null);
     const [listFilters, setListFilters] = useState({ awb: "", origin: "", destination: "", payment: "", status: "" });
     const [logFilters, setLogFilters] = useState({ awb: "", carrier: "", error: "" });
+    const [listSortBy, setListSortBy] = useState("bookingDate");
+    const [listSortOrder, setListSortOrder] = useState<SortOrder>("desc");
+    const [logSortBy, setLogSortBy] = useState("createdAt");
+    const [logSortOrder, setLogSortOrder] = useState<SortOrder>("desc");
 
     const { data: metricsData } = useQuery({
         queryKey: ["trackingMetrics"],
@@ -71,8 +67,15 @@ export default function TrackingPage() {
     });
 
     const { data: listData, isLoading: isListLoading, error: listError } = useQuery({
-        queryKey: ["trackingSearch", page, limit, searchTerm],
-        queryFn: () => trackingService.searchTracking(page, limit, searchTerm),
+        queryKey: ["trackingSearch", page, limit, searchTerm, listSortBy, listSortOrder],
+        queryFn: () =>
+            trackingService.searchTracking({
+                page,
+                limit,
+                search: searchTerm,
+                sortBy: listSortBy,
+                sortOrder: listSortOrder,
+            }),
     });
 
     // Use detailed query only if searchTerm exactly matches an AWB No (for quick detail view)
@@ -91,8 +94,8 @@ export default function TrackingPage() {
     };
 
     const { data: deadLettersData, isLoading: isLogsLoading, refetch: refetchLogs } = useQuery({
-        queryKey: ["deadLetters", limit],
-        queryFn: () => trackingService.getDeadLetters(limit),
+        queryKey: ["deadLetters", limit, logSortBy, logSortOrder],
+        queryFn: () => trackingService.getDeadLetters({ limit, sortBy: logSortBy, sortOrder: logSortOrder }),
         enabled: activeView === 'logs',
     });
     const logFilteredRows =
@@ -170,6 +173,25 @@ export default function TrackingPage() {
     const listTotal = listData?.meta?.total ?? 0;
     const listFrom = listTotal === 0 ? 0 : (page - 1) * limit + 1;
     const listTo = Math.min(page * limit, listTotal);
+
+    const handleListSort = (field: string) => {
+        if (listSortBy === field) {
+            setListSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setListSortBy(field);
+            setListSortOrder("asc");
+        }
+        setPage(1);
+    };
+
+    const handleLogSort = (field: string) => {
+        if (logSortBy === field) {
+            setLogSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setLogSortBy(field);
+            setLogSortOrder("asc");
+        }
+    };
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -455,13 +477,13 @@ export default function TrackingPage() {
                                     <Table className="min-w-[1040px] border-0">
                                         <TableHeader>
                                             <TableRow className="border-0 bg-primary hover:bg-primary">
-                                                <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">AWB No <SortArrows /></span></TableHead>
-                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Date <SortArrows /></span></TableHead>
-                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Origin <SortArrows /></span></TableHead>
-                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Destination <SortArrows /></span></TableHead>
-                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Pcs / Wt <SortArrows /></span></TableHead>
-                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Payment <SortArrows /></span></TableHead>
-                                                <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Status <SortArrows /></span></TableHead>
+                                                <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="AWB No" field="awbNo" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Date" field="bookingDate" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Origin" field="origin" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Destination" field="destination" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Pcs / Wt" field="pieces" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Payment" field="paymentType" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Status" field="currentStatus" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
                                             </TableRow>
                                             <TableRow>
                                                 <TableHead className="p-2"><Input placeholder="AWB No" className="h-8 border-border bg-background text-xs" value={listFilters.awb} onChange={(e) => setListFilters((f) => ({ ...f, awb: e.target.value }))} /></TableHead>
@@ -583,11 +605,11 @@ export default function TrackingPage() {
                             <Table className="min-w-[980px] border-0">
                                 <TableHeader>
                                     <TableRow className="border-0 bg-primary hover:bg-primary">
-                                        <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">AWB No <SortArrows /></span></TableHead>
-                                        <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Carrier <SortArrows /></span></TableHead>
-                                        <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Failure Reason <SortArrows /></span></TableHead>
-                                        <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Retries <SortArrows /></span></TableHead>
-                                        <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Date <SortArrows /></span></TableHead>
+                                        <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="AWB No" field="awbNo" sortBy={logSortBy} sortOrder={logSortOrder} onSort={handleLogSort} /></TableHead>
+                                        <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Carrier" field="carrier" sortBy={logSortBy} sortOrder={logSortOrder} onSort={handleLogSort} /></TableHead>
+                                        <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Failure Reason" field="error" sortBy={logSortBy} sortOrder={logSortOrder} onSort={handleLogSort} /></TableHead>
+                                        <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Retries" field="retryCount" sortBy={logSortBy} sortOrder={logSortOrder} onSort={handleLogSort} /></TableHead>
+                                        <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Date" field="createdAt" sortBy={logSortBy} sortOrder={logSortOrder} onSort={handleLogSort} /></TableHead>
                                         <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                                     </TableRow>
                                     <TableRow>

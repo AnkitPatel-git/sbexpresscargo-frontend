@@ -301,12 +301,23 @@ export default function CustomersPage() {
                         </Button>
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.customer.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add Customer
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1240px] border-0">
@@ -317,8 +328,8 @@ export default function CustomersPage() {
                             <TableHead className="font-semibold text-primary-foreground">Customer group</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Contact Person</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">City</TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Type" field="customerType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Type</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Status</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Edit, Trash2, Loader2, FilePlus, Filter, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, Loader2, FilePlus, Filter } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,7 @@ import { Vehicle } from "@/types/masters/vehicle"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function VehiclePage() {
     const router = useRouter()
@@ -46,6 +47,8 @@ export default function VehiclePage() {
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("vehicleNo")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
     const debouncedVehicleNo = useDebounce(appliedFilters.vehicleNo, 500)
     const debouncedVehicleType = useDebounce(appliedFilters.vehicleType, 500)
     const debouncedStatus = useDebounce(appliedFilters.status, 500)
@@ -58,13 +61,13 @@ export default function VehiclePage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["vehicles", page, debouncedSearch, debouncedVehicleNo, debouncedVehicleType, debouncedStatus, debouncedDriverUserId],
+        queryKey: ["vehicles", page, debouncedSearch, debouncedVehicleNo, debouncedVehicleType, debouncedStatus, debouncedDriverUserId, sortBy, sortOrder],
         queryFn: () => vehicleService.getVehicles({
             page,
             limit,
             search: debouncedSearch,
-            sortBy: "vehicleNo",
-            sortOrder: "asc",
+            sortBy,
+            sortOrder,
             vehicleNo: debouncedVehicleNo,
             vehicleType: debouncedVehicleType,
             status: debouncedStatus,
@@ -119,6 +122,16 @@ export default function VehiclePage() {
         setFiltersOpen(false)
     }
 
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
+
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -151,23 +164,34 @@ export default function VehiclePage() {
                         <MasterExcelImportButton master="vehicles" label="Vehicles" queryKey={["vehicles"]} />
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.vehicle.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add Vehicle
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[980px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground">Vehicle No <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Type <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Owner <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Driver <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Vehicle No" field="vehicleNo" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Type" field="vehicleType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Owner</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Driver</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Capacity (kg)</TableHead>
-                            <TableHead className="font-semibold text-primary-foreground text-center">Status <ChevronUp className="ml-1 inline h-3 w-3" /><ChevronDown className="-ml-1 inline h-3 w-3" /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground text-center"><SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="justify-center" /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

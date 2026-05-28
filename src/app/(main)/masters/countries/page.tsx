@@ -125,7 +125,7 @@ export default function CountriesPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
+    const rows =
         data?.data.filter((country: Country) => {
             if (appliedFilters.code && !country.code.toLowerCase().includes(appliedFilters.code.toLowerCase())) return false
             if (appliedFilters.name && !country.name.toLowerCase().includes(appliedFilters.name.toLowerCase())) return false
@@ -203,12 +203,23 @@ export default function CountriesPage() {
                         </Button>
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.country.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add Country
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[920px] border-0">
@@ -216,19 +227,19 @@ export default function CountriesPage() {
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Code" field="code" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Country Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Weight Unit" field="weightUnit" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Weight Unit</TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Currency" field="currency" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="ISD Code" field="isdCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">ISD Code</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Loading countries...</TableCell></TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No countries found.</TableCell></TableRow>
                         ) : (
-                            filteredRows.map((country: Country, index) => (
+                            rows.map((country: Country, index) => (
                                 <TableRow key={country.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium uppercase text-foreground">{country.code}</TableCell>
                                     <TableCell className="font-medium text-foreground">{country.name}</TableCell>

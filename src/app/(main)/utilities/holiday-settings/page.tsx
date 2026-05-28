@@ -120,12 +120,23 @@ export default function HolidaySettingsPage() {
             blocked on active holidays.
           </p>
         </div>
-        <PermissionGuard permission="utility.holiday.create">
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add holiday
-          </Button>
-        </PermissionGuard>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Input
+            placeholder="Search by name..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="h-8 w-full sm:w-[220px]"
+          />
+          <PermissionGuard permission="utility.holiday.create">
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add holiday
+            </Button>
+          </PermissionGuard>
+        </div>
       </div>
 
       <PermissionGuard
@@ -138,15 +149,6 @@ export default function HolidaySettingsPage() {
         }
       >
         <div className="flex flex-wrap gap-3 items-center">
-          <Input
-            placeholder="Search by name..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="max-w-xs"
-          />
           <Select
             value={year}
             onValueChange={(v) => {
