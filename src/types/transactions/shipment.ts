@@ -244,11 +244,15 @@ export const shipmentSchema = z.object({
     })
   }
 
-  if (values.isEdl && (!values.odaEdlDistanceKm || values.odaEdlDistanceKm <= 0)) {
+  if (
+    values.isEdl &&
+    (!values.odaEdlDistanceKm || values.odaEdlDistanceKm <= 0)
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["odaEdlDistanceKm"],
-      message: "EDL distance is required when ODA/EDL is checked",
+      message:
+        "EDL distance (km) is required when ODA/EDL is checked — set it on the consignee pincode master or enter it here",
     })
   }
 

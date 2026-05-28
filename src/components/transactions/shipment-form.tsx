@@ -129,6 +129,24 @@ const generateKycRowId = () => {
 
 /** Same pickup and delivery pincode would otherwise be 0 km; pricing uses a floor (see backend PincodeRouteDistanceService). */
 const MIN_SAME_PINCODE_DISTANCE_KM = 10
+
+function consigneePincodeEdlKey(pin: ServiceablePincode | null | undefined): string | null {
+    if (!pin) return null
+    const code = pin.pinCode?.trim()
+    if (code) return code
+    if (pin.id > 0) return String(pin.id)
+    return null
+}
+
+function consigneePincodeHasEdl(pin: ServiceablePincode | null | undefined): boolean {
+    return Boolean(pin?.edl) || Boolean(pin?.oda)
+}
+
+function parseConsigneePinEdlKm(pin: ServiceablePincode | null | undefined): number | null {
+    if (pin?.odaEdlDistanceKm == null || pin.odaEdlDistanceKm === '') return null
+    const km = Math.round(Number(pin.odaEdlDistanceKm))
+    return Number.isFinite(km) && km > 0 ? km : null
+}
 const roundWeightKg = (value: number) => {
     if (!Number.isFinite(value) || value <= 0) return 0
     const baseKg = Math.floor(value)
@@ -731,6 +749,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const [consigneePincodeSearch, setConsigneePincodeSearch] = useState('')
     const [selectedShipperPincode, setSelectedShipperPincode] = useState<ServiceablePincode | null>(null)
     const [selectedConsigneePincode, setSelectedConsigneePincode] = useState<ServiceablePincode | null>(null)
+    /** Consignee pin we last auto-filled EDL from; reset manual distance when this changes. */
+    const consigneeEdlAutoPinKeyRef = useRef<string | null>(null)
+    /** User edited EDL distance after auto-fill — keep their value for pricing until pin changes. */
+    const edlDistanceManualOverrideRef = useRef(false)
     const [suppressShipperErrors, setSuppressShipperErrors] = useState(false)
     const [suppressConsigneeErrors, setSuppressConsigneeErrors] = useState(false)
     /** Ensures shipper Combobox shows label when id comes from customer default shipper (not in search page). */
@@ -767,6 +789,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         })
         return [...baseRow, ...sortedRows]
     }, [chargePreview])
+    const chargePreviewSubTotalWithoutFuel = useMemo(() => {
+        if (!chargePreview) return null
+        return chargePreviewRows.reduce((sum, row) => {
+            const isFuelRow = /(?:\bFUEL\b)/i.test(String(row.name || ''))
+            return isFuelRow ? sum : sum + (Number(row.amount) || 0)
+        }, 0)
+    }, [chargePreview, chargePreviewRows])
 
     const debouncedCustomerSearch = useDebounce(customerSearch.trim(), 300)
     const debouncedShipperSearch = useDebounce(shipperSearch.trim(), 300)
@@ -1020,6 +1049,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (initialData) {
             form.reset(buildShipmentFormValues(initialData))
             lastDefaultShipperApplyCustomerRef.current = normalizeMasterSelectId(initialData.customerId)
+            const savedEdlKm = normalizeNumberValue(initialData.odaEdlDistanceKm)
+            edlDistanceManualOverrideRef.current =
+                savedEdlKm != null && savedEdlKm > 0
         }
     }, [initialData, form])
 
@@ -1304,8 +1336,32 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         })
         setSelectedConsigneePincode(null)
         setConsigneePincodeSearch('')
+        consigneeEdlAutoPinKeyRef.current = null
+        edlDistanceManualOverrideRef.current = false
         setSuppressConsigneeErrors(true)
         form.clearErrors()
+    }
+
+    const applyConsigneeEdlFromPincode = (
+        pin: ServiceablePincode | null | undefined,
+        options?: { markDirty?: boolean },
+    ) => {
+        const pinKey = consigneePincodeEdlKey(pin)
+        if (!pinKey || !consigneePincodeHasEdl(pin)) return
+
+        const dirty = options?.markDirty ?? false
+        consigneeEdlAutoPinKeyRef.current = pinKey
+        edlDistanceManualOverrideRef.current = false
+
+        form.setValue('isEdl', true, { shouldDirty: dirty, shouldValidate: true })
+
+        const pinEdlKm = parseConsigneePinEdlKm(pin)
+        if (pinEdlKm != null) {
+            form.setValue('odaEdlDistanceKm', pinEdlKm, {
+                shouldDirty: dirty,
+                shouldValidate: true,
+            })
+        }
     }
 
     const applySelectedPincode = (scope: 'shipper' | 'consignee', pinCode: string) => {
@@ -1331,6 +1387,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         form.setValue('consignee.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
         setSelectedConsigneePincode(selected ?? null)
         setConsigneePincodeSearch('')
+        applyConsigneeEdlFromPincode(selected, { markDirty: true })
     }
 
     const { data: shipperPincodeData } = useQuery({
@@ -1422,6 +1479,27 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (consigneeZoneOptions.some((zone) => zone.id === watchedToZoneId)) return
         form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
     }, [consigneeZoneOptions, form, watchedToZoneId])
+
+    useEffect(() => {
+        const pin = consigneePincodeSource
+        const pinKey = consigneePincodeEdlKey(pin)
+        if (!pinKey) return
+
+        if (consigneeEdlAutoPinKeyRef.current !== pinKey) {
+            consigneeEdlAutoPinKeyRef.current = pinKey
+            edlDistanceManualOverrideRef.current = false
+        }
+
+        if (!consigneePincodeHasEdl(pin)) return
+        if (edlDistanceManualOverrideRef.current) {
+            if (!form.getValues('isEdl')) {
+                form.setValue('isEdl', true, { shouldDirty: false, shouldValidate: true })
+            }
+            return
+        }
+
+        applyConsigneeEdlFromPincode(pin, { markDirty: false })
+    }, [consigneePincodeSource, form])
 
     useEffect(() => {
         if (shipperZoneOptions.length !== 1) return
@@ -2606,7 +2684,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                             ref={field.ref}
                                                             onBlur={field.onBlur}
                                                             value={field.value}
-                                                            onValueChange={field.onChange}
+                                                            onValueChange={(value) => {
+                                                                edlDistanceManualOverrideRef.current = true
+                                                                field.onChange(value)
+                                                            }}
                                                             min={0}
                                                             disabled={!watchedIsEdl}
                                                         />
@@ -3080,6 +3161,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     {chargePreview && (
                         <div className="mt-3 rounded-md border border-border/70 bg-muted/20 p-3 text-sm">
                             <div className="flex flex-wrap gap-4">
+                                <p><span className="text-muted-foreground">Sub Total (without fuel):</span> {chargePreviewSubTotalWithoutFuel ?? "—"}</p>
                                 <p><span className="text-muted-foreground">Total Amount:</span> {chargePreview.totalAmount ?? "—"}</p>
                             </div>
                         </div>
