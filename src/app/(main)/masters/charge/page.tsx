@@ -186,12 +186,23 @@ export default function ChargePage() {
             </Button>
           </PermissionGuard>
         </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Input
+            placeholder="Search..."
+            value={appliedFilters.search}
+            onChange={(e) => {
+              setAppliedFilters((prev) => ({ ...prev, search: e.target.value }));
+              setPage(1);
+            }}
+            className="h-8 w-full sm:w-[240px]"
+          />
         <PermissionGuard permission="master.charge.create">
           <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={() => router.push("/masters/charge/create")}>
             <FilePlus className="h-4 w-4" />
             Create Charge
           </Button>
         </PermissionGuard>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">

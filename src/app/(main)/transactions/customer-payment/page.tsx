@@ -5,8 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Download,
   Edit,
   FilePlus,
@@ -45,15 +43,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { customerPaymentService } from "@/services/transactions/customer-payment-service";
 import { CustomerPayment } from "@/types/transactions/customer-payment";
 import { cn } from "@/lib/utils";
-
-function SortArrows() {
-  return (
-    <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-      <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-      <ChevronDown className="h-2.5 w-2.5" />
-    </span>
-  );
-}
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
 
 export default function CustomerPaymentListPage() {
   const router = useRouter();
@@ -62,6 +52,8 @@ export default function CustomerPaymentListPage() {
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
+  const [sortBy, setSortBy] = useState("date");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [colFilters, setColFilters] = useState({
     customer: "",
@@ -70,8 +62,15 @@ export default function CustomerPaymentListPage() {
   });
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["customer-payments", page, limit, debouncedSearch],
-    queryFn: () => customerPaymentService.getCustomerPayments(page, limit, debouncedSearch),
+    queryKey: ["customer-payments", page, limit, debouncedSearch, sortBy, sortOrder],
+    queryFn: () =>
+      customerPaymentService.getCustomerPayments({
+        page,
+        limit,
+        search: debouncedSearch,
+        sortBy,
+        sortOrder,
+      }),
   });
 
   const deleteMutation = useMutation({
@@ -123,6 +122,16 @@ export default function CustomerPaymentListPage() {
       return true;
     }) ?? [];
 
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  };
+
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -172,11 +181,11 @@ export default function CustomerPaymentListPage() {
         <Table className="min-w-[980px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
-              <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Customer <SortArrows /></span></TableHead>
-              <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Amount <SortArrows /></span></TableHead>
-              <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Date / Paid Date <SortArrows /></span></TableHead>
-              <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Status <SortArrows /></span></TableHead>
-              <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">File <SortArrows /></span></TableHead>
+              <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Customer" field="customerId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+              <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Amount" field="amount" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+              <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Date / Paid Date" field="date" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+              <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Status" field="approved" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+              <TableHead className="font-semibold text-primary-foreground">File</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
             <TableRow className="border-b border-border bg-card hover:bg-card">

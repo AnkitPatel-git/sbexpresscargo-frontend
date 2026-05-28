@@ -253,6 +253,16 @@ export default function VendorConfigPage() {
                         <MasterExcelImportButton master="vendor-config" label="Vendor Configs" queryKey={["vendor-configs"]} />
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
 
                 <PermissionGuard permission="master.vendor_config.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
@@ -260,6 +270,7 @@ export default function VendorConfigPage() {
                         Add Vendor Config
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1160px] border-0">

@@ -214,7 +214,7 @@ export default function ContentsPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
+    const rows =
         data?.data.filter((content) => {
             if (appliedFilters.code && !(content.contentCode || "").toLowerCase().includes(appliedFilters.code.toLowerCase())) return false
             if (appliedFilters.name && !(content.contentName || "").toLowerCase().includes(appliedFilters.name.toLowerCase())) return false
@@ -285,12 +285,23 @@ export default function ContentsPage() {
                         </Button>
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.content.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add Content
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[700px] border-0">
@@ -305,10 +316,10 @@ export default function ContentsPage() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">Loading contents...</TableCell></TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No contents found.</TableCell></TableRow>
                         ) : (
-                            filteredRows.map((content: Content, index) => (
+                            rows.map((content: Content, index) => (
                                 <TableRow key={content.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{content.contentCode}</TableCell>
                                     <TableCell className="font-medium text-foreground">{content.contentName}</TableCell>

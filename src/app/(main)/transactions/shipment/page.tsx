@@ -20,6 +20,7 @@ import { MASTER_READ } from "@/lib/portal-permissions";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import type { Shipment } from "@/types/transactions/shipment";
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
 
 type ShipmentFilters = {
   awbNo: string;
@@ -54,6 +55,8 @@ export default function ShipmentsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<ShipmentFilters>(defaultFilters);
   const [draftFilters, setDraftFilters] = useState<ShipmentFilters>(defaultFilters);
+  const [sortBy, setSortBy] = useState("id");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const { data: customerData } = useQuery({
     queryKey: ["shipment-client-options"],
@@ -70,15 +73,15 @@ export default function ShipmentsPage() {
   const listParams = {
     page,
     limit,
-    sortBy: "id",
-    sortOrder: "desc" as const,
+    sortBy,
+    sortOrder,
     ...Object.fromEntries(
       Object.entries(appliedFilters).map(([key, value]) => [key, value.trim() ? value : undefined]),
     ),
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["shipments", listParams],
+    queryKey: ["shipments", page, limit, sortBy, sortOrder, appliedFilters],
     queryFn: () => shipmentService.getShipments(listParams),
   });
 
@@ -102,6 +105,16 @@ export default function ShipmentsPage() {
     setAppliedFilters(defaultFilters);
     setPage(1);
     setFiltersOpen(false);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setPage(1);
   };
 
   async function handleExport() {
@@ -225,7 +238,17 @@ export default function ShipmentsPage() {
         </div>
 
         <PermissionGuard permission="transaction.shipment.create">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <Input
+              placeholder="Search by AWB..."
+              value={appliedFilters.awbNo}
+              onChange={(e) => {
+                setAppliedFilters((prev) => ({ ...prev, awbNo: e.target.value }));
+                setPage(1);
+              }}
+              className="h-8 w-full sm:w-[240px]"
+            />
+            <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
@@ -246,6 +269,7 @@ export default function ShipmentsPage() {
               <FilePlus className="h-4 w-4" />
               Create Booking
             </Button>
+            </div>
           </div>
         </PermissionGuard>
       </div>
@@ -254,19 +278,37 @@ export default function ShipmentsPage() {
         <Table className="min-w-[1500px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
-              <TableHead className="font-semibold text-primary-foreground">AWB No</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">E-waybill</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Book Date</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="AWB No" field="awbNo" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="E-waybill" field="ewaybillNumber" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Book Date" field="bookDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
               <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Shipper</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Consignee</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Origin</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Destination</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Origin" field="origin" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Destination" field="destination" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
               <TableHead className="font-semibold text-primary-foreground">Product</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Payment</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Status</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Pieces</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Amount</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Payment" field="paymentType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Status" field="currentStatus" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Pieces" field="pieces" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Amount" field="totalAmount" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>

@@ -16,16 +16,22 @@ const getAuthHeaders = (isFormData = false) => {
 class ManifestService {
     private readonly baseUrl = `${API_URL}/transaction/manifest`;
 
-    async getManifests(page: number, limit: number, search: string = ''): Promise<ManifestListResponse> {
+    async getManifests(params: {
+        page: number;
+        limit: number;
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<ManifestListResponse> {
         const queryParams = new URLSearchParams({
-            page: page.toString(),
-            limit: limit.toString(),
-            sortBy: 'manifestNo',
-            sortOrder: 'desc',
+            page: params.page.toString(),
+            limit: params.limit.toString(),
+            sortBy: params.sortBy ?? 'manifestNo',
+            sortOrder: params.sortOrder ?? 'desc',
         });
 
-        if (search) {
-            queryParams.append('search', search);
+        if (params.search) {
+            queryParams.append('search', params.search);
         }
 
         const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`, { headers: getAuthHeaders() });

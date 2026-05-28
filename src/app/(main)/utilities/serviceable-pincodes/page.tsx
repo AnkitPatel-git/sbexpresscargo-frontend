@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash2, Check, X, FileDown, FileUp, Filter, ChevronUp, ChevronDown, Download } from "lucide-react"
+import { Plus, Edit, Trash2, Check, X, FileDown, FileUp, Filter, Download } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -46,15 +46,7 @@ import { ServiceablePincode } from "@/types/utilities/serviceable-pincode"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useAuth } from "@/context/auth-context"
 import { useDebounce } from "@/hooks/use-debounce"
-
-function SortArrows() {
-    return (
-        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-            <ChevronDown className="h-2.5 w-2.5" />
-        </span>
-    )
-}
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function ServiceablePincodesPage() {
     const router = useRouter()
@@ -73,6 +65,8 @@ export default function ServiceablePincodesPage() {
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
+    const [sortBy, setSortBy] = useState("pinCode")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const debouncedPinCode = useDebounce(appliedFilters.pinCode, 400)
     const debouncedCityName = useDebounce(appliedFilters.cityName, 400)
@@ -98,14 +92,14 @@ export default function ServiceablePincodesPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["serviceable-pincodes", page, debouncedSearch, debouncedPinCode, debouncedCityName, debouncedAreaName, debouncedCountryCode],
+        queryKey: ["serviceable-pincodes", page, debouncedSearch, debouncedPinCode, debouncedCityName, debouncedAreaName, debouncedCountryCode, sortBy, sortOrder],
         queryFn: () =>
             serviceablePincodeService.getServiceablePincodes({
                 page,
                 limit,
                 search: debouncedSearch,
-                sortBy: "pinCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 pinCode: debouncedPinCode || undefined,
                 cityName: debouncedCityName || undefined,
                 areaName: debouncedAreaName || undefined,
@@ -120,8 +114,8 @@ export default function ServiceablePincodesPage() {
         try {
             const { blob, filename } = await serviceablePincodeService.exportServiceablePincodes({
                 search: debouncedSearch,
-                sortBy: "pinCode",
-                sortOrder: "asc",
+                sortBy,
+                sortOrder,
                 pinCode: debouncedPinCode || undefined,
                 cityName: debouncedCityName || undefined,
                 areaName: debouncedAreaName || undefined,
@@ -279,6 +273,16 @@ export default function ServiceablePincodesPage() {
         setFiltersOpen(false)
     }
 
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
+    }
+
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
@@ -342,31 +346,38 @@ export default function ServiceablePincodesPage() {
                         </Button>
                     </PermissionGuard>
                 </div>
-                <PermissionGuard permission="utility.serviceable_pincode.create">
-                    <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Pincode">
-                        <Plus className="mr-1 h-4 w-4" /> Add Pincode
-                    </Button>
-                </PermissionGuard>
-            </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Search:</span>
-                <Input placeholder="Search pincodes..." className="h-9 w-44 bg-background sm:w-52" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search pincodes..."
+                        className="h-8 w-full sm:w-[240px]"
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value)
+                            setPage(1)
+                        }}
+                    />
+                    <PermissionGuard permission="utility.serviceable_pincode.create">
+                        <Button type="button" className="h-9 rounded-md px-3" onClick={handleCreate} title="Add Pincode">
+                            <Plus className="mr-1 h-4 w-4" /> Add Pincode
+                        </Button>
+                    </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1360px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground"><span className="inline-flex items-center">Pin Code <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">City <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Area <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Country <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Zones <SortArrows /></span></TableHead>
-                            <TableHead className="text-right font-semibold text-primary-foreground"><span className="inline-flex items-center">EDL km <SortArrows /></span></TableHead>
-                            <TableHead className="text-right font-semibold text-primary-foreground"><span className="inline-flex items-center">TAT days <SortArrows /></span></TableHead>
-                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Embargo <SortArrows /></span></TableHead>
-                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">Serviceable <SortArrows /></span></TableHead>
-                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">EDL <SortArrows /></span></TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="Pin Code" field="pinCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="City" field="cityName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Area" field="areaName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Country</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">State</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Zones</TableHead>
+                            <TableHead className="text-right font-semibold text-primary-foreground"><SortableColumnHeader label="EDL km" field="odaEdlDistanceKm" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="text-right font-semibold text-primary-foreground"><SortableColumnHeader label="TAT days" field="tatWorkingDays" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">Embargo</TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">Serviceable</TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">EDL</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

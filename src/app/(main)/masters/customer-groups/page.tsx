@@ -166,6 +166,16 @@ export default function CustomerGroupsPage() {
                         </DialogContent>
                     </Dialog>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.name}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, name: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.customer_group.create">
                     <Button
                         type="button"
@@ -177,6 +187,7 @@ export default function CustomerGroupsPage() {
                         Add customer group
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
 
             <div className="overflow-x-auto rounded-md border border-border">
@@ -190,7 +201,7 @@ export default function CustomerGroupsPage() {
                                 <SortableColumnHeader label="Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">
-                                <SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                                Status
                             </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>

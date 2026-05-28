@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Edit, Trash2, FileDown, Filter, FilePlus, ChevronUp, ChevronDown } from "lucide-react"
+import { Edit, Trash2, FileDown, Filter, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -43,15 +43,7 @@ import { State } from "@/types/masters/state"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { useDebounce } from "@/hooks/use-debounce"
-
-function SortArrows() {
-    return (
-        <span className="ml-1 inline-flex flex-col leading-none opacity-80">
-            <ChevronUp className="h-2.5 w-2.5 -mb-1" />
-            <ChevronDown className="h-2.5 w-2.5" />
-        </span>
-    )
-}
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
 
 export default function StatesPage() {
     const router = useRouter()
@@ -68,6 +60,8 @@ export default function StatesPage() {
     const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
     const [draftFilters, setDraftFilters] = useState(defaultFilters)
     const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("stateName")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -78,8 +72,8 @@ export default function StatesPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["states", page, debouncedSearch],
-        queryFn: () => stateService.getStates({ page, limit, search: debouncedSearch }),
+        queryKey: ["states", page, debouncedSearch, sortBy, sortOrder],
+        queryFn: () => stateService.getStates({ page, limit, search: debouncedSearch, sortBy, sortOrder }),
     })
 
     const deleteMutation = useMutation({
@@ -116,7 +110,7 @@ export default function StatesPage() {
     const total = data?.meta?.total ?? 0
     const from = total === 0 ? 0 : (page - 1) * limit + 1
     const to = Math.min(page * limit, total)
-    const filteredRows =
+    const rows =
         data?.data.filter((state: State) => {
             if (appliedFilters.stateName && !state.stateName.toLowerCase().includes(appliedFilters.stateName.toLowerCase())) return false
             if (
@@ -139,6 +133,16 @@ export default function StatesPage() {
         setAppliedFilters(defaultFilters)
         setPage(1)
         setFiltersOpen(false)
+    }
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
     }
 
     return (
@@ -172,21 +176,32 @@ export default function StatesPage() {
                         <MasterExcelImportButton master="states" label="States" queryKey={["states"]} />
                     </PermissionGuard>
                     </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.state.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add State
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[860px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">State Name <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">Country <SortArrows /></span></TableHead>
-                            <TableHead className="font-semibold text-primary-foreground"><span className="inline-flex items-center">GST Alias <SortArrows /></span></TableHead>
-                            <TableHead className="text-center font-semibold text-primary-foreground"><span className="inline-flex items-center">UT <SortArrows /></span></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="State Name" field="stateName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Country</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="GST Alias" field="gstAlias" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
+                            <TableHead className="text-center font-semibold text-primary-foreground">UT</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -195,12 +210,12 @@ export default function StatesPage() {
                             <TableRow>
                                 <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Loading states...</TableCell>
                             </TableRow>
-                        ) : filteredRows.length === 0 ? (
+                        ) : rows.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No states found.</TableCell>
                             </TableRow>
                         ) : (
-                            filteredRows.map((state: State, index) => (
+                            rows.map((state: State, index) => (
                                 <TableRow key={state.id} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
                                     <TableCell className="font-medium text-foreground">{state.stateName}</TableCell>
                                     <TableCell className="text-foreground">{state.country?.name || "-"}</TableCell>

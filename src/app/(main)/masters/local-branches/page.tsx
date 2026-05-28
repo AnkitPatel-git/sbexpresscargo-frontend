@@ -199,12 +199,23 @@ export default function LocalBranchesPage() {
                         </Button>
                     </PermissionGuard>
                 </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Input
+                        placeholder="Search..."
+                        value={appliedFilters.search}
+                        onChange={(e) => {
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
+                            setPage(1)
+                        }}
+                        className="h-8 w-full sm:w-[240px]"
+                    />
                 <PermissionGuard permission="master.local_branch.create">
                     <Button type="button" variant="default" className="h-8 gap-2 px-3 font-semibold" onClick={handleCreate}>
                         <FilePlus className="h-4 w-4" />
                         Add Branch
                     </Button>
                 </PermissionGuard>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
                 <Table className="min-w-[1000px] border-0">
@@ -220,7 +231,7 @@ export default function LocalBranchesPage() {
                                 <SortableColumnHeader label="Branch Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">
-                                <SortableColumnHeader label="Service Center" field="serviceCenterId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                                Service Center
                             </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>

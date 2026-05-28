@@ -16,15 +16,23 @@ const getAuthHeaders = (isFormData = false) => {
 class CustomerPaymentService {
     private readonly baseUrl = `${API_URL}/transaction/customer-payment`;
 
-    async getCustomerPayments(page: number, limit: number, search: string = ''): Promise<CustomerPaymentListResponse> {
+    async getCustomerPayments(params: {
+        page: number;
+        limit: number;
+        search?: string;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+    }): Promise<CustomerPaymentListResponse> {
         // Bruno: GET .../customer-payment?page=1&limit=20
         const queryParams = new URLSearchParams({
-            page: page.toString(),
-            limit: limit.toString(),
+            page: params.page.toString(),
+            limit: params.limit.toString(),
         });
-        if (search) {
-            queryParams.append('search', search);
+        if (params.search) {
+            queryParams.append('search', params.search);
         }
+        if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
         const response = await apiFetch(`${this.baseUrl}?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
