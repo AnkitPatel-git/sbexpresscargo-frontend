@@ -15,6 +15,12 @@ export const UTILITY_READ = {
   serviceablePincode: "utility.serviceable_pincode.read",
 } as const;
 
+/** Shipment commercial / charge calculator (separate from shipment.core.*). */
+export const SHIPMENT_CHARGE = {
+  read: "shipment.charge.read",
+  calculate: "shipment.charge.calculate",
+} as const;
+
 export function isSuperAdminRole(roleIdentifier?: string | null): boolean {
   const id = roleIdentifier?.toUpperCase();
   return id === "SUPER_ADMIN" || id === "SUPERUSER";

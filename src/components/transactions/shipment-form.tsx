@@ -102,7 +102,7 @@ import type { Consignee } from '@/types/masters/consignee'
 import type { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useAuth } from '@/context/auth-context'
-import { MASTER_READ, UTILITY_READ } from '@/lib/portal-permissions'
+import { MASTER_READ, SHIPMENT_CHARGE, UTILITY_READ } from '@/lib/portal-permissions'
 
 interface ShipmentFormProps {
     initialData?: Shipment | null
@@ -719,6 +719,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         serviceMap: hasPermission(MASTER_READ.serviceMap),
         pincode: hasPermission(UTILITY_READ.serviceablePincode),
     }
+    const canViewCharges = hasPermission(SHIPMENT_CHARGE.read)
+    const canCalculateCharges = hasPermission(SHIPMENT_CHARGE.calculate)
     const mastersReady = !authLoading
     const isEdit = !!initialData
     /** Ref avoids adding `isEdit` to effect deps (same hook must keep a constant-sized dep array across HMR). */
@@ -1205,6 +1207,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const debouncedAutoPricingTriggerKey = useDebounce(autoPricingTriggerKey, 650)
 
     useEffect(() => {
+        if (!canCalculateCharges) return
         if (!isEdit || !savedShipment?.id) return
         if (!normalizeMasterSelectId(watchedCustomerId) || !normalizeMasterSelectId(watchedProductId)) return
         if (!(normalizeMasterSelectId(watchedShipperId) > 0 || (watchedShipperPinCode || '').trim())) return
@@ -1223,7 +1226,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         return () => {
             cancelled = true
         }
-    }, [debouncedAutoPricingTriggerKey, isEdit, savedShipment?.id, watchedCustomerId, watchedProductId, watchedShipperId, watchedConsigneeId, watchedShipperPinCode, watchedConsigneePinCode, form])
+    }, [canCalculateCharges, debouncedAutoPricingTriggerKey, isEdit, savedShipment?.id, watchedCustomerId, watchedProductId, watchedShipperId, watchedConsigneeId, watchedShipperPinCode, watchedConsigneePinCode, form])
 
     const prevShipperIdRef = useRef<number>(0)
     const prevConsigneeIdRef = useRef<number>(0)
@@ -3152,11 +3155,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 </OutlinedFormSection>
 
                 {/* Section 6: Charges */}
+                {canViewCharges ? (
                 <OutlinedFormSection label="Charge Details" labelTone="navy">
                     <div className="flex flex-wrap justify-end gap-2 border-b border-border/70 pb-3">
+                        {canCalculateCharges ? (
                         <Button type="button" variant="outline" size="sm" onClick={() => calculateMutation.mutate()} disabled={calculateMutation.isPending}>
                             <Calculator className="mr-2 h-4 w-4" /> Calculate Charges
                         </Button>
+                        ) : null}
                     </div>
                     <div className="overflow-hidden rounded-md border border-border/70 bg-muted/20">
                         <Table>
@@ -3204,6 +3210,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                         </div>
                     )}
                 </OutlinedFormSection>
+                ) : null}
 
                     </TabsContent>
 
@@ -3254,7 +3261,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 Forwarding AWB and a vendor are required (vendor on this tab or on the AWB step). Service
                                 map is optional. Details are saved after shipment booking save/update.
                             </p>
-                            {previewShipmentId && effectiveForwardingVendorId > 0 ? (
+                            {canViewCharges && previewShipmentId && effectiveForwardingVendorId > 0 ? (
                                 <div className="mt-3 rounded-md border border-border/70 bg-muted/15 p-3 text-xs">
                                     <p className="mb-1 font-medium text-foreground">Rate preview (saved booking)</p>
                                     {forwardingRatePreview.isPending ? (

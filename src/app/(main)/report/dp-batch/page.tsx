@@ -375,7 +375,7 @@ export default function DpBatchReportPage() {
             </DialogContent>
           </Dialog>
 
-          <PermissionGuard permission="transaction.shipment.read">
+          <PermissionGuard permission="report.dp_batch.read">
             <Button type="button" variant="outline" className="h-9 gap-2" onClick={() => void handleExport()}>
               <FileUp className="h-4 w-4" />
               Export CSV

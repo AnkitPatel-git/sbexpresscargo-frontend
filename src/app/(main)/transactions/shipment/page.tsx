@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useAuth } from "@/context/auth-context";
-import { MASTER_READ } from "@/lib/portal-permissions";
+import { MASTER_READ, SHIPMENT_CHARGE } from "@/lib/portal-permissions";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import type { Shipment } from "@/types/transactions/shipment";
@@ -50,6 +50,8 @@ export default function ShipmentsPage() {
   const queryClient = useQueryClient();
   const { hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
   const canReadCustomers = hasPermission(MASTER_READ.customer);
+  const canViewCharges = hasPermission(SHIPMENT_CHARGE.read);
+  const tableColSpan = canViewCharges ? 14 : 13;
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -306,22 +308,24 @@ export default function ShipmentsPage() {
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="Pieces" field="pieces" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
+              {canViewCharges ? (
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="Amount" field="totalAmount" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
+              ) : null}
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={14} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={tableColSpan} className="h-24 text-center text-muted-foreground">
                   Loading shipment bookings…
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={14} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={tableColSpan} className="h-24 text-center text-muted-foreground">
                   No shipment bookings found.
                 </TableCell>
               </TableRow>
@@ -342,7 +346,9 @@ export default function ShipmentsPage() {
                   <TableCell>{shipment.paymentType || "—"}</TableCell>
                   <TableCell>{shipment.currentStatus || "—"}</TableCell>
                   <TableCell>{shipment.pieces ?? "—"}</TableCell>
+                  {canViewCharges ? (
                   <TableCell>{shipment.totalAmount != null ? String(shipment.totalAmount) : "—"}</TableCell>
+                  ) : null}
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
                       <PermissionGuard permission="transaction.shipment.update">

@@ -8,7 +8,9 @@ import { format } from "date-fns";
 import { ArrowLeft, Download, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
+import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
+import { SHIPMENT_CHARGE } from "@/lib/portal-permissions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
@@ -252,8 +254,10 @@ export default function ShipmentDetailsPage() {
           <p><span className="text-muted-foreground">Payment Type:</span> {fallbackText(shipment.paymentType)}</p>
           <p><span className="text-muted-foreground">Currency:</span> INR</p>
           <p><span className="text-muted-foreground">COD:</span> {shipment.isCod ? `Yes (${fallbackText(shipment.codAmount)})` : "No"}</p>
-          <p><span className="text-muted-foreground">Base Freight:</span> {fallbackText(shipment.baseFreight)}</p>
-          <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(shipment.totalAmount)}</p>
+          <PermissionGuard permission={SHIPMENT_CHARGE.read}>
+            <p><span className="text-muted-foreground">Base Freight:</span> {fallbackText(shipment.baseFreight)}</p>
+            <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(shipment.totalAmount)}</p>
+          </PermissionGuard>
         </FormSection>
 
         <FormSection title="Weight & Pieces" contentClassName="space-y-2 text-sm">
@@ -283,6 +287,7 @@ export default function ShipmentDetailsPage() {
           )}
         </FormSection>
 
+        <PermissionGuard permission={SHIPMENT_CHARGE.read}>
         <FormSection title="Applied Charge" contentClassName="space-y-2 text-sm">
           <p><span className="text-muted-foreground">Base Freight:</span> {fallbackText(shipment.baseFreight)}</p>
           <p><span className="text-muted-foreground">Charge lines total:</span> {appliedCharges.length > 0 ? fallbackText(appliedChargesTotal) : "—"}</p>
@@ -303,6 +308,7 @@ export default function ShipmentDetailsPage() {
             <p className="text-muted-foreground">No applied shipment charges on this booking.</p>
           )}
         </FormSection>
+        </PermissionGuard>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

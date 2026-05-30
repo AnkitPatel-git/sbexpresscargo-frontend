@@ -26,17 +26,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  columnsForGroup,
+  columnsForModule,
   countGranted,
   filterGroups,
   findActionById,
   findActionByKey,
-  flattenActions,
-  formatMenuLabel,
-  isGroupFullyGranted,
-  isGroupPartiallyGranted,
+  flattenModuleActions,
+  flattenModuleResources,
+  groupByModule,
+  isModuleFullyGranted,
+  isModulePartiallyGranted,
   isResourceFullyGranted,
   isResourcePartiallyGranted,
+  type PermissionModuleSection,
 } from "@/lib/permission-access";
 import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { cn } from "@/lib/utils";
@@ -130,47 +132,49 @@ function CheckboxWrap({
   );
 }
 
-function GroupTitle({ group }: { group: GroupedPermission }) {
-  const { granted, total } = countGranted([group]);
+function ModuleTitle({ section }: { section: PermissionModuleSection }) {
+  const { granted, total } = countGranted(section.groups);
+  const resources = flattenModuleResources(section);
   return (
     <div>
-      <p className="text-sm font-semibold">{formatMenuLabel(group.underMenu)}</p>
+      <p className="text-sm font-semibold tracking-wide">{section.moduleLabel}</p>
       <p className="text-xs text-muted-foreground">
-        {granted} of {total} granted · {group.resources.length} resource
-        {group.resources.length === 1 ? "" : "s"}
+        {granted} of {total} granted · {resources.length} resource
+        {resources.length === 1 ? "" : "s"}
       </p>
     </div>
   );
 }
 
-function PermissionGroupCard({
-  group,
+function PermissionModuleCard({
+  section,
   pendingIds,
   onToggleAction,
   onToggleResource,
-  onToggleGroup,
+  onToggleModule,
 }: {
-  group: GroupedPermission;
+  section: PermissionModuleSection;
   pendingIds: Set<number>;
   onToggleAction: (permissionId: number, nextGranted: boolean) => void;
   onToggleResource: (resource: GroupedPermission["resources"][number], grant: boolean) => void;
-  onToggleGroup: (grant: boolean) => void;
+  onToggleModule: (grant: boolean) => void;
 }) {
-  const columns = columnsForGroup(group);
-  const groupPending = flattenActions(group).some((a) => pendingIds.has(a.id));
+  const columns = columnsForModule(section);
+  const resources = flattenModuleResources(section);
+  const modulePending = flattenModuleActions(section).some((a) => pendingIds.has(a.id));
 
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-card">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/50 px-3 py-2.5">
-        <GroupTitle group={group} />
+        <ModuleTitle section={section} />
         <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
           <AccessCheckbox
-            checked={isGroupFullyGranted(group)}
-            indeterminate={isGroupPartiallyGranted(group)}
-            pending={groupPending}
-            disabled={flattenActions(group).length === 0}
-            onCheckedChange={onToggleGroup}
-            aria-label={`Toggle all permissions in ${formatMenuLabel(group.underMenu)}`}
+            checked={isModuleFullyGranted(section)}
+            indeterminate={isModulePartiallyGranted(section)}
+            pending={modulePending}
+            disabled={flattenModuleActions(section).length === 0}
+            onCheckedChange={onToggleModule}
+            aria-label={`Toggle all permissions in ${section.moduleLabel}`}
           />
           Select all in section
         </label>
@@ -190,7 +194,7 @@ function PermissionGroupCard({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {group.resources.map((resource) => (
+            {resources.map((resource) => (
               <TableRow key={resource.resourceKey}>
                 <TableCell className="font-medium">{resource.resource}</TableCell>
                 <TableCell className="text-center">
@@ -315,6 +319,10 @@ export function AccessRightsPanel() {
 
   const groups = groupedResp?.data ?? [];
   const filteredGroups = useMemo(() => filterGroups(groups, filter), [groups, filter]);
+  const moduleSections = useMemo(
+    () => groupByModule(filteredGroups),
+    [filteredGroups],
+  );
   const totals = useMemo(() => countGranted(groups), [groups]);
 
   const setPending = useCallback((id: number, pending: boolean) => {
@@ -434,9 +442,9 @@ export function AccessRightsPanel() {
     [runBatch],
   );
 
-  const handleToggleGroup = useCallback(
-    async (group: GroupedPermission, grant: boolean) => {
-      const changes = flattenActions(group)
+  const handleToggleModule = useCallback(
+    async (section: PermissionModuleSection, grant: boolean) => {
+      const changes = flattenModuleActions(section)
         .filter((a) => !!a.granted !== grant)
         .map((a) => ({ permissionId: a.id, grant }));
       if (changes.length === 0) return;
@@ -565,18 +573,18 @@ export function AccessRightsPanel() {
             <SummaryBar
               roleName={roleName}
               totals={totals}
-              filteredCount={filteredGroups.length}
-              totalSections={groups.length}
+              filteredCount={moduleSections.length}
+              totalSections={groupByModule(groups).length}
             />
 
-            {filteredGroups.length === 0 ? (
+            {moduleSections.length === 0 ? (
               <StateMessage message="No permissions match your search." />
             ) : (
               <div className="space-y-4">
-                {filteredGroups.map((group) => (
-                  <PermissionGroupCard
-                    key={group.underMenu}
-                    group={group}
+                {moduleSections.map((section) => (
+                  <PermissionModuleCard
+                    key={section.moduleKey}
+                    section={section}
                     pendingIds={pendingIds}
                     onToggleAction={(permissionId, grant) =>
                       void handleToggleAction(permissionId, grant)
@@ -584,7 +592,7 @@ export function AccessRightsPanel() {
                     onToggleResource={(resource, grant) =>
                       void handleToggleResource(resource, grant)
                     }
-                    onToggleGroup={(grant) => void handleToggleGroup(group, grant)}
+                    onToggleModule={(grant) => void handleToggleModule(section, grant)}
                   />
                 ))}
               </div>

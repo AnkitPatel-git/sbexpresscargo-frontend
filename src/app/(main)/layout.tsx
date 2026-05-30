@@ -1219,7 +1219,7 @@ const SidebarContent = ({
 
         {isReportsOpen && !isCollapsed && (
           <div className="mt-1 flex flex-col gap-0.5 rounded-md bg-white p-1 shadow-sm">
-            <PermissionGuard permission="transaction.shipment.read">
+            <PermissionGuard permission="report.mis.read">
               <LinkItem
                 href="/report/mis"
                 active={isActive("/report/mis")}
@@ -1230,7 +1230,7 @@ const SidebarContent = ({
                 MIS Report
               </LinkItem>
             </PermissionGuard>
-            <PermissionGuard permission="transaction.shipment.read">
+            <PermissionGuard permission="report.dp_batch.read">
               <LinkItem
                 href="/report/dp-batch"
                 active={isActive("/report/dp-batch")}
@@ -1265,7 +1265,7 @@ const SidebarContent = ({
             </div>
             <div className="max-h-[70vh] overflow-y-auto">
               <div className="mt-1 flex flex-col gap-1">
-                <PermissionGuard permission="transaction.shipment.read">
+                <PermissionGuard permission="report.mis.read">
                   <LinkItem
                     href="/report/mis"
                     active={isActive("/report/mis")}
@@ -1276,7 +1276,7 @@ const SidebarContent = ({
                     MIS Report
                   </LinkItem>
                 </PermissionGuard>
-                <PermissionGuard permission="transaction.shipment.read">
+                <PermissionGuard permission="report.dp_batch.read">
                   <LinkItem
                     href="/report/dp-batch"
                     active={isActive("/report/dp-batch")}
