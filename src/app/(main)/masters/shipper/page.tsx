@@ -29,6 +29,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
+import { useDebounce } from "@/hooks/use-debounce"
 import { shipperService } from "@/services/masters/shipper-service"
 import { Shipper } from "@/types/masters/shipper"
 import { cn } from "@/lib/utils"
@@ -46,6 +48,9 @@ export default function ShipperPage() {
     const [draftFilters, setDraftFilters] = useState<ShipperFilters>(emptyFilters)
     const [deleteId, setDeleteId] = useState<number | null>(null)
     const [exporting, setExporting] = useState(false)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("shipperCode")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     useEffect(() => {
         if (filtersOpen) {
@@ -56,9 +61,9 @@ export default function ShipperPage() {
     const listParams = {
         page,
         limit,
-        search: appliedFilters.search || undefined,
-        sortBy: "shipperCode",
-        sortOrder: "asc" as const,
+        search: debouncedSearch || undefined,
+        sortBy,
+        sortOrder,
         shipperCode: appliedFilters.shipperCode || undefined,
         shipperName: appliedFilters.shipperName || undefined,
         aadhaarNo: appliedFilters.aadhaarNo || undefined,
@@ -115,6 +120,16 @@ export default function ShipperPage() {
         setAppliedFilters(emptyFilters)
         setPage(1)
         setFiltersOpen(false)
+    }
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
     }
 
     return (
@@ -176,8 +191,12 @@ export default function ShipperPage() {
                 <Table className="min-w-[900px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground">Code</TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Shipper Name</TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Code" field="shipperCode" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Shipper Name" field="shipperName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Contact Person</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Aadhaar No</TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>

@@ -42,6 +42,7 @@ import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-asy
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { MasterExcelImportButton } from "@/components/masters/master-excel-import-button"
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
+import { useDebounce } from "@/hooks/use-debounce"
 
 type CustomerFilters = {
     search: string
@@ -77,6 +78,7 @@ export default function CustomersPage() {
     const [isMounted, setIsMounted] = useState(false)
     const [sortBy, setSortBy] = useState("code")
     const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
 
     useEffect(() => {
         setIsMounted(true)
@@ -91,7 +93,7 @@ export default function CustomersPage() {
     const listParams = {
         page,
         limit,
-        search: appliedFilters.search || undefined,
+        search: debouncedSearch || undefined,
         sortBy,
         sortOrder,
         code: appliedFilters.code || undefined,

@@ -29,6 +29,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
+import { useDebounce } from "@/hooks/use-debounce"
 import { consigneeService } from "@/services/masters/consignee-service"
 import { Consignee } from "@/types/masters/consignee"
 import { cn } from "@/lib/utils"
@@ -46,6 +48,9 @@ export default function ConsigneePage() {
     const [draftFilters, setDraftFilters] = useState<ConsigneeFilters>(emptyFilters)
     const [deleteId, setDeleteId] = useState<number | null>(null)
     const [exporting, setExporting] = useState(false)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
+    const [sortBy, setSortBy] = useState("code")
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
 
     useEffect(() => {
         if (filtersOpen) {
@@ -56,9 +61,9 @@ export default function ConsigneePage() {
     const listParams = {
         page,
         limit,
-        search: appliedFilters.search || undefined,
-        sortBy: "code",
-        sortOrder: "asc" as const,
+        search: debouncedSearch || undefined,
+        sortBy,
+        sortOrder,
         code: appliedFilters.code || undefined,
         name: appliedFilters.name || undefined,
     }
@@ -114,6 +119,16 @@ export default function ConsigneePage() {
         setAppliedFilters(emptyFilters)
         setPage(1)
         setFiltersOpen(false)
+    }
+
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+        } else {
+            setSortBy(field)
+            setSortOrder("asc")
+        }
+        setPage(1)
     }
 
     return (
@@ -181,8 +196,12 @@ export default function ConsigneePage() {
                 <Table className="min-w-[760px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
-                            <TableHead className="h-11 font-semibold text-primary-foreground">Code</TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Consignee Name</TableHead>
+                            <TableHead className="h-11 font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Code" field="code" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">
+                                <SortableColumnHeader label="Consignee Name" field="name" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                            </TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
                     </TableHeader>

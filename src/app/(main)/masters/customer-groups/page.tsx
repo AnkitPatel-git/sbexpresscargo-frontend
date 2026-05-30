@@ -36,9 +36,10 @@ import { customerGroupService } from "@/services/masters/customer-group-service"
 import type { CustomerGroup } from "@/types/masters/customer-group"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header"
+import { useDebounce } from "@/hooks/use-debounce"
 
-type GroupFilters = { code: string; name: string; status: string }
-const defaultFilters: GroupFilters = { code: "", name: "", status: "all" }
+type GroupFilters = { search: string; code: string; name: string; status: string }
+const defaultFilters: GroupFilters = { search: "", code: "", name: "", status: "all" }
 
 export default function CustomerGroupsPage() {
     const queryClient = useQueryClient()
@@ -51,6 +52,7 @@ export default function CustomerGroupsPage() {
     const [sortBy, setSortBy] = useState("code")
     const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
     const [deleteId, setDeleteId] = useState<number | null>(null)
+    const debouncedSearch = useDebounce(appliedFilters.search, 500)
 
     useEffect(() => {
         if (filtersOpen) setDraftFilters(appliedFilters)
@@ -59,6 +61,7 @@ export default function CustomerGroupsPage() {
     const listParams = {
         page,
         limit,
+        search: debouncedSearch || undefined,
         sortBy,
         sortOrder,
         code: appliedFilters.code || undefined,
@@ -131,6 +134,12 @@ export default function CustomerGroupsPage() {
                             </DialogHeader>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <Input
+                                    placeholder="Search groups..."
+                                    className="h-9 bg-background sm:col-span-2"
+                                    value={draftFilters.search}
+                                    onChange={(e) => setDraftFilters((p) => ({ ...p, search: e.target.value }))}
+                                />
+                                <Input
                                     placeholder="Code"
                                     className="h-9 bg-background"
                                     value={draftFilters.code}
@@ -169,9 +178,9 @@ export default function CustomerGroupsPage() {
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                     <Input
                         placeholder="Search..."
-                        value={appliedFilters.name}
+                        value={appliedFilters.search}
                         onChange={(e) => {
-                            setAppliedFilters((prev) => ({ ...prev, name: e.target.value }))
+                            setAppliedFilters((prev) => ({ ...prev, search: e.target.value }))
                             setPage(1)
                         }}
                         className="h-8 w-full sm:w-[240px]"

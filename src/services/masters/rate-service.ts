@@ -33,7 +33,18 @@ export type RateMasterListQueryParams = {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: "fromDate" | "id" | "updateType" | string;
+  sortBy?:
+    | "fromDate"
+    | "toDate"
+    | "id"
+    | "updateType"
+    | "customerName"
+    | "customerCode"
+    | "vendorName"
+    | "vendorCode"
+    | "productName"
+    | "productCode"
+    | string;
   sortOrder?: "asc" | "desc";
   updateType?: string;
   vendorId?: number;

@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
 import { cn } from "@/lib/utils";
+import { useDebounce } from "@/hooks/use-debounce";
 import { rateService } from "@/services/masters/rate-service";
 import type { RateMaster } from "@/types/masters/rate";
 import { PermissionGuard } from "@/components/auth/permission-guard"
@@ -55,6 +57,9 @@ export default function RateMasterPage() {
   });
   const [draftFilters, setDraftFilters] = useState(appliedFilters);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const debouncedSearch = useDebounce(appliedFilters.search, 500);
+  const [sortBy, setSortBy] = useState("fromDate");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   useEffect(() => {
     if (filtersOpen) {
@@ -73,27 +78,29 @@ export default function RateMasterPage() {
     const ut = defaultRateListUpdateType(contract);
     setAppliedFilters((prev) => ({ ...prev, updateType: ut }));
     setDraftFilters((prev) => ({ ...prev, updateType: ut }));
+    setSortBy("fromDate");
+    setSortOrder("desc");
     setPage(1);
   }, [contract]);
 
   const listParams = {
     page,
     limit,
-    search: appliedFilters.search || undefined,
+    search: debouncedSearch || undefined,
     fromDate: appliedFilters.fromDate || undefined,
     toDate: appliedFilters.toDate || undefined,
     updateType: appliedFilters.updateType || undefined,
-    sortBy: "fromDate" as const,
-    sortOrder: "desc" as const,
+    sortBy,
+    sortOrder,
   };
 
   const exportParams = {
-    search: appliedFilters.search || undefined,
+    search: debouncedSearch || undefined,
     fromDate: appliedFilters.fromDate || undefined,
     toDate: appliedFilters.toDate || undefined,
     updateType: appliedFilters.updateType || undefined,
-    sortBy: "fromDate" as const,
-    sortOrder: "desc" as const,
+    sortBy,
+    sortOrder,
   };
 
   const { data, isLoading } = useQuery({
@@ -157,6 +164,17 @@ export default function RateMasterPage() {
   const pageTitle =
     contract === "vendor" ? "Vendor rate masters" : "Customer rate masters";
   const partyColumnLabel = contract === "vendor" ? "Vendor" : "Customer";
+  const partySortField = contract === "vendor" ? "vendorName" : "customerName";
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  };
 
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
@@ -284,12 +302,24 @@ export default function RateMasterPage() {
         <Table className="min-w-[960px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
-              <TableHead className="font-semibold text-primary-foreground">ID</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Update type</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">{partyColumnLabel}</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Product</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">From</TableHead>
-              <TableHead className="font-semibold text-primary-foreground">To</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="ID" field="id" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Update type" field="updateType" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label={partyColumnLabel} field={partySortField} sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Product" field="productName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="From" field="fromDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="To" field="toDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
