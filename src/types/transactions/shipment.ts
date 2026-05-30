@@ -59,6 +59,7 @@ export const shipmentSchema = z.object({
       address1: z.string().optional(),
       address2: z.string().optional(),
       pinCode: z.string().optional(),
+      area: z.string().optional(),
       city: z.string().optional(),
       state: z.string().optional(),
       country: z.string().optional(),
@@ -93,6 +94,7 @@ export const shipmentSchema = z.object({
       address1: z.string().optional(),
       address2: z.string().optional(),
       pinCode: z.string().optional(),
+      area: z.string().optional(),
       city: z.string().optional(),
       state: z.string().optional(),
       country: z.string().optional(),
@@ -232,7 +234,7 @@ export const shipmentSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["fromZoneId"],
-      message: "From Zone is required",
+      message: "Shipper pincode doesn't have zone",
     })
   }
 
@@ -240,7 +242,7 @@ export const shipmentSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["toZoneId"],
-      message: "To Zone is required",
+      message: "Consignee pincode doesn't have zone",
     })
   }
 

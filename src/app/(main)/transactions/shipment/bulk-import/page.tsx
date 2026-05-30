@@ -107,7 +107,8 @@ export default function ShipmentBulkImportPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Upload an Excel workbook with a <span className="font-mono">Shipments</span> sheet (or the first sheet if
           unnamed). Each row creates one booking using <strong>customer</strong> and <strong>shipper</strong> master
-          codes, <strong>product</strong> and <strong>zone</strong> codes, and <strong>service center</strong> code.{" "}
+          codes, <strong>product</strong>, and <strong>service center</strong> code. Provide <strong>shipper code</strong> only (address comes from shipper master). From/to zones are resolved
+          automatically from the shipper pincode and consignee pincode — do not include zone columns.{" "}
           <strong>Consignee</strong> columns match or create a consignee like manual booking.{" "}
           <strong>Content</strong> is matched by <span className="font-mono">contentName</span> (trimmed, case-insensitive;
           optional <span className="font-mono">contentCode</span> still works). For several cartons with different sizes or

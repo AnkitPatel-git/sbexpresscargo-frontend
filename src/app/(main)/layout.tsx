@@ -270,9 +270,10 @@ const SidebarContent = ({
   rateContractQuery,
   isCustomerUser = false,
 }: SidebarContentProps) => {
-  const showMasters = !isCustomerUser;
-  const showDocuments = !isCustomerUser;
-  const showUtilities = !isCustomerUser;
+  const { isLoading: authLoading } = useAuth();
+  const showMasters = !authLoading && !isCustomerUser;
+  const showDocuments = !authLoading && !isCustomerUser;
+  const showUtilities = !authLoading && !isCustomerUser;
   const collapsedSubmenuScrollClass = "max-h-[20rem] overflow-y-auto pr-1";
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(
     !isCollapsed && pathname.startsWith("/document"),
@@ -1482,7 +1483,7 @@ function DashboardLayoutClient({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout, isCustomerUser } = useAuth();
+  const { user, logout, isCustomerUser, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const rateContractQuery = useSearchParams().get("contract");
@@ -1751,7 +1752,8 @@ function DashboardLayoutClient({
 
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="hidden items-center gap-0.5 rounded-full border border-[#1f2d3d] bg-white px-1 py-0.5 lg:flex">
-              {[
+              {!authLoading &&
+                [
                 {
                   icon: Truck,
                   label: "Shipment Booking",
@@ -1885,7 +1887,13 @@ function DashboardLayoutClient({
           </div>
         </header>
         <main className="flex flex-1 flex-col overflow-auto bg-background">
-          <div className="flex-1 p-4 lg:p-6">{children}</div>
+          <div className="flex-1 p-4 lg:p-6">
+            {authLoading ? (
+              <div className="min-h-[40vh]" aria-hidden />
+            ) : (
+              children
+            )}
+          </div>
           <footer className="flex shrink-0 flex-col items-center justify-between gap-2 border-t border-border bg-card px-4 py-3 text-xs text-muted-foreground sm:flex-row">
             <span className="font-semibold tracking-wide text-primary/80">
               SBtechnoworld On Cloud

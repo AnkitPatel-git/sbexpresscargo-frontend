@@ -35,6 +35,14 @@ import {
 
 type DuplicateTargetMode = "single" | "customer_group";
 
+function resolveCustomerGroupId(
+  customer?: { customerGroupId?: number | null; customerGroup?: { id?: number } | null } | null,
+): number | null {
+  if (!customer) return null;
+  const id = customer.customerGroupId ?? customer.customerGroup?.id ?? null;
+  return id != null && id > 0 ? id : null;
+}
+
 function rateTemplateLabel(rm: RateMaster) {
   const party = isVendorRateMasterRow(rm)
     ? rm.vendor?.vendorName || rm.vendor?.vendorCode || `Vendor #${rm.vendorId ?? "?"}`
@@ -84,7 +92,10 @@ export function DuplicateRateMasterCard() {
     setRateSearch("");
     setTargetMode("single");
     setIncludeSourceCustomer(false);
+    prevTemplateDatesRef.current = 0;
   }, [isVendorContract]);
+
+  const prevTemplateDatesRef = useRef(0);
 
   const { data: customersData } = useQuery({
     queryKey: ["duplicate-rate-customers", debouncedCustomerSearch],
@@ -139,18 +150,52 @@ export function DuplicateRateMasterCard() {
 
   const isGroupMode = !isVendorContract && targetMode === "customer_group";
 
+  const selectedTemplateRate = useMemo(
+    () => (ratesData?.data ?? []).find((rm) => rm.id === sourceRateMasterId),
+    [ratesData?.data, sourceRateMasterId],
+  );
+
   const { data: sourceRateResponse, isFetching: sourceRateLoading } = useQuery({
     queryKey: ["duplicate-source-rate", sourceRateMasterId],
     queryFn: () => rateService.getRateMasterById(sourceRateMasterId),
-    enabled: isGroupMode && sourceRateMasterId > 0,
+    enabled: sourceRateMasterId > 0,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const sourceRate = sourceRateResponse?.data;
-  const sourceGroupId = sourceRate?.customer?.customerGroupId ?? null;
+  const sourceGroupId = useMemo(
+    () =>
+      resolveCustomerGroupId(sourceRate?.customer) ??
+      resolveCustomerGroupId(selectedTemplateRate?.customer) ??
+      null,
+    [sourceRate?.customer, selectedTemplateRate?.customer],
+  );
   const sourceGroupLabel =
     sourceRate?.customer?.customerGroup?.name ||
     sourceRate?.customer?.customerGroup?.code ||
+    selectedTemplateRate?.customer?.customerGroup?.name ||
+    selectedTemplateRate?.customer?.customerGroup?.code ||
     (sourceGroupId != null ? `Group #${sourceGroupId}` : null);
+
+  useEffect(() => {
+    if (sourceRateMasterId <= 0) return;
+    const template = sourceRate ?? selectedTemplateRate;
+    const pid = template?.productId;
+    if (pid != null && pid > 0) {
+      setProductId(pid);
+    }
+  }, [sourceRateMasterId, sourceRate, selectedTemplateRate]);
+
+  useEffect(() => {
+    if (!isGroupMode || sourceRateMasterId <= 0 || !sourceRate?.toDate) return;
+    if (prevTemplateDatesRef.current === sourceRateMasterId) return;
+    prevTemplateDatesRef.current = sourceRateMasterId;
+    const templateEnd = sourceRate.toDate.slice(0, 10);
+    const nextFrom = format(addDays(new Date(`${templateEnd}T00:00:00`), 1), "yyyy-MM-dd");
+    setFromDate(nextFrom);
+    setToDate(format(addDays(new Date(`${nextFrom}T00:00:00`), 30), "yyyy-MM-dd"));
+  }, [isGroupMode, sourceRate?.toDate, sourceRateMasterId]);
 
   const { data: groupCustomersData, isFetching: groupCustomersLoading } = useQuery({
     queryKey: ["duplicate-group-customers", sourceGroupId, includeSourceCustomer, sourceRate?.customerId],
@@ -169,10 +214,16 @@ export function DuplicateRateMasterCard() {
     const rows = groupCustomersData?.data ?? [];
     if (!isGroupMode) return [];
     if (includeSourceCustomer) return rows;
-    const sourceId = sourceRate?.customerId;
+    const sourceId = sourceRate?.customerId ?? selectedTemplateRate?.customerId;
     if (sourceId == null) return rows;
     return rows.filter((c) => c.id !== sourceId);
-  }, [groupCustomersData?.data, includeSourceCustomer, isGroupMode, sourceRate?.customerId]);
+  }, [
+    groupCustomersData?.data,
+    includeSourceCustomer,
+    isGroupMode,
+    selectedTemplateRate?.customerId,
+    sourceRate?.customerId,
+  ]);
 
   const customerOptions = useMemo(
     () =>
@@ -247,14 +298,6 @@ export function DuplicateRateMasterCard() {
       const result = res?.data;
       const created = result?.created?.length ?? 0;
       const skipped = result?.skipped?.length ?? 0;
-      if (created === 0) {
-        toast.error(
-          skipped > 0
-            ? `No rates created — ${skipped} customer(s) skipped (often overlapping contracts)`
-            : "No rates were created",
-        );
-        return;
-      }
       const skippedNote = skipped > 0 ? `, ${skipped} skipped` : "";
       toast.success(`Created ${created} rate master(s) for ${result?.customerGroupName ?? "group"}${skippedNote}`);
       router.push(rateMasterListPath(contract));
@@ -410,8 +453,8 @@ export function DuplicateRateMasterCard() {
 
             {sourceRateMasterId > 0 && !sourceRateLoading && sourceGroupId == null ? (
               <p className="text-sm font-medium text-destructive">
-                The template rate&apos;s customer is not in a customer group. Assign a group on the
-                customer master, or use single-customer duplicate.
+                The template rate&apos;s customer is not in a customer group. Open that customer in
+                Customer Master, assign a group, save, then re-select the template rate here.
               </p>
             ) : null}
 
@@ -442,8 +485,9 @@ export function DuplicateRateMasterCard() {
                   <p className="text-sm text-muted-foreground">Loading customers…</p>
                 ) : groupPreviewCustomers.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No customers to copy to. Enable &quot;template customer&quot; above or add more
-                    customers to the group.
+                    No other customers in this group. Enable &quot;template customer&quot; above and
+                    use a date range that does not overlap the template rate, or add more customers
+                    to the group.
                   </p>
                 ) : (
                   <ul className="max-h-36 list-inside list-disc overflow-y-auto text-sm text-muted-foreground">

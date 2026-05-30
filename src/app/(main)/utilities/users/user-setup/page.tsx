@@ -52,18 +52,24 @@ export default function UserSetupPage() {
     return { portal, mobile, total: users.length };
   }, [users]);
 
+  const resolveApplicationType = (roleId: string) => {
+    const role = roles.find((r: { id: number; identifier?: string }) => String(r.id) === roleId);
+    if (role?.identifier === "FIELD_EXECUTIVE") return "mobile";
+    if (role?.identifier === "OPERATIONS") return "both";
+    return form.applicationType;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload = {
         username: form.username,
         email: form.email,
-        ...(editId ? {} : { password: form.password }),
+        ...(editId ? {} : { password: form.password, status: form.status }),
         roleId: Number(form.roleId),
         mobile: form.mobile || undefined,
-        status: form.status,
         profile: {
           origin: form.origin || undefined,
-          applicationType: form.applicationType,
+          applicationType: resolveApplicationType(form.roleId),
           weightType: form.weightType,
         },
       };
