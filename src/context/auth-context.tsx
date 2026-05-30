@@ -54,14 +54,6 @@ function mergeProfileUser(stored: User, fresh: UtilityUser): User {
     }
 }
 
-function needsProfileHydration(user: User | null): boolean {
-    if (!user) return false
-    if (!user.permissions?.length) return true
-    if (user.role?.identifier !== "CUSTOMER") return false
-    const ids = normalizeCustomerIds(user)
-    return ids.length === 0
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
     const [token, setToken] = useState<string | null>(null)
@@ -95,25 +87,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (!cancelled) {
                 setToken(storedToken)
-                setUser(parsed)
-            }
-
-            if (!needsProfileHydration(parsed)) {
-                if (!cancelled) setIsLoading(false)
-                return
             }
 
             try {
                 const response = await authApi.getProfile()
-                if (cancelled || !response.success || !response.data) return
-                const merged = mergeProfileUser(parsed, {
-                    ...response.data,
-                    permissions: response.data.permissions ?? parsed.permissions,
-                    role: response.data.role ?? parsed.role,
-                } as User)
-                persistUser(merged)
+                if (cancelled) return
+                if (response.success && response.data) {
+                    persistUser(
+                        mergeProfileUser(parsed, {
+                            ...response.data,
+                            permissions: response.data.permissions ?? parsed.permissions,
+                            role: response.data.role ?? parsed.role,
+                        } as User),
+                    )
+                } else {
+                    setUser(parsed)
+                }
             } catch {
                 // Keep stored session; pages gate API calls on permissions.
+                if (!cancelled) setUser(parsed)
             } finally {
                 if (!cancelled) setIsLoading(false)
             }
@@ -146,12 +138,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const hasPermission = useCallback(
-        (permission: string) =>
-            hasPortalPermission(user?.permissions, user?.role?.identifier, permission),
-        [user?.permissions, user?.role?.identifier],
+        (permission: string) => {
+            if (isLoading) return false
+            return hasPortalPermission(user?.permissions, user?.role?.identifier, permission)
+        },
+        [isLoading, user?.permissions, user?.role?.identifier],
     )
 
-    const isCustomerUser = user?.role?.identifier === "CUSTOMER"
+    const isCustomerUser = !isLoading && user?.role?.identifier === "CUSTOMER"
     const effectiveCustomerIds = normalizeCustomerIds(user)
     const defaultCustomerId = effectiveCustomerIds[0] ?? null
     const isAllowedCustomer = (customerId?: number | null) => {

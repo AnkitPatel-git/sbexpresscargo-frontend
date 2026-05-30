@@ -24,6 +24,7 @@ import {
 import * as XLSX from "xlsx"
 
 import { cn } from "@/lib/utils"
+import { pickPincodeZone, pincodeZoneMissingMessage } from "@/lib/pincode-zone"
 import { optionLabelForSelect, PIECE_MEASURE_UNIT_OPTIONS } from "@/lib/select-closed-label"
 import {
     Form,
@@ -220,7 +221,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
             address1: shipperRef.address1 || '',
             address2: shipperRef.address2 || '',
             pinCode: shipperRef.serviceablePincode?.pinCode || '',
-            city: shipperRef.serviceablePincode?.cityName || '',
+            ...pincodeLocationFields(shipperRef.serviceablePincode),
             state: shipperRef.state?.stateName || shipperRef.serviceablePincode?.state?.stateName || '',
             country: shipperRef.country?.name || shipperRef.serviceablePincode?.country?.name || '',
             telephone: shipperRef.telephone || '',
@@ -235,7 +236,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
             address1: consigneeRef.address1 || '',
             address2: consigneeRef.address2 || '',
             pinCode: consigneeRef.serviceablePincode?.pinCode || '',
-            city: consigneeRef.serviceablePincode?.cityName || '',
+            ...pincodeLocationFields(consigneeRef.serviceablePincode),
             state: consigneeRef.state?.stateName || consigneeRef.stateMaster?.stateName || consigneeRef.serviceablePincode?.state?.stateName || '',
             country: consigneeRef.country?.name || consigneeRef.serviceablePincode?.country?.name || '',
             telephone: consigneeRef.telephone || '',
@@ -475,6 +476,15 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 
 const strOrEmpty = (v: string | null | undefined) => (v == null ? '' : String(v))
 
+function pincodeLocationFields(
+    pin?: { areaName?: string | null; cityName?: string | null } | null,
+): { area: string; city: string } {
+    return {
+        area: strOrEmpty(pin?.areaName),
+        city: strOrEmpty(pin?.cityName),
+    }
+}
+
 const requiredFieldLabel = (label: string, required: boolean) => (
     <>
         {label}
@@ -529,6 +539,7 @@ const EMPTY_SHIPPER_BLOCK: NonNullable<ShipmentFormValues['shipper']> = {
     address1: '',
     address2: '',
     pinCode: '',
+    area: '',
     city: '',
     state: '',
     country: '',
@@ -546,6 +557,7 @@ const EMPTY_CONSIGNEE_BLOCK: NonNullable<ShipmentFormValues['consignee']> = {
     address1: '',
     address2: '',
     pinCode: '',
+    area: '',
     city: '',
     state: '',
     country: '',
@@ -589,6 +601,7 @@ type ShipmentPartySource = {
         id?: number | null
         pinCode?: string | null
         cityName?: string | null
+        areaName?: string | null
         state?: { stateName?: string | null } | null
         country?: { name?: string | null } | null
     } | null
@@ -655,7 +668,7 @@ function shipperFromMaster(s: Shipper): NonNullable<ShipmentFormValues['shipper'
         address1: strOrEmpty(shipper.address1),
         address2: strOrEmpty(shipper.address2),
         pinCode: strOrEmpty(shipper.serviceablePincode?.pinCode),
-        city: strOrEmpty(shipper.city ?? shipper.serviceablePincode?.cityName),
+        ...pincodeLocationFields(shipper.serviceablePincode),
         state: strOrEmpty(shipper.state?.stateName ?? shipper.serviceablePincode?.state?.stateName),
         country: strOrEmpty(shipper.country?.name ?? shipper.serviceablePincode?.country?.name),
         telephone: strOrEmpty(shipper.telephone),
@@ -675,7 +688,7 @@ function consigneeFromMaster(c: Consignee): NonNullable<ShipmentFormValues['cons
         address1: strOrEmpty(consignee.address1),
         address2: strOrEmpty(consignee.address2),
         pinCode: strOrEmpty(consignee.serviceablePincode?.pinCode),
-        city: strOrEmpty(consignee.city ?? consignee.serviceablePincode?.cityName),
+        ...pincodeLocationFields(consignee.serviceablePincode),
         state: strOrEmpty(consignee.stateMaster?.stateName ?? consignee.state?.stateName ?? consignee.serviceablePincode?.state?.stateName),
         country: strOrEmpty(consignee.country?.name ?? consignee.serviceablePincode?.country?.name),
         telephone: strOrEmpty(consignee.telephone),
@@ -1296,6 +1309,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             'shipper.address1',
             'shipper.address2',
             'shipper.pinCode',
+            'shipper.area',
             'shipper.city',
             'shipper.state',
             'shipper.country',
@@ -1325,6 +1339,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             'consignee.address1',
             'consignee.address2',
             'consignee.pinCode',
+            'consignee.area',
             'consignee.city',
             'consignee.state',
             'consignee.country',
@@ -1370,8 +1385,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (scope === 'shipper') {
             form.setValue('shipper.pinCode', pinCode, { shouldDirty: true, shouldValidate: true })
             form.setValue('shipper.pinCodeId', selected?.id, { shouldDirty: true, shouldValidate: true })
-            form.setValue('fromZoneId', selectedZones.length === 1 ? selectedZones[0].id : 0, { shouldDirty: false, shouldValidate: false })
-            form.setValue('shipper.city', selected?.areaName || selected?.cityName || '', { shouldDirty: false, shouldValidate: false })
+            const resolvedZone = pickPincodeZone(selectedZones)
+            form.setValue('fromZoneId', resolvedZone?.zoneId ?? 0, { shouldDirty: false, shouldValidate: true })
+            const location = pincodeLocationFields(selected)
+            form.setValue('shipper.area', location.area, { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.city', location.city, { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.state', selected?.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
             setSelectedShipperPincode(selected ?? null)
@@ -1381,8 +1399,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
         form.setValue('consignee.pinCode', pinCode, { shouldDirty: true, shouldValidate: true })
         form.setValue('consignee.pinCodeId', selected?.id, { shouldDirty: true, shouldValidate: true })
-        form.setValue('toZoneId', selectedZones.length === 1 ? selectedZones[0].id : 0, { shouldDirty: false, shouldValidate: false })
-        form.setValue('consignee.city', selected?.areaName || selected?.cityName || '', { shouldDirty: false, shouldValidate: false })
+        const resolvedZone = pickPincodeZone(selectedZones)
+        form.setValue('toZoneId', resolvedZone?.zoneId ?? 0, { shouldDirty: false, shouldValidate: true })
+        const location = pincodeLocationFields(selected)
+        form.setValue('consignee.area', location.area, { shouldDirty: false, shouldValidate: false })
+        form.setValue('consignee.city', location.city, { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.state', selected?.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.country', selected?.country?.name || '', { shouldDirty: false, shouldValidate: false })
         setSelectedConsigneePincode(selected ?? null)
@@ -1419,26 +1440,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         : selectedConsigneePincode ?? consigneePincodeData?.data?.[0] ?? null
     const shipperZoneOptions = useMemo(() => sanitizeArray(shipperPincodeSource?.zones), [shipperPincodeSource])
     const consigneeZoneOptions = useMemo(() => sanitizeArray(consigneePincodeSource?.zones), [consigneePincodeSource])
-    const shipperZoneComboboxOptions = shipperZoneOptions
-        .map((zone) => {
-            const value = normalizeMasterSelectId(zone.id)
-            if (value <= 0) return null
-            return {
-                label: toSafeOptionLabel(zone.name || zone.code, `Zone #${value}`),
-                value,
-            }
-        })
-        .filter((option): option is { label: string; value: number } => option != null)
-    const consigneeZoneComboboxOptions = consigneeZoneOptions
-        .map((zone) => {
-            const value = normalizeMasterSelectId(zone.id)
-            if (value <= 0) return null
-            return {
-                label: toSafeOptionLabel(zone.name || zone.code, `Zone #${value}`),
-                value,
-            }
-        })
-        .filter((option): option is { label: string; value: number } => option != null)
+    const shipperResolvedZone = useMemo(() => pickPincodeZone(shipperZoneOptions), [shipperZoneOptions])
+    const consigneeResolvedZone = useMemo(() => pickPincodeZone(consigneeZoneOptions), [consigneeZoneOptions])
 
     useEffect(() => {
         const shipperPin = (watchedShipperPinCode || '').trim()
@@ -1467,18 +1470,34 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     }, [form, pincodeDistanceData?.data?.distanceKm, watchedConsigneePinCode, watchedShipperPinCode])
 
     useEffect(() => {
-        if (!watchedFromZoneId) return
-        if (shipperZoneOptions.length === 0) return
-        if (shipperZoneOptions.some((zone) => zone.id === watchedFromZoneId)) return
-        form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
-    }, [form, shipperZoneOptions, watchedFromZoneId])
+        const pin = (watchedShipperPinCode || '').trim()
+        if (pin.length < 6 || !shipperPincodeSource) return
+        const resolved = pickPincodeZone(shipperZoneOptions)
+        if (resolved) {
+            if (normalizeMasterSelectId(form.getValues('fromZoneId')) !== resolved.zoneId) {
+                form.setValue('fromZoneId', resolved.zoneId, { shouldDirty: false, shouldValidate: false })
+            }
+            form.clearErrors('fromZoneId')
+            return
+        }
+        form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: true })
+        form.setError('fromZoneId', { type: 'manual', message: pincodeZoneMissingMessage('shipper') })
+    }, [form, shipperPincodeSource, shipperZoneOptions, watchedShipperPinCode])
 
     useEffect(() => {
-        if (!watchedToZoneId) return
-        if (consigneeZoneOptions.length === 0) return
-        if (consigneeZoneOptions.some((zone) => zone.id === watchedToZoneId)) return
-        form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
-    }, [consigneeZoneOptions, form, watchedToZoneId])
+        const pin = (watchedConsigneePinCode || '').trim()
+        if (pin.length < 6 || !consigneePincodeSource) return
+        const resolved = pickPincodeZone(consigneeZoneOptions)
+        if (resolved) {
+            if (normalizeMasterSelectId(form.getValues('toZoneId')) !== resolved.zoneId) {
+                form.setValue('toZoneId', resolved.zoneId, { shouldDirty: false, shouldValidate: false })
+            }
+            form.clearErrors('toZoneId')
+            return
+        }
+        form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: true })
+        form.setError('toZoneId', { type: 'manual', message: pincodeZoneMissingMessage('consignee') })
+    }, [consigneePincodeSource, consigneeZoneOptions, form, watchedConsigneePinCode])
 
     useEffect(() => {
         const pin = consigneePincodeSource
@@ -1502,22 +1521,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     }, [consigneePincodeSource, form])
 
     useEffect(() => {
-        if (shipperZoneOptions.length !== 1) return
-        const zoneId = normalizeMasterSelectId(shipperZoneOptions[0]?.id)
-        if (zoneId <= 0) return
-        if (normalizeMasterSelectId(form.getValues('fromZoneId')) === zoneId) return
-        form.setValue('fromZoneId', zoneId, { shouldDirty: false, shouldValidate: false })
-    }, [form, shipperZoneOptions])
-
-    useEffect(() => {
-        if (consigneeZoneOptions.length !== 1) return
-        const zoneId = normalizeMasterSelectId(consigneeZoneOptions[0]?.id)
-        if (zoneId <= 0) return
-        if (normalizeMasterSelectId(form.getValues('toZoneId')) === zoneId) return
-        form.setValue('toZoneId', zoneId, { shouldDirty: false, shouldValidate: false })
-    }, [consigneeZoneOptions, form])
-
-    useEffect(() => {
         if (!watchedFloorDelivery && (form.getValues('floorCount') || 0) !== 0) {
             form.setValue('floorCount', 0, { shouldDirty: false, shouldValidate: false })
         }
@@ -1538,6 +1541,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
             }
             form.setValue('shipper.pinCodeId', undefined, { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.area', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.city', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.state', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.country', '', { shouldDirty: false, shouldValidate: false })
@@ -1550,6 +1554,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
             }
             form.setValue('shipper.pinCodeId', undefined, { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper.area', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.city', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.state', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('shipper.country', '', { shouldDirty: false, shouldValidate: false })
@@ -1560,9 +1565,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             setSelectedShipperPincode(lookup)
         }
         form.setValue('shipper.pinCodeId', lookup.id, { shouldDirty: false, shouldValidate: false })
-        const lookupZones = sanitizeArray(lookup.zones)
-        form.setValue('fromZoneId', lookupZones.length === 1 ? lookupZones[0].id : form.getValues('fromZoneId'), { shouldDirty: false, shouldValidate: false })
-        form.setValue('shipper.city', lookup.areaName || lookup.cityName || '', { shouldDirty: false, shouldValidate: false })
+        const resolvedZone = pickPincodeZone(sanitizeArray(lookup.zones))
+        form.setValue('fromZoneId', resolvedZone?.zoneId ?? 0, { shouldDirty: false, shouldValidate: true })
+        const shipperLocation = pincodeLocationFields(lookup)
+        form.setValue('shipper.area', shipperLocation.area, { shouldDirty: false, shouldValidate: false })
+        form.setValue('shipper.city', shipperLocation.city, { shouldDirty: false, shouldValidate: false })
         form.setValue('shipper.state', lookup.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('shipper.country', lookup.country?.name || '', { shouldDirty: false, shouldValidate: false })
     }, [debouncedShipperPinCode, form, initialData, shipperPincodeData?.data, watchedShipperId])
@@ -1576,6 +1583,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
             }
             form.setValue('consignee.pinCodeId', undefined, { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee.area', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.city', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.state', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.country', '', { shouldDirty: false, shouldValidate: false })
@@ -1588,6 +1596,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
             }
             form.setValue('consignee.pinCodeId', undefined, { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee.area', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.city', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.state', '', { shouldDirty: false, shouldValidate: false })
             form.setValue('consignee.country', '', { shouldDirty: false, shouldValidate: false })
@@ -1598,9 +1607,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             setSelectedConsigneePincode(lookup)
         }
         form.setValue('consignee.pinCodeId', lookup.id, { shouldDirty: false, shouldValidate: false })
-        const lookupZones = sanitizeArray(lookup.zones)
-        form.setValue('toZoneId', lookupZones.length === 1 ? lookupZones[0].id : form.getValues('toZoneId'), { shouldDirty: false, shouldValidate: false })
-        form.setValue('consignee.city', lookup.areaName || lookup.cityName || '', { shouldDirty: false, shouldValidate: false })
+        const resolvedZone = pickPincodeZone(sanitizeArray(lookup.zones))
+        form.setValue('toZoneId', resolvedZone?.zoneId ?? 0, { shouldDirty: false, shouldValidate: true })
+        const consigneeLocation = pincodeLocationFields(lookup)
+        form.setValue('consignee.area', consigneeLocation.area, { shouldDirty: false, shouldValidate: false })
+        form.setValue('consignee.city', consigneeLocation.city, { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.state', lookup.state?.stateName || '', { shouldDirty: false, shouldValidate: false })
         form.setValue('consignee.country', lookup.country?.name || '', { shouldDirty: false, shouldValidate: false })
     }, [consigneePincodeData?.data, debouncedConsigneePinCode, form, initialData, watchedConsigneeId])
@@ -2211,18 +2222,31 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         <FormField
                                             control={form.control}
                                             name="fromZoneId"
-                                            render={({ field }) => (
+                                            render={() => (
                                                 <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("From Zone", true)}>
                                                     <FormControl>
-                                                        <Combobox
-                                                            options={shipperZoneComboboxOptions}
-                                                            value={field.value}
-                                                            onChange={(value) => field.onChange(normalizeMasterSelectId(value))}
-                                                            placeholder={shipperZoneOptions.length > 0 ? "Select zone" : "Select pincode first"}
-                                                            searchPlaceholder="Search zone..."
-                                                            disabled={!shipperPincodeSource}
-                                                            className={FLOATING_INNER_COMBO}
+                                                        <Input
+                                                            value={shipperResolvedZone?.label ?? ""}
+                                                            readOnly
+                                                            disabled
+                                                            placeholder={
+                                                                (watchedShipperPinCode || '').trim().length >= 6 && shipperPincodeSource
+                                                                    ? pincodeZoneMissingMessage('shipper')
+                                                                    : "Auto-filled from pincode"
+                                                            }
+                                                            className={FLOATING_INNER_CONTROL}
                                                         />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="shipper.area"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label="Area">
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} readOnly disabled placeholder="Auto-filled from pincode" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -2390,18 +2414,31 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         <FormField
                                             control={form.control}
                                             name="toZoneId"
-                                            render={({ field }) => (
+                                            render={() => (
                                                 <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("To Zone", true)}>
                                                     <FormControl>
-                                                        <Combobox
-                                                            options={consigneeZoneComboboxOptions}
-                                                            value={field.value}
-                                                            onChange={(value) => field.onChange(normalizeMasterSelectId(value))}
-                                                            placeholder={consigneeZoneOptions.length > 0 ? "Select zone" : "Select pincode first"}
-                                                            searchPlaceholder="Search zone..."
-                                                            disabled={!consigneePincodeSource}
-                                                            className={FLOATING_INNER_COMBO}
+                                                        <Input
+                                                            value={consigneeResolvedZone?.label ?? ""}
+                                                            readOnly
+                                                            disabled
+                                                            placeholder={
+                                                                (watchedConsigneePinCode || '').trim().length >= 6 && consigneePincodeSource
+                                                                    ? pincodeZoneMissingMessage('consignee')
+                                                                    : "Auto-filled from pincode"
+                                                            }
+                                                            className={FLOATING_INNER_CONTROL}
                                                         />
+                                                    </FormControl>
+                                                </FloatingFormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="consignee.area"
+                                            render={({ field }) => (
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label="Area">
+                                                    <FormControl>
+                                                        <Input {...field} value={field.value || ""} readOnly disabled placeholder="Auto-filled from pincode" className={FLOATING_INNER_CONTROL} />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
