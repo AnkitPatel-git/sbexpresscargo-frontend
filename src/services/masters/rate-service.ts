@@ -203,7 +203,7 @@ export const rateService = {
     if (!response.ok) {
       throw new Error(await readErrorMessage(response, "Failed to export rate masters"));
     }
-    return { blob: await response.blob(), filename: parseFilename(response, "rate-masters.csv") };
+    return { blob: await response.blob(), filename: parseFilename(response, "rate-masters.xlsx") };
   },
 
   async getZoneRates(rateMasterId: number): Promise<RateChildListResponse<RateZoneRate>> {

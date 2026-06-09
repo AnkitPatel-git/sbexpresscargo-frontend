@@ -253,7 +253,7 @@ export default function RateMasterPage() {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-primary"
-              title="Export CSV"
+              title="Export full detail (Excel)"
               onClick={() => exportMutation.mutate()}
               disabled={exportMutation.isPending}
             >
