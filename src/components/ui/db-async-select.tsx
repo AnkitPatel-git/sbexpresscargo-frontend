@@ -9,7 +9,7 @@
  * In `fetchPage`, call your API with `{ page, limit: DB_ASYNC_SELECT_PAGE_SIZE, search }`.
  */
 
-import { useEffect, useMemo, useRef, useState, type Ref } from "react"
+import { useEffect, useId, useMemo, useRef, useState, type Ref } from "react"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -86,6 +86,8 @@ export function DbAsyncSelect<T extends { id: number }>({
   const [search, setSearch] = useState("")
   /** Keeps label visible after close when the selected row is not on the current search page. */
   const [selectedItem, setSelectedItem] = useState<T | null>(null)
+  const generatedId = useId()
+  const searchInputId = id ? `${id}-search` : `${generatedId}-search`
   const searchInputRef = useRef<HTMLInputElement>(null)
   const selectScrollRootRef = useRef<HTMLDivElement | null>(null)
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null)
@@ -281,6 +283,8 @@ export function DbAsyncSelect<T extends { id: number }>({
           >
             <Input
               ref={searchInputRef}
+              id={searchInputId}
+              name={searchInputId}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholder}

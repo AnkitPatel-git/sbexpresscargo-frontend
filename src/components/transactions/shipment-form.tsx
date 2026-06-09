@@ -96,7 +96,14 @@ import { serviceMapService } from '@/services/masters/service-map-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
 import { pincodeDistanceService } from '@/services/utilities/pincode-distance-service'
-import { shipmentSchema, ShipmentFormValues, Shipment, ShipmentCalculateResponse, ShipmentKycDocument } from '@/types/transactions/shipment'
+import {
+    EWAYBILL_MANDATORY_INVOICE_THRESHOLD,
+    shipmentSchema,
+    ShipmentFormValues,
+    Shipment,
+    ShipmentCalculateResponse,
+    ShipmentKycDocument,
+} from '@/types/transactions/shipment'
 import type { Shipper } from '@/types/masters/shipper'
 import type { Consignee } from '@/types/masters/consignee'
 import type { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
@@ -1084,6 +1091,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const watchedReversePickup = form.watch('reversePickup')
     const watchedAppointmentDelivery = form.watch('appointmentDelivery')
     const watchedShipmentTotalValue = form.watch('shipmentTotalValue')
+    const isEwaybillRequired =
+        Number(watchedShipmentTotalValue) > EWAYBILL_MANDATORY_INVOICE_THRESHOLD
     const watchedActualWeight = form.watch('actualWeight')
     const watchedVolumetricWeight = form.watch('volumetricWeight')
     const watchedKm = form.watch('km')
@@ -2087,7 +2096,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="ewaybillNumber"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Ewaybill No (optional)" itemClassName="md:col-span-1">
+                                            <FloatingFormItem
+                                                required={isEwaybillRequired}
+                                                label={
+                                                    isEwaybillRequired
+                                                        ? requiredFieldLabel("Ewaybill No", true)
+                                                        : "Ewaybill No (optional)"
+                                                }
+                                                itemClassName="md:col-span-1"
+                                            >
                                                 <FormControl>
                                                     <Input {...field} value={field.value || ""} placeholder="Enter ewaybill number" className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>

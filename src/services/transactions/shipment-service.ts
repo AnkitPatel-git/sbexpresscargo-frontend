@@ -93,6 +93,21 @@ export const shipmentService = {
     );
   },
 
+  async deleteShipment(
+    id: number,
+    payload: { remark: string; requestedByUserId: number },
+  ): Promise<ApiEnvelope<{ id: number; deleted: boolean }>> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/${id}`,
+      {
+        method: "DELETE",
+        headers: authHeaders(true),
+        body: JSON.stringify(payload),
+      },
+      "Failed to delete shipment",
+    );
+  },
+
   async calculateCharges(data: ShipmentFormPayload): Promise<ApiEnvelope<ShipmentCalculateResponse>> {
     return requestJson(
       `${API_URL}/transaction/shipment/calculate-charges`,

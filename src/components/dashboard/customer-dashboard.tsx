@@ -104,12 +104,17 @@ export function CustomerDashboard() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <label
+                  htmlFor="customer-dashboard-from-date"
+                  className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                >
                   From date
                 </label>
                 <div className="relative">
                   <Calendar className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
+                    id="customer-dashboard-from-date"
+                    name="fromDate"
                     type="date"
                     value={fromDate}
                     onChange={(e) => setFromDate(e.target.value)}
@@ -118,12 +123,17 @@ export function CustomerDashboard() {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <label
+                  htmlFor="customer-dashboard-to-date"
+                  className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                >
                   To date
                 </label>
                 <div className="relative">
                   <Calendar className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
+                    id="customer-dashboard-to-date"
+                    name="toDate"
                     type="date"
                     value={toDate}
                     onChange={(e) => setToDate(e.target.value)}

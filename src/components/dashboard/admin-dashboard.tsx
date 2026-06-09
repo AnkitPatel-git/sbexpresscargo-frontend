@@ -125,12 +125,17 @@ export function AdminDashboard() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <label
+                    htmlFor="admin-dashboard-from-date"
+                    className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                  >
                     From Date
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                     <Input
+                      id="admin-dashboard-from-date"
+                      name="fromDate"
                       type="date"
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
@@ -139,12 +144,17 @@ export function AdminDashboard() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <label
+                    htmlFor="admin-dashboard-to-date"
+                    className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                  >
                     To Date
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                     <Input
+                      id="admin-dashboard-to-date"
+                      name="toDate"
                       type="date"
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}

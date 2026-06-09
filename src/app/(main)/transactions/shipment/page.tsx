@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useId, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Edit, FilePlus, FileSpreadsheet, FileUp, Filter, RefreshCw, Search } from "lucide-react";
+import { Edit, FilePlus, FileSpreadsheet, FileUp, Filter, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -13,13 +13,18 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select";
 import { cn } from "@/lib/utils";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useAuth } from "@/context/auth-context";
-import { MASTER_READ, SHIPMENT_CHARGE } from "@/lib/portal-permissions";
+import { isSuperAdminRole, MASTER_READ, SHIPMENT_CHARGE } from "@/lib/portal-permissions";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
+import { userService } from "@/services/user-service";
 import type { Shipment } from "@/types/transactions/shipment";
+import type { UtilityUser } from "@/types/utilities/user";
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
 
 type ShipmentFilters = {
@@ -45,14 +50,19 @@ const defaultFilters: ShipmentFilters = {
 };
 
 export default function ShipmentsPage() {
+  const deleteRequestedBySelectId = useId();
   const isClient = useIsClient();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
+  const { user, hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
+  const isSuperAdmin = isSuperAdminRole(user?.role?.identifier);
   const canReadCustomers = hasPermission(MASTER_READ.customer);
   const canViewCharges = hasPermission(SHIPMENT_CHARGE.read);
   const tableColSpan = canViewCharges ? 14 : 13;
   const [page, setPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null);
+  const [deleteRemark, setDeleteRemark] = useState("");
+  const [deleteRequestedByUserId, setDeleteRequestedByUserId] = useState<string>("");
   const [limit] = useState(10);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<ShipmentFilters>(defaultFilters);
@@ -117,6 +127,49 @@ export default function ShipmentsPage() {
       setSortOrder("asc");
     }
     setPage(1);
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: (input: { id: number; remark: string; requestedByUserId: number }) =>
+      shipmentService.deleteShipment(input.id, {
+        remark: input.remark,
+        requestedByUserId: input.requestedByUserId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
+      toast.success("Shipment deleted");
+      setDeleteTarget(null);
+      setDeleteRemark("");
+      setDeleteRequestedByUserId("");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete shipment");
+    },
+  });
+
+  const openDeleteDialog = (shipment: Shipment) => {
+    setDeleteTarget(shipment);
+    setDeleteRemark("");
+    setDeleteRequestedByUserId("");
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    const remark = deleteRemark.trim();
+    const requestedByUserId = Number(deleteRequestedByUserId);
+    if (!remark) {
+      toast.error("Enter a deletion remark");
+      return;
+    }
+    if (!Number.isInteger(requestedByUserId) || requestedByUserId <= 0) {
+      toast.error("Select who requested the deletion");
+      return;
+    }
+    deleteMutation.mutate({
+      id: deleteTarget.id,
+      remark,
+      requestedByUserId,
+    });
   };
 
   async function handleExport() {
@@ -356,7 +409,19 @@ export default function ShipmentsPage() {
                           <Edit className="h-4 w-4" />
                         </Button>
                       </PermissionGuard>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10" onClick={() => handleViewDetails(shipment)}>
+                      {isSuperAdmin ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[var(--express-danger)] hover:bg-[var(--express-danger)]/10"
+                          onClick={() => openDeleteDialog(shipment)}
+                          title="Delete shipment"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : null}
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => handleViewDetails(shipment)}>
                         <Search className="h-4 w-4" />
                       </Button>
                     </div>
@@ -390,6 +455,84 @@ export default function ShipmentsPage() {
           </Button>
         </div>
       </div>
+
+      <Dialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) {
+            setDeleteTarget(null);
+            setDeleteRemark("");
+            setDeleteRequestedByUserId("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete shipment</DialogTitle>
+            <DialogDescription>
+              {deleteTarget
+                ? `Soft-delete AWB ${deleteTarget.awbNo}. This action is recorded with a remark and the user who requested deletion.`
+                : "Soft-delete this shipment booking."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="shipment-delete-remark">Deletion remark</Label>
+              <Textarea
+                id="shipment-delete-remark"
+                value={deleteRemark}
+                onChange={(event) => setDeleteRemark(event.target.value)}
+                placeholder="Why is this shipment being deleted?"
+                rows={4}
+                maxLength={1000}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={deleteRequestedBySelectId}>Deletion requested by</Label>
+              <DbAsyncSelect<UtilityUser>
+                id={deleteRequestedBySelectId}
+                queryKey={["shipment-delete-requested-by-users"]}
+                value={deleteRequestedByUserId || undefined}
+                onValueChange={setDeleteRequestedByUserId}
+                fetchPage={(page, search) =>
+                  userService.listUsers({
+                    page,
+                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                    search: search || undefined,
+                    status: "ACTIVE",
+                  })
+                }
+                getItemLabel={(item) =>
+                  item.username
+                    ? `${item.username}${item.email ? ` (${item.email})` : ""}`
+                    : `User #${item.id}`
+                }
+                placeholder="Select user"
+                searchPlaceholder="Search users…"
+                disabled={deleteMutation.isPending}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete shipment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

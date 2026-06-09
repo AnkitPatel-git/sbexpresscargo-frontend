@@ -560,7 +560,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="address1"
                                     render={({ field }) => (
-                                        <FloatingFormItem required label="Address / Building" itemClassName="md:col-span-2">
+                                        <FloatingFormItem required label="Pickup Address" itemClassName="md:col-span-2">
                                             <FormControl>
                                                 <Input {...field} placeholder="Street address, building, floor" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -571,7 +571,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                     control={form.control}
                                     name="address2"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Address line 2" itemClassName="md:col-span-2">
+                                        <FloatingFormItem label="Billing Address" itemClassName="md:col-span-2">
                                             <FormControl>
                                                 <Input {...field} placeholder="Optional" className={FLOATING_INNER_CONTROL} />
                                             </FormControl>
@@ -1494,10 +1494,21 @@ function SimpleInput({
     onChange: (value: string) => void
     type?: string
 }) {
+    const fieldId = useId()
+    const fieldName = label.toLowerCase().replace(/\s+/g, '-')
+
     return (
         <div className="space-y-2">
-            <div className="text-sm font-medium">{label}</div>
-            <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+            <label htmlFor={fieldId} className="text-sm font-medium">
+                {label}
+            </label>
+            <Input
+                id={fieldId}
+                name={fieldName}
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+            />
         </div>
     )
 }

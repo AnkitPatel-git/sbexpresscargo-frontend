@@ -2,6 +2,9 @@ import * as z from "zod";
 
 import { optionalMasterCode } from "@/lib/master-code-schema";
 
+/** E-waybill is mandatory when invoice value exceeds this amount (Indian GST rules). */
+export const EWAYBILL_MANDATORY_INVOICE_THRESHOLD = 50_000;
+
 export const pieceItemSchema = z.object({
   contentId: z.number().int().positive("Content is required"),
   quantity: z.number().int().optional(),
@@ -296,6 +299,23 @@ export const shipmentSchema = z.object({
       path: ["codAmount"],
       message: "COD Amount is required when COD is checked",
     })
+  }
+
+  const invoiceValue = Number(values.shipmentTotalValue ?? values.shipmentValue);
+  if (
+    Number.isFinite(invoiceValue) &&
+    invoiceValue > EWAYBILL_MANDATORY_INVOICE_THRESHOLD
+  ) {
+    const ewaybill = typeof values.ewaybillNumber === "string"
+      ? values.ewaybillNumber.trim()
+      : "";
+    if (!ewaybill) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ewaybillNumber"],
+        message: `E-waybill is required when invoice value exceeds ${EWAYBILL_MANDATORY_INVOICE_THRESHOLD.toLocaleString("en-IN")}`,
+      });
+    }
   }
 });
 
