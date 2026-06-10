@@ -98,6 +98,7 @@ import { serviceablePincodeService } from '@/services/utilities/serviceable-pinc
 import { pincodeDistanceService } from '@/services/utilities/pincode-distance-service'
 import {
     EWAYBILL_MANDATORY_INVOICE_THRESHOLD,
+    getEwaybillRequiredMessage,
     shipmentSchema,
     ShipmentFormValues,
     Shipment,
@@ -281,7 +282,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         medicalCharges: shipmentRef?.medicalCharges ?? 0,
         paymentType: shipmentRef?.paymentType || 'CREDIT',
         instruction: shipmentRef?.instruction || '',
-        serviceCenterId: shipmentRef?.serviceCenterId || 0,
+        serviceCenterId: normalizeMasterSelectId(shipmentRef?.serviceCenterId) || 0,
         isCod: shipmentRef?.isCod || false,
         codAmount: shipmentRef?.codAmount || 0,
         piecesRows: normalizePieceRows(shipmentRef?.piecesRows),
@@ -537,6 +538,21 @@ function normalizeMasterSelectId(value: unknown): number {
     return Number.isFinite(n) && n > 0 ? n : 0
 }
 
+const toServiceCenterComboboxOption = (serviceCenter: {
+    id?: unknown
+    code?: string | null
+    name?: string | null
+}): { label: string; value: number } | null => {
+    const value = normalizeMasterSelectId(serviceCenter.id)
+    if (value <= 0) return null
+    const code = toSafeOptionLabel(serviceCenter.code, '')
+    const name = toSafeOptionLabel(serviceCenter.name, '')
+    return {
+        label: code && name ? `${code} - ${name}` : code || name || `Service Center #${value}`,
+        value,
+    }
+}
+
 const EMPTY_SHIPPER_BLOCK: NonNullable<ShipmentFormValues['shipper']> = {
     shipperCode: '',
     shipperName: '',
@@ -786,6 +802,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         label: string
         value: number
     } | null>(null)
+    const [serviceCenterPinnedOption, setServiceCenterPinnedOption] = useState<{
+        label: string
+        value: number
+    } | null>(null)
     const chargePreviewRows = useMemo(() => {
         if (!chargePreview) return []
         const baseRow = typeof chargePreview.baseFreight === 'number'
@@ -897,6 +917,20 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }),
         enabled: mastersReady && masterRead.serviceCenter,
     })
+    const pinnedServiceCenterId = normalizeMasterSelectId(initialData?.serviceCenterId)
+    const { data: pinnedServiceCenterData } = useQuery({
+        queryKey: ['shipment-pinned-service-center', pinnedServiceCenterId],
+        queryFn: async () => {
+            const res = await serviceCenterService.getServiceCenterById(pinnedServiceCenterId)
+            return res.data
+        },
+        enabled:
+            mastersReady &&
+            masterRead.serviceCenter &&
+            isEdit &&
+            pinnedServiceCenterId > 0 &&
+            !initialData?.serviceCenter,
+    })
 
     const { data: shipperPincodeOptionsData } = useQuery({
         queryKey: ['shipment-shipper-pincode-options', debouncedShipperPincodeSearch],
@@ -959,18 +993,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             }
         })
         .filter((option): option is { label: string; value: number } => option != null)
-    const serviceCenterComboboxOptions = serviceCenterOptions
-        .map((serviceCenter) => {
-            const value = normalizeMasterSelectId(serviceCenter.id)
-            if (value <= 0) return null
-            const code = toSafeOptionLabel(serviceCenter.code, '')
-            const name = toSafeOptionLabel(serviceCenter.name, '')
-            return {
-                label: code && name ? `${code} - ${name}` : code || name || `Service Center #${value}`,
-                value,
-            }
-        })
-        .filter((option): option is { label: string; value: number } => option != null)
+    const serviceCenterComboboxOptions = useMemo(() => {
+        const base = serviceCenterOptions
+            .map((serviceCenter) => toServiceCenterComboboxOption(serviceCenter))
+            .filter((option): option is { label: string; value: number } => option != null)
+        if (serviceCenterPinnedOption && !base.some((option) => option.value === serviceCenterPinnedOption.value)) {
+            return [serviceCenterPinnedOption, ...base]
+        }
+        return base
+    }, [serviceCenterOptions, serviceCenterPinnedOption])
     const vendorComboboxOptions = vendorOptions
         .map((vendor) => {
             const value = normalizeMasterSelectId(vendor.id)
@@ -1057,7 +1088,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 taxApply: false,
                 taxOnFuel: false,
             }))
-            form.setValue('charges', editableCharges, { shouldDirty: true, shouldValidate: true })
+            form.setValue('charges', editableCharges, { shouldDirty: true, shouldValidate: false })
             toast.success("Charges calculated")
         },
         onError: (error: unknown) => {
@@ -1076,6 +1107,29 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 savedEdlKm != null && savedEdlKm > 0
         }
     }, [initialData, form])
+
+    useEffect(() => {
+        if (!isEdit) {
+            setServiceCenterPinnedOption(null)
+            return
+        }
+        const serviceCenterId = normalizeMasterSelectId(initialData?.serviceCenterId)
+        if (serviceCenterId <= 0) {
+            setServiceCenterPinnedOption(null)
+            return
+        }
+        if (initialData?.serviceCenter) {
+            const option = toServiceCenterComboboxOption(initialData.serviceCenter)
+            setServiceCenterPinnedOption(option)
+            return
+        }
+        if (
+            pinnedServiceCenterData &&
+            normalizeMasterSelectId(pinnedServiceCenterData.id) === serviceCenterId
+        ) {
+            setServiceCenterPinnedOption(toServiceCenterComboboxOption(pinnedServiceCenterData))
+        }
+    }, [isEdit, initialData, pinnedServiceCenterData])
 
     const watchedShipperId = form.watch('shipperId')
     const watchedConsigneeId = form.watch('consigneeId')
@@ -1962,6 +2016,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             return
         }
         const values = form.getValues()
+        const ewaybillMessage = getEwaybillRequiredMessage(
+            values.shipmentTotalValue,
+            values.shipmentValue,
+            values.ewaybillNumber,
+        )
+        if (ewaybillMessage) {
+            form.setError('ewaybillNumber', { type: 'manual', message: ewaybillMessage })
+            toast.error(ewaybillMessage)
+            return
+        }
         awbMutation.mutate(values)
     }
 

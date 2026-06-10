@@ -5,6 +5,26 @@ import { optionalMasterCode } from "@/lib/master-code-schema";
 /** E-waybill is mandatory when invoice value exceeds this amount (Indian GST rules). */
 export const EWAYBILL_MANDATORY_INVOICE_THRESHOLD = 50_000;
 
+export function getEwaybillRequiredMessage(
+  shipmentTotalValue: number | undefined | null,
+  shipmentValue: number | undefined | null,
+  ewaybillNumber: string | undefined | null,
+): string | null {
+  const invoiceValue = Number(shipmentTotalValue ?? shipmentValue);
+  if (
+    !Number.isFinite(invoiceValue) ||
+    invoiceValue <= EWAYBILL_MANDATORY_INVOICE_THRESHOLD
+  ) {
+    return null;
+  }
+  const ewaybill =
+    typeof ewaybillNumber === "string" ? ewaybillNumber.trim() : "";
+  if (!ewaybill) {
+    return `E-waybill is required when invoice value exceeds ${EWAYBILL_MANDATORY_INVOICE_THRESHOLD.toLocaleString("en-IN")}`;
+  }
+  return null;
+}
+
 export const pieceItemSchema = z.object({
   contentId: z.number().int().positive("Content is required"),
   quantity: z.number().int().optional(),
@@ -301,22 +321,6 @@ export const shipmentSchema = z.object({
     })
   }
 
-  const invoiceValue = Number(values.shipmentTotalValue ?? values.shipmentValue);
-  if (
-    Number.isFinite(invoiceValue) &&
-    invoiceValue > EWAYBILL_MANDATORY_INVOICE_THRESHOLD
-  ) {
-    const ewaybill = typeof values.ewaybillNumber === "string"
-      ? values.ewaybillNumber.trim()
-      : "";
-    if (!ewaybill) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["ewaybillNumber"],
-        message: `E-waybill is required when invoice value exceeds ${EWAYBILL_MANDATORY_INVOICE_THRESHOLD.toLocaleString("en-IN")}`,
-      });
-    }
-  }
 });
 
 export type ShipmentFormValues = z.infer<typeof shipmentSchema>;
@@ -513,6 +517,11 @@ export interface Shipment {
     id: number;
     productCode?: string;
     productName?: string;
+    name?: string;
+  } | null;
+  serviceCenter?: {
+    id: number;
+    code?: string;
     name?: string;
   } | null;
   createdBy?: {

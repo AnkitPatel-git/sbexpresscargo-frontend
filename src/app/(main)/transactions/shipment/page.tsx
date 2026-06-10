@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Edit, FilePlus, FileSpreadsheet, FileUp, Filter, RefreshCw, Search, Trash2 } from "lucide-react";
@@ -19,7 +19,7 @@ import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-asy
 import { cn } from "@/lib/utils";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useAuth } from "@/context/auth-context";
-import { isSuperAdminRole, MASTER_READ, SHIPMENT_CHARGE } from "@/lib/portal-permissions";
+import { isSuperAdminRole, MASTER_READ } from "@/lib/portal-permissions";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import { userService } from "@/services/user-service";
@@ -57,8 +57,14 @@ export default function ShipmentsPage() {
   const { user, hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
   const isSuperAdmin = isSuperAdminRole(user?.role?.identifier);
   const canReadCustomers = hasPermission(MASTER_READ.customer);
-  const canViewCharges = hasPermission(SHIPMENT_CHARGE.read);
-  const tableColSpan = canViewCharges ? 14 : 13;
+  const tableColSpan = 14;
+
+  const formatInvoiceValue = (value: number | string | null | undefined) => {
+    if (value == null || value === "") return "—";
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) return "—";
+    return amount.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  };
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null);
   const [deleteRemark, setDeleteRemark] = useState("");
@@ -69,6 +75,17 @@ export default function ShipmentsPage() {
   const [draftFilters, setDraftFilters] = useState<ShipmentFilters>(defaultFilters);
   const [sortBy, setSortBy] = useState("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+
+  const { data: userRolesData } = useQuery({
+    queryKey: ["user-roles"],
+    queryFn: () => userService.listRoles(),
+    enabled: isSuperAdmin,
+  });
+
+  const operationsRoleId = useMemo(() => {
+    const roles = userRolesData?.data ?? [];
+    return roles.find((role) => role.identifier === "OPERATIONS")?.id;
+  }, [userRolesData?.data]);
 
   const { data: customerData } = useQuery({
     queryKey: ["shipment-client-options"],
@@ -361,11 +378,9 @@ export default function ShipmentsPage() {
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="Pieces" field="pieces" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
-              {canViewCharges ? (
               <TableHead className="font-semibold text-primary-foreground">
-                <SortableColumnHeader label="Amount" field="totalAmount" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                <SortableColumnHeader label="Invoice Value" field="shipmentTotalValue" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
-              ) : null}
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -399,9 +414,7 @@ export default function ShipmentsPage() {
                   <TableCell>{shipment.paymentType || "—"}</TableCell>
                   <TableCell>{shipment.currentStatus || "—"}</TableCell>
                   <TableCell>{shipment.pieces ?? "—"}</TableCell>
-                  {canViewCharges ? (
-                  <TableCell>{shipment.totalAmount != null ? String(shipment.totalAmount) : "—"}</TableCell>
-                  ) : null}
+                  <TableCell>{formatInvoiceValue(shipment.shipmentTotalValue)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
                       <PermissionGuard permission="transaction.shipment.update">
@@ -491,7 +504,7 @@ export default function ShipmentsPage() {
               <Label htmlFor={deleteRequestedBySelectId}>Deletion requested by</Label>
               <DbAsyncSelect<UtilityUser>
                 id={deleteRequestedBySelectId}
-                queryKey={["shipment-delete-requested-by-users"]}
+                queryKey={["shipment-delete-requested-by-users", operationsRoleId]}
                 value={deleteRequestedByUserId || undefined}
                 onValueChange={setDeleteRequestedByUserId}
                 fetchPage={(page, search) =>
@@ -500,6 +513,7 @@ export default function ShipmentsPage() {
                     limit: DB_ASYNC_SELECT_PAGE_SIZE,
                     search: search || undefined,
                     status: "ACTIVE",
+                    ...(operationsRoleId != null ? { roleId: operationsRoleId } : {}),
                   })
                 }
                 getItemLabel={(item) =>
@@ -507,9 +521,9 @@ export default function ShipmentsPage() {
                     ? `${item.username}${item.email ? ` (${item.email})` : ""}`
                     : `User #${item.id}`
                 }
-                placeholder="Select user"
-                searchPlaceholder="Search users…"
-                disabled={deleteMutation.isPending}
+                placeholder="Select operations user"
+                searchPlaceholder="Search operations users…"
+                disabled={deleteMutation.isPending || operationsRoleId == null}
               />
             </div>
           </div>
