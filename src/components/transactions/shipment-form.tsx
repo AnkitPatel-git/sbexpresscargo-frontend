@@ -293,6 +293,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
 const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValues => {
     const payload: ShipmentFormValues = {
         awbNo: values.awbNo?.trim() || undefined,
+        ewaybillNumber: values.ewaybillNumber?.trim() || undefined,
         bookDate: toDateInputValue(values.bookDate),
         bookTime: values.bookTime?.trim() || undefined,
         referenceNo: values.referenceNo?.trim() || undefined,
@@ -364,9 +365,15 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
     return payload
 }
 
-const normalizeShipmentUpdatePayload = (values: ShipmentFormValues): ShipmentFormValues => {
+const normalizeShipmentUpdatePayload = (
+    values: ShipmentFormValues,
+    version?: number,
+): ShipmentFormValues => {
     const { serviceMapId: _serviceMapId, ...payload } = normalizeShipmentPayload(values)
-    return payload
+    return {
+        ...payload,
+        ...(version != null && version > 0 ? { version } : {}),
+    }
 }
 
 const normalizeShipmentCalculatePayload = (values: ShipmentFormValues): ShipmentFormValues => {
@@ -1837,7 +1844,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         mutationFn: (values: ShipmentFormValues) => {
             const targetId = savedShipment?.id || initialData?.id
             if (targetId) {
-                return shipmentService.updateShipment(targetId, normalizeShipmentUpdatePayload(values))
+                return shipmentService.updateShipment(
+                    targetId,
+                    normalizeShipmentUpdatePayload(
+                        values,
+                        savedShipment?.version ?? initialData?.version,
+                    ),
+                )
             }
             return shipmentService.createShipment(normalizeShipmentPayload(values))
         },
