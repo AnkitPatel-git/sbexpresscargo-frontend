@@ -28,7 +28,7 @@ export interface RateZoneRate extends RateZoneRatePayload {
   toZone?: RateZoneRef | null;
 }
 
-export type RouteWeightSlabPricingMode = "FLAT" | "PER_KG";
+export type RouteWeightSlabPricingMode = "FLAT" | "PER_KG" | "FLAT_G" | "PER_500G";
 
 export interface RateWeightSlabPayload {
   minWeight: number;
@@ -78,6 +78,8 @@ export interface RateRouteSlabPayload {
   toZoneId?: number;
   minKm?: number;
   maxKm?: number;
+  /** Optional floor for base freight on this zone pair (after weight-slab calculation). */
+  minimumAmount?: number | null;
   weightSlabs: RateWeightSlabPayload[];
 }
 

@@ -74,6 +74,14 @@ export const PRICING_MODE_FLAT_PER_KG_OPTIONS = [
   { value: "PER_KG" as const, label: "Per kg" },
 ] as const
 
+/** Base rate route weight slabs — kg bands plus gram-based modes. */
+export const PRICING_MODE_ROUTE_WEIGHT_OPTIONS = [
+  { value: "FLAT" as const, label: "Flat (kg band)" },
+  { value: "PER_KG" as const, label: "Per kg" },
+  { value: "FLAT_G" as const, label: "Flat (g band)" },
+  { value: "PER_500G" as const, label: "Per 500 g" },
+] as const
+
 export const PRICING_MODE_CONDITION_SLAB_OPTIONS = [
   { value: "FLAT" as const, label: "Flat (fixed amount for band)" },
   { value: "PER_KG" as const, label: "Per unit (rate × basis: weight or km)" },

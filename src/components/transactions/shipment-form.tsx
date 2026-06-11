@@ -25,6 +25,10 @@ import * as XLSX from "xlsx"
 
 import { cn } from "@/lib/utils"
 import { pickPincodeZone, pincodeZoneMissingMessage } from "@/lib/pincode-zone"
+import {
+    SHIPMENT_COD_TOPAY_AMOUNT_LABEL,
+    SHIPMENT_COD_TOPAY_LABEL,
+} from "@/lib/shipment-payment-label"
 import { optionLabelForSelect, PIECE_MEASURE_UNIT_OPTIONS } from "@/lib/select-closed-label"
 import {
     Form,
@@ -44,6 +48,7 @@ import {
     OutlinedFormSection,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
+import { DecimalInput } from "@/components/ui/decimal-input"
 import { IntegerInput } from "@/components/ui/integer-input"
 import { Button } from "@/components/ui/button"
 import {
@@ -92,18 +97,19 @@ import { shipperService } from '@/services/masters/shipper-service'
 import { consigneeService } from '@/services/masters/consignee-service'
 import { productService } from '@/services/masters/product-service'
 import { vendorService } from '@/services/masters/vendor-service'
-import { serviceMapService } from '@/services/masters/service-map-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
 import { pincodeDistanceService } from '@/services/utilities/pincode-distance-service'
 import {
     EWAYBILL_MANDATORY_INVOICE_THRESHOLD,
     getEwaybillRequiredMessage,
+    roundShipmentTotalValue,
     shipmentSchema,
     ShipmentFormValues,
     Shipment,
     ShipmentCalculateResponse,
     ShipmentKycDocument,
+    ForwardingVendorOption,
 } from '@/types/transactions/shipment'
 import type { Shipper } from '@/types/masters/shipper'
 import type { Consignee } from '@/types/masters/consignee'
@@ -120,6 +126,11 @@ type ForwardingRow = {
     forwardingAwb: string
     deliveryVendorId: number
     deliveryServiceMapId: number
+}
+
+const formatForwardingServiceType = (serviceType: string | null | undefined) => {
+    if (!serviceType) return "—"
+    return serviceType.charAt(0) + serviceType.slice(1).toLowerCase()
 }
 
 type KycRow = {
@@ -330,7 +341,9 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         productId: normalizePositiveNumberValue(values.productId),
         fromZoneId: normalizePositiveNumberValue(values.fromZoneId),
         toZoneId: normalizePositiveNumberValue(values.toZoneId),
-        shipmentTotalValue: normalizeNumberValue(values.shipmentTotalValue ?? values.shipmentValue),
+        shipmentTotalValue: roundShipmentTotalValue(
+            normalizeNumberValue(values.shipmentTotalValue ?? values.shipmentValue),
+        ),
         invoiceDate: values.invoiceDate?.trim() || undefined,
         invoiceNumber: values.invoiceNumber?.trim() || undefined,
         actualWeight: normalizeNumberValue(values.actualWeight) ?? 0,
@@ -775,6 +788,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             deliveryServiceMapId: existing?.deliveryServiceMapId || 0,
         }
     })
+    const [forwardingSelectOpen, setForwardingSelectOpen] = useState(false)
+    const [forwardingSelectTarget, setForwardingSelectTarget] = useState<ForwardingVendorOption | null>(null)
+    const [forwardingAwbDraft, setForwardingAwbDraft] = useState("")
     const [kycRows, setKycRows] = useState<KycRow[]>([
         { id: generateKycRowId(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
     ])
@@ -786,7 +802,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const [contentSearch, setContentSearch] = useState('')
     const [productSearch, setProductSearch] = useState('')
     const [vendorSearch, setVendorSearch] = useState('')
-    const [serviceMapSearch, setServiceMapSearch] = useState('')
     const [serviceCenterSearch, setServiceCenterSearch] = useState('')
     const [piecesImportOpen, setPiecesImportOpen] = useState(false)
     const [piecesExcelFile, setPiecesExcelFile] = useState<File | null>(null)
@@ -852,7 +867,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const debouncedContentSearch = useDebounce(contentSearch.trim(), 300)
     const debouncedProductSearch = useDebounce(productSearch.trim(), 300)
     const debouncedVendorSearch = useDebounce(vendorSearch.trim(), 300)
-    const debouncedServiceMapSearch = useDebounce(serviceMapSearch.trim(), 300)
     const debouncedServiceCenterSearch = useDebounce(serviceCenterSearch.trim(), 300)
     const debouncedShipperPincodeSearch = useDebounce(shipperPincodeSearch.trim(), 300)
     const debouncedConsigneePincodeSearch = useDebounce(consigneePincodeSearch.trim(), 300)
@@ -1024,31 +1038,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         defaultValues: buildShipmentFormValues(initialData),
     })
 
-    const awbTabVendorId = form.watch("vendorId")
-
-    const { data: serviceMapsData } = useQuery({
-        queryKey: [
-            "service-maps-list",
-            forwardingForm.deliveryVendorId,
-            awbTabVendorId,
-            debouncedServiceMapSearch,
-        ],
-        queryFn: () => {
-            const awbVid = awbTabVendorId ?? 0
-            const vid =
-                forwardingForm.deliveryVendorId > 0
-                    ? forwardingForm.deliveryVendorId
-                    : awbVid > 0
-                      ? awbVid
-                      : 0
-            return serviceMapService.getServiceMaps({
-                limit: 10,
-                search: debouncedServiceMapSearch || undefined,
-                vendorId: vid > 0 ? vid : undefined,
-            })
-        },
-        enabled: mastersReady && masterRead.serviceMap,
-    })
 
     const { fields: pieceFields, append: appendPiece, remove: removePiece } = useFieldArray({
         control: form.control,
@@ -1824,7 +1813,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         form.setValue('volumetricWeight', totalVolumetricWeight, { shouldValidate: false })
         // On edit, preserve backend booking total until user changes piece/item rows.
         if (!(isEditRef.current && !form.formState.isDirty)) {
-            form.setValue('shipmentTotalValue', Math.round(bookingTotalValue), { shouldValidate: false })
+            form.setValue(
+                'shipmentTotalValue',
+                roundShipmentTotalValue(bookingTotalValue) ?? 0,
+                { shouldValidate: false },
+            )
         }
     }, [form, isSurfaceProduct, surfaceCft, weightCalcKey]);
 
@@ -1871,23 +1864,26 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     })
 
     const forwardingMutation = useMutation({
-        mutationFn: async () => {
+        mutationFn: async (payload: ForwardingRow) => {
             if (!savedShipment?.id || !savedShipment.version) {
                 throw new Error('Please create shipment booking first')
             }
             const awbVendorId = Number(form.getValues("vendorId")) || 0
             return shipmentService.upsertForwarding(savedShipment.id, {
                 version: Number(savedShipment.version),
-                ...normalizeForwardingPayload(forwardingForm, awbVendorId),
+                ...normalizeForwardingPayload(payload, awbVendorId),
             })
         },
-        onSuccess: (response) => {
+        onSuccess: (response, payload) => {
             const nextVersion = ((response?.data as { shipment?: { version?: number } })?.shipment?.version) || savedShipment?.version
             if (savedShipment?.id) {
                 setSavedShipment({ id: savedShipment.id, version: nextVersion })
             }
+            setForwardingForm(payload)
+            setForwardingSelectOpen(false)
+            setForwardingSelectTarget(null)
+            setForwardingAwbDraft("")
             setIsForwardingStepComplete(true)
-            setActiveTab('kyc')
             toast.success('Forwarding saved')
         },
         onError: (error: unknown) => {
@@ -1961,40 +1957,59 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
     }
 
-    const updateForwardingForm = (patch: Partial<ForwardingRow>) => {
-        setForwardingForm((prev) => ({ ...prev, ...patch }))
-    }
-
-    const awbVendorIdNum = Number(awbTabVendorId) || 0
-    const effectiveForwardingVendorId =
-        forwardingForm.deliveryVendorId > 0 ? forwardingForm.deliveryVendorId : awbVendorIdNum
-
     const previewShipmentId = savedShipment?.id
-    const forwardingRatePreview = useQuery({
-        queryKey: [
-            'forwarding-rate-preview',
-            previewShipmentId,
-            effectiveForwardingVendorId,
-            watchedProductId,
-        ],
-        queryFn: () =>
-            shipmentService.getForwardingRatePreview(
-                previewShipmentId!,
-                effectiveForwardingVendorId,
-            ),
+
+    const forwardingOptionsQuery = useQuery({
+        queryKey: ['forwarding-options', previewShipmentId, watchedProductId],
+        queryFn: () => shipmentService.getForwardingOptions(previewShipmentId!),
         enabled:
             Boolean(previewShipmentId) &&
-            effectiveForwardingVendorId > 0 &&
-            normalizeMasterSelectId(watchedProductId) > 0,
+            normalizeMasterSelectId(watchedProductId) > 0 &&
+            activeTab === 'forwarding',
         staleTime: 30_000,
     })
 
-    const forwardingServiceOptions = sanitizeArray(serviceMapsData?.data)
-        .filter((sm) => sm.vendorId === effectiveForwardingVendorId)
-        .map((sm) => ({
-            label: `${sm.serviceType} (${sm.id})`,
-            value: sm.id,
-        }))
+    const forwardingOptions = sanitizeArray(forwardingOptionsQuery.data?.data?.options)
+    const forwardingOptionsMessage = forwardingOptionsQuery.data?.data?.message?.trim() || null
+    const noForwardingVendorsAvailable = forwardingOptionsQuery.data?.data?.noVendorsAvailable === true
+
+    const selectedForwardingOption = useMemo(
+        () =>
+            forwardingOptions.find(
+                (option) =>
+                    option.vendorId === forwardingForm.deliveryVendorId &&
+                    option.serviceMapId === forwardingForm.deliveryServiceMapId,
+            ) ?? null,
+        [forwardingForm.deliveryServiceMapId, forwardingForm.deliveryVendorId, forwardingOptions],
+    )
+
+    const openForwardingSelectDialog = (option: ForwardingVendorOption) => {
+        const isReselect =
+            forwardingForm.deliveryVendorId === option.vendorId &&
+            forwardingForm.deliveryServiceMapId === option.serviceMapId
+        setForwardingSelectTarget(option)
+        setForwardingAwbDraft(isReselect ? forwardingForm.forwardingAwb : "")
+        setForwardingSelectOpen(true)
+    }
+
+    const submitForwardingSelection = () => {
+        if (!forwardingSelectTarget) return
+        const forwardingAwb = forwardingAwbDraft.trim()
+        if (!forwardingAwb) {
+            toast.error("Forwarding AWB is required")
+            return
+        }
+        forwardingMutation.mutate({
+            forwardingAwb,
+            deliveryVendorId: forwardingSelectTarget.vendorId,
+            deliveryServiceMapId: forwardingSelectTarget.serviceMapId,
+        })
+    }
+
+    const isForwardingOptionSelected = (option: ForwardingVendorOption) =>
+        forwardingForm.deliveryVendorId === option.vendorId &&
+        forwardingForm.deliveryServiceMapId === option.serviceMapId &&
+        Boolean(forwardingForm.forwardingAwb.trim())
 
     const addKycRow = () => {
         setKycRows((prev) => [
@@ -2042,21 +2057,12 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         awbMutation.mutate(values)
     }
 
-    const handleForwardingNext = async () => {
-        if (!forwardingForm.forwardingAwb.trim()) {
-            toast.error("Forwarding AWB is required")
+    const handleForwardingNext = () => {
+        if (!isForwardingStepComplete) {
+            toast.error("Select a vendor and enter forwarding AWB to continue")
             return
         }
-        const awbVendorId = Number(form.getValues("vendorId")) || 0
-        const effectiveVendorId =
-            forwardingForm.deliveryVendorId > 0 ? forwardingForm.deliveryVendorId : awbVendorId
-        if (effectiveVendorId <= 0) {
-            toast.error(
-                "Vendor is required for forwarding. Set vendor on the AWB step or select a delivery vendor here.",
-            )
-            return
-        }
-        forwardingMutation.mutate()
+        setActiveTab('kyc')
     }
 
     const handleTabChange = (nextTab: string) => {
@@ -2604,7 +2610,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem label="Invoice Value">
                                                 <FormControl>
-                                                    <IntegerInput
+                                                    <DecimalInput
                                                         className={FLOATING_INNER_CONTROL}
                                                         name={field.name}
                                                         ref={field.ref}
@@ -2612,6 +2618,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         value={field.value}
                                                         onValueChange={field.onChange}
                                                         min={0}
+                                                        decimalPlaces={2}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>
@@ -2799,7 +2806,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         <FormControl>
                                                             <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
                                                         </FormControl>
-                                                        <FormLabel className="text-xs font-normal leading-none">COD</FormLabel>
+                                                        <FormLabel className="text-xs font-normal leading-none">{SHIPMENT_COD_TOPAY_LABEL}</FormLabel>
                                                     </FormItem>
                                                 )}
                                             />
@@ -2853,7 +2860,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="codAmount"
                                             render={({ field }) => (
-                                                <FloatingFormItem label="COD Amount">
+                                                <FloatingFormItem label={SHIPMENT_COD_TOPAY_AMOUNT_LABEL}>
                                                     <FormControl>
                                                         <IntegerInput
                                                             className={FLOATING_INNER_CONTROL}
@@ -3309,82 +3316,145 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     </TabsContent>
 
                     <TabsContent value="forwarding">
-                        <OutlinedFormSection label="Forwarding Details" labelTone="navy">
-                            <div className="grid grid-cols-1 gap-3 pt-2 md:grid-cols-2 xl:grid-cols-3">
+                        <OutlinedFormSection label="Select Forwarding Vendor" labelTone="navy">
+                            {!previewShipmentId ? (
+                                <p className="pt-2 text-sm text-muted-foreground">
+                                    Save the AWB step first to compare vendor options for this shipment.
+                                </p>
+                            ) : forwardingOptionsQuery.isPending ? (
+                                <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Loading vendor options…
+                                </div>
+                            ) : forwardingOptionsQuery.isError ? (
+                                <p className="pt-2 text-sm text-destructive">
+                                    {getErrorMessage(forwardingOptionsQuery.error, 'Could not load forwarding options')}
+                                </p>
+                            ) : (
+                                <>
+                                    {isForwardingStepComplete ? (
+                                        <div className="mb-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
+                                            Selected: {forwardingForm.forwardingAwb}
+                                            {selectedForwardingOption
+                                                ? ` — ${selectedForwardingOption.vendorName} · ${formatForwardingServiceType(selectedForwardingOption.serviceType)}`
+                                                : ""}
+                                        </div>
+                                    ) : null}
+                                    {canViewCharges && forwardingOptionsQuery.data?.data?.customerTotalAmount != null ? (
+                                        <p className="mb-3 text-xs text-muted-foreground">
+                                            Customer (AWB) total: {forwardingOptionsQuery.data.data.customerTotalAmount}
+                                        </p>
+                                    ) : null}
+                                    {noForwardingVendorsAvailable && forwardingOptionsMessage ? (
+                                        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950">
+                                            {forwardingOptionsMessage}
+                                        </div>
+                                    ) : null}
+                                    <div className="overflow-hidden rounded-md border border-border/70 bg-muted/20">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow className="border-b-0 bg-primary hover:bg-primary">
+                                                    <TableHead className="text-primary-foreground first:rounded-tl-md">Vendor</TableHead>
+                                                    <TableHead className="text-primary-foreground">Service</TableHead>
+                                                    {canViewCharges ? (
+                                                        <TableHead className="text-primary-foreground">Vendor Total</TableHead>
+                                                    ) : null}
+                                                    <TableHead className="text-right text-primary-foreground last:rounded-tr-md">Action</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {forwardingOptions.map((option) => {
+                                                    const selected = isForwardingOptionSelected(option)
+                                                    return (
+                                                        <TableRow
+                                                            key={`${option.vendorId}-${option.serviceMapId}`}
+                                                            className={selected ? "bg-green-50/70" : undefined}
+                                                        >
+                                                            <TableCell className="font-medium">{option.vendorName}</TableCell>
+                                                            <TableCell>{formatForwardingServiceType(option.serviceType)}</TableCell>
+                                                            {canViewCharges ? (
+                                                                <TableCell>
+                                                                    {option.vendorTotalAmount != null
+                                                                        ? option.vendorTotalAmount
+                                                                        : "—"}
+                                                                </TableCell>
+                                                            ) : null}
+                                                            <TableCell className="text-right">
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant={selected ? "secondary" : "default"}
+                                                                    onClick={() => openForwardingSelectDialog(option)}
+                                                                    disabled={!option.rateAvailable}
+                                                                >
+                                                                    {selected ? "Change" : "Select"}
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )
+                                                })}
+                                                {forwardingOptions.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell
+                                                            colSpan={canViewCharges ? 4 : 3}
+                                                            className="py-8 text-center text-sm text-muted-foreground"
+                                                        >
+                                                            {forwardingOptionsMessage ||
+                                                                "No vendor is available for this request. Please add vendors for this request."}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ) : null}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                    <p className="pt-2 text-xs text-muted-foreground">
+                                        Choose a vendor and service, then enter the partner forwarding AWB to save.
+                                    </p>
+                                </>
+                            )}
+                        </OutlinedFormSection>
+
+                        <Dialog open={forwardingSelectOpen} onOpenChange={setForwardingSelectOpen}>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Enter Forwarding AWB</DialogTitle>
+                                    <DialogDescription>
+                                        {forwardingSelectTarget
+                                            ? `${forwardingSelectTarget.vendorName} · ${formatForwardingServiceType(forwardingSelectTarget.serviceType)}`
+                                            : "Enter the partner / linehaul AWB for the selected vendor."}
+                                    </DialogDescription>
+                                </DialogHeader>
                                 <FloatingFormItem required label="Forwarding AWB*">
                                     <Input
                                         className={FLOATING_INNER_CONTROL}
-                                        value={forwardingForm.forwardingAwb}
-                                        onChange={(e) => updateForwardingForm({ forwardingAwb: e.target.value })}
+                                        value={forwardingAwbDraft}
+                                        onChange={(e) => setForwardingAwbDraft(e.target.value)}
                                         placeholder="Partner / linehaul AWB"
+                                        autoFocus
                                     />
                                 </FloatingFormItem>
-                                <FloatingFormItem required label="Vendor*">
-                                    <Combobox
-                                        options={vendorComboboxOptions}
-                                        value={forwardingForm.deliveryVendorId}
-                                        onChange={(val) =>
-                                            updateForwardingForm({
-                                                deliveryVendorId: Number(val) || 0,
-                                                deliveryServiceMapId: 0,
-                                            })
-                                        }
-                                        placeholder="Select vendor (or set on AWB)"
-                                        searchPlaceholder="Search vendor..."
-                                        searchValue={vendorSearch}
-                                        onSearchValueChange={setVendorSearch}
-                                        className={FLOATING_INNER_COMBO}
-                                    />
-                                </FloatingFormItem>
-                                <FloatingFormItem label="Service (optional)">
-                                    <Combobox
-                                        options={forwardingServiceOptions}
-                                        value={forwardingForm.deliveryServiceMapId}
-                                        onChange={(val) => updateForwardingForm({ deliveryServiceMapId: Number(val) || 0 })}
-                                        placeholder={
-                                            effectiveForwardingVendorId > 0 ? "Select service" : "Select vendor on AWB or above"
-                                        }
-                                        searchPlaceholder="Search service..."
-                                        searchValue={serviceMapSearch}
-                                        onSearchValueChange={setServiceMapSearch}
-                                        className={FLOATING_INNER_COMBO}
-                                    />
-                                </FloatingFormItem>
-                            </div>
-                            <p className="pt-2 text-xs text-muted-foreground">
-                                Forwarding AWB and a vendor are required (vendor on this tab or on the AWB step). Service
-                                map is optional. Details are saved after shipment booking save/update.
-                            </p>
-                            {canViewCharges && previewShipmentId && effectiveForwardingVendorId > 0 ? (
-                                <div className="mt-3 rounded-md border border-border/70 bg-muted/15 p-3 text-xs">
-                                    <p className="mb-1 font-medium text-foreground">Rate preview (saved booking)</p>
-                                    {forwardingRatePreview.isPending ? (
-                                        <p className="text-muted-foreground">Loading customer vs vendor totals…</p>
-                                    ) : null}
-                                    {forwardingRatePreview.isError ? (
-                                        <p className="text-destructive">
-                                            {getErrorMessage(forwardingRatePreview.error, 'Could not load rate preview')}
-                                        </p>
-                                    ) : null}
-                                    {forwardingRatePreview.data?.data ? (
-                                        <div className="mt-1 space-y-0.5 text-muted-foreground">
-                                            <p>
-                                                <span className="text-foreground/80">Customer (AWB contract):</span>{' '}
-                                                {forwardingRatePreview.data.data.customerQuote.totalAmount}
-                                            </p>
-                                            <p>
-                                                <span className="text-foreground/80">Vendor (buy contract):</span>{' '}
-                                                {forwardingRatePreview.data.data.vendorQuote.totalAmount}
-                                            </p>
-                                            <p>
-                                                <span className="text-foreground/80">Difference (customer − vendor):</span>{' '}
-                                                {forwardingRatePreview.data.data.profit}
-                                            </p>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            ) : null}
-                        </OutlinedFormSection>
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setForwardingSelectOpen(false)}
+                                        disabled={forwardingMutation.isPending}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={submitForwardingSelection}
+                                        disabled={forwardingMutation.isPending}
+                                    >
+                                        {forwardingMutation.isPending && (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        )}
+                                        Submit
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </TabsContent>
 
                     <TabsContent value="kyc">
@@ -3515,9 +3585,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                         </Button>
                     )}
                     {activeTab === 'forwarding' && (
-                        <Button type="button" onClick={handleForwardingNext} disabled={forwardingMutation.isPending}>
-                            {forwardingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Save Forwarding & Next
+                        <Button type="button" onClick={handleForwardingNext} disabled={!isForwardingStepComplete}>
+                            Next
                         </Button>
                     )}
                     {activeTab === 'kyc' && (

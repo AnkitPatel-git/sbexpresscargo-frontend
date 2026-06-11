@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, FilePlus, FileUp, Plus } from "lucide-react";
 import { format } from "date-fns";
 
+import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -540,7 +541,7 @@ export default function TrackingPage() {
                                                             {item.pieces} / {item.chargeWeight}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge variant="secondary">{item.paymentType}</Badge>
+                                                            <Badge variant="secondary">{formatShipmentPaymentTypeLabel(item.paymentType)}</Badge>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge variant="outline" className="font-normal">

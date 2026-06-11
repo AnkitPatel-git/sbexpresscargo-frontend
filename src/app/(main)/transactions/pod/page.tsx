@@ -396,6 +396,9 @@ export default function PodPage() {
                                 {paginatedRows.map((row, idx) => {
                                     const rowUploading =
                                         rowPodProofMutation.isPending && pendingUploadAwb === row.AWBNo;
+                                    const rowBlankDownloading =
+                                        blankPdfMutation.isPending &&
+                                        blankPdfMutation.variables?.awbNo === row.AWBNo;
                                     return (
                                         <TableRow
                                             key={`${row.AWBNo}-${idx}`}
@@ -470,14 +473,19 @@ export default function PodPage() {
                                                     <PermissionGuard permission="transaction.pod.download">
                                                         <Button
                                                             type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-primary hover:bg-primary/10"
-                                                            title="Download blank POD PDF"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 gap-1 text-xs"
+                                                            title={`Download blank POD for ${row.AWBNo}`}
                                                             onClick={() => blankPdfMutation.mutate({ awbNo: row.AWBNo })}
-                                                            disabled={blankPdfMutation.isPending || !row.shipmentId}
+                                                            disabled={rowBlankDownloading || !row.shipmentId}
                                                         >
-                                                            <FileDown className="h-4 w-4" />
+                                                            {rowBlankDownloading ? (
+                                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                            ) : (
+                                                                <FileDown className="h-3.5 w-3.5" />
+                                                            )}
+                                                            Download
                                                         </Button>
                                                     </PermissionGuard>
                                                 </div>

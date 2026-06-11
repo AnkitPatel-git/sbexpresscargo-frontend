@@ -248,22 +248,7 @@ export function DbAsyncSelect<T extends { id: number }>({
           className={cn(triggerClassName)}
           disabled={disabled}
         >
-          {/*
-            Radix SelectValue only shows SelectItem text while the menu is mounted.
-            After close, pass an explicit visible label (create/edit async selects).
-          */}
-          <span
-            data-slot="select-value"
-            className={cn(
-              "min-w-0 flex-1 truncate text-left",
-              !triggerDisplayText && "text-muted-foreground",
-            )}
-          >
-            {triggerDisplayText ?? placeholder}
-          </span>
-          <SelectValue className="sr-only" aria-hidden>
-            {triggerDisplayText ?? placeholder}
-          </SelectValue>
+          <SelectValue placeholder={placeholder}>{triggerDisplayText}</SelectValue>
         </SelectTrigger>
         <SelectContent
           viewportClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"

@@ -1,6 +1,7 @@
 import { apiFetch } from "@/lib/api-fetch";
 import type {
   ApiEnvelope,
+  ForwardingOptionsData,
   ForwardingRatePreviewData,
   ShipmentCalculateResponse,
   ShipmentFormPayload,
@@ -162,8 +163,12 @@ export const shipmentService = {
     };
   },
 
-  async bulkImportFromExcel(file: File): Promise<{
+  async bulkImportFromExcel(
+    file: File,
+    options?: { updateExisting?: boolean },
+  ): Promise<{
     created: number;
+    updated: number;
     failed: number;
     failures: Array<{ row: number; message: string }>;
     successes: Array<{ row: number; awbNo: string }>;
@@ -171,6 +176,9 @@ export const shipmentService = {
   }> {
     const formData = new FormData();
     formData.append("file", file);
+    if (options?.updateExisting === false) {
+      formData.append("updateExisting", "false");
+    }
     const response = await apiFetch(`${API_URL}/transaction/shipment/bulk-import`, {
       method: "POST",
       headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
@@ -180,6 +188,7 @@ export const shipmentService = {
       success?: boolean;
       data?: {
         created: number;
+        updated: number;
         failed: number;
         failures: Array<{ row: number; message: string }>;
         successes: Array<{ row: number; awbNo: string }>;
@@ -192,6 +201,53 @@ export const shipmentService = {
     }
     if (!json.success || json.data == null) {
       throw new Error("Invalid bulk import response");
+    }
+    return json.data;
+  },
+
+  async downloadBulkForwardingTemplate(): Promise<{ blob: Blob; filename: string }> {
+    const response = await apiFetch(`${API_URL}/transaction/shipment/bulk-forwarding/template`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to download bulk forwarding template"));
+    }
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, "shipment-bulk-forwarding-template.xlsx"),
+    };
+  },
+
+  async bulkForwardingFromExcel(file: File): Promise<{
+    updated: number;
+    failed: number;
+    failures: Array<{ row: number; message: string }>;
+    successes: Array<{ row: number; awbNo: string }>;
+    bulkUploadLogId?: number;
+  }> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiFetch(`${API_URL}/transaction/shipment/bulk-forwarding`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      body: formData,
+    });
+    const json = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      data?: {
+        updated: number;
+        failed: number;
+        failures: Array<{ row: number; message: string }>;
+        successes: Array<{ row: number; awbNo: string }>;
+        bulkUploadLogId?: number;
+      };
+      message?: string;
+    };
+    if (!response.ok) {
+      throw new Error(json.message || "Bulk forwarding update failed");
+    }
+    if (!json.success || json.data == null) {
+      throw new Error("Invalid bulk forwarding response");
     }
     return json.data;
   },
@@ -262,6 +318,16 @@ export const shipmentService = {
       `${API_URL}/transaction/shipment/${shipmentId}/forwarding-rate-preview?${query.toString()}`,
       { headers: authHeaders() },
       "Failed to load forwarding rate preview",
+    );
+  },
+
+  async getForwardingOptions(
+    shipmentId: number,
+  ): Promise<ApiEnvelope<ForwardingOptionsData>> {
+    return requestJson(
+      `${API_URL}/transaction/shipment/${shipmentId}/forwarding-options`,
+      { headers: authHeaders() },
+      "Failed to load forwarding options",
     );
   },
 

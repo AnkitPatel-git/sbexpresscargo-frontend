@@ -12,6 +12,7 @@ export const MIS_REPORT_COLUMNS = [
   "toZone",
   "serviceCenter",
   "productName",
+  "actualWeight",
   "declaredWeight",
   "chargeWeight",
   "shipmentTotalValue",

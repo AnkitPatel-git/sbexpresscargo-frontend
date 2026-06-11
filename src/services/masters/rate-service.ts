@@ -378,14 +378,16 @@ export const rateService = {
 
   async parseBaseRateMatrix(
     file: File,
-    fixedMaxKg: number,
+    fixedMaxKg: number | null,
   ): Promise<{
     importedPairs: number;
     rateSlabs: RateRouteSlabPayload[];
   }> {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("fixedMaxKg", String(fixedMaxKg));
+    if (fixedMaxKg != null) {
+      formData.append("fixedMaxKg", String(fixedMaxKg));
+    }
     const response = await apiFetch(`${API_URL}/rate-master/base-rate-matrix/parse`, {
       method: "POST",
       headers: authHeaders(),
@@ -408,14 +410,16 @@ export const rateService = {
   async importBaseRateMatrix(
     rateMasterId: number,
     file: File,
-    fixedMaxKg: number,
+    fixedMaxKg: number | null,
   ): Promise<{
     importedPairs: number;
     rateMaster: RateMasterSingleResponse["data"];
   }> {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("fixedMaxKg", String(fixedMaxKg));
+    if (fixedMaxKg != null) {
+      formData.append("fixedMaxKg", String(fixedMaxKg));
+    }
     const response = await apiFetch(`${API_URL}/rate-master/${rateMasterId}/base-rate-matrix/import`, {
       method: "POST",
       headers: authHeaders(),

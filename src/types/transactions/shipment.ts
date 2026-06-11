@@ -1,9 +1,29 @@
 import * as z from "zod";
 
 import { optionalMasterCode } from "@/lib/master-code-schema";
+import {
+  SHIPMENT_COD_TOPAY_AMOUNT_LABEL,
+  SHIPMENT_COD_TOPAY_LABEL,
+} from "@/lib/shipment-payment-label";
 
 /** E-waybill is mandatory when invoice value exceeds this amount (Indian GST rules). */
 export const EWAYBILL_MANDATORY_INVOICE_THRESHOLD = 50_000;
+
+export const SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES = 2;
+
+export function roundShipmentTotalValue(
+  value: number | undefined | null,
+): number | undefined {
+  if (value == null || !Number.isFinite(value)) return undefined;
+  const factor = 10 ** SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES;
+  return Math.round(value * factor) / factor;
+}
+
+export function hasAtMostShipmentTotalValueDecimals(value: number): boolean {
+  if (!Number.isFinite(value)) return false;
+  const factor = 10 ** SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES;
+  return Math.round(value * factor) / factor === value;
+}
 
 export function getEwaybillRequiredMessage(
   shipmentTotalValue: number | undefined | null,
@@ -303,6 +323,15 @@ export const shipmentSchema = z.object({
       path: ["shipmentTotalValue"],
       message: "Invoice Value is required",
     })
+  } else if (
+    values.shipmentTotalValue != null &&
+    !hasAtMostShipmentTotalValueDecimals(Number(values.shipmentTotalValue))
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["shipmentTotalValue"],
+      message: `Invoice value can have at most ${SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES} decimal places`,
+    })
   }
 
   if (values.km == null || Number(values.km) <= 0) {
@@ -317,7 +346,7 @@ export const shipmentSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["codAmount"],
-      message: "COD Amount is required when COD is checked",
+      message: `${SHIPMENT_COD_TOPAY_AMOUNT_LABEL} is required when ${SHIPMENT_COD_TOPAY_LABEL} is checked`,
     })
   }
 
@@ -647,6 +676,24 @@ export interface ForwardingRatePreviewData {
     charges?: Array<{ name: string; amount: number }>;
   };
   profit: number;
+}
+
+/** `GET /transaction/shipment/:id/forwarding-options` — vendor + service rows for forwarding selection. */
+export interface ForwardingVendorOption {
+  vendorId: number;
+  vendorName: string;
+  serviceMapId: number;
+  serviceType: string | null;
+  vendorTotalAmount: number | null;
+  profit: number | null;
+  rateAvailable: boolean;
+}
+
+export interface ForwardingOptionsData {
+  customerTotalAmount: number | null;
+  options: ForwardingVendorOption[];
+  noVendorsAvailable?: boolean;
+  message?: string | null;
 }
 
 export interface ApiEnvelope<T> {

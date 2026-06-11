@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { format } from "date-fns";
 import type { Shipment } from "@/types/transactions/shipment";
+import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
 import { cn } from "@/lib/utils";
 
 const OFFICE_LINES = [
@@ -26,14 +27,6 @@ const TERMS = [
 function fb(v?: string | number | null): string {
     if (v === null || v === undefined || v === "") return "";
     return String(v);
-}
-
-function paymentLabel(p: string): string {
-    const u = p.toUpperCase();
-    if (u === "CREDIT") return "CREDIT";
-    if (u === "CASH") return "CASH";
-    if (u === "TO_PAY") return "TO PAY";
-    return u || "—";
 }
 
 function stateFrom(
@@ -98,17 +91,6 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
             ? `${Number(shipment.shipmentTotalValue)} INR`
             : "—";
 
-    const awb = shipment.awbNo ?? "";
-    const awbBreakable = awb.replace(/-/g, "-\u200B");
-    const awbFontClass =
-        awb.length > 28
-            ? "text-[9px] tracking-tight"
-            : awb.length > 22
-              ? "text-[10px] tracking-tight"
-              : awb.length > 16
-                ? "text-xs tracking-tight"
-                : "text-sm tracking-tight";
-
     const cell = "border border-black px-1.5 py-0.5 text-black";
     const lbl = "text-[9px] font-bold uppercase leading-tight tracking-tight";
     const val = "text-[11px] font-normal leading-snug break-words min-h-[1.1rem]";
@@ -123,7 +105,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
             <div className="min-w-[520px] p-2 sm:min-w-0 sm:p-3">
                 {/* Header */}
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_158px] border border-black">
-                    <div className="flex min-h-[58px] items-center justify-center border-r border-black bg-white p-1.5">
+                    <div className="flex min-h-[78px] items-center justify-center border-r border-black bg-white p-1.5">
                         <div className="flex w-full max-w-[110px] items-center justify-center bg-white px-1 py-0.5">
                             <Image
                                 src="/logo/logo.png"
@@ -136,24 +118,16 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                             />
                         </div>
                     </div>
-                    <div className="flex flex-col items-center justify-center border-r border-black px-2 py-2 text-center">
+                    <div className="flex min-h-[78px] flex-col items-center justify-center border-r border-black px-2 py-2 text-center">
                         {OFFICE_LINES.map((line) => (
                             <div key={line} className="text-[10px] font-bold leading-tight">
                                 {line}
                             </div>
                         ))}
                     </div>
-                    <div className="flex min-w-0 flex-col items-center justify-center px-1 py-1 text-center">
-                        <div
-                            className={cn(
-                                "max-w-full font-mono font-bold leading-tight break-all",
-                                awbFontClass,
-                            )}
-                        >
-                            {awbBreakable}
-                        </div>
-                        <div className="mt-1 text-[8px] font-medium text-neutral-500">
-                            Barcode on downloaded PDF
+                    <div className="flex min-h-[78px] min-w-0 flex-col items-center justify-center px-1 py-1 text-center">
+                        <div className="text-[8px] font-medium text-neutral-500">
+                            AWB barcode on downloaded PDF
                         </div>
                     </div>
                 </div>
@@ -239,55 +213,55 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                     <div className={cn(val, "py-0.5")}>{fb(shipment.referenceNo) || "—"}</div>
                 </div>
 
-                {/* Goods / pieces — row height follows description */}
+                {/* Goods / pieces — compact row height */}
                 <div className="grid auto-rows-min grid-cols-[28%_22%_14%_18%_18%] items-stretch border border-t-0 border-black">
-                    <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black")}>
+                    <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black py-0.5")}>
                         <div className={lbl}>DESCRIPTION OF GOODS:</div>
-                        <div className={cn(val, "min-h-0 flex-1")}>{description}</div>
+                        <div className={cn(val, "min-h-0 flex-1 leading-tight")}>{description}</div>
                     </div>
-                    <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black")}>
+                    <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black py-0.5")}>
                         <div className={lbl}>PIECES:</div>
-                        <div className="flex min-h-[2.5rem] flex-1 items-center justify-center text-lg font-bold">
+                        <div className="flex min-h-[1.75rem] flex-1 items-center justify-center text-base font-bold">
                             {piecesTotal}
                         </div>
                     </div>
-                    <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black")}>
+                    <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black py-0.5")}>
                         <div className={lbl}>MODE:</div>
-                        <div className="mt-2 flex flex-1 items-center justify-center text-center text-xs font-bold">
+                        <div className="mt-1 flex flex-1 items-center justify-center text-center text-[11px] font-bold">
                             {(shipment.product?.productName || shipment.product?.name || "SURFACE").toUpperCase()}
                         </div>
                     </div>
                     <div className={cn(cell, "border-r border-black p-0")}>
-                        <div className="bg-black px-1.5 py-1 text-center text-[9px] font-bold text-white">SHIPMENT VALUE</div>
-                        <div className="px-1.5 py-2 text-[11px]">Value: {valStr}</div>
+                        <div className="bg-black px-1.5 py-0.5 text-center text-[9px] font-bold text-white">SHIPMENT VALUE</div>
+                        <div className="px-1.5 py-1 text-[11px]">Value: {valStr}</div>
                     </div>
                     <div className={cn(cell, "p-0")}>
-                        <div className="bg-black px-1.5 py-1 text-center text-[9px] font-bold text-white">BOOKING DATE</div>
-                        <div className="px-1.5 py-2 text-[11px]">Date: {bookFmt}</div>
+                        <div className="bg-black px-1.5 py-0.5 text-center text-[9px] font-bold text-white">BOOKING DATE</div>
+                        <div className="px-1.5 py-1 text-[11px]">Date: {bookFmt}</div>
                     </div>
                 </div>
 
-                {/* Payment strip */}
-                <div className="grid grid-cols-[58%_42%] border border-t-0 border-black">
-                    <div className={cn(cell, "border-r border-black whitespace-pre-line text-[10px] font-bold leading-snug")}>
-                        {PAYMENT_NOTE}
+                {/* GST / Invoice / E-way — single row, equal columns */}
+                <div className="grid grid-cols-3 border border-t-0 border-black text-[10px]">
+                    <div className={cn(cell, "border-r border-black py-1")}>
+                        <span className="font-bold">GSTIN:</span>{" "}
+                        <span className="font-normal">{fb(shipment.customer?.gstNo) || "—"}</span>
                     </div>
-                    <div className={cn(cell, "space-y-1 text-[10px]")}>
-                        <div>
-                            <span className="font-bold">GSTIN:</span>{" "}
-                            <span className="font-normal">{fb(shipment.customer?.gstNo) || "—"}</span>
-                        </div>
-                        <div>
-                            <span className="font-bold">INVOICE NO:</span>{" "}
-                            <span className="font-normal">
-                                {[fb(shipment.invoiceNumber), fb(shipment.invoiceDate?.split("T")[0])].filter(Boolean).join(" / ") || "—"}
-                            </span>
-                        </div>
-                        <div>
-                            <span className="font-bold">EWAY BILL NO:</span>{" "}
-                            <span className="font-normal">{fb(shipment.ewaybillNumber) || "—"}</span>
-                        </div>
+                    <div className={cn(cell, "border-r border-black py-1")}>
+                        <span className="font-bold">INVOICE NO:</span>{" "}
+                        <span className="font-normal">
+                            {[fb(shipment.invoiceNumber), fb(shipment.invoiceDate?.split("T")[0])].filter(Boolean).join(" / ") || "—"}
+                        </span>
                     </div>
+                    <div className={cn(cell, "py-1")}>
+                        <span className="font-bold">EWAY BILL NO:</span>{" "}
+                        <span className="font-normal">{fb(shipment.ewaybillNumber) || "—"}</span>
+                    </div>
+                </div>
+
+                {/* Payment note */}
+                <div className={cn(cell, "border border-t-0 border-black whitespace-pre-line text-[10px] font-bold leading-snug")}>
+                    {PAYMENT_NOTE}
                 </div>
 
                 {/* Bottom: agreement + terms | spacer | billing — row height from content */}
@@ -327,7 +301,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                     />
                     <div className={cn(cell, "border-0 p-0")}>
                         <div className="bg-black px-2 py-1.5 text-center text-[10px] font-bold text-white">METHOD OF PAYMENT</div>
-                        <div className="px-2 py-1 text-sm font-bold">{paymentLabel(shipment.paymentType)}</div>
+                        <div className="px-2 py-1 text-sm font-bold">{formatShipmentPaymentTypeLabel(shipment.paymentType)}</div>
                     </div>
                 </div>
 

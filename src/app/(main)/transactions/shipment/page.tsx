@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useAuth } from "@/context/auth-context";
 import { isSuperAdminRole, MASTER_READ } from "@/lib/portal-permissions";
+import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import { userService } from "@/services/user-service";
@@ -57,13 +58,20 @@ export default function ShipmentsPage() {
   const { user, hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
   const isSuperAdmin = isSuperAdminRole(user?.role?.identifier);
   const canReadCustomers = hasPermission(MASTER_READ.customer);
-  const tableColSpan = 14;
+  const tableColSpan = 15;
 
   const formatInvoiceValue = (value: number | string | null | undefined) => {
     if (value == null || value === "") return "—";
     const amount = Number(value);
     if (!Number.isFinite(amount)) return "—";
     return amount.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  };
+
+  const formatActualWeight = (value: number | string | null | undefined) => {
+    if (value == null || value === "") return "—";
+    const weight = Number(value);
+    if (!Number.isFinite(weight)) return "—";
+    return weight.toLocaleString("en-IN", { maximumFractionDigits: 3 });
   };
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null);
@@ -331,6 +339,18 @@ export default function ShipmentsPage() {
               <FileSpreadsheet className="h-4 w-4" />
               Bulk import
             </Button>
+            <PermissionGuard permission="transaction.shipment.update">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 gap-2 px-3 font-semibold"
+                onClick={() => router.push("/transactions/shipment/bulk-forwarding")}
+                title="Bulk forwarding update from Excel"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Bulk forwarding
+              </Button>
+            </PermissionGuard>
             <Button
               type="button"
               variant="default"
@@ -379,6 +399,9 @@ export default function ShipmentsPage() {
                 <SortableColumnHeader label="Pieces" field="pieces" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
               <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Actual Weight" field="declaredWeight" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="Invoice Value" field="shipmentTotalValue" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
@@ -411,9 +434,10 @@ export default function ShipmentsPage() {
                   <TableCell>{shipment.origin || "—"}</TableCell>
                   <TableCell>{shipment.destination || "—"}</TableCell>
                   <TableCell>{shipment.product?.productName || shipment.product?.name || "—"}</TableCell>
-                  <TableCell>{shipment.paymentType || "—"}</TableCell>
+                  <TableCell>{formatShipmentPaymentTypeLabel(shipment.paymentType)}</TableCell>
                   <TableCell>{shipment.currentStatus || "—"}</TableCell>
                   <TableCell>{shipment.pieces ?? "—"}</TableCell>
+                  <TableCell>{formatActualWeight(shipment.declaredWeight)}</TableCell>
                   <TableCell>{formatInvoiceValue(shipment.shipmentTotalValue)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">

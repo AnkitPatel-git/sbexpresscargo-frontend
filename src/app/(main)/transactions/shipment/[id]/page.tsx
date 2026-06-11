@@ -20,6 +20,10 @@ import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
+import {
+  formatShipmentPaymentTypeLabel,
+  SHIPMENT_COD_TOPAY_LABEL,
+} from "@/lib/shipment-payment-label";
 import type { Shipment, ShipmentCharge } from "@/types/transactions/shipment";
 
 const fallbackText = (value?: string | number | null) => {
@@ -199,6 +203,25 @@ export default function ShipmentDetailsPage() {
             type="button"
             variant="outline"
             size="sm"
+            onClick={() => podProofDownloadMutation.mutate()}
+            disabled={!hasUploadedPod || podProofDownloadMutation.isPending}
+          >
+            {podProofDownloadMutation.isPending ? (
+              <>
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                Downloading…
+              </>
+            ) : (
+              <>
+                <Download className="mr-1 h-4 w-4" />
+                Uploaded POD
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={() => labelDownloadMutation.mutate(shipment.awbNo)}
             disabled={!shipment.awbNo?.trim() || labelDownloadMutation.isPending}
           >
@@ -251,9 +274,9 @@ export default function ShipmentDetailsPage() {
 
         <FormSection title="Service & Billing" contentClassName="space-y-2 text-sm">
           <p><span className="text-muted-foreground">Product:</span> {fallbackText(shipment.product?.productName || shipment.product?.name)}</p>
-          <p><span className="text-muted-foreground">Payment Type:</span> {fallbackText(shipment.paymentType)}</p>
+          <p><span className="text-muted-foreground">Payment Type:</span> {formatShipmentPaymentTypeLabel(shipment.paymentType)}</p>
           <p><span className="text-muted-foreground">Currency:</span> INR</p>
-          <p><span className="text-muted-foreground">COD:</span> {shipment.isCod ? `Yes (${fallbackText(shipment.codAmount)})` : "No"}</p>
+          <p><span className="text-muted-foreground">{SHIPMENT_COD_TOPAY_LABEL}:</span> {shipment.isCod ? `Yes (${fallbackText(shipment.codAmount)})` : "No"}</p>
           <PermissionGuard permission={SHIPMENT_CHARGE.read}>
             <p><span className="text-muted-foreground">Base Freight:</span> {fallbackText(shipment.baseFreight)}</p>
             <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(shipment.totalAmount)}</p>

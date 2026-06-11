@@ -35,6 +35,7 @@ import {
   optionLabelForSelect,
   PRICING_MODE_CONDITION_SLAB_OPTIONS,
   PRICING_MODE_FLAT_PER_KG_OPTIONS,
+  PRICING_MODE_ROUTE_WEIGHT_OPTIONS,
 } from "@/lib/select-closed-label";
 import type {
   CreateRateMasterPayload,
@@ -46,6 +47,7 @@ import type {
   RateRouteRateSlab,
   RateRouteSlabPayload,
   RateZoneRef,
+  RouteWeightSlabPricingMode,
   UpdateRateMasterPayload,
 } from "@/types/masters/rate";
 import type { Customer } from "@/types/masters/customer";
@@ -146,9 +148,38 @@ type WeightSlabDraft = {
   minWeight: string;
   maxWeight: string;
   rate: string;
-  pricingMode?: "FLAT" | "PER_KG";
+  pricingMode?: RouteWeightSlabPricingMode;
   applyFuel?: boolean;
 };
+
+function coerceRouteWeightSlabPricingMode(mode?: string): RouteWeightSlabPricingMode {
+  if (mode === "PER_KG") return "PER_KG";
+  if (mode === "FLAT_G") return "FLAT_G";
+  if (mode === "PER_500G") return "PER_500G";
+  return "FLAT";
+}
+
+function isGramRouteWeightPricingMode(mode?: string): boolean {
+  return mode === "FLAT_G" || mode === "PER_500G";
+}
+
+function weightSlabRatePlaceholder(mode?: string): string {
+  switch (mode) {
+    case "PER_KG":
+      return "Rate per kg";
+    case "FLAT_G":
+      return "Flat rate (g band)";
+    case "PER_500G":
+      return "Rate per 500 g";
+    default:
+      return "Total rate (kg band)";
+  }
+}
+
+function weightSlabBoundPlaceholder(mode: string | undefined, bound: "min" | "max"): string {
+  const unit = isGramRouteWeightPricingMode(mode) ? "g" : "kg";
+  return bound === "min" ? `Min weight (${unit})` : `Max weight (${unit})`;
+}
 
 type RouteSlabDraft = {
   id?: number;
@@ -156,6 +187,7 @@ type RouteSlabDraft = {
   toZoneId: string;
   minKm: string;
   maxKm: string;
+  minimumAmount: string;
   weightSlabs: WeightSlabDraft[];
 };
 
@@ -803,8 +835,10 @@ export function RateForm({ initialData }: RateFormProps) {
             />
             <RouteSlabsEditor
               title="Base rate"
-              description="Match by From Zone and To Zone; each slab needs at least one weight slab (Flat or Per kg). Use Excel above for bulk entry."
+              description="Match by From Zone and To Zone. Weight slabs support kg bands (Flat / Per kg) or gram bands (Flat g / Per 500 g). Chargeable shipment weight is converted to grams for gram bands."
               showKmBands={false}
+              showMinimumAmount
+              extendedWeightPricingModes
               slabs={routeSlabs}
               setSlabs={setRouteSlabs}
               zoneLabelById={zoneLabelById}
@@ -869,13 +903,25 @@ function mapRouteSlabsForApi(rows: RouteSlabRow[], mode: "route" | "oda" = "rout
       minWeight: Number(w.minWeight),
       maxWeight: Number(w.maxWeight),
       rate: Number(w.rate),
-      pricingMode: (w as { pricingMode?: string }).pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
+      pricingMode:
+        mode === "route"
+          ? coerceRouteWeightSlabPricingMode((w as { pricingMode?: string }).pricingMode)
+          : (w as { pricingMode?: string }).pricingMode === "PER_KG"
+            ? ("PER_KG" as const)
+            : ("FLAT" as const),
       applyFuel: (w as { applyFuel?: boolean }).applyFuel !== false,
     }));
     const slab: RateRouteSlabPayload = { weightSlabs: ws };
     if (mode === "route") {
       if (rest.fromZoneId != null && rest.fromZoneId !== undefined) slab.fromZoneId = Number(rest.fromZoneId);
       if (rest.toZoneId != null && rest.toZoneId !== undefined) slab.toZoneId = Number(rest.toZoneId);
+      if (
+        rest.minimumAmount != null &&
+        rest.minimumAmount !== undefined &&
+        Number.isFinite(Number(rest.minimumAmount))
+      ) {
+        slab.minimumAmount = Number(rest.minimumAmount);
+      }
     }
     if (rest.minKm != null && rest.minKm !== undefined && Number.isFinite(Number(rest.minKm))) slab.minKm = Number(rest.minKm);
     if (rest.maxKm != null && rest.maxKm !== undefined && Number.isFinite(Number(rest.maxKm))) slab.maxKm = Number(rest.maxKm);
@@ -1034,6 +1080,8 @@ function RouteSlabsEditor({
   description,
   showZones = true,
   showKmBands = true,
+  showMinimumAmount = false,
+  extendedWeightPricingModes = false,
   requireKmBands = false,
   slabs,
   setSlabs,
@@ -1046,6 +1094,10 @@ function RouteSlabsEditor({
   showZones?: boolean;
   /** When false (base rate), min/max km inputs are hidden and km is not saved on the row. */
   showKmBands?: boolean;
+  /** When true (base rate), optional minimum amount floor per zone pair. */
+  showMinimumAmount?: boolean;
+  /** When true (base rate), show FLAT_G and PER_500G pricing modes. */
+  extendedWeightPricingModes?: boolean;
   /** When true (ODA/EDL), min and max km are required and max must be greater than min. */
   requireKmBands?: boolean;
   slabs: RouteSlabRow[];
@@ -1058,6 +1110,7 @@ function RouteSlabsEditor({
     toZoneId: "",
     minKm: "",
     maxKm: "",
+    minimumAmount: "",
     weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -1073,18 +1126,23 @@ function RouteSlabsEditor({
       toZoneId: row.toZoneId != null ? String(row.toZoneId) : "",
       minKm: row.minKm != null ? String(row.minKm) : "",
       maxKm: row.maxKm != null ? String(row.maxKm) : "",
+      minimumAmount: row.minimumAmount != null ? String(row.minimumAmount) : "",
       weightSlabs:
         ws.length > 0
           ? ws.map((item) => ({
               minWeight: String(item.minWeight),
               maxWeight: String(item.maxWeight),
               rate: String(item.rate),
-              pricingMode: (item as { pricingMode?: string }).pricingMode === "PER_KG" ? "PER_KG" : "FLAT",
+              pricingMode: extendedWeightPricingModes
+                ? coerceRouteWeightSlabPricingMode((item as { pricingMode?: string }).pricingMode)
+                : (item as { pricingMode?: string }).pricingMode === "PER_KG"
+                  ? "PER_KG"
+                  : "FLAT",
               applyFuel: (item as { applyFuel?: boolean }).applyFuel !== false,
             }))
           : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
     });
-  }, [editingIndex, slabs]);
+  }, [editingIndex, extendedWeightPricingModes, slabs]);
 
   function resetDraft() {
     setDraft({
@@ -1093,6 +1151,7 @@ function RouteSlabsEditor({
       toZoneId: "",
       minKm: "",
       maxKm: "",
+      minimumAmount: "",
       weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
     });
     setEditingIndex(null);
@@ -1104,7 +1163,11 @@ function RouteSlabsEditor({
         minWeight: Number(item.minWeight),
         maxWeight: Number(item.maxWeight),
         rate: Number(item.rate),
-        pricingMode: item.pricingMode === "PER_KG" ? ("PER_KG" as const) : ("FLAT" as const),
+        pricingMode: extendedWeightPricingModes
+          ? coerceRouteWeightSlabPricingMode(item.pricingMode)
+          : item.pricingMode === "PER_KG"
+            ? ("PER_KG" as const)
+            : ("FLAT" as const),
         applyFuel: item.applyFuel !== false,
       }))
       .filter((item) => Number.isFinite(item.minWeight) && Number.isFinite(item.maxWeight) && Number.isFinite(item.rate));
@@ -1116,6 +1179,8 @@ function RouteSlabsEditor({
       showZones && draft.toZoneId && draft.toZoneId !== "__none__" ? Number(draft.toZoneId) : undefined;
     const minKmParsed = showKmBands && draft.minKm.trim() ? Number(draft.minKm) : undefined;
     const maxKmParsed = showKmBands && draft.maxKm.trim() ? Number(draft.maxKm) : undefined;
+    const minimumAmountParsed =
+      showMinimumAmount && draft.minimumAmount.trim() ? Number(draft.minimumAmount) : undefined;
 
     if (requireKmBands) {
       if (
@@ -1142,10 +1207,18 @@ function RouteSlabsEditor({
       ...(showZones && toZoneRef ? { toZone: toZoneRef } : {}),
       ...(showKmBands && minKmParsed !== undefined && Number.isFinite(minKmParsed) ? { minKm: minKmParsed } : {}),
       ...(showKmBands && maxKmParsed !== undefined && Number.isFinite(maxKmParsed) ? { maxKm: maxKmParsed } : {}),
+      ...(showMinimumAmount &&
+      minimumAmountParsed !== undefined &&
+      Number.isFinite(minimumAmountParsed)
+        ? { minimumAmount: minimumAmountParsed }
+        : {}),
     };
     if (!showKmBands) {
       next.minKm = undefined;
       next.maxKm = undefined;
+    }
+    if (!showMinimumAmount) {
+      next.minimumAmount = undefined;
     }
     if (!showZones) {
       next.fromZoneId = undefined;
@@ -1179,7 +1252,7 @@ function RouteSlabsEditor({
               ...item,
               [field]:
                 field === "pricingMode"
-                  ? (value as "FLAT" | "PER_KG")
+                  ? (value as RouteWeightSlabPricingMode)
                   : field === "applyFuel"
                     ? Boolean(value)
                     : String(value),
@@ -1243,7 +1316,8 @@ function RouteSlabsEditor({
         className={cn(
           "grid min-w-0 grid-cols-1 gap-4 [&>*]:min-w-0",
           showZones && showKmBands && "md:grid-cols-2 lg:grid-cols-4",
-          showZones && !showKmBands && "md:grid-cols-2",
+          showZones && !showKmBands && showMinimumAmount && "md:grid-cols-3",
+          showZones && !showKmBands && !showMinimumAmount && "md:grid-cols-2",
           !showZones && showKmBands && "md:grid-cols-2",
         )}
       >
@@ -1279,6 +1353,17 @@ function RouteSlabsEditor({
             />
           </>
         ) : null}
+        {showMinimumAmount ? (
+          <DecimalInput
+            placeholder="Min amount (optional)"
+            className={FLOATING_INNER_CONTROL}
+            value={draft.minimumAmount}
+            onValueChange={(n) =>
+              setDraft((current) => ({ ...current, minimumAmount: n === undefined ? "" : String(n) }))
+            }
+            min={0}
+          />
+        ) : null}
         {showKmBands ? (
           <>
             <IntegerInput
@@ -1311,14 +1396,14 @@ function RouteSlabsEditor({
           {draft.weightSlabs.map((item, index) => (
             <div key={index} className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">
               <IntegerInput
-                placeholder="Min weight"
+                placeholder={weightSlabBoundPlaceholder(item.pricingMode, "min")}
                 className={FLOATING_INNER_CONTROL}
                 value={item.minWeight}
                 onValueChange={(n) => updateWeightSlab(index, "minWeight", n === undefined ? "" : String(n))}
                 min={0}
               />
               <IntegerInput
-                placeholder="Max weight"
+                placeholder={weightSlabBoundPlaceholder(item.pricingMode, "max")}
                 className={FLOATING_INNER_CONTROL}
                 value={item.maxWeight}
                 onValueChange={(n) => updateWeightSlab(index, "maxWeight", n === undefined ? "" : String(n))}
@@ -1326,20 +1411,26 @@ function RouteSlabsEditor({
               />
               <Select
                 value={item.pricingMode ?? "FLAT"}
-                onValueChange={(value) => updateWeightSlab(index, "pricingMode", value)}
+                onValueChange={(value) =>
+                  updateWeightSlab(index, "pricingMode", value as RouteWeightSlabPricingMode)
+                }
               >
                 <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                  <SelectValue placeholder="Pricing">
-                    {optionLabelForSelect(item.pricingMode ?? "FLAT", PRICING_MODE_FLAT_PER_KG_OPTIONS)}
-                  </SelectValue>
+                  <SelectValue placeholder="Pricing" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="FLAT">Flat</SelectItem>
-                  <SelectItem value="PER_KG">Per kg</SelectItem>
+                  {(extendedWeightPricingModes
+                    ? PRICING_MODE_ROUTE_WEIGHT_OPTIONS
+                    : PRICING_MODE_FLAT_PER_KG_OPTIONS
+                  ).map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <DecimalInput
-                placeholder={item.pricingMode === "PER_KG" ? "Rate per kg" : "Total rate"}
+                placeholder={weightSlabRatePlaceholder(item.pricingMode)}
                 className={FLOATING_INNER_CONTROL}
                 value={item.rate}
                 onValueChange={(n) => updateWeightSlab(index, "rate", n === undefined ? "" : String(n))}
@@ -1392,6 +1483,9 @@ function RouteSlabsEditor({
               {showKmBands ? (
                 <TableHead className="font-semibold text-primary-foreground">Km</TableHead>
               ) : null}
+              {showMinimumAmount ? (
+                <TableHead className="font-semibold text-primary-foreground">Min amount</TableHead>
+              ) : null}
               <TableHead className="font-semibold text-primary-foreground">Weight slabs</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
@@ -1400,7 +1494,7 @@ function RouteSlabsEditor({
             {slabs.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={(showZones ? 2 : 0) + (showKmBands ? 1 : 0) + 2}
+                  colSpan={(showZones ? 2 : 0) + (showKmBands ? 1 : 0) + (showMinimumAmount ? 1 : 0) + 2}
                   className="h-24 text-center text-muted-foreground"
                 >
                   No slabs yet. Add at least one weight slab per row.
@@ -1423,6 +1517,9 @@ function RouteSlabsEditor({
                     <TableCell>
                       {row.minKm != null || row.maxKm != null ? `${row.minKm ?? "—"} – ${row.maxKm ?? "—"}` : "—"}
                     </TableCell>
+                  ) : null}
+                  {showMinimumAmount ? (
+                    <TableCell>{row.minimumAmount != null ? row.minimumAmount : "—"}</TableCell>
                   ) : null}
                   <TableCell>{row.weightSlabs?.length ?? 0}</TableCell>
                   <TableCell>
