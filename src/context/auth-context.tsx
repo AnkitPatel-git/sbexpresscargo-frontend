@@ -6,6 +6,7 @@ import Cookies from "js-cookie"
 import { useRouter } from "next/navigation"
 import { userService } from "@/services/user-service"
 import { authApi } from "@/lib/api-client"
+import { isAuthFailureMessage, redirectToLogin } from "@/lib/auth-session"
 import { hasPortalPermission } from "@/lib/portal-permissions"
 import type { UtilityUser } from "@/types/utilities/user"
 
@@ -103,8 +104,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     setUser(parsed)
                 }
-            } catch {
-                // Keep stored session; pages gate API calls on permissions.
+            } catch (error) {
+                const message = error instanceof Error ? error.message : ""
+                if (isAuthFailureMessage(message)) {
+                    redirectToLogin()
+                    return
+                }
                 if (!cancelled) setUser(parsed)
             } finally {
                 if (!cancelled) setIsLoading(false)

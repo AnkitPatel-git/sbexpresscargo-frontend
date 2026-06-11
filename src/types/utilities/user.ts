@@ -108,4 +108,7 @@ export interface ListUsersParams {
   mobile?: string;
   status?: UserStatus;
   roleId?: number;
+  applicationType?: "portal" | "mobile";
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
 }

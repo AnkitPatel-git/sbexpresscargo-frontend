@@ -1,72 +1,45 @@
+import {
+    isLoginRequest,
+    redirectToLogin,
+    responseIndicatesAuthFailure,
+} from "@/lib/auth-session";
+
 let healthCheckPromise: Promise<boolean> | null = null;
 
 function isBrowser() {
-    return typeof window !== 'undefined';
-}
-
-function isLoginRequest(input: RequestInfo | URL): boolean {
-    const urlStr = typeof input === 'string' ? input : input.toString();
-    return urlStr.includes('/utilities/users/login') || urlStr.includes('/users/login');
-}
-
-function isAuthFailureMessage(message: unknown): boolean {
-    if (typeof message !== 'string') return false;
-    return /session expired|session no longer valid|please login again|logged in on another device|unauthorized/i.test(
-        message,
-    );
-}
-
-async function responseIndicatesAuthFailure(response: Response): Promise<boolean> {
-    if (response.status === 401) return true;
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) return false;
-    try {
-        const body = (await response.clone().json()) as { success?: boolean; message?: string };
-        return body.success === false && isAuthFailureMessage(body.message);
-    } catch {
-        return false;
-    }
+    return typeof window !== "undefined";
 }
 
 function isHealthRequest(input: RequestInfo | URL): boolean {
-    const urlStr = typeof input === 'string' ? input : input.toString();
-    return urlStr.includes('/health');
+    const urlStr = typeof input === "string" ? input : input.toString();
+    return urlStr.includes("/health");
 }
 
 function healthUrlFrom(input: RequestInfo | URL): string {
-    const raw = typeof input === 'string' ? input : input.toString();
+    const raw = typeof input === "string" ? input : input.toString();
 
     try {
-        const url = new URL(raw, isBrowser() ? window.location.origin : 'http://localhost');
-        const apiIndex = url.pathname.indexOf('/api/');
-        url.pathname = apiIndex >= 0 ? `${url.pathname.slice(0, apiIndex)}/api/health` : '/api/health';
-        url.search = '';
-        url.hash = '';
+        const url = new URL(raw, isBrowser() ? window.location.origin : "http://localhost");
+        const apiIndex = url.pathname.indexOf("/api/");
+        url.pathname = apiIndex >= 0 ? `${url.pathname.slice(0, apiIndex)}/api/health` : "/api/health";
+        url.search = "";
+        url.hash = "";
 
         if (!/^https?:\/\//i.test(raw) && isBrowser()) {
             return `${url.pathname}${url.search}${url.hash}`;
         }
         return url.toString();
     } catch {
-        return '/api/health';
+        return "/api/health";
     }
-}
-
-function redirectToLogin() {
-    if (!isBrowser() || window.location.pathname === '/login') return;
-
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
-    document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    window.location.href = '/login';
 }
 
 async function checkHealth(input: RequestInfo | URL): Promise<boolean> {
     if (healthCheckPromise) return healthCheckPromise;
 
     healthCheckPromise = fetch(healthUrlFrom(input), {
-        method: 'GET',
-        cache: 'no-store',
+        method: "GET",
+        cache: "no-store",
     })
         .then((response) => response.ok)
         .catch(() => false)

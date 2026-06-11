@@ -43,6 +43,9 @@ export const userService = {
     if (params.mobile) query.append("mobile", params.mobile);
     if (params.status) query.append("status", params.status);
     if (params.roleId) query.append("roleId", String(params.roleId));
+    if (params.applicationType) query.append("applicationType", params.applicationType);
+    if (params.sortBy) query.append("sortBy", params.sortBy);
+    if (params.sortOrder) query.append("sortOrder", params.sortOrder);
     return apiClient<PaginatedResponse<UtilityUser>>(`${USERS}?${query.toString()}`);
   },
 

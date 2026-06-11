@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -14,11 +14,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { optionLabelById } from "@/lib/select-closed-label";
 import { OutlinedFieldShell, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
+import { useDebounce } from "@/hooks/use-debounce";
+import { cn } from "@/lib/utils";
+
+type UserFilter = "all" | "portal" | "mobile";
+
+const LIMIT = 10;
 
 export default function UserSetupPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("user");
+  const [userFilter, setUserFilter] = useState<UserFilter>("all");
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState("username");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [isOpen, setIsOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState({
@@ -33,9 +46,41 @@ export default function UserSetupPage() {
     weightType: "Kgs",
   });
 
+  const listBaseParams = {
+    limit: LIMIT,
+    search: debouncedSearch,
+    status: "ACTIVE" as const,
+    sortBy,
+    sortOrder,
+  };
+
   const { data: usersResp, isLoading } = useQuery({
-    queryKey: ["utility-users", page, search],
-    queryFn: () => userService.listUsers({ page, limit: 10, search, status: "ACTIVE" }),
+    queryKey: ["utility-users", page, debouncedSearch, userFilter, selectedRoleId, sortBy, sortOrder],
+    queryFn: () =>
+      userService.listUsers({
+        page,
+        ...listBaseParams,
+        ...(userFilter === "portal" && { applicationType: "portal" }),
+        ...(userFilter === "mobile" && { applicationType: "mobile" }),
+        ...(selectedRoleId != null && { roleId: selectedRoleId }),
+      }),
+  });
+
+  const { data: totalCountResp } = useQuery({
+    queryKey: ["utility-users-count", "all", debouncedSearch],
+    queryFn: () => userService.listUsers({ page: 1, limit: 1, search: debouncedSearch, status: "ACTIVE" }),
+  });
+
+  const { data: portalCountResp } = useQuery({
+    queryKey: ["utility-users-count", "portal", debouncedSearch],
+    queryFn: () =>
+      userService.listUsers({ page: 1, limit: 1, search: debouncedSearch, status: "ACTIVE", applicationType: "portal" }),
+  });
+
+  const { data: mobileCountResp } = useQuery({
+    queryKey: ["utility-users-count", "mobile", debouncedSearch],
+    queryFn: () =>
+      userService.listUsers({ page: 1, limit: 1, search: debouncedSearch, status: "ACTIVE", applicationType: "mobile" }),
   });
 
   const { data: rolesResp } = useQuery({
@@ -45,12 +90,13 @@ export default function UserSetupPage() {
 
   const users = usersResp?.data ?? [];
   const roles = rolesResp?.data ?? [];
-
-  const userCounts = useMemo(() => {
-    const portal = users.filter((u: any) => (u.profile?.applicationType || "").toLowerCase() === "portal").length;
-    const mobile = users.filter((u: any) => (u.profile?.applicationType || "").toLowerCase() === "mobile").length;
-    return { portal, mobile, total: users.length };
-  }, [users]);
+  const selectedRole = roles.find((r: { id: number }) => r.id === selectedRoleId) ?? null;
+  const totalPages = usersResp?.meta?.totalPages ?? 1;
+  const userCounts = {
+    portal: portalCountResp?.meta?.total ?? 0,
+    mobile: mobileCountResp?.meta?.total ?? 0,
+    total: totalCountResp?.meta?.total ?? 0,
+  };
 
   const resolveApplicationType = (roleId: string) => {
     const role = roles.find((r: { id: number; identifier?: string }) => String(r.id) === roleId);
@@ -79,6 +125,7 @@ export default function UserSetupPage() {
     onSuccess: () => {
       toast.success(editId ? "User updated successfully" : "User created successfully");
       queryClient.invalidateQueries({ queryKey: ["utility-users"] });
+      queryClient.invalidateQueries({ queryKey: ["utility-users-count"] });
       setIsOpen(false);
       setEditId(null);
       setForm({
@@ -100,6 +147,7 @@ export default function UserSetupPage() {
     mutationFn: ({ id, status }: { id: number; status: "ACTIVE" | "INACTIVE" }) => userService.changeUserStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["utility-users"] });
+      queryClient.invalidateQueries({ queryKey: ["utility-users-count"] });
       toast.success("User status updated");
     },
     onError: (error: Error) => toast.error(error.message || "Failed to update status"),
@@ -121,9 +169,44 @@ export default function UserSetupPage() {
     setIsOpen(true);
   };
 
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  };
+
+  const applyUserFilter = (filter: UserFilter) => {
+    setUserFilter(filter);
+    setSelectedRoleId(null);
+    setActiveTab("user");
+    setPage(1);
+  };
+
+  const applyRoleFilter = (roleId: number) => {
+    setSelectedRoleId(roleId);
+    setUserFilter("all");
+    setActiveTab("user");
+    setPage(1);
+  };
+
+  const clearRoleFilter = () => {
+    setSelectedRoleId(null);
+    setPage(1);
+  };
+
+  const filterChipClass = (active: boolean) =>
+    cn(
+      "cursor-pointer rounded border px-2 py-1 transition-colors hover:bg-muted",
+      active && "border-primary bg-primary/10 font-medium text-primary",
+    );
+
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
-      <Tabs defaultValue="user">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="mb-3 flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="user">User</TabsTrigger>
@@ -131,8 +214,25 @@ export default function UserSetupPage() {
           </TabsList>
 
           <div className="flex items-center gap-2">
-            <Input className="h-8 w-44" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <Button type="button" size="icon" variant="outline" className="h-8 w-8" onClick={() => queryClient.refetchQueries({ queryKey: ["utility-users"], type: "active" })}>
+            <Input
+              className="h-8 w-44"
+              placeholder="Search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="h-8 w-8"
+              onClick={() => {
+                queryClient.refetchQueries({ queryKey: ["utility-users"], type: "active" });
+                queryClient.refetchQueries({ queryKey: ["utility-users-count"], type: "active" });
+              }}
+            >
               <RefreshCw className="h-4 w-4" />
             </Button>
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -190,22 +290,55 @@ export default function UserSetupPage() {
         </div>
 
         <div className="mb-3 flex flex-wrap gap-2 text-xs">
-          <span className="rounded border px-2 py-1">Portal Users {userCounts.portal}</span>
-          <span className="rounded border px-2 py-1">Mobile Users {userCounts.mobile}</span>
-          <span className="rounded border px-2 py-1">Total {userCounts.total}</span>
-          <span className="rounded border px-2 py-1">Group {roles.length}</span>
+          <button type="button" className={filterChipClass(activeTab === "user" && userFilter === "portal")} onClick={() => applyUserFilter("portal")}>
+            Portal Users {userCounts.portal}
+          </button>
+          <button type="button" className={filterChipClass(activeTab === "user" && userFilter === "mobile")} onClick={() => applyUserFilter("mobile")}>
+            Mobile Users {userCounts.mobile}
+          </button>
+          <button type="button" className={filterChipClass(activeTab === "user" && userFilter === "all" && selectedRoleId == null)} onClick={() => applyUserFilter("all")}>
+            Total {userCounts.total}
+          </button>
+          <button
+            type="button"
+            className={filterChipClass(activeTab === "group" && selectedRoleId == null)}
+            onClick={() => {
+              setActiveTab("group");
+              setPage(1);
+            }}
+          >
+            Group {roles.length}
+          </button>
         </div>
+
+        {activeTab === "user" && selectedRole && (
+          <div className="mb-3 flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Showing users in group:</span>
+            <span className="rounded border border-primary bg-primary/10 px-2 py-1 font-medium text-primary">
+              {selectedRole.name}
+            </span>
+            <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={clearRoleFilter}>
+              Clear
+            </button>
+          </div>
+        )}
 
         <TabsContent value="user">
           <div className="overflow-x-auto rounded-md border border-border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-primary hover:bg-primary">
-                  <TableHead className="text-primary-foreground">Name</TableHead>
-                  <TableHead className="text-primary-foreground">Group</TableHead>
+                  <TableHead className="font-semibold text-primary-foreground">
+                    <SortableColumnHeader label="Name" field="username" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </TableHead>
+                  <TableHead className="font-semibold text-primary-foreground">
+                    <SortableColumnHeader label="Group" field="roleId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </TableHead>
                   <TableHead className="text-primary-foreground">Company</TableHead>
                   <TableHead className="text-primary-foreground">Application Type</TableHead>
-                  <TableHead className="text-primary-foreground">Status</TableHead>
+                  <TableHead className="font-semibold text-primary-foreground">
+                    <SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                  </TableHead>
                   <TableHead className="text-primary-foreground text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -256,7 +389,14 @@ export default function UserSetupPage() {
                 {roles.length === 0 ? (
                   <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No groups found.</TableCell></TableRow>
                 ) : roles.map((r: any) => (
-                  <TableRow key={r.id}>
+                  <TableRow
+                    key={r.id}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/50",
+                      selectedRoleId === r.id && "bg-primary/5",
+                    )}
+                    onClick={() => applyRoleFilter(r.id)}
+                  >
                     <TableCell>{r.name}</TableCell>
                     <TableCell>{r.identifier}</TableCell>
                     <TableCell>Active</TableCell>
@@ -268,11 +408,13 @@ export default function UserSetupPage() {
         </TabsContent>
       </Tabs>
 
-      <div className="mt-3 flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>{"<"}</Button>
-        <span className="text-sm">{page}</span>
-        <Button type="button" variant="outline" size="sm" onClick={() => setPage((p) => p + 1)}>{">"}</Button>
-      </div>
+      {activeTab === "user" && (
+        <div className="mt-3 flex items-center justify-end gap-2">
+          <Button type="button" variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>{"<"}</Button>
+          <span className="text-sm">{page} / {totalPages}</span>
+          <Button type="button" variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>{">"}</Button>
+        </div>
+      )}
     </div>
   );
 }
