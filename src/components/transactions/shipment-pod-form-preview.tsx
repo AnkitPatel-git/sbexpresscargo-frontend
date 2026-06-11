@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { format } from "date-fns";
 import type { Shipment } from "@/types/transactions/shipment";
+import { formatDateOnlyDdMmYyyy } from "@/lib/format-date-only";
 import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
 import { cn } from "@/lib/utils";
 
@@ -79,9 +79,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
     }
     const description = goodsNames.size > 0 ? [...goodsNames].join(", ") : "—";
 
-    const bookFmt = shipment.bookDate
-        ? format(new Date(shipment.bookDate), "dd/MM/yyyy")
-        : "—";
+    const bookFmt = formatDateOnlyDdMmYyyy(shipment.bookDate);
 
     const declared = Number(shipment.declaredWeight ?? 0);
     const declaredStr = Number.isFinite(declared) ? declared.toFixed(3) : "0.000";
