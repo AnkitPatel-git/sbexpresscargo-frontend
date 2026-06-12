@@ -125,8 +125,8 @@ export default function ShipmentBulkImportPage() {
           codes, <strong>product code</strong>, and <strong>service center</strong> code. Provide <strong>shipper code</strong> only (address comes from shipper master). From/to zones are resolved
           automatically from the shipper pincode and consignee pincode — do not include zone columns.{" "}
           <strong>Consignee</strong> columns match or create a consignee like manual booking.{" "}
-          <strong>Floor Delivery</strong> is Yes/No; <strong>Floor Count</strong> is a number (
-          <span className="font-mono">0</span> when No, or floors &gt; 0 when Yes).{" "}
+          <strong>Floor Count</strong> is a number (
+          <span className="font-mono">0</span> if no floor delivery; else number of floors &gt; 0).{" "}
           <strong>Content</strong> is matched by <span className="font-mono">contentName</span> (trimmed, case-insensitive;
           optional <span className="font-mono">contentCode</span> still works). For several cartons with different sizes or
           contents, add a <span className="font-mono">Pieces</span> sheet: each line sets{" "}

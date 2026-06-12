@@ -329,10 +329,10 @@ export default function PodPage() {
                                         Status
                                     </TableHead>
                                     <TableHead className="text-center font-semibold text-primary-foreground">
-                                        Upload POD
+                                        POD
                                     </TableHead>
                                     <TableHead className="text-center font-semibold text-primary-foreground">
-                                        Blank POD
+                                        DRS
                                     </TableHead>
                                 </TableRow>
                                 <TableRow className="border-b border-border bg-card hover:bg-card">

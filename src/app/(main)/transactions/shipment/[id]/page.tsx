@@ -214,7 +214,7 @@ export default function ShipmentDetailsPage() {
             ) : (
               <>
                 <Download className="mr-1 h-4 w-4" />
-                Uploaded POD
+                Download pod
               </>
             )}
           </Button>
