@@ -225,10 +225,10 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         bookDate: toDateInputValue(shipment?.bookDate),
         bookTime: shipment?.bookTime || format(new Date(), "HH:mm"),
         referenceNo: shipment?.referenceNo || '',
-        customerId: shipmentRef?.customerId || 0,
-        clientId: shipmentRef?.customerId || 0,
-        shipperId: shipmentRef?.shipperId || 0,
-        consigneeId: shipmentRef?.consigneeId || 0,
+        customerId: normalizeMasterSelectId(shipmentRef?.customerId ?? shipmentRef?.customer?.id),
+        clientId: normalizeMasterSelectId(shipmentRef?.customerId ?? shipmentRef?.customer?.id),
+        shipperId: normalizeMasterSelectId(shipmentRef?.shipperId ?? shipmentRef?.shipper?.id),
+        consigneeId: normalizeMasterSelectId(shipmentRef?.consigneeId ?? shipmentRef?.consignee?.id),
         ewaybillNumber: shipmentRef?.ewaybillNumber || '',
         shipper: shipperRef ? {
             shipperName: shipperRef.shipperName || shipperRef.name || '',
@@ -565,6 +565,56 @@ const toServiceCenterComboboxOption = (serviceCenter: {
     }
 }
 
+const toCustomerComboboxOption = (customer: {
+    id?: unknown
+    name?: string | null
+}): { label: string; value: number } | null => {
+    const value = normalizeMasterSelectId(customer.id)
+    if (value <= 0) return null
+    return {
+        value,
+        label: toSafeOptionLabel(customer.name, `Customer #${value}`),
+    }
+}
+
+const toShipperComboboxOption = (shipper: {
+    id?: unknown
+    shipperCode?: string | null
+    shipperName?: string | null
+    name?: string | null
+} | null | undefined): { label: string; value: number } | null => {
+    const value = normalizeMasterSelectId(shipper?.id)
+    if (value <= 0) return null
+    const code = strOrEmpty(shipper?.shipperCode)
+    const name = strOrEmpty(shipper?.shipperName ?? shipper?.name)
+    return {
+        value,
+        label: toSafeOptionLabel(
+            [code, name].filter(Boolean).join(' · '),
+            `Shipper #${value}`,
+        ),
+    }
+}
+
+const toConsigneeComboboxOption = (consignee: {
+    id?: unknown
+    code?: string | null
+    name?: string | null
+    consigneeName?: string | null
+} | null | undefined): { label: string; value: number } | null => {
+    const value = normalizeMasterSelectId(consignee?.id)
+    if (value <= 0) return null
+    const code = strOrEmpty(consignee?.code)
+    const name = strOrEmpty(consignee?.consigneeName ?? consignee?.name)
+    return {
+        value,
+        label: toSafeOptionLabel(
+            [code, name].filter(Boolean).join(' · '),
+            `Consignee #${value}`,
+        ),
+    }
+}
+
 const EMPTY_SHIPPER_BLOCK: NonNullable<ShipmentFormValues['shipper']> = {
     shipperCode: '',
     shipperName: '',
@@ -814,6 +864,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         label: string
         value: number
     } | null>(null)
+    const [consigneePinnedOption, setConsigneePinnedOption] = useState<{
+        label: string
+        value: number
+    } | null>(null)
     const [serviceCenterPinnedOption, setServiceCenterPinnedOption] = useState<{
         label: string
         value: number
@@ -928,6 +982,54 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }),
         enabled: mastersReady && masterRead.serviceCenter,
     })
+    const pinnedEditCustomerId = normalizeMasterSelectId(
+        initialData?.customerId ?? initialData?.customer?.id,
+    )
+    const pinnedEditShipperId = normalizeMasterSelectId(
+        initialData?.shipperId ?? initialData?.shipper?.id,
+    )
+    const pinnedEditConsigneeId = normalizeMasterSelectId(
+        initialData?.consigneeId ?? initialData?.consignee?.id,
+    )
+    const { data: pinnedEditCustomerData } = useQuery({
+        queryKey: ['shipment-pinned-edit-customer', pinnedEditCustomerId],
+        queryFn: async () => {
+            const res = await customerService.getCustomerById(pinnedEditCustomerId)
+            return res.data
+        },
+        enabled:
+            mastersReady &&
+            masterRead.customer &&
+            isEdit &&
+            pinnedEditCustomerId > 0 &&
+            !initialData?.customer,
+    })
+    const { data: pinnedEditShipperData } = useQuery({
+        queryKey: ['shipment-pinned-edit-shipper', pinnedEditShipperId],
+        queryFn: async () => {
+            const res = await shipperService.getShipperById(pinnedEditShipperId)
+            return res.data
+        },
+        enabled:
+            mastersReady &&
+            masterRead.shipper &&
+            isEdit &&
+            pinnedEditShipperId > 0 &&
+            !initialData?.shipper,
+    })
+    const { data: pinnedEditConsigneeData } = useQuery({
+        queryKey: ['shipment-pinned-edit-consignee', pinnedEditConsigneeId],
+        queryFn: async () => {
+            const res = await consigneeService.getConsigneeById(pinnedEditConsigneeId)
+            return res.data
+        },
+        enabled:
+            mastersReady &&
+            masterRead.consignee &&
+            isEdit &&
+            pinnedEditConsigneeId > 0 &&
+            !initialData?.consignee,
+    })
     const pinnedServiceCenterId = normalizeMasterSelectId(initialData?.serviceCenterId)
     const { data: pinnedServiceCenterData } = useQuery({
         queryKey: ['shipment-pinned-service-center', pinnedServiceCenterId],
@@ -984,16 +1086,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
         return base
     }, [customerOptions, customerPinnedOption, effectiveCustomerIds, isCustomerUser])
-    const consigneeComboboxOptions = consigneeOptions
-        .map((consignee) => {
-            const value = normalizeMasterSelectId(consignee.id)
-            if (value <= 0) return null
-            return {
-                label: toSafeOptionLabel(consignee.name, `Consignee #${value}`),
-                value,
-            }
-        })
-        .filter((option): option is { label: string; value: number } => option != null)
+    const consigneeComboboxOptions = useMemo(() => {
+        const base = consigneeOptions
+            .map((consignee) => toConsigneeComboboxOption(consignee))
+            .filter((option): option is { label: string; value: number } => option != null)
+        if (consigneePinnedOption && !base.some((option) => option.value === consigneePinnedOption.value)) {
+            return [consigneePinnedOption, ...base]
+        }
+        return base
+    }, [consigneeOptions, consigneePinnedOption])
     const productComboboxOptions = productOptions
         .map((product) => {
             const value = normalizeMasterSelectId(product.id)
@@ -1083,16 +1184,56 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     })
 
     const lastDefaultShipperApplyCustomerRef = useRef(0)
+    const prevShipperIdRef = useRef<number>(0)
+    const prevConsigneeIdRef = useRef<number>(0)
 
     useEffect(() => {
         if (initialData) {
             form.reset(buildShipmentFormValues(initialData))
-            lastDefaultShipperApplyCustomerRef.current = normalizeMasterSelectId(initialData.customerId)
+            lastDefaultShipperApplyCustomerRef.current = normalizeMasterSelectId(
+                initialData.customerId ?? initialData.customer?.id,
+            )
             const savedEdlKm = normalizeNumberValue(initialData.odaEdlDistanceKm)
             edlDistanceManualOverrideRef.current =
                 savedEdlKm != null && savedEdlKm > 0
         }
     }, [initialData, form])
+
+    useEffect(() => {
+        if (!isEdit) {
+            setCustomerPinnedOption(null)
+            setShipperPinnedOption(null)
+            setConsigneePinnedOption(null)
+            return
+        }
+
+        const customerOption =
+            (initialData?.customer ? toCustomerComboboxOption(initialData.customer) : null) ??
+            (pinnedEditCustomerData ? toCustomerComboboxOption(pinnedEditCustomerData) : null)
+        setCustomerPinnedOption(customerOption)
+
+        const shipperOption =
+            (initialData?.shipper ? toShipperComboboxOption(initialData.shipper) : null) ??
+            (pinnedEditShipperData ? toShipperComboboxOption(pinnedEditShipperData) : null)
+        setShipperPinnedOption(shipperOption)
+        if (shipperOption) {
+            prevShipperIdRef.current = shipperOption.value
+        }
+
+        const consigneeOption =
+            (initialData?.consignee ? toConsigneeComboboxOption(initialData.consignee) : null) ??
+            (pinnedEditConsigneeData ? toConsigneeComboboxOption(pinnedEditConsigneeData) : null)
+        setConsigneePinnedOption(consigneeOption)
+        if (consigneeOption) {
+            prevConsigneeIdRef.current = consigneeOption.value
+        }
+    }, [
+        isEdit,
+        initialData,
+        pinnedEditCustomerData,
+        pinnedEditShipperData,
+        pinnedEditConsigneeData,
+    ])
 
     useEffect(() => {
         if (!isEdit) {
@@ -1154,19 +1295,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const customerVolumetricOptions = sanitizeArray(customerVolumetricsData?.data)
 
     useEffect(() => {
+        if (isEdit) return
         if (!isCustomerUser) {
             setCustomerPinnedOption(null)
             return
         }
         const customer = pinnedCustomerData
         if (!customer) return
-        const customerId = normalizeMasterSelectId(customer.id)
-        if (customerId <= 0) return
-        setCustomerPinnedOption({
-            value: customerId,
-            label: toSafeOptionLabel(customer.name, `Customer #${customerId}`),
-        })
-    }, [isCustomerUser, pinnedCustomerData])
+        const option = toCustomerComboboxOption(customer)
+        if (option) setCustomerPinnedOption(option)
+    }, [isCustomerUser, isEdit, pinnedCustomerData])
 
     const customerIdNum = normalizeMasterSelectId(watchedCustomerId)
 
@@ -1277,10 +1415,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
     }, [canCalculateCharges, debouncedAutoPricingTriggerKey, isEdit, savedShipment?.id, watchedCustomerId, watchedProductId, watchedShipperId, watchedConsigneeId, watchedShipperPinCode, watchedConsigneePinCode, form])
 
-    const prevShipperIdRef = useRef<number>(0)
-    const prevConsigneeIdRef = useRef<number>(0)
-
     useEffect(() => {
+        if (isEdit) return
         if (customerIdNum <= 0) {
             setShipperPinnedOption(null)
             lastDefaultShipperApplyCustomerRef.current = 0
@@ -1344,7 +1480,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         customerBookingDefaultsLoading,
         customerIdNum,
         form,
-        initialData,
+        isEdit,
     ])
     const isShipperLocked = normalizeMasterSelectId(watchedShipperId) > 0
     const isConsigneeLocked = normalizeMasterSelectId(watchedConsigneeId) > 0
@@ -1406,6 +1542,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         consigneeEdlAutoPinKeyRef.current = null
         edlDistanceManualOverrideRef.current = false
         setSuppressConsigneeErrors(true)
+        setConsigneePinnedOption(null)
         form.clearErrors()
     }
 
@@ -2148,8 +2285,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <FormControl>
                                                     <Combobox
                                                         options={customerComboboxOptions}
-                                                        value={field.value}
-                                                        onChange={field.onChange}
+                                                        value={normalizeMasterSelectId(field.value) || undefined}
+                                                        onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
                                                         placeholder="Select customer"
                                                         searchPlaceholder="Search customer..."
                                                         searchValue={customerSearch}
