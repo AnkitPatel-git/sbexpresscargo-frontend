@@ -202,7 +202,6 @@ const normalizePieceRows = (rows?: ShipmentFormValues['piecesRows']): NonNullabl
     }
 
     return rows.map((row) => ({
-        actualWeight: normalizeNumberValue(row.actualWeight) ?? normalizeNumberValue((row as Record<string, unknown>).actualWeightPerPc) ?? 0,
         pieces: normalizeNumberValue(row.pieces) || 0,
         length: normalizeNumberValue(row.length),
         breadth:
@@ -211,7 +210,6 @@ const normalizePieceRows = (rows?: ShipmentFormValues['piecesRows']): NonNullabl
         height: normalizeNumberValue(row.height),
         division: normalizeNumberValue(row.division),
         volumetricWeight: normalizeNumberValue(row.volumetricWeight),
-        chargeWeight: normalizeNumberValue(row.chargeWeight),
         items: (row.items && row.items.length > 0 ? row.items : [createEmptyPieceItem()]).map((item) => normalizePieceItem(item as Partial<PieceItemForm> & Record<string, unknown>)),
     }))
 }
@@ -447,17 +445,13 @@ const parsePiecesCsv = (raw: string): NonNullable<ShipmentFormValues["piecesRows
 
     return bodyLines.map((line) => {
         const cells = line.split(",")
-        const actualWeight = parseNum(get(cells, "actualWeight"))
-        const fallbackActualWeight = parseNum(get(cells, "actualWeightPerPc"))
         return {
-            actualWeight: actualWeight ?? fallbackActualWeight ?? 0,
             pieces: parseNum(get(cells, "pieces")) || 0,
             length: parseNum(get(cells, "length")),
             breadth: parseNum(get(cells, "breadth")) ?? parseNum(get(cells, "width")),
             height: parseNum(get(cells, "height")),
             division: parseNum(get(cells, "division")),
             volumetricWeight: parseNum(get(cells, "volumetricWeight")),
-            chargeWeight: parseNum(get(cells, "chargeWeight")),
             items: [createEmptyPieceItem()],
         }
     }).filter((row) => row.pieces > 0)
@@ -475,17 +469,15 @@ const parsePiecesExcel = (file: File): Promise<NonNullable<ShipmentFormValues["p
                 if (!firstSheetName) throw new Error("No sheet found")
                 const sheet = workbook.Sheets[firstSheetName]
                 const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" })
-                const csvHeader = "actualWeight,pieces,length,breadth,height,division,volumetricWeight,chargeWeight"
+                const csvHeader = "pieces,length,breadth,height,division,volumetricWeight"
                 const csvRows = rows.map((row) =>
                     [
-                        row.actualWeight ?? row.actualWeightPerPc ?? "",
                         row.pieces ?? "",
                         row.length ?? "",
                         row.breadth ?? row.width ?? "",
                         row.height ?? "",
                         row.division ?? "",
                         row.volumetricWeight ?? "",
-                        row.chargeWeight ?? "",
                     ].join(","),
                 )
                 resolve(parsePiecesCsv([csvHeader, ...csvRows].join("\n")))
@@ -619,13 +611,11 @@ const createEmptyPieceItem = (): PieceItemForm => ({
 
 const createEmptyPieceRow = (): PieceRowForm => ({
     pieces: 1,
-    actualWeight: undefined,
     length: undefined,
     breadth: undefined,
     height: undefined,
     division: undefined,
     volumetricWeight: undefined,
-    chargeWeight: undefined,
     items: [createEmptyPieceItem()],
 })
 
@@ -1760,7 +1750,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const weightCalcKey = useDebounce(
         JSON.stringify(
             (watchedPiecesRows || []).map((row) => ({
-                actualWeight: Number(row.actualWeight) || 0,
                 pieces: Number(row.pieces) || 0,
                 length: Number(row.length) || 0,
                 breadth: Number(row.breadth) || 0,
@@ -1774,7 +1763,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     )
     useEffect(() => {
         const calcRows = JSON.parse(weightCalcKey) as Array<{
-            actualWeight: number
             pieces: number
             length: number
             breadth: number
@@ -1921,17 +1909,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         try {
             const sheet = XLSX.utils.aoa_to_sheet([
                 [
-                    "actualWeight",
                     "pieces",
                     "length",
                     "breadth",
                     "height",
                     "division",
                     "volumetricWeight",
-                    "chargeWeight",
                 ],
-                [500, 1, 10, 10, 10, 5000, 0, 0],
-                ["", "", "", "", "", "", "", ""],
+                [1, 10, 10, 10, 5000, 0],
+                ["", "", "", "", "", ""],
             ])
             const workbook = XLSX.utils.book_new()
             XLSX.utils.book_append_sheet(workbook, sheet, "pieces")

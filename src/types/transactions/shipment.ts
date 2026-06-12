@@ -54,14 +54,12 @@ export const pieceItemSchema = z.object({
 });
 
 export const pieceRowSchema = z.object({
-  actualWeight: z.number().int().min(0, "Weight must be a whole number").optional(),
   pieces: z.number().int().min(1, "Pieces must be at least 1"),
   length: z.number().int().optional(),
   breadth: z.number().int().optional(),
   height: z.number().int().optional(),
   division: z.number().int().optional(),
   volumetricWeight: z.number().int().optional(),
-  chargeWeight: z.number().int().optional(),
   items: z.array(pieceItemSchema).optional(),
 });
 
@@ -366,7 +364,8 @@ export interface PieceItem extends z.infer<typeof pieceItemSchema> {
 export interface PieceRow extends z.infer<typeof pieceRowSchema> {
   id?: number;
   shipmentId?: number;
-  actualWeight: number;
+  actualWeight?: number | null;
+  chargeWeight?: number | null;
   items?: PieceItem[];
   createdAt?: string;
   updatedAt?: string;
@@ -647,9 +646,7 @@ export interface ShipmentCalculateResponse {
 
 export interface ShipmentWeightRowPreview {
   pieces: number;
-  actualWeight: number;
   volumetricWeight: number;
-  chargeWeight: number;
   totalValue: number;
 }
 
@@ -657,7 +654,6 @@ export interface ShipmentWeightPreviewResponse {
   cft: number;
   rows: ShipmentWeightRowPreview[];
   shipmentVolumetricWeight: number;
-  shipmentChargeWeight: number;
   bookingTotalValue: number;
 }
 

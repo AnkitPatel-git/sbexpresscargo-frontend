@@ -125,7 +125,6 @@ export const shipmentService = {
     customerId: number;
     productId: number;
     piecesRows: Array<{
-      actualWeight?: number;
       pieces?: number;
       length?: number;
       breadth?: number;
