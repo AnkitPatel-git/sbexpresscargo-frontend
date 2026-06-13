@@ -19,7 +19,7 @@ import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-asy
 import { cn } from "@/lib/utils";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useAuth } from "@/context/auth-context";
-import { isSuperAdminRole, MASTER_READ } from "@/lib/portal-permissions";
+import { isSuperAdminRole, MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
@@ -57,7 +57,7 @@ export default function ShipmentsPage() {
   const queryClient = useQueryClient();
   const { user, hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
   const isSuperAdmin = isSuperAdminRole(user?.role?.identifier);
-  const canReadCustomers = hasPermission(MASTER_READ.customer);
+  const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
   const tableColSpan = 15;
 
   const formatInvoiceValue = (value: number | string | null | undefined) => {

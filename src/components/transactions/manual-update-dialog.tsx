@@ -42,6 +42,8 @@ import { serviceCenterService } from "@/services/masters/service-center-service"
 import { Combobox } from "@/components/ui/combobox";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
 import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
+import { useAuth } from "@/context/auth-context";
+import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 
 const formSchema = z
     .object({
@@ -76,10 +78,16 @@ interface ManualUpdateDialogProps {
 
 export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: ManualUpdateDialogProps) {
     const queryClient = useQueryClient();
+    const { hasPermission, isLoading: authLoading } = useAuth();
+    const canReadServiceCenters = hasMasterLookupForPortalTransaction(
+        hasPermission,
+        MASTER_READ.serviceCenter,
+    );
 
     const { data: serviceCentersData } = useQuery({
         queryKey: ["service-centers"],
         queryFn: () => serviceCenterService.getServiceCenters(),
+        enabled: !authLoading && canReadServiceCenters,
     });
 
     const serviceCenterOptions = serviceCentersData?.data?.map(sc => ({

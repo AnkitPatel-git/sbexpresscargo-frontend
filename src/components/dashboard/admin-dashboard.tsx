@@ -25,11 +25,14 @@ import { StatsCard } from "@/components/dashboard/dashboard-metrics";
 import { SalesTrendChart, ServiceCenterSalesChart } from "@/components/dashboard/dashboard-charts";
 import { ExpressInboundSummary, ExpressOutboundSummary } from "@/components/dashboard/express-operation-summary";
 import { useAuth } from "@/context/auth-context";
-import { MASTER_READ } from "@/lib/portal-permissions";
+import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 
 export function AdminDashboard() {
   const { hasPermission, isLoading: authLoading } = useAuth();
-  const canReadServiceCenters = hasPermission(MASTER_READ.serviceCenter);
+  const canReadServiceCenters = hasMasterLookupForPortalTransaction(
+    hasPermission,
+    MASTER_READ.serviceCenter,
+  );
   const [isMounted, setIsMounted] = useState(false);
   const [fromDate, setFromDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(format(new Date(), "yyyy-MM-dd"));

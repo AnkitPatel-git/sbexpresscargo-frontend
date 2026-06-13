@@ -30,6 +30,8 @@ import { customerPaymentService } from "@/services/transactions/customer-payment
 import { customerService } from "@/services/masters/customer-service";
 import { Combobox } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
+import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 
 interface CustomerPaymentFormProps {
   initialData?: CustomerPayment | null;
@@ -38,12 +40,15 @@ interface CustomerPaymentFormProps {
 export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { hasPermission, isLoading: authLoading } = useAuth();
+  const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
   const isEditing = !!initialData;
   const [file, setFile] = useState<File | undefined>();
 
   const { data: customersResponse } = useQuery({
     queryKey: ["customers-master"],
     queryFn: () => customerService.getCustomers({ limit: 100 }),
+    enabled: !authLoading && canReadCustomers,
   });
 
   const customerOptions = customersResponse?.data.map((c) => ({

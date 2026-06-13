@@ -30,6 +30,7 @@ import { serviceCenterService } from "@/services/masters/service-center-service"
 import { AttendanceUserMonthLogDialog } from "@/components/reports/attendance-user-month-log-dialog";
 import { attendanceRegisterService } from "@/services/reports/attendance-register-service";
 import { useAuth } from "@/context/auth-context";
+import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 
 function istCalendarParts(): { year: number; month: number } {
   const now = new Date();
@@ -38,7 +39,9 @@ function istCalendarParts(): { year: number; month: number } {
 }
 
 function AttendanceRegisterPanel() {
-  const { isCustomerUser, defaultCustomerId, effectiveCustomerIds } = useAuth();
+  const { isCustomerUser, defaultCustomerId, effectiveCustomerIds, hasPermission, isLoading: authLoading } = useAuth();
+  const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
+  const canReadServiceCenters = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.serviceCenter);
   const defaults = useMemo(() => istCalendarParts(), []);
   const [year, setYear] = useState(defaults.year);
   const [month, setMonth] = useState(defaults.month);
@@ -95,6 +98,7 @@ function AttendanceRegisterPanel() {
         sortBy: "name",
         sortOrder: "asc",
       }),
+    enabled: !authLoading && canReadServiceCenters && !isCustomerUser,
   });
 
   const { data: customers } = useQuery({
@@ -106,6 +110,7 @@ function AttendanceRegisterPanel() {
         sortBy: "name",
         sortOrder: "asc",
       }),
+    enabled: !authLoading && canReadCustomers && !isCustomerUser,
   });
 
   const allowedCustomerIds = new Set(effectiveCustomerIds);

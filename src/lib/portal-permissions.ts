@@ -11,6 +11,62 @@ export const MASTER_READ = {
   zone: "master.zone.read",
 } as const;
 
+/** Shipment APIs used for booking-screen master lookups (no Masters nav). */
+export const SHIPMENT_CORE = {
+  read: "shipment.core.read",
+  create: "shipment.core.create",
+  update: "shipment.core.update",
+} as const;
+
+export const TRANSACTION_SHIPMENT = {
+  read: "transaction.shipment.read",
+  create: "transaction.shipment.create",
+  update: "transaction.shipment.update",
+} as const;
+
+/** Alternate permissions that may load master dropdowns without master nav access. */
+const PORTAL_TRANSACTION_MASTER_LOOKUP = [
+  SHIPMENT_CORE.read,
+  SHIPMENT_CORE.create,
+  SHIPMENT_CORE.update,
+  "shipment.tracking.read",
+  TRANSACTION_SHIPMENT.read,
+  TRANSACTION_SHIPMENT.create,
+  TRANSACTION_SHIPMENT.update,
+  "transaction.tracking.read",
+  "transaction.tracking.update",
+  "transaction.tracking.all",
+  "transaction.manifest.read",
+  "transaction.manifest.create",
+  "transaction.manifest.update",
+  "transaction.manifest.all",
+  "transaction.pod.read",
+  "transaction.pod.all",
+  "transaction.customer_payment.read",
+  "transaction.customer_payment.create",
+  "transaction.customer_payment.update",
+  "transaction.customer_payment.all",
+  "report.mis.read",
+  "report.dp_batch.read",
+  "report.attendance.read",
+  "dashboard.core.read",
+] as const;
+
+/**
+ * True when user may load a master dropdown on transaction/report screens
+ * without master module nav access.
+ */
+export function hasMasterLookupForPortalTransaction(
+  hasPermission: (permission: string) => boolean,
+  masterReadPermission: string,
+): boolean {
+  if (hasPermission(masterReadPermission)) return true;
+  return PORTAL_TRANSACTION_MASTER_LOOKUP.some(hasPermission);
+}
+
+/** @deprecated Use {@link hasMasterLookupForPortalTransaction}. */
+export const hasMasterLookupForShipmentBooking = hasMasterLookupForPortalTransaction;
+
 export const UTILITY_READ = {
   serviceablePincode: "utility.serviceable_pincode.read",
 } as const;

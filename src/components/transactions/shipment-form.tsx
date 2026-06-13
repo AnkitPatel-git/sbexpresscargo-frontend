@@ -117,7 +117,7 @@ import type { Consignee } from '@/types/masters/consignee'
 import type { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useAuth } from '@/context/auth-context'
-import { MASTER_READ, SHIPMENT_CHARGE, UTILITY_READ } from '@/lib/portal-permissions'
+import { MASTER_READ, SHIPMENT_CHARGE, UTILITY_READ, hasMasterLookupForPortalTransaction } from '@/lib/portal-permissions'
 
 interface ShipmentFormProps {
     initialData?: Shipment | null
@@ -796,15 +796,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         isLoading: authLoading,
     } = useAuth()
     const masterRead = {
-        customer: hasPermission(MASTER_READ.customer),
-        shipper: hasPermission(MASTER_READ.shipper),
-        consignee: hasPermission(MASTER_READ.consignee),
-        product: hasPermission(MASTER_READ.product),
-        vendor: hasPermission(MASTER_READ.vendor),
-        content: hasPermission(MASTER_READ.content),
-        serviceCenter: hasPermission(MASTER_READ.serviceCenter),
+        customer: hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer),
+        shipper: hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.shipper),
+        consignee: hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.consignee),
+        product: hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.product),
+        vendor: hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.vendor),
+        content: hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.content),
+        serviceCenter: hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.serviceCenter),
         serviceMap: hasPermission(MASTER_READ.serviceMap),
-        pincode: hasPermission(UTILITY_READ.serviceablePincode),
+        pincode: hasMasterLookupForPortalTransaction(hasPermission, UTILITY_READ.serviceablePincode),
     }
     const canViewCharges = hasPermission(SHIPMENT_CHARGE.read)
     const canCalculateCharges = hasPermission(SHIPMENT_CHARGE.calculate)

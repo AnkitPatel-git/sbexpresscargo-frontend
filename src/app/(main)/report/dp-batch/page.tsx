@@ -29,7 +29,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
-import { MASTER_READ } from "@/lib/portal-permissions";
+import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 import { customerService } from "@/services/masters/customer-service";
 import { productService } from "@/services/masters/product-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
@@ -64,9 +64,9 @@ export default function DpBatchReportPage() {
     hasPermission,
     isLoading: authLoading,
   } = useAuth();
-  const canReadCustomers = hasPermission(MASTER_READ.customer);
-  const canReadProducts = hasPermission(MASTER_READ.product);
-  const canReadServiceCenters = hasPermission(MASTER_READ.serviceCenter);
+  const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
+  const canReadProducts = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.product);
+  const canReadServiceCenters = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.serviceCenter);
   const scopedCustomerId =
     isCustomerUser && Number.isInteger(Number(defaultCustomerId)) && Number(defaultCustomerId) > 0
       ? Number(defaultCustomerId)

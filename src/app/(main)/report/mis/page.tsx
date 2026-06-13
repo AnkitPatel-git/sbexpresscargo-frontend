@@ -37,7 +37,7 @@ import { zoneService } from "@/services/masters/zone-service";
 import { misReportService } from "@/services/reports/mis-report-service";
 import { MIS_REPORT_COLUMNS, type MisReportColumn } from "@/types/reports/mis-report";
 import { useAuth } from "@/context/auth-context";
-import { MASTER_READ } from "@/lib/portal-permissions";
+import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 
 type MisReportFilters = {
   awbNo: string;
@@ -127,11 +127,11 @@ export default function MisReportPage() {
     hasPermission,
     isLoading: authLoading,
   } = useAuth();
-  const canReadCustomers = hasPermission(MASTER_READ.customer);
-  const canReadShippers = hasPermission(MASTER_READ.shipper);
-  const canReadZones = hasPermission(MASTER_READ.zone);
-  const canReadProducts = hasPermission(MASTER_READ.product);
-  const canReadServiceCenters = hasPermission(MASTER_READ.serviceCenter);
+  const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
+  const canReadShippers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.shipper);
+  const canReadZones = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.zone);
+  const canReadProducts = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.product);
+  const canReadServiceCenters = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.serviceCenter);
   const scopedCustomerId =
     isCustomerUser && Number.isInteger(Number(defaultCustomerId)) && Number(defaultCustomerId) > 0
       ? Number(defaultCustomerId)
