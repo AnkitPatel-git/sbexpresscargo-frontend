@@ -103,6 +103,7 @@ import { pincodeDistanceService } from '@/services/utilities/pincode-distance-se
 import {
     EWAYBILL_MANDATORY_INVOICE_THRESHOLD,
     getEwaybillRequiredMessage,
+    roundActualWeight,
     roundShipmentTotalValue,
     shipmentSchema,
     ShipmentFormValues,
@@ -279,7 +280,10 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         floorCount: shipmentRef?.floorCount || 0,
         currency: shipmentRef?.currency || 'INR',
         pieces: shipmentRef?.pieces || 1,
-        actualWeight: normalizeNumberValue(shipmentRef?.actualWeight) ?? normalizeNumberValue(shipmentRef?.declaredWeight) ?? 0,
+        actualWeight: roundActualWeight(
+            normalizeNumberValue(shipmentRef?.actualWeight) ??
+                normalizeNumberValue(shipmentRef?.declaredWeight),
+        ) ?? 0,
         volumetricWeight: shipmentRef?.volumetricWeight || 0,
         chargeWeight: shipmentRef?.chargeWeight || 0,
         km: shipmentRef?.km || 0,
@@ -344,7 +348,7 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         ),
         invoiceDate: values.invoiceDate?.trim() || undefined,
         invoiceNumber: values.invoiceNumber?.trim() || undefined,
-        actualWeight: normalizeNumberValue(values.actualWeight) ?? 0,
+        actualWeight: roundActualWeight(normalizeNumberValue(values.actualWeight)) ?? 0,
         volumetricWeight: normalizeNumberValue(values.volumetricWeight) ?? 0,
         chargeWeight: normalizeNumberValue(values.chargeWeight) ?? 0,
         reversePickup: Boolean(values.reversePickup),
@@ -2808,7 +2812,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem required label="Actual Weight">
                                                 <FormControl>
-                                                    <IntegerInput
+                                                    <DecimalInput
                                                         className={FLOATING_INNER_CONTROL}
                                                         name={field.name}
                                                         ref={field.ref}
@@ -2816,6 +2820,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         value={field.value}
                                                         onValueChange={field.onChange}
                                                         min={0}
+                                                        decimalPlaces={2}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>

@@ -10,6 +10,7 @@ import {
 export const EWAYBILL_MANDATORY_INVOICE_THRESHOLD = 50_000;
 
 export const SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES = 2;
+export const SHIPMENT_ACTUAL_WEIGHT_DECIMAL_PLACES = 2;
 
 export function roundShipmentTotalValue(
   value: number | undefined | null,
@@ -22,6 +23,20 @@ export function roundShipmentTotalValue(
 export function hasAtMostShipmentTotalValueDecimals(value: number): boolean {
   if (!Number.isFinite(value)) return false;
   const factor = 10 ** SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES;
+  return Math.round(value * factor) / factor === value;
+}
+
+export function roundActualWeight(
+  value: number | undefined | null,
+): number | undefined {
+  if (value == null || !Number.isFinite(value)) return undefined;
+  const factor = 10 ** SHIPMENT_ACTUAL_WEIGHT_DECIMAL_PLACES;
+  return Math.round(value * factor) / factor;
+}
+
+export function hasAtMostActualWeightDecimals(value: number): boolean {
+  if (!Number.isFinite(value)) return false;
+  const factor = 10 ** SHIPMENT_ACTUAL_WEIGHT_DECIMAL_PLACES;
   return Math.round(value * factor) / factor === value;
 }
 
@@ -168,7 +183,7 @@ export const shipmentSchema = z.object({
   floorDelivery: z.boolean().default(false),
   floorCount: z.number().int().optional(),
   pieces: z.number().int().optional(),
-  actualWeight: z.number().int().min(1, "Actual Weight is required"),
+  actualWeight: z.number().positive("Actual Weight is required"),
   volumetricWeight: z.number().int().min(1, "Total Vol. Weight is required"),
   chargeWeight: z.number().int().min(1, "Charge Weight is required"),
   km: z.number().int().optional(),
@@ -329,6 +344,20 @@ export const shipmentSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["shipmentTotalValue"],
       message: `Invoice value can have at most ${SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES} decimal places`,
+    })
+  }
+
+  if (values.actualWeight == null || Number(values.actualWeight) <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["actualWeight"],
+      message: "Actual Weight is required",
+    })
+  } else if (!hasAtMostActualWeightDecimals(Number(values.actualWeight))) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["actualWeight"],
+      message: `Actual weight can have at most ${SHIPMENT_ACTUAL_WEIGHT_DECIMAL_PLACES} decimal places`,
     })
   }
 

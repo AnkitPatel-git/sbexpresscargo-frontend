@@ -101,6 +101,20 @@ export default function ShipmentDetailsPage() {
     onError: (error: Error) => toast.error(error.message || "Failed to download shipping label"),
   });
 
+  const podBlankFormDownloadMutation = useMutation({
+    mutationFn: () => shipmentService.downloadPodBlankForm(id),
+    onSuccess: ({ blob, filename }) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("DRS form downloaded");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to download DRS form"),
+  });
+
   const podProofDownloadMutation = useMutation({
     mutationFn: () => shipmentService.downloadUploadedPodProof(id),
     onSuccess: ({ blob, filename }) => {
@@ -218,6 +232,27 @@ export default function ShipmentDetailsPage() {
               </>
             )}
           </Button>
+          <PermissionGuard permission="transaction.pod.download">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => podBlankFormDownloadMutation.mutate()}
+              disabled={podBlankFormDownloadMutation.isPending}
+            >
+              {podBlankFormDownloadMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  Downloading…
+                </>
+              ) : (
+                <>
+                  <Download className="mr-1 h-4 w-4" />
+                  Download DRS
+                </>
+              )}
+            </Button>
+          </PermissionGuard>
           <Button
             type="button"
             variant="outline"
@@ -419,7 +454,7 @@ export default function ShipmentDetailsPage() {
 
         <FormSection title="Proof of delivery (POD)" contentClassName="space-y-3 text-sm">
           <p className="text-muted-foreground">
-            Upload a signed or vendor POD scan. Blank POD forms are available from the POD transaction screen.
+            Upload a signed or vendor POD scan. Use Download DRS above for the blank delivery receipt form.
           </p>
           <Button
             type="button"
