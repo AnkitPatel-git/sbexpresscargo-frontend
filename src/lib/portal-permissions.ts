@@ -56,6 +56,7 @@ const PORTAL_TRANSACTION_MASTER_LOOKUP = [
   "report.mis.read",
   "report.dp_batch.read",
   "report.attendance.read",
+  "report.partwise_sales.read",
   "dashboard.core.read",
 ] as const;
 

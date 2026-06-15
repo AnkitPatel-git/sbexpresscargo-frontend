@@ -109,6 +109,7 @@ const headerNavItems = [
   { href: "/transactions/receipt", label: "Receipts" },
   { href: "/report/mis", label: "MIS Report" },
   { href: "/report/dp-batch", label: "DP Batch Report" },
+  { href: "/report/partwise-sales-summary", label: "Partwise Sales Summary" },
   { href: "/report/attendance-register", label: "Attendance register" },
   { href: "/document/invoice-generation", label: "Invoice Generation" },
   { href: "/document/invoice-print", label: "Invoice Print" },
@@ -1253,6 +1254,17 @@ const SidebarContent = ({
                 Attendance register
               </LinkItem>
             </PermissionGuard>
+            <PermissionGuard permission="report.partwise_sales.read">
+              <LinkItem
+                href="/report/partwise-sales-summary"
+                active={isActive("/report/partwise-sales-summary")}
+                icon={ClipboardList}
+                showTextOverride
+                inFlyout
+              >
+                Partwise Sales Summary
+              </LinkItem>
+            </PermissionGuard>
           </div>
         )}
 
@@ -1297,6 +1309,17 @@ const SidebarContent = ({
                     inFlyout
                   >
                     Attendance register
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="report.partwise_sales.read">
+                  <LinkItem
+                    href="/report/partwise-sales-summary"
+                    active={isActive("/report/partwise-sales-summary")}
+                    icon={ClipboardList}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Partwise Sales Summary
                   </LinkItem>
                 </PermissionGuard>
               </div>
