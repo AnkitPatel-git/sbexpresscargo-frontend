@@ -128,7 +128,8 @@ export default function ShipmentBulkImportPage() {
           existing <strong>BOOKED</strong> shipment when{" "}
           <strong>AWB No.</strong> matches (only non-empty cells are applied). New rows still need{" "}
           <strong>customer</strong> and <strong>shipper</strong> master
-          codes, <strong>product code</strong>, and <strong>service center</strong> code. Provide <strong>shipper code</strong> only (address comes from shipper master). From/to zones are resolved
+          codes, <strong>product code</strong>, and <strong>service center</strong> code (e.g.{" "}
+          <span className="font-mono">SBCTR001</span>). Use <strong>DD/MM/YYYY</strong> for booking and invoice dates. Provide <strong>shipper code</strong> only (address comes from shipper master). From/to zones are resolved
           automatically from the shipper pincode and consignee pincode — do not include zone columns.{" "}
           <strong>Consignee</strong> columns match or create a consignee like manual booking.{" "}
           <strong>Floor Count</strong> is a number (
