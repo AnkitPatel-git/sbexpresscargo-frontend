@@ -16,6 +16,7 @@ export const MIS_REPORT_COLUMNS = [
   "declaredWeight",
   "chargeWeight",
   "shipmentTotalValue",
+  "baseFreight",
   "totalAmount",
   "createdAt",
 ] as const;

@@ -98,6 +98,7 @@ const COLUMN_LABELS: Record<MisReportColumn, string> = {
   declaredWeight: "Declared Weight",
   chargeWeight: "Charge Weight",
   shipmentTotalValue: "Shipment Value",
+  baseFreight: "Base Freight",
   totalAmount: "Total Amount",
   createdAt: "Created At",
 };

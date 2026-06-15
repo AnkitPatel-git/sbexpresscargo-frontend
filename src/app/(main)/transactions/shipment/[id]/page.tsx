@@ -35,6 +35,11 @@ function chargeRowLabel(row: ShipmentCharge) {
   return row.description?.trim() || row.chargeType?.trim() || (row.chargeId ? `Charge #${row.chargeId}` : "Charge");
 }
 
+function isFuelChargeRow(row: ShipmentCharge): boolean {
+  const label = `${row.description ?? ""} ${row.chargeType ?? ""}`.toUpperCase();
+  return label.includes("FUEL");
+}
+
 export default function ShipmentDetailsPage() {
   const params = useParams();
   const id = Number(params.id);
@@ -167,11 +172,29 @@ export default function ShipmentDetailsPage() {
   const kycDocuments = shipment?.kycDocuments ?? [];
   const statuses = useMemo(() => shipment?.statuses ?? [], [shipment?.statuses]);
 
-  const appliedChargesTotal = useMemo(
-    () =>
-      appliedCharges.reduce((sum, row) => sum + (Number(row.total ?? row.amount) || 0), 0),
+  const nonFuelCharges = useMemo(
+    () => appliedCharges.filter((row) => !isFuelChargeRow(row)),
     [appliedCharges],
   );
+  const fuelChargeTotal = useMemo(
+    () =>
+      appliedCharges
+        .filter((row) => isFuelChargeRow(row))
+        .reduce((sum, row) => sum + (Number(row.total ?? row.amount) || 0), 0),
+    [appliedCharges],
+  );
+  const ancillaryChargesTotal = useMemo(
+    () =>
+      nonFuelCharges.reduce(
+        (sum, row) => sum + (Number(row.total ?? row.amount) || 0),
+        0,
+      ),
+    [nonFuelCharges],
+  );
+  const subTotalWithoutFuel = useMemo(() => {
+    const baseFreight = Number(shipment?.baseFreight) || 0;
+    return baseFreight + ancillaryChargesTotal;
+  }, [shipment?.baseFreight, ancillaryChargesTotal]);
 
   const currentStatus = useMemo(
     () => shipment?.currentStatus || statuses[statuses.length - 1]?.status || "—",
@@ -348,7 +371,10 @@ export default function ShipmentDetailsPage() {
         <PermissionGuard permission={SHIPMENT_CHARGE.read}>
         <FormSection title="Applied Charge" contentClassName="space-y-2 text-sm">
           <p><span className="text-muted-foreground">Base Freight:</span> {fallbackText(shipment.baseFreight)}</p>
-          <p><span className="text-muted-foreground">Charge lines total:</span> {appliedCharges.length > 0 ? fallbackText(appliedChargesTotal) : "—"}</p>
+          <p><span className="text-muted-foreground">Sub Total (without fuel):</span> {fallbackText(subTotalWithoutFuel)}</p>
+          {fuelChargeTotal > 0 ? (
+            <p><span className="text-muted-foreground">Fuel:</span> {fallbackText(fuelChargeTotal)}</p>
+          ) : null}
           <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(shipment.totalAmount)}</p>
           {appliedCharges.length > 0 ? (
             <div className="space-y-1 pt-2">
