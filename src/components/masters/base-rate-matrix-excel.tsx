@@ -102,7 +102,7 @@ export function BaseRateMatrixExcel({ rateMasterId, onImported }: BaseRateMatrix
     if (!file) return;
 
     if (fixedMaxKgInvalid) {
-      toast.error("Fixed rate up to (kg) must be a whole number ≥ 0, or leave blank when using the Slabs sheet");
+      toast.error("Fixed rate up to (kg) must be a whole number ≥ 0, or leave blank when using Base Fare / Slabs sheets");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
@@ -139,15 +139,25 @@ export function BaseRateMatrixExcel({ rateMasterId, onImported }: BaseRateMatrix
       <div>
         <p className="text-sm font-semibold">Excel upload (zone base rates)</p>
         <p className="text-sm text-muted-foreground mt-1">
-          Download the template — it has three sheets: <span className="font-medium text-foreground">Instructions</span>,{" "}
-          <span className="font-medium text-foreground">Slabs</span> (recommended), and legacy{" "}
+          Download the template — it has four sheets: <span className="font-medium text-foreground">Instructions</span>,{" "}
+          <span className="font-medium text-foreground">Base Fare</span> (recommended bulk upload),{" "}
+          <span className="font-medium text-foreground">Slabs</span> (advanced), and legacy{" "}
           <span className="font-medium text-foreground">BaseRate</span> matrix.
         </p>
         <p className="text-sm text-muted-foreground mt-1">
-          <span className="font-medium text-foreground">Slabs sheet:</span> one row per weight band with{" "}
-          <span className="font-medium text-foreground">Pricing Mode</span> (FLAT, PER_KG, FLAT_G, PER_500G) and optional{" "}
-          <span className="font-medium text-foreground">Min Amount</span> per zone pair. Use grams in min/max for FLAT_G and
-          PER_500G.
+          <span className="font-medium text-foreground">Base Fare sheet:</span> one row per weight band —{" "}
+          <span className="font-medium text-foreground">From Zone</span>,{" "}
+          <span className="font-medium text-foreground">To Zone</span>,{" "}
+          <span className="font-medium text-foreground">From Weight</span>,{" "}
+          <span className="font-medium text-foreground">To Weight</span>,{" "}
+          <span className="font-medium text-foreground">Basis</span> (Flat (kg band), Per kg, Flat (g band), Per 500 g),{" "}
+          <span className="font-medium text-foreground">Rate</span>. Use grams in From/To Weight for gram-based bands.
+          You can also upload a single-sheet file with only these columns.
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          <span className="font-medium text-foreground">Slabs sheet:</span> same data with{" "}
+          <span className="font-medium text-foreground">Pricing Mode</span> codes and optional{" "}
+          <span className="font-medium text-foreground">Min Amount</span> per zone pair.
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           <span className="font-medium text-foreground">BaseRate sheet:</span> simple zone×zone per-kg matrix — requires{" "}
@@ -165,7 +175,7 @@ export function BaseRateMatrixExcel({ rateMasterId, onImported }: BaseRateMatrix
           inputMode="numeric"
           value={fixedMaxKgInput}
           onChange={(e) => setFixedMaxKgInput(e.target.value)}
-          placeholder="Leave blank when using Slabs sheet; e.g. 10 for matrix"
+          placeholder="Leave blank for Base Fare / Slabs upload; e.g. 10 for matrix"
           aria-invalid={fixedMaxKgInvalid}
         />
         {fixedMaxKgInvalid ? (
@@ -173,7 +183,7 @@ export function BaseRateMatrixExcel({ rateMasterId, onImported }: BaseRateMatrix
         ) : fixedMaxKg != null ? (
           <p className="text-xs text-muted-foreground">{fixedMaxKgSummary(fixedMaxKg)}</p>
         ) : (
-          <p className="text-xs text-muted-foreground">Optional if your file uses the Slabs sheet</p>
+          <p className="text-xs text-muted-foreground">Optional for Base Fare or Slabs sheet uploads</p>
         )}
       </div>
 
