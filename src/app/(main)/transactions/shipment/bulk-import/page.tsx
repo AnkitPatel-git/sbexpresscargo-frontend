@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { shipmentService } from "@/services/transactions/shipment-service";
+import { shipmentService, type ShipmentBulkImportJobStatus } from "@/services/transactions/shipment-service";
 import {
   bulkUploadLogService,
   canDownloadBulkUploadErrorsCsv,
@@ -39,12 +39,17 @@ export default function ShipmentBulkImportPage() {
     successes: Array<{ row: number; awbNo: string }>;
     bulkUploadLogId?: number;
   } | null>(null);
+  const [importProgress, setImportProgress] = useState<ShipmentBulkImportJobStatus | null>(null);
 
   const importMutation = useMutation({
     mutationFn: (f: File) =>
-      shipmentService.bulkImportFromExcel(f, { updateExisting }),
+      shipmentService.bulkImportFromExcel(f, {
+        updateExisting,
+        onProgress: setImportProgress,
+      }),
     onSuccess: (data) => {
       setSummary(data);
+      setImportProgress(null);
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       void queryClient.invalidateQueries({ queryKey: ["shipments"] });
@@ -60,6 +65,7 @@ export default function ShipmentBulkImportPage() {
       }
     },
     onError: (error: Error) => {
+      setImportProgress(null);
       toast.error(error.message || "Bulk import failed");
     },
   });
@@ -180,6 +186,7 @@ export default function ShipmentBulkImportPage() {
                   const f = e.target.files?.[0];
                   setFile(f ?? null);
                   setSummary(null);
+                  setImportProgress(null);
                 }}
               />
               <Button type="button" variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
@@ -204,6 +211,41 @@ export default function ShipmentBulkImportPage() {
           </PermissionGuard>
         </div>
       </div>
+
+      {importMutation.isPending && (
+        <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">Processing import…</span>
+            {importProgress ? (
+              <span className="text-muted-foreground">
+                {importProgress.successCount + importProgress.failureCount} / {importProgress.totalRows} rows
+              </span>
+            ) : (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          {importProgress && importProgress.totalRows > 0 && (
+            <>
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      ((importProgress.successCount + importProgress.failureCount) /
+                        importProgress.totalRows) *
+                        100,
+                    )}%`,
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Succeeded: {importProgress.successCount} · Failed: {importProgress.failureCount}
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {summary && (
         <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">

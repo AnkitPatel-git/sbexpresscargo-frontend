@@ -2,6 +2,10 @@ import * as z from "zod";
 
 import { optionalMasterCode } from "@/lib/master-code-schema";
 import {
+  isProductWeightInGrams,
+  type ProductWeightUnit,
+} from "@/lib/product-weight";
+import {
   SHIPMENT_COD_TOPAY_AMOUNT_LABEL,
   SHIPMENT_COD_TOPAY_LABEL,
 } from "@/lib/shipment-payment-label";
@@ -74,7 +78,7 @@ export const pieceRowSchema = z.object({
   breadth: z.number().int().optional(),
   height: z.number().int().optional(),
   division: z.number().int().optional(),
-  volumetricWeight: z.number().int().optional(),
+  volumetricWeight: z.number().positive().optional(),
   items: z.array(pieceItemSchema).optional(),
 });
 
@@ -94,7 +98,7 @@ export const shipmentChargeSchema = z.object({
   chargeType: z.string().optional(),
 });
 
-export const shipmentSchema = z.object({
+export const shipmentBaseSchema = z.object({
   version: z.number().int().positive().optional(),
   awbNo: z.string().optional(),
   ewaybillNumber: z.string().optional(),
@@ -183,9 +187,9 @@ export const shipmentSchema = z.object({
   floorDelivery: z.boolean().default(false),
   floorCount: z.number().int().optional(),
   pieces: z.number().int().optional(),
-  actualWeight: z.number().positive("Actual Weight is required"),
-  volumetricWeight: z.number().int().min(1, "Total Vol. Weight is required"),
-  chargeWeight: z.number().int().min(1, "Charge Weight is required"),
+  actualWeight: z.coerce.number().positive("Actual Weight is required"),
+  volumetricWeight: z.coerce.number().positive("Total Vol. Weight is required"),
+  chargeWeight: z.coerce.number().positive("Charge Weight is required"),
   km: z.number().int().optional(),
   isEdl: z.boolean().default(false),
   odaEdlDistanceKm: z.number().int().optional(),
@@ -219,7 +223,13 @@ export const shipmentSchema = z.object({
   codAmount: z.number().int().optional(),
   piecesRows: z.array(pieceRowSchema).optional(),
   charges: z.array(shipmentChargeSchema).optional(),
-}).superRefine((values, ctx) => {
+});
+
+function appendShipmentValidation(
+  weightUnit: ProductWeightUnit,
+  values: z.infer<typeof shipmentBaseSchema>,
+  ctx: z.RefinementCtx,
+) {
   if (!values.piecesRows || values.piecesRows.length === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -353,6 +363,14 @@ export const shipmentSchema = z.object({
       path: ["actualWeight"],
       message: "Actual Weight is required",
     })
+  } else if (isProductWeightInGrams(weightUnit)) {
+    if (!Number.isInteger(Number(values.actualWeight))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["actualWeight"],
+        message: "Actual weight must be a whole number of grams",
+      })
+    }
   } else if (!hasAtMostActualWeightDecimals(Number(values.actualWeight))) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -376,8 +394,17 @@ export const shipmentSchema = z.object({
       message: `${SHIPMENT_COD_TOPAY_AMOUNT_LABEL} is required when ${SHIPMENT_COD_TOPAY_LABEL} is checked`,
     })
   }
+}
 
-});
+export function createShipmentSchema(
+  getWeightUnit: () => ProductWeightUnit = () => "KG",
+) {
+  return shipmentBaseSchema.superRefine((values, ctx) => {
+    appendShipmentValidation(getWeightUnit(), values, ctx);
+  });
+}
+
+export const shipmentSchema = createShipmentSchema();
 
 export type ShipmentFormValues = z.infer<typeof shipmentSchema>;
 
@@ -574,6 +601,7 @@ export interface Shipment {
     id: number;
     productCode?: string;
     productName?: string;
+    weightUnit?: 'G' | 'KG';
     name?: string;
   } | null;
   serviceCenter?: {

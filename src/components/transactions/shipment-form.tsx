@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { useForm, useFieldArray, Resolver } from 'react-hook-form'
+import { useForm, useFieldArray, Resolver, type UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -103,9 +103,8 @@ import { pincodeDistanceService } from '@/services/utilities/pincode-distance-se
 import {
     EWAYBILL_MANDATORY_INVOICE_THRESHOLD,
     getEwaybillRequiredMessage,
-    roundActualWeight,
     roundShipmentTotalValue,
-    shipmentSchema,
+    createShipmentSchema,
     ShipmentFormValues,
     Shipment,
     ShipmentCalculateResponse,
@@ -118,6 +117,15 @@ import type { ServiceablePincode } from '@/types/utilities/serviceable-pincode'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useAuth } from '@/context/auth-context'
 import { MASTER_READ, SHIPMENT_CHARGE, UTILITY_READ, hasMasterLookupForPortalTransaction } from '@/lib/portal-permissions'
+import {
+    type ProductWeightUnit,
+    isProductWeightInGrams,
+    kgToProductBookingWeight,
+    normalizeProductBookingWeight,
+    productWeightLabel,
+    resolveShipmentVolumetricWeight,
+    sumPieceVolumetricWeights,
+} from '@/lib/product-weight'
 
 interface ShipmentFormProps {
     initialData?: Shipment | null
@@ -168,13 +176,6 @@ function parseConsigneePinEdlKm(pin: ServiceablePincode | null | undefined): num
     const km = Math.round(Number(pin.odaEdlDistanceKm))
     return Number.isFinite(km) && km > 0 ? km : null
 }
-const roundWeightKg = (value: number) => {
-    if (!Number.isFinite(value) || value <= 0) return 0
-    const baseKg = Math.floor(value)
-    const gramsFraction = value - baseKg
-    return gramsFraction > 0.1 ? baseKg + 1 : baseKg
-}
-
 const normalizeNumberValue = (value: unknown): number | undefined => {
     if (typeof value === "number" && Number.isFinite(value)) return value
     if (typeof value === "string" && value.trim()) {
@@ -245,7 +246,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
             telephone: shipperRef.telephone || '',
             mobile: shipperRef.mobile || '',
             email: shipperRef.email || '',
-        } : undefined,
+        } : createEmptyShipperBlock(),
         consignee: consigneeRef ? {
             name: consigneeRef.consigneeName || consigneeRef.name || '',
             pinCodeId: consigneeRef.pinCodeId ?? consigneeRef.serviceablePincode?.id ?? undefined,
@@ -259,8 +260,8 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
             country: consigneeRef.country?.name || consigneeRef.serviceablePincode?.country?.name || '',
             telephone: consigneeRef.telephone || '',
             mobile: consigneeRef.mobile || '',
-            email: consigneeRef.email || '',
-        } : undefined,
+            email: consigneeRef.email ?? '',
+        } : createEmptyConsigneeBlock(),
         origin: shipmentRef?.origin || '',
         originCode: shipmentRef?.originCode || '',
         destination: shipmentRef?.destination || '',
@@ -280,12 +281,20 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         floorCount: shipmentRef?.floorCount || 0,
         currency: shipmentRef?.currency || 'INR',
         pieces: shipmentRef?.pieces || 1,
-        actualWeight: roundActualWeight(
+        actualWeight: normalizeProductBookingWeight(
             normalizeNumberValue(shipmentRef?.actualWeight) ??
-                normalizeNumberValue(shipmentRef?.declaredWeight),
-        ) ?? 0,
-        volumetricWeight: shipmentRef?.volumetricWeight || 0,
-        chargeWeight: shipmentRef?.chargeWeight || 0,
+                normalizeNumberValue(shipmentRef?.declaredWeight) ??
+                0,
+            shipmentRef?.product?.weightUnit ?? 'KG',
+        ) || 0,
+        volumetricWeight: resolveShipmentVolumetricWeight(
+            normalizeNumberValue(shipmentRef?.volumetricWeight) ?? 0,
+            normalizeNumberValue(shipmentRef?.actualWeight) ??
+                normalizeNumberValue(shipmentRef?.declaredWeight) ??
+                0,
+            sumPieceVolumetricWeights(shipmentRef?.piecesRows),
+        ),
+        chargeWeight: normalizeNumberValue(shipmentRef?.chargeWeight) ?? 0,
         km: shipmentRef?.km || 0,
         isEdl: Boolean(shipmentRef?.isEdl) || Boolean(shipmentRef?.oda),
         odaEdlDistanceKm: shipmentRef?.odaEdlDistanceKm != null
@@ -303,7 +312,44 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
     }
 }
 
-const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValues => {
+const normalizeShipmentPayload = (
+    values: ShipmentFormValues,
+    weightUnit: ProductWeightUnit = 'KG',
+): ShipmentFormValues => {
+    const actualWeight = normalizeProductBookingWeight(
+        normalizeNumberValue(values.actualWeight) ?? 0,
+        weightUnit,
+    )
+    const piecesRows = normalizePieceRows(values.piecesRows)
+        .filter((row) => Number(row.pieces || 0) > 0)
+        .map((row) => {
+            const volumetricWeight = normalizeNumberValue(row.volumetricWeight)
+            return {
+                ...row,
+                ...(volumetricWeight != null && volumetricWeight > 0
+                    ? {
+                        volumetricWeight: normalizeProductBookingWeight(
+                            volumetricWeight,
+                            weightUnit,
+                        ),
+                    }
+                    : {}),
+            }
+        })
+    const pieceVolumetricSum = sumPieceVolumetricWeights(piecesRows)
+    const volumetricWeight = normalizeProductBookingWeight(
+        resolveShipmentVolumetricWeight(
+            normalizeNumberValue(values.volumetricWeight) ?? 0,
+            actualWeight,
+            pieceVolumetricSum,
+        ),
+        weightUnit,
+    )
+    const chargeWeight = normalizeProductBookingWeight(
+        Math.max(actualWeight, volumetricWeight),
+        weightUnit,
+    )
+
     const payload: ShipmentFormValues = {
         awbNo: values.awbNo?.trim() || undefined,
         ewaybillNumber: values.ewaybillNumber?.trim() || undefined,
@@ -337,7 +383,7 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
                 address2: values.consignee.address2?.trim() || undefined,
                 telephone: values.consignee.telephone?.trim() || undefined,
                 mobile: values.consignee.mobile?.trim() || undefined,
-                email: values.consignee.email?.trim() || undefined,
+                email: consigneeEmailForPayload(values),
             } as NonNullable<ShipmentFormValues['consignee']>
             : undefined,
         productId: normalizePositiveNumberValue(values.productId),
@@ -348,9 +394,9 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         ),
         invoiceDate: values.invoiceDate?.trim() || undefined,
         invoiceNumber: values.invoiceNumber?.trim() || undefined,
-        actualWeight: roundActualWeight(normalizeNumberValue(values.actualWeight)) ?? 0,
-        volumetricWeight: normalizeNumberValue(values.volumetricWeight) ?? 0,
-        chargeWeight: normalizeNumberValue(values.chargeWeight) ?? 0,
+        actualWeight,
+        volumetricWeight,
+        chargeWeight,
         reversePickup: Boolean(values.reversePickup),
         appointmentDelivery: Boolean(values.appointmentDelivery),
         floorDelivery: Boolean(values.floorDelivery),
@@ -365,7 +411,7 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
         serviceMapId: normalizeNumberValue(values.serviceMapId),
         isCod: Boolean(values.isCod),
         codAmount: normalizeNumberValue(values.codAmount),
-        piecesRows: normalizePieceRows(values.piecesRows).filter((row) => Number(row.pieces || 0) > 0),
+        piecesRows,
         charges: (values.charges || []).map((row) => ({
             chargeId: normalizePositiveNumberValue(row.chargeId) ?? 0,
             description: row.description?.trim() || undefined,
@@ -383,16 +429,20 @@ const normalizeShipmentPayload = (values: ShipmentFormValues): ShipmentFormValue
 const normalizeShipmentUpdatePayload = (
     values: ShipmentFormValues,
     version?: number,
+    weightUnit: ProductWeightUnit = 'KG',
 ): ShipmentFormValues => {
-    const { serviceMapId: _serviceMapId, ...payload } = normalizeShipmentPayload(values)
+    const { serviceMapId: _serviceMapId, ...payload } = normalizeShipmentPayload(values, weightUnit)
     return {
         ...payload,
         ...(version != null && version > 0 ? { version } : {}),
     }
 }
 
-const normalizeShipmentCalculatePayload = (values: ShipmentFormValues): ShipmentFormValues => {
-    const { serviceMapId: _serviceMapId, charges: _charges, ...payload } = normalizeShipmentPayload(values)
+const normalizeShipmentCalculatePayload = (
+    values: ShipmentFormValues,
+    weightUnit: ProductWeightUnit = 'KG',
+): ShipmentFormValues => {
+    const { serviceMapId: _serviceMapId, charges: _charges, ...payload } = normalizeShipmentPayload(values, weightUnit)
     return payload
 }
 
@@ -655,6 +705,15 @@ const EMPTY_CONSIGNEE_BLOCK: NonNullable<ShipmentFormValues['consignee']> = {
     email: '',
 }
 
+/** Fresh copies so shipper/consignee blocks never share nested state. */
+function createEmptyShipperBlock(): NonNullable<ShipmentFormValues['shipper']> {
+    return { ...EMPTY_SHIPPER_BLOCK }
+}
+
+function createEmptyConsigneeBlock(): NonNullable<ShipmentFormValues['consignee']> {
+    return { ...EMPTY_CONSIGNEE_BLOCK }
+}
+
 const createEmptyPieceItem = (): PieceItemForm => ({
     contentId: 0,
     quantity: 1,
@@ -762,6 +821,28 @@ function shipperFromMaster(s: Shipper): NonNullable<ShipmentFormValues['shipper'
         mobile: strOrEmpty(shipper.mobile),
         email: strOrEmpty(shipper.email),
     }
+}
+
+function clearMirroredConsigneeEmail(form: UseFormReturn<ShipmentFormValues>): void {
+    if (normalizeMasterSelectId(form.getValues('consigneeId')) > 0) return
+    const shipperEmail = strOrEmpty(form.getValues('shipper.email')).trim().toLowerCase()
+    const consigneeEmail = strOrEmpty(form.getValues('consignee.email')).trim()
+    if (shipperEmail && consigneeEmail.toLowerCase() === shipperEmail) {
+        form.setValue('consignee.email', '', { shouldDirty: false, shouldValidate: false })
+    }
+}
+
+function consigneeEmailForPayload(
+    values: ShipmentFormValues,
+): string | undefined {
+    const consigneeEmail = values.consignee?.email?.trim()
+    if (!consigneeEmail) return undefined
+    if (normalizePositiveNumberValue(values.consigneeId)) return consigneeEmail
+    const shipperEmail = values.shipper?.email?.trim()
+    if (shipperEmail && consigneeEmail.toLowerCase() === shipperEmail.toLowerCase()) {
+        return undefined
+    }
+    return consigneeEmail
 }
 
 function consigneeFromMaster(c: Consignee): NonNullable<ShipmentFormValues['consignee']> {
@@ -1128,9 +1209,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             }
         })
         .filter((option): option is { label: string; value: number } => option != null)
+    const productWeightUnitRef = useRef<ProductWeightUnit>(
+        (initialData?.product?.weightUnit as ProductWeightUnit) ?? 'KG',
+    )
     const form = useForm<ShipmentFormValues>({
-        resolver: zodResolver(shipmentSchema) as Resolver<ShipmentFormValues>,
+        resolver: zodResolver(createShipmentSchema(() => productWeightUnitRef.current)) as Resolver<ShipmentFormValues>,
         defaultValues: buildShipmentFormValues(initialData),
+        mode: 'onSubmit',
+        reValidateMode: 'onSubmit',
     })
 
 
@@ -1168,7 +1254,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     }
 
     const calculateMutation = useMutation({
-        mutationFn: () => shipmentService.calculateCharges(normalizeShipmentCalculatePayload(form.getValues())),
+        mutationFn: () => shipmentService.calculateCharges(
+            normalizeShipmentCalculatePayload(form.getValues(), productWeightUnitRef.current),
+        ),
         onSuccess: (response) => {
             setChargePreview(response.data)
             const editableCharges = (response.data?.rows || []).map((row) => ({
@@ -1406,7 +1494,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         let cancelled = false
         ;(async () => {
             try {
-                const response = await shipmentService.calculateCharges(normalizeShipmentCalculatePayload(form.getValues()))
+                const response = await shipmentService.calculateCharges(
+                    normalizeShipmentCalculatePayload(form.getValues(), productWeightUnitRef.current),
+                )
                 if (!cancelled) {
                     setChargePreview(response.data)
                 }
@@ -1469,6 +1559,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                         shouldDirty: false,
                         shouldValidate: true,
                     })
+                    clearMirroredConsigneeEmail(form)
+                    if (normalizeMasterSelectId(form.getValues('consigneeId')) <= 0) {
+                        const consigneeBlock = form.getValues('consignee')
+                        if (!consigneeBlock || typeof consigneeBlock !== 'object') {
+                            form.setValue('consignee', createEmptyConsigneeBlock(), {
+                                shouldDirty: false,
+                                shouldValidate: false,
+                            })
+                        }
+                    }
                     setSelectedShipperPincode(null)
                     if (!initialData) {
                         form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
@@ -1821,6 +1921,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             const found = shippers.find((s) => s.id === id)
             if (found) {
                 form.setValue('shipper', shipperFromMaster(found), { shouldDirty: false, shouldValidate: true })
+                clearMirroredConsigneeEmail(form)
                 setSelectedShipperPincode(null)
                 if (!initialData) {
                     form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
@@ -1830,7 +1931,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
 
         if (prev > 0) {
-            form.setValue('shipper', EMPTY_SHIPPER_BLOCK, { shouldDirty: false, shouldValidate: false })
+            form.setValue('shipper', createEmptyShipperBlock(), { shouldDirty: false, shouldValidate: false })
             setSelectedShipperPincode(null)
             if (!initialData) {
                 form.setValue('fromZoneId', 0, { shouldDirty: false, shouldValidate: false })
@@ -1859,7 +1960,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
 
         if (prev > 0) {
-            form.setValue('consignee', EMPTY_CONSIGNEE_BLOCK, { shouldDirty: false, shouldValidate: false })
+            form.setValue('consignee', createEmptyConsigneeBlock(), { shouldDirty: false, shouldValidate: false })
             setSelectedConsigneePincode(null)
             if (!initialData) {
                 form.setValue('toZoneId', 0, { shouldDirty: false, shouldValidate: false })
@@ -1875,6 +1976,22 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         () => productOptions.find((product) => normalizeMasterSelectId(product.id) === normalizeMasterSelectId(watchedProductId)),
         [productOptions, watchedProductId],
     )
+    const productWeightUnit = (selectedProduct?.weightUnit
+        ?? initialData?.product?.weightUnit
+        ?? 'KG') as ProductWeightUnit
+    const isGramProduct = isProductWeightInGrams(productWeightUnit)
+    const weightUnitLabel = productWeightLabel(productWeightUnit)
+
+    useEffect(() => {
+        productWeightUnitRef.current = productWeightUnit
+        const actualWeight = Math.max(0, Number(form.getValues('actualWeight')) || 0)
+        if (actualWeight > 0) {
+            void form.trigger(['actualWeight', 'volumetricWeight', 'chargeWeight'])
+        } else {
+            form.clearErrors(['actualWeight', 'volumetricWeight', 'chargeWeight'])
+        }
+    }, [productWeightUnit, form])
+
     const isSurfaceProduct = useMemo(() => {
         const productName = typeof selectedProduct?.productName === 'string' ? selectedProduct.productName.toLowerCase() : ''
         return productName.includes('surface')
@@ -1919,11 +2036,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             const height = Math.max(0, Number(row.height) || 0)
             if (pcs <= 0 || length <= 0 || breadth <= 0 || height <= 0) return 0
             const lbh = length * breadth * height
-            return roundWeightKg(
-                isSurfaceProduct
-                    ? ((lbh / 27000) * surfaceCft) * pcs
-                    : (lbh / 5000) * pcs,
-            )
+            const volKg = isSurfaceProduct
+                ? ((lbh / 27000) * surfaceCft) * pcs
+                : (lbh / 5000) * pcs
+            return kgToProductBookingWeight(volKg, productWeightUnit)
         })
 
         // Do not validate here: totals are often 0 until the user enters dimensions/weights;
@@ -1938,8 +2054,19 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             0,
         )
         const totalVolumetricWeight = rowVolumetrics.reduce((sum, value) => sum + value, 0)
+        const actualWeight = Math.max(0, Number(form.getValues('actualWeight')) || 0)
+        const nextVolumetricWeight = resolveShipmentVolumetricWeight(
+            0,
+            actualWeight,
+            totalVolumetricWeight,
+        )
         form.setValue('pieces', Math.round(totalPcs), { shouldValidate: false })
-        form.setValue('volumetricWeight', totalVolumetricWeight, { shouldValidate: false })
+        form.setValue('volumetricWeight', nextVolumetricWeight, {
+            shouldValidate: nextVolumetricWeight > 0,
+        })
+        if (nextVolumetricWeight > 0) {
+            form.clearErrors('volumetricWeight')
+        }
         // On edit, preserve backend booking total until user changes piece/item rows.
         if (!(isEditRef.current && !form.formState.isDirty)) {
             form.setValue(
@@ -1948,17 +2075,33 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 { shouldValidate: false },
             )
         }
-    }, [form, isSurfaceProduct, surfaceCft, weightCalcKey]);
+    }, [form, isSurfaceProduct, productWeightUnit, surfaceCft, weightCalcKey]);
 
     useEffect(() => {
         const manualActualWeight = Math.max(0, Number(watchedActualWeight) || 0)
         const manualVolumetricWeight = Math.max(0, Number(watchedVolumetricWeight) || 0)
-        const nextChargeWeight = roundWeightKg(Math.max(manualActualWeight, manualVolumetricWeight))
+        const pieceVolumetricSum = sumPieceVolumetricWeights(watchedPiecesRows)
+        const resolvedVolumetric = resolveShipmentVolumetricWeight(
+            manualVolumetricWeight,
+            manualActualWeight,
+            pieceVolumetricSum,
+        )
+        if (resolvedVolumetric > 0 && resolvedVolumetric !== manualVolumetricWeight) {
+            form.setValue('volumetricWeight', resolvedVolumetric, { shouldValidate: false })
+            form.clearErrors('volumetricWeight')
+        }
+        const nextChargeWeight = normalizeProductBookingWeight(
+            Math.max(manualActualWeight, resolvedVolumetric),
+            productWeightUnit,
+        )
         const currentChargeWeight = Math.max(0, Number(form.getValues('chargeWeight')) || 0)
         if (nextChargeWeight !== currentChargeWeight) {
             form.setValue('chargeWeight', nextChargeWeight, { shouldValidate: false })
+            if (nextChargeWeight > 0) {
+                form.clearErrors('chargeWeight')
+            }
         }
-    }, [form, watchedActualWeight, watchedVolumetricWeight]);
+    }, [form, productWeightUnit, watchedActualWeight, watchedVolumetricWeight, watchedPiecesRows]);
 
     // --- End Calculations ---
 
@@ -1971,10 +2114,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                     normalizeShipmentUpdatePayload(
                         values,
                         savedShipment?.version ?? initialData?.version,
+                        productWeightUnitRef.current,
                     ),
                 )
             }
-            return shipmentService.createShipment(normalizeShipmentPayload(values))
+            return shipmentService.createShipment(
+                normalizeShipmentPayload(values, productWeightUnitRef.current),
+            )
         },
         onSuccess: (response) => {
             const shipment = response?.data
@@ -2164,6 +2310,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             'toZoneId',
             'pieces',
             'actualWeight',
+            'volumetricWeight',
+            'chargeWeight',
             'paymentType',
         ])
         if (!valid) {
@@ -2406,9 +2554,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="shipper.email"
                                             render={({ field }) => (
-                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("E-Mail", false)}>
+                                                <FloatingFormItem suppressError={suppressShipperErrors} label={requiredFieldLabel("Shipper E-Mail", false)}>
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} disabled={isShipperLocked} className={FLOATING_INNER_CONTROL} />
+                                                        <Input
+                                                            {...field}
+                                                            type="email"
+                                                            autoComplete="section-shipper email"
+                                                            value={field.value || ""}
+                                                            disabled={isShipperLocked}
+                                                            className={FLOATING_INNER_CONTROL}
+                                                        />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -2598,9 +2753,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             control={form.control}
                                             name="consignee.email"
                                             render={({ field }) => (
-                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("E-Mail", false)}>
+                                                <FloatingFormItem suppressError={suppressConsigneeErrors} label={requiredFieldLabel("Consignee E-Mail", false)}>
                                                     <FormControl>
-                                                        <Input {...field} value={field.value || ""} disabled={isConsigneeLocked} className={FLOATING_INNER_CONTROL} />
+                                                        <Input
+                                                            {...field}
+                                                            type="email"
+                                                            autoComplete="section-consignee email"
+                                                            value={field.value || ""}
+                                                            disabled={isConsigneeLocked}
+                                                            className={FLOATING_INNER_CONTROL}
+                                                        />
                                                     </FormControl>
                                                 </FloatingFormItem>
                                             )}
@@ -2810,18 +2972,30 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="actualWeight"
                                         render={({ field }) => (
-                                            <FloatingFormItem required label="Actual Weight">
+                                            <FloatingFormItem required label={`Actual Weight (${weightUnitLabel})`}>
                                                 <FormControl>
-                                                    <DecimalInput
-                                                        className={FLOATING_INNER_CONTROL}
-                                                        name={field.name}
-                                                        ref={field.ref}
-                                                        onBlur={field.onBlur}
-                                                        value={field.value}
-                                                        onValueChange={field.onChange}
-                                                        min={0}
-                                                        decimalPlaces={2}
-                                                    />
+                                                    {isGramProduct ? (
+                                                        <IntegerInput
+                                                            className={FLOATING_INNER_CONTROL}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                            onBlur={field.onBlur}
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            min={0}
+                                                        />
+                                                    ) : (
+                                                        <DecimalInput
+                                                            className={FLOATING_INNER_CONTROL}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                            onBlur={field.onBlur}
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            min={0}
+                                                            decimalPlaces={2}
+                                                        />
+                                                    )}
                                                 </FormControl>
                                             </FloatingFormItem>
                                         )}
@@ -2830,7 +3004,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="volumetricWeight"
                                         render={({ field }) => (
-                                            <FloatingFormItem required label="Total Vol. Weight">
+                                            <FloatingFormItem required label={`Total Vol. Weight (${weightUnitLabel})`}>
                                                 <FormControl>
                                                     <IntegerInput
                                                         className={FLOATING_INNER_CONTROL}
@@ -2849,7 +3023,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="chargeWeight"
                                         render={({ field }) => (
-                                            <FloatingFormItem required label="Charge Weight">
+                                            <FloatingFormItem required label={`Charge Weight (${weightUnitLabel})`}>
                                                 <FormControl>
                                                     <IntegerInput
                                                         className={FLOATING_INNER_CONTROL}
@@ -3212,7 +3386,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         value={watchedPiecesRows?.[index]?.volumetricWeight}
                                                         disabled
                                                     />
-                                                    <span className="text-[10px] text-muted-foreground">kg</span>
+                                                    <span className="text-[10px] text-muted-foreground">{weightUnitLabel}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>

@@ -39,6 +39,7 @@ const productSchema = z.object({
     productCode: optionalMasterCode(2),
     productName: z.string().trim().min(3, "Product name must be at least 3 characters"),
     productType: z.string().min(1, "Product type is required"),
+    weightUnit: z.enum(["G", "KG"]),
     status: z.string().min(1, "Status is required"),
 })
 
@@ -59,6 +60,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
             productCode: initialData?.productCode || "",
             productName: initialData?.productName || "",
             productType: initialData?.productType || "DOMESTIC",
+            weightUnit: initialData?.weightUnit || "KG",
             status: initialData?.status || "ACTIVE",
         },
     })
@@ -69,6 +71,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
                 productCode: initialData.productCode,
                 productName: initialData.productName,
                 productType: initialData.productType,
+                weightUnit: initialData.weightUnit || "KG",
                 status: initialData.status,
             })
         }
@@ -164,6 +167,31 @@ export function ProductForm({ initialData }: ProductFormProps) {
                                         <SelectItem value="DOMESTIC">Domestic</SelectItem>
                                         <SelectItem value="INTERNATIONAL">International</SelectItem>
                                         <SelectItem value="LOCAL">Local</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FloatingFormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="weightUnit"
+                        render={({ field }) => (
+                            <FloatingFormItem required label="Booking Weight Unit">
+                                <Select
+                                    key={`weightUnit-${field.value}`}
+                                    onValueChange={field.onChange}
+                                    value={field.value || "KG"}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                            <SelectValue placeholder="Select unit">
+                                                {field.value === "G" ? "Grams (g)" : "Kilograms (kg)"}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="KG">Kilograms (kg)</SelectItem>
+                                        <SelectItem value="G">Grams (g)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </FloatingFormItem>

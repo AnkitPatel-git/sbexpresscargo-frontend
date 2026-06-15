@@ -1,9 +1,12 @@
 /** Product Master — Bruno `docs/bruno/Masters/Product Master/*`. */
 
+export type ProductWeightUnit = 'G' | 'KG'
+
 export interface Product {
     id: number;
     productCode: string;
     productName: string;
+    weightUnit?: ProductWeightUnit;
     version: number;
     productType: 'DOMESTIC' | 'INTERNATIONAL' | 'LOCAL' | string;
     status: 'ACTIVE' | 'INACTIVE' | string;
@@ -19,6 +22,7 @@ export interface ProductFormData {
     productCode?: string;
     productName: string;
     productType: string;
+    weightUnit?: ProductWeightUnit;
     status: string;
     /** Required on update; omit on create. */
     version?: number;

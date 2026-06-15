@@ -13,6 +13,20 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
+export type ShipmentBulkImportJobStatus = {
+  bulkUploadLogId: number;
+  status: "PROCESSING" | "COMPLETED" | "CANCELLED";
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  created: number;
+  updated: number;
+  failed: number;
+  failures: Array<{ row: number; message: string }>;
+  successes: Array<{ row: number; awbNo: string }>;
+  fatalError?: { message?: string } | null;
+};
+
 function authHeaders(includeJson = false) {
   return {
     ...(includeJson ? { "Content-Type": "application/json" } : {}),
@@ -164,7 +178,11 @@ export const shipmentService = {
 
   async bulkImportFromExcel(
     file: File,
-    options?: { updateExisting?: boolean },
+    options?: {
+      updateExisting?: boolean;
+      onProgress?: (progress: ShipmentBulkImportJobStatus) => void;
+      pollIntervalMs?: number;
+    },
   ): Promise<{
     created: number;
     updated: number;
@@ -186,22 +204,79 @@ export const shipmentService = {
     const json = (await response.json().catch(() => ({}))) as {
       success?: boolean;
       data?: {
-        created: number;
-        updated: number;
-        failed: number;
-        failures: Array<{ row: number; message: string }>;
-        successes: Array<{ row: number; awbNo: string }>;
-        bulkUploadLogId?: number;
+        bulkUploadLogId: number;
+        status: string;
+        totalRows: number;
       };
       message?: string;
     };
     if (!response.ok) {
       throw new Error(json.message || "Bulk import failed");
     }
-    if (!json.success || json.data == null) {
+    if (!json.success || json.data?.bulkUploadLogId == null) {
       throw new Error("Invalid bulk import response");
     }
-    return json.data;
+
+    const logId = json.data.bulkUploadLogId;
+    const totalRows = json.data.totalRows;
+    options?.onProgress?.({
+      bulkUploadLogId: logId,
+      status: "PROCESSING",
+      totalRows,
+      successCount: 0,
+      failureCount: 0,
+      created: 0,
+      updated: 0,
+      failed: 0,
+      failures: [],
+      successes: [],
+    });
+
+    const pollMs = options?.pollIntervalMs ?? 2000;
+    const maxWaitMs = 30 * 60 * 1000;
+    const startedAt = Date.now();
+
+    while (true) {
+      const statusResponse = await apiFetch(
+        `${API_URL}/transaction/shipment/bulk-import/status/${logId}`,
+        { headers: authHeaders() },
+      );
+      const statusJson = (await statusResponse.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: ShipmentBulkImportJobStatus;
+        message?: string;
+      };
+      if (!statusResponse.ok || !statusJson.success || statusJson.data == null) {
+        throw new Error(statusJson.message || "Failed to check bulk import status");
+      }
+
+      const job = statusJson.data;
+      options?.onProgress?.(job);
+
+      if (job.status === "COMPLETED") {
+        return {
+          created: job.created,
+          updated: job.updated,
+          failed: job.failed,
+          failures: job.failures,
+          successes: job.successes,
+          bulkUploadLogId: job.bulkUploadLogId,
+        };
+      }
+      if (job.status === "CANCELLED") {
+        const fatal =
+          job.fatalError && typeof job.fatalError.message === "string"
+            ? job.fatalError.message
+            : "Bulk import was cancelled";
+        throw new Error(fatal);
+      }
+      if (Date.now() - startedAt > maxWaitMs) {
+        throw new Error(
+          "Bulk import is still running. Check bulk upload logs later for results.",
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+    }
   },
 
   async downloadBulkForwardingTemplate(): Promise<{ blob: Blob; filename: string }> {
