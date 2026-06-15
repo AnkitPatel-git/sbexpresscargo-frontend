@@ -19,7 +19,7 @@ import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-asy
 import { cn } from "@/lib/utils";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useAuth } from "@/context/auth-context";
-import { isSuperAdminRole, MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
+import { isSuperAdminRole, MASTER_READ, SHIPMENT_BOOKING_PORTAL, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
@@ -307,7 +307,7 @@ export default function ShipmentsPage() {
               <Filter className="h-4 w-4" />
             </Button>
           )}
-          <PermissionGuard permission="transaction.shipment.read">
+          <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.read}>
             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => void handleExport()} title="Export CSV">
               <FileUp className="h-4 w-4" />
             </Button>
@@ -317,7 +317,7 @@ export default function ShipmentsPage() {
           </Button>
         </div>
 
-        <PermissionGuard permission="transaction.shipment.create">
+        <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.create}>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Input
               placeholder="Search by AWB..."
@@ -339,7 +339,7 @@ export default function ShipmentsPage() {
               <FileSpreadsheet className="h-4 w-4" />
               Bulk import
             </Button>
-            <PermissionGuard permission="transaction.shipment.update">
+            <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.update}>
               <Button
                 type="button"
                 variant="outline"
@@ -441,7 +441,7 @@ export default function ShipmentsPage() {
                   <TableCell>{formatInvoiceValue(shipment.shipmentTotalValue)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
-                      <PermissionGuard permission="transaction.shipment.update">
+                      <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.update}>
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)] hover:bg-[var(--express-link)]/10" onClick={() => handleEdit(shipment)}>
                           <Edit className="h-4 w-4" />
                         </Button>

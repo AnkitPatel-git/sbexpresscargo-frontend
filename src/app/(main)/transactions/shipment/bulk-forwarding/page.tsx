@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { PermissionGuard } from "@/components/auth/permission-guard";
+import { SHIPMENT_BOOKING_PORTAL } from "@/lib/portal-permissions";
 import {
   Table,
   TableBody,
@@ -115,7 +116,7 @@ export default function ShipmentBulkForwardingPage() {
 
       <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <PermissionGuard permission="transaction.shipment.read">
+          <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.read}>
             <Button
               type="button"
               variant="outline"
@@ -132,7 +133,7 @@ export default function ShipmentBulkForwardingPage() {
             </Button>
           </PermissionGuard>
 
-          <PermissionGuard permission="transaction.shipment.update">
+          <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.update}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 ref={fileInputRef}

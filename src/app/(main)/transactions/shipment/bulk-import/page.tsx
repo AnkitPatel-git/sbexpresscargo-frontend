@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { PermissionGuard } from "@/components/auth/permission-guard";
+import { SHIPMENT_BOOKING_PORTAL } from "@/lib/portal-permissions";
 import {
   Table,
   TableBody,
@@ -148,7 +149,7 @@ export default function ShipmentBulkImportPage() {
 
       <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <PermissionGuard permission="transaction.shipment.read">
+          <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.read}>
             <Button
               type="button"
               variant="outline"
@@ -165,7 +166,7 @@ export default function ShipmentBulkImportPage() {
             </Button>
           </PermissionGuard>
 
-          <PermissionGuard permission="transaction.shipment.create">
+          <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.create}>
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <Checkbox

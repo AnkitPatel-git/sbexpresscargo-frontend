@@ -24,6 +24,13 @@ export const TRANSACTION_SHIPMENT = {
   update: "transaction.shipment.update",
 } as const;
 
+/** Portal nav/buttons: accept legacy transaction.* or API shipment.core.* (Operations role). */
+export const SHIPMENT_BOOKING_PORTAL = {
+  read: [TRANSACTION_SHIPMENT.read, SHIPMENT_CORE.read] as const,
+  create: [TRANSACTION_SHIPMENT.create, SHIPMENT_CORE.create] as const,
+  update: [TRANSACTION_SHIPMENT.update, SHIPMENT_CORE.update] as const,
+};
+
 /** Alternate permissions that may load master dropdowns without master nav access. */
 const PORTAL_TRANSACTION_MASTER_LOOKUP = [
   SHIPMENT_CORE.read,

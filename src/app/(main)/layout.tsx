@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { PermissionGuard } from "@/components/auth/permission-guard";
+import { SHIPMENT_BOOKING_PORTAL } from "@/lib/portal-permissions";
 import { cn } from "@/lib/utils";
 import {
   masterNavItemActive,
@@ -897,7 +898,7 @@ const SidebarContent = ({
 
         {isTransactionsOpen && !isCollapsed && (
           <div className="mt-1 flex flex-col gap-0.5 rounded-md bg-white p-1 shadow-sm">
-            <PermissionGuard permission="transaction.shipment.read">
+            <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.read}>
               <LinkItem
                 href="/transactions/shipment"
                 subItem
@@ -949,7 +950,7 @@ const SidebarContent = ({
                 Customer Payment
               </LinkItem>
             </PermissionGuard>}
-            {!isCustomerUser && <PermissionGuard permission="transaction.shipment.read">
+            {!isCustomerUser && <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.read}>
               <LinkItem
                 href="/transactions/receipt"
                 subItem
@@ -972,7 +973,7 @@ const SidebarContent = ({
             </div>
             <div className="max-h-[70vh] overflow-y-auto">
               <div className="mt-1 flex flex-col gap-1">
-                <PermissionGuard permission="transaction.shipment.read">
+                <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.read}>
                   <LinkItem
                     href="/transactions/shipment"
                     subItem
@@ -1032,7 +1033,7 @@ const SidebarContent = ({
                     Customer Payment
                   </LinkItem>
                 </PermissionGuard>}
-                {!isCustomerUser && <PermissionGuard permission="transaction.shipment.read">
+                {!isCustomerUser && <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.read}>
                   <LinkItem
                     href="/transactions/receipt"
                     subItem

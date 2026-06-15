@@ -6,12 +6,15 @@ import { useAuth } from "@/context/auth-context"
 
 interface PermissionGuardProps {
     permission?: string
+    /** User needs any one of these permissions (OR). */
+    anyOf?: readonly string[]
     fallback?: React.ReactNode
     children: React.ReactNode
 }
 
 export function PermissionGuard({
     permission,
+    anyOf,
     fallback = null,
     children,
 }: PermissionGuardProps) {
@@ -19,7 +22,11 @@ export function PermissionGuard({
 
     if (isLoading) return null
 
-    if (permission && !hasPermission(permission)) {
+    if (anyOf?.length) {
+        if (!anyOf.some((p) => hasPermission(p))) {
+            return <>{fallback}</>
+        }
+    } else if (permission && !hasPermission(permission)) {
         return <>{fallback}</>
     }
 
