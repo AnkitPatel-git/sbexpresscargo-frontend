@@ -127,6 +127,22 @@ import {
     sumPieceVolumetricWeights,
 } from '@/lib/product-weight'
 
+function applyBookingWeightBlur(
+    rawValue: number | string | null | undefined,
+    onChange: (value: number) => void,
+    onBlur: () => void,
+    weightUnit: ProductWeightUnit,
+) {
+    const normalized = normalizeProductBookingWeight(
+        Math.max(0, Number(rawValue) || 0),
+        weightUnit,
+    )
+    if (normalized !== Number(rawValue)) {
+        onChange(normalized)
+    }
+    onBlur()
+}
+
 interface ShipmentFormProps {
     initialData?: Shipment | null
 }
@@ -2979,7 +2995,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                             className={FLOATING_INNER_CONTROL}
                                                             name={field.name}
                                                             ref={field.ref}
-                                                            onBlur={field.onBlur}
+                                                            onBlur={() =>
+                                                                applyBookingWeightBlur(
+                                                                    field.value,
+                                                                    field.onChange,
+                                                                    field.onBlur,
+                                                                    productWeightUnit,
+                                                                )
+                                                            }
                                                             value={field.value}
                                                             onValueChange={field.onChange}
                                                             min={0}
@@ -2989,7 +3012,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                             className={FLOATING_INNER_CONTROL}
                                                             name={field.name}
                                                             ref={field.ref}
-                                                            onBlur={field.onBlur}
+                                                            onBlur={() =>
+                                                                applyBookingWeightBlur(
+                                                                    field.value,
+                                                                    field.onChange,
+                                                                    field.onBlur,
+                                                                    productWeightUnit,
+                                                                )
+                                                            }
                                                             value={field.value}
                                                             onValueChange={field.onChange}
                                                             min={0}
@@ -3010,7 +3040,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         className={FLOATING_INNER_CONTROL}
                                                         name={field.name}
                                                         ref={field.ref}
-                                                        onBlur={field.onBlur}
+                                                        onBlur={() =>
+                                                            applyBookingWeightBlur(
+                                                                field.value,
+                                                                field.onChange,
+                                                                field.onBlur,
+                                                                productWeightUnit,
+                                                            )
+                                                        }
                                                         value={field.value}
                                                         onValueChange={field.onChange}
                                                         min={0}

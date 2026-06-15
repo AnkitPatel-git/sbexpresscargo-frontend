@@ -1,9 +1,23 @@
 export type ProductWeightUnit = 'G' | 'KG'
 
+const PRODUCT_BOOKING_GRAM_SLAB = 500
+
 export function isProductWeightInGrams(
   unit: ProductWeightUnit | string | null | undefined,
 ): boolean {
   return String(unit ?? 'KG').toUpperCase() === 'G'
+}
+
+/** Gram products: round up to the next 500 g slab (1600 → 2000). */
+export function roundProductBookingGramWeight(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0
+  return Math.ceil(value / PRODUCT_BOOKING_GRAM_SLAB) * PRODUCT_BOOKING_GRAM_SLAB
+}
+
+/** Kg products: standard half-up rounding to whole kg (10.499 → 10, 10.5 → 11). */
+export function roundProductBookingKgWeight(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0
+  return Math.round(value)
 }
 
 /** Normalize a weight value in the product's native booking unit. */
@@ -13,12 +27,9 @@ export function normalizeProductBookingWeight(
 ): number {
   if (!Number.isFinite(value) || value <= 0) return 0
   if (isProductWeightInGrams(unit)) {
-    return Math.round(value)
+    return roundProductBookingGramWeight(value)
   }
-  const baseKg = Math.floor(value)
-  const fraction = value - baseKg
-  const ceiled = fraction > 0.1 ? baseKg + 1 : value
-  return Math.round(ceiled * 100) / 100
+  return roundProductBookingKgWeight(value)
 }
 
 /** Stored booking weight → kg for L×B×H divisor math. */
@@ -36,10 +47,10 @@ export function kgToProductBookingWeight(
   unit: ProductWeightUnit | string,
 ): number {
   if (!Number.isFinite(kg) || kg <= 0) return 0
-  if (isProductWeightInGrams(unit)) {
-    return Math.round(kg * 1000)
-  }
-  return normalizeProductBookingWeight(kg, unit)
+  return normalizeProductBookingWeight(
+    isProductWeightInGrams(unit) ? kg * 1000 : kg,
+    unit,
+  )
 }
 
 export function productWeightLabel(
