@@ -20,6 +20,22 @@ export function roundProductBookingKgWeight(value: number): number {
   return Math.round(value)
 }
 
+function round2(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+/**
+ * Gram-product compatibility parser:
+ * - legacy values may still be grams (e.g. 500, 1600)
+ * - new flow stores decimal kg (e.g. 0.5, 1.5)
+ */
+function normalizeGramValueToKg(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0
+  const interpretedAsGrams = value >= 100
+  const grams = interpretedAsGrams ? value : value * 1000
+  return round2(roundProductBookingGramWeight(grams) / 1000)
+}
+
 /** Normalize a weight value in the product's native booking unit. */
 export function normalizeProductBookingWeight(
   value: number,
@@ -27,7 +43,7 @@ export function normalizeProductBookingWeight(
 ): number {
   if (!Number.isFinite(value) || value <= 0) return 0
   if (isProductWeightInGrams(unit)) {
-    return roundProductBookingGramWeight(value)
+    return normalizeGramValueToKg(value)
   }
   return roundProductBookingKgWeight(value)
 }
@@ -38,7 +54,9 @@ export function productBookingWeightToKg(
   unit: ProductWeightUnit | string,
 ): number {
   if (!Number.isFinite(value)) return 0
-  return isProductWeightInGrams(unit) ? value / 1000 : value
+  if (!isProductWeightInGrams(unit)) return value
+  // Backward compatible: legacy rows stored grams; new rows store kg decimals.
+  return value >= 100 ? value / 1000 : value
 }
 
 /** Kg from volumetric formula → product storage unit. */
@@ -47,10 +65,10 @@ export function kgToProductBookingWeight(
   unit: ProductWeightUnit | string,
 ): number {
   if (!Number.isFinite(kg) || kg <= 0) return 0
-  return normalizeProductBookingWeight(
-    isProductWeightInGrams(unit) ? kg * 1000 : kg,
-    unit,
-  )
+  if (isProductWeightInGrams(unit)) {
+    return normalizeGramValueToKg(kg)
+  }
+  return normalizeProductBookingWeight(kg, unit)
 }
 
 export function productWeightLabel(
