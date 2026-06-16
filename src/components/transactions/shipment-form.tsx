@@ -118,10 +118,8 @@ import { useAuth } from '@/context/auth-context'
 import { MASTER_READ, SHIPMENT_CHARGE, UTILITY_READ, hasMasterLookupForPortalTransaction } from '@/lib/portal-permissions'
 import {
     type ProductWeightUnit,
-    isProductWeightInGrams,
     kgToProductBookingWeight,
     normalizeProductBookingWeight,
-    productWeightLabel,
     resolveShipmentVolumetricWeight,
     sumPieceVolumetricWeights,
 } from '@/lib/product-weight'
@@ -1952,8 +1950,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const productWeightUnit = (selectedProduct?.weightUnit
         ?? initialData?.product?.weightUnit
         ?? 'KG') as ProductWeightUnit
-    const isGramProduct = isProductWeightInGrams(productWeightUnit)
-    const weightUnitLabel = productWeightLabel(productWeightUnit)
+    const weightUnitLabel = 'kg'
 
     useEffect(() => {
         productWeightUnitRef.current = productWeightUnit
@@ -2926,53 +2923,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem required label={`Actual Weight (${weightUnitLabel})`}>
                                                 <FormControl>
-                                                    {isGramProduct ? (
-                                                        <IntegerInput
-                                                            className={FLOATING_INNER_CONTROL}
-                                                            name={field.name}
-                                                            ref={field.ref}
-                                                            onBlur={() =>
-                                                                applyBookingWeightBlur(
-                                                                    field.value,
-                                                                    field.onChange,
-                                                                    field.onBlur,
-                                                                    productWeightUnit,
-                                                                )
-                                                            }
-                                                            value={field.value}
-                                                            onValueChange={field.onChange}
-                                                            min={0}
-                                                        />
-                                                    ) : (
-                                                        <DecimalInput
-                                                            className={FLOATING_INNER_CONTROL}
-                                                            name={field.name}
-                                                            ref={field.ref}
-                                                            onBlur={() =>
-                                                                applyBookingWeightBlur(
-                                                                    field.value,
-                                                                    field.onChange,
-                                                                    field.onBlur,
-                                                                    productWeightUnit,
-                                                                )
-                                                            }
-                                                            value={field.value}
-                                                            onValueChange={field.onChange}
-                                                            min={0}
-                                                            decimalPlaces={2}
-                                                        />
-                                                    )}
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="volumetricWeight"
-                                        render={({ field }) => (
-                                            <FloatingFormItem required label={`Total Vol. Weight (${weightUnitLabel})`}>
-                                                <FormControl>
-                                                    <IntegerInput
+                                                    <DecimalInput
                                                         className={FLOATING_INNER_CONTROL}
                                                         name={field.name}
                                                         ref={field.ref}
@@ -2987,6 +2938,34 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         value={field.value}
                                                         onValueChange={field.onChange}
                                                         min={0}
+                                                        decimalPlaces={2}
+                                                    />
+                                                </FormControl>
+                                            </FloatingFormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="volumetricWeight"
+                                        render={({ field }) => (
+                                            <FloatingFormItem required label={`Total Vol. Weight (${weightUnitLabel})`}>
+                                                <FormControl>
+                                                    <DecimalInput
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        name={field.name}
+                                                        ref={field.ref}
+                                                        onBlur={() =>
+                                                            applyBookingWeightBlur(
+                                                                field.value,
+                                                                field.onChange,
+                                                                field.onBlur,
+                                                                productWeightUnit,
+                                                            )
+                                                        }
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        min={0}
+                                                        decimalPlaces={2}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>
@@ -2998,12 +2977,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem required label={`Charge Weight (${weightUnitLabel})`}>
                                                 <FormControl>
-                                                    <IntegerInput
+                                                    <DecimalInput
                                                         className={FLOATING_INNER_CONTROL}
                                                         name={field.name}
                                                         ref={field.ref}
                                                         value={field.value}
                                                         disabled
+                                                        decimalPlaces={2}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>

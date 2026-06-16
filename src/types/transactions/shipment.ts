@@ -2,7 +2,6 @@ import * as z from "zod";
 
 import { optionalMasterCode } from "@/lib/master-code-schema";
 import {
-  isProductWeightInGrams,
   type ProductWeightUnit,
 } from "@/lib/product-weight";
 import {
@@ -362,14 +361,6 @@ function appendShipmentValidation(
       path: ["actualWeight"],
       message: "Actual Weight is required",
     })
-  } else if (isProductWeightInGrams(weightUnit)) {
-    if (!Number.isInteger(Number(values.actualWeight))) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["actualWeight"],
-        message: "Actual weight must be a whole number of grams",
-      })
-    }
   } else if (!hasAtMostActualWeightDecimals(Number(values.actualWeight))) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
