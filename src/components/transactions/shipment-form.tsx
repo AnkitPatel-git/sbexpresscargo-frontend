@@ -99,7 +99,6 @@ import { productService } from '@/services/masters/product-service'
 import { vendorService } from '@/services/masters/vendor-service'
 import { serviceCenterService } from '@/services/masters/service-center-service'
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
-import { pincodeDistanceService } from '@/services/utilities/pincode-distance-service'
 import {
     EWAYBILL_MANDATORY_INVOICE_THRESHOLD,
     getEwaybillRequiredMessage,
@@ -171,9 +170,6 @@ const generateKycRowId = () => {
     }
     return `kyc-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
-
-/** Same pickup and delivery pincode would otherwise be 0 km; pricing uses a floor (see backend PincodeRouteDistanceService). */
-const MIN_SAME_PINCODE_DISTANCE_KM = 10
 
 function consigneePincodeEdlKey(pin: ServiceablePincode | null | undefined): string | null {
     if (!pin) return null
@@ -311,7 +307,6 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
             sumPieceVolumetricWeights(shipmentRef?.piecesRows),
         ),
         chargeWeight: normalizeNumberValue(shipmentRef?.chargeWeight) ?? 0,
-        km: shipmentRef?.km || 0,
         isEdl: Boolean(shipmentRef?.isEdl) || Boolean(shipmentRef?.oda),
         odaEdlDistanceKm: shipmentRef?.odaEdlDistanceKm != null
             ? Number(shipmentRef.odaEdlDistanceKm)
@@ -417,7 +412,6 @@ const normalizeShipmentPayload = (
         appointmentDelivery: Boolean(values.appointmentDelivery),
         floorDelivery: Boolean(values.floorDelivery),
         floorCount: normalizeNumberValue(values.floorCount),
-        km: normalizeNumberValue(values.km),
         isEdl: Boolean(values.isEdl),
         odaEdlDistanceKm: normalizeNumberValue(values.odaEdlDistanceKm),
         commercial: Boolean(values.commercial),
@@ -803,7 +797,6 @@ type ShipmentFormSource = Shipment & {
     actualWeight?: number | null
     volumetricWeight?: number | null
     chargeWeight?: number | null
-    km?: number | null
     isEdl?: boolean | null
     odaEdlDistanceKm?: number | string | null
     commercial?: boolean | null
@@ -1384,7 +1377,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         Number(watchedShipmentTotalValue) > EWAYBILL_MANDATORY_INVOICE_THRESHOLD
     const watchedActualWeight = form.watch('actualWeight')
     const watchedVolumetricWeight = form.watch('volumetricWeight')
-    const watchedKm = form.watch('km')
     const watchedIsEdl = form.watch('isEdl')
     const watchedOdaEdlDistanceKm = form.watch('odaEdlDistanceKm')
     const watchedPiecesRowsForPricing = form.watch('piecesRows')
@@ -1468,7 +1460,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 floorDelivery: watchedFloorDelivery,
                 floorCount: watchedFloorCount,
                 shipmentTotalValue: watchedShipmentTotalValue,
-                km: watchedKm,
                 isEdl: watchedIsEdl,
                 odaEdlDistanceKm: watchedOdaEdlDistanceKm,
                 piecesRows: watchedPiecesRowsForPricing,
@@ -1489,7 +1480,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             watchedFloorDelivery,
             watchedFloorCount,
             watchedShipmentTotalValue,
-            watchedKm,
             watchedIsEdl,
             watchedOdaEdlDistanceKm,
             watchedPiecesRowsForPricing,
@@ -1734,13 +1724,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         staleTime: 5 * 60 * 1000,
     })
 
-    const { data: pincodeDistanceData } = useQuery({
-        queryKey: ['shipment-pincode-distance', watchedShipperPinCode, watchedConsigneePinCode],
-        queryFn: () => pincodeDistanceService.getPincodeDistance((watchedShipperPinCode || '').trim(), (watchedConsigneePinCode || '').trim()),
-        enabled: (watchedShipperPinCode || '').trim().length >= 6 && (watchedConsigneePinCode || '').trim().length >= 6,
-        staleTime: 60 * 60 * 1000,
-    })
-
     const shipperPincodeSource = normalizeMasterSelectId(watchedShipperId) > 0
         ? shipperPincodeData?.data?.[0] ?? null
         : selectedShipperPincode ?? shipperPincodeData?.data?.[0] ?? null
@@ -1751,32 +1734,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const consigneeZoneOptions = useMemo(() => sanitizeArray(consigneePincodeSource?.zones), [consigneePincodeSource])
     const shipperResolvedZone = useMemo(() => pickPincodeZone(shipperZoneOptions), [shipperZoneOptions])
     const consigneeResolvedZone = useMemo(() => pickPincodeZone(consigneeZoneOptions), [consigneeZoneOptions])
-
-    useEffect(() => {
-        const shipperPin = (watchedShipperPinCode || '').trim()
-        const consigneePin = (watchedConsigneePinCode || '').trim()
-
-        if (shipperPin.length < 6 || consigneePin.length < 6) {
-            if ((form.getValues('km') || 0) !== 0) {
-                form.setValue('km', 0, { shouldDirty: false, shouldValidate: false })
-            }
-            return
-        }
-
-        if (shipperPin === consigneePin) {
-            if ((form.getValues('km') || 0) !== MIN_SAME_PINCODE_DISTANCE_KM) {
-                form.setValue('km', MIN_SAME_PINCODE_DISTANCE_KM, { shouldDirty: false, shouldValidate: false })
-            }
-            return
-        }
-
-        const distanceKm = pincodeDistanceData?.data?.distanceKm
-        if (typeof distanceKm === 'number' && Number.isFinite(distanceKm)) {
-            if (Math.abs((form.getValues('km') || 0) - distanceKm) > 0.01) {
-                form.setValue('km', distanceKm, { shouldDirty: false, shouldValidate: false })
-            }
-        }
-    }, [form, pincodeDistanceData?.data?.distanceKm, watchedConsigneePinCode, watchedShipperPinCode])
 
     useEffect(() => {
         const pin = (watchedShipperPinCode || '').trim()
@@ -2908,47 +2865,26 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         </FloatingFormItem>
                                     )}
                                 />
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="shipmentTotalValue"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Invoice Value">
-                                                <FormControl>
-                                                    <DecimalInput
-                                                        className={FLOATING_INNER_CONTROL}
-                                                        name={field.name}
-                                                        ref={field.ref}
-                                                        onBlur={field.onBlur}
-                                                        value={field.value}
-                                                        onValueChange={field.onChange}
-                                                        min={0}
-                                                        decimalPlaces={2}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="km"
-                                        render={({ field }) => (
-                                            <FloatingFormItem label="Total Distance (KM)">
-                                                <FormControl>
-                                                    <IntegerInput
-                                                        className={FLOATING_INNER_CONTROL}
-                                                        name={field.name}
-                                                        ref={field.ref}
-                                                        onBlur={field.onBlur}
-                                                        value={field.value}
-                                                        onValueChange={field.onChange}
-                                                        min={0}
-                                                    />
-                                                </FormControl>
-                                            </FloatingFormItem>
-                                        )}
-                                    />
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="shipmentTotalValue"
+                                    render={({ field }) => (
+                                        <FloatingFormItem label="Invoice Value">
+                                            <FormControl>
+                                                <DecimalInput
+                                                    className={FLOATING_INNER_CONTROL}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                    onBlur={field.onBlur}
+                                                    value={field.value}
+                                                    onValueChange={field.onChange}
+                                                    min={0}
+                                                    decimalPlaces={2}
+                                                />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                     <FormField
                                         control={form.control}

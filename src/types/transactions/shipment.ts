@@ -190,7 +190,6 @@ export const shipmentBaseSchema = z.object({
   actualWeight: z.coerce.number().positive("Actual Weight is required"),
   volumetricWeight: z.coerce.number().positive("Total Vol. Weight is required"),
   chargeWeight: z.coerce.number().positive("Charge Weight is required"),
-  km: z.number().int().optional(),
   isEdl: z.boolean().default(false),
   odaEdlDistanceKm: z.number().int().optional(),
   commercial: z.boolean().default(false),
@@ -379,14 +378,6 @@ function appendShipmentValidation(
     })
   }
 
-  if (values.km == null || Number(values.km) <= 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["km"],
-      message: "Total Distance is required",
-    })
-  }
-
   if (values.isCod && (!values.codAmount || values.codAmount <= 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -524,7 +515,6 @@ export interface Shipment {
   origin?: string | null;
   destination?: string | null;
   pieces?: number | null;
-  km?: number | null;
   isEdl?: boolean;
   /** @deprecated Ignored for new bookings; merged into `isEdl` when loading legacy data. */
   oda?: boolean;
