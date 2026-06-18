@@ -329,8 +329,9 @@ export default function MisReportPage() {
 
   const formatCell = (column: MisReportColumn, value: string | number | null) => {
     if (value == null || value === "") return "—";
-    if (column === "createdAt") return formatReportDateTime(value);
-    if (REPORT_DATE_COLUMNS.has(column)) return formatReportDate(value);
+    const dateValue = typeof value === "number" ? String(value) : value;
+    if (column === "createdAt") return formatReportDateTime(dateValue);
+    if (REPORT_DATE_COLUMNS.has(column)) return formatReportDate(dateValue);
     return String(value);
   };
 
