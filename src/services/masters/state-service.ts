@@ -10,6 +10,7 @@ export const stateService = {
         search?: string;
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        countryId?: number;
     }): Promise<StateListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append('page', params.page.toString());
@@ -17,6 +18,7 @@ export const stateService = {
         if (params?.search) queryParams.append('search', params.search);
         if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
         if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        if (params?.countryId) queryParams.append('countryId', params.countryId.toString());
 
         const response = await apiFetch(`${API_URL}/state-master?${queryParams.toString()}`, {
             headers: {

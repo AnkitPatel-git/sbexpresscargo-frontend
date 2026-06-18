@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select";
 import { useDebounce } from "@/hooks/use-debounce";
+import { getTodayIndiaYyyyMmDd } from "@/lib/india-date";
 import { bankService } from "@/services/masters/bank-service";
 import type { Bank } from "@/types/masters/bank";
 import { shipmentService } from "@/services/transactions/shipment-service";
@@ -31,7 +32,7 @@ export type ReceiptFormLine = {
 function emptyLine(): ReceiptFormLine {
   return {
     receiptNo: "",
-    receiptDate: new Date().toISOString().split("T")[0],
+    receiptDate: getTodayIndiaYyyyMmDd(),
     amount: "",
     receiptType: "",
     referenceNo: "",

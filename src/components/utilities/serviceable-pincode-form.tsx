@@ -35,6 +35,8 @@ import { zoneService } from '@/services/masters/zone-service'
 import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import { ServiceablePincode, type ServiceablePincodeFormData } from '@/types/utilities/serviceable-pincode'
+import type { State } from '@/types/masters/state'
+import type { City } from '@/types/masters/city'
 
 const pincodeSchema = z.object({
     countryId: z.number().min(1, "Country is required"),
@@ -98,8 +100,11 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             : null,
     )
     const [pickedState, setPickedState] = useState<{ id: number; stateName: string } | null>(() =>
-        initialData?.state && initialData.stateId
-            ? { id: initialData.stateId, stateName: initialData.state.stateName }
+        initialData?.stateId
+            ? {
+                  id: initialData.stateId,
+                  stateName: initialData.state?.stateName ?? '',
+              }
             : null,
     )
     const [pickedCity, setPickedCity] = useState<{ id: number; cityName: string } | null>(() =>
@@ -189,7 +194,14 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
 
     const { data: statesData, isFetching: isStatesFetching } = useQuery({
         queryKey: ['states-list', selectedCountryId, debouncedStateSearch],
-        queryFn: () => stateService.getStates({ limit: 25, search: debouncedStateSearch, sortBy: 'stateName', sortOrder: 'asc' }),
+        queryFn: () =>
+            stateService.getStates({
+                limit: 50,
+                search: debouncedStateSearch,
+                sortBy: 'stateName',
+                sortOrder: 'asc',
+                countryId: selectedCountryId || undefined,
+            }),
         enabled: !!selectedCountryId && (stateOpen || !!selectedStateId),
         staleTime: 5 * 60 * 1000,
     })
@@ -224,11 +236,80 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     })
 
     const countryOptions = useMemo(() => countriesData?.data ?? [], [countriesData?.data])
-    const stateOptions = useMemo(
-        () => (statesData?.data ?? []).filter((state) => !selectedCountryId || state.countryId === selectedCountryId),
-        [selectedCountryId, statesData?.data]
-    )
-    const cityOptions = useMemo(() => citiesData?.data ?? [], [citiesData?.data])
+    const stateOptions = useMemo(() => {
+        const fromApi = (statesData?.data ?? []).filter(
+            (state) => !selectedCountryId || state.countryId === selectedCountryId,
+        )
+        const seen = new Set(fromApi.map((state) => state.id))
+        const extras: State[] = []
+
+        const addExtraState = (id: number, stateName: string, countryId: number) => {
+            if (!id || seen.has(id)) return
+            seen.add(id)
+            extras.push({
+                id,
+                countryId,
+                stateName,
+                gstAlias: '',
+                unionTerritory: false,
+                createdAt: '',
+                updatedAt: '',
+                createdById: null,
+                updatedById: null,
+                deletedAt: null,
+                deletedById: null,
+            })
+        }
+
+        if (pickedState?.id) {
+            addExtraState(pickedState.id, pickedState.stateName, selectedCountryId)
+        } else if (initialData?.stateId && initialData.state) {
+            addExtraState(initialData.stateId, initialData.state.stateName, initialData.countryId)
+        }
+
+        return [...extras, ...fromApi]
+    }, [initialData, pickedState, selectedCountryId, statesData?.data])
+
+    const cityOptions = useMemo(() => {
+        const fromApi = citiesData?.data ?? []
+        const seen = new Set(fromApi.map((city) => city.id))
+        const extras: City[] = []
+
+        const addExtraCity = (id: number, cityName: string, countryId: number, stateId: number) => {
+            if (!id || seen.has(id)) return
+            seen.add(id)
+            extras.push({
+                id,
+                cityName,
+                countryId,
+                stateId,
+            })
+        }
+
+        if (pickedCity?.id) {
+            addExtraCity(
+                pickedCity.id,
+                pickedCity.cityName,
+                selectedCountryId,
+                selectedStateId,
+            )
+        } else if (initialData?.cityId) {
+            addExtraCity(
+                initialData.cityId,
+                initialData.city?.cityName ?? initialData.cityName ?? '',
+                initialData.countryId,
+                initialData.stateId,
+            )
+        }
+
+        return [...extras, ...fromApi]
+    }, [
+        citiesData?.data,
+        initialData,
+        pickedCity,
+        selectedCountryId,
+        selectedStateId,
+    ])
     const zoneOptions = useMemo(() => zonesData?.data ?? [], [zonesData?.data])
 
     const selectedCity = useMemo(() => {
@@ -293,43 +374,6 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
     }, [initialData?.zones, pickedZone, selectedZoneId, zoneOptions])
 
     useEffect(() => {
-        if (!selectedCountryId) {
-            setPickedCountry(null)
-            setPickedState(null)
-            setPickedCity(null)
-            return
-        }
-        if (pickedCountry && pickedCountry.id !== selectedCountryId) {
-            setPickedState(null)
-            setPickedCity(null)
-        }
-
-        const sid = form.getValues('stateId')
-        if (!sid) return
-
-        const stateBelongsToCountry = stateOptions.some(
-            (state) => state.id === sid && state.countryId === selectedCountryId,
-        )
-
-        if (!stateBelongsToCountry && stateOptions.length > 0) {
-            form.setValue('stateId', 0, { shouldValidate: true })
-            form.setValue('cityId', 0, { shouldValidate: true })
-            setPickedState(null)
-            setPickedCity(null)
-        }
-    }, [form, pickedCountry, selectedCountryId, stateOptions])
-
-    useEffect(() => {
-        if (!selectedStateId) return
-        const cid = form.getValues('cityId')
-        if (!cid) return
-        const ok = cityOptions.some((c) => c.id === cid)
-        if (!ok && cityOptions.length > 0) {
-            form.setValue('cityId', 0, { shouldValidate: true })
-        }
-    }, [form, selectedStateId, cityOptions])
-
-    useEffect(() => {
         if (!countryOpen) setCountrySearch('')
     }, [countryOpen])
 
@@ -365,7 +409,30 @@ export function ServiceablePincodeForm({ initialData }: ServiceablePincodeFormPr
             tatWorkingDays: initialData.tatWorkingDays != null ? String(initialData.tatWorkingDays) : '',
             embargo: initialData.embargo ?? false,
         })
-    }, [initialData])
+        if (initialData.country && initialData.countryId) {
+            setPickedCountry({
+                id: initialData.countryId,
+                name: initialData.country.name,
+                code: initialData.country.code,
+            })
+        }
+        if (initialData.stateId) {
+            setPickedState({
+                id: initialData.stateId,
+                stateName: initialData.state?.stateName ?? '',
+            })
+        }
+        if (initialData.cityId) {
+            setPickedCity({
+                id: initialData.cityId,
+                cityName: initialData.city?.cityName ?? initialData.cityName ?? '',
+            })
+        }
+        const zone = initialData.zones?.[0]
+        if (zone) {
+            setPickedZone({ id: zone.id, name: zone.name, code: zone.code })
+        }
+    }, [form, initialData])
 
     function selectZone(zoneId: number, zone?: { id: number; name: string; code: string }) {
         form.setValue('zoneIds', [zoneId], { shouldValidate: true })

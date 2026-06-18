@@ -39,6 +39,14 @@ function formatAmount(value: number | null | undefined) {
   });
 }
 
+function formatWeight(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return value.toLocaleString("en-IN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
+}
+
 export default function PartwiseSalesSummaryPage() {
   const { hasPermission, isLoading: authLoading } = useAuth();
   const canReadCustomerGroups = hasMasterLookupForPortalTransaction(
@@ -155,8 +163,8 @@ export default function PartwiseSalesSummaryPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Partwise Sales Summary</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Shipment total amount summed per client for the current month and the two prior months
-              (by booking date).
+              Shipment total amount and total chargeable weight per client for the current month
+              and the two prior months (by booking date).
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -261,7 +269,7 @@ export default function PartwiseSalesSummaryPage() {
         </div>
 
         <div className="overflow-x-auto rounded-md border border-border">
-          <Table className="min-w-[720px] border-0">
+          <Table className="min-w-[960px] border-0">
             <TableHeader>
               <TableRow className="border-0 bg-primary hover:bg-primary">
                 <TableHead className="font-semibold text-primary-foreground">
@@ -282,9 +290,31 @@ export default function PartwiseSalesSummaryPage() {
                     onSort={handleSort}
                   />
                 </TableHead>
-                <TableHead className="font-semibold text-primary-foreground text-right">
+                <TableHead
+                  colSpan={2}
+                  className="font-semibold text-primary-foreground text-center border-l border-primary-foreground/20"
+                >
+                  {months?.currentMonth ?? "Current month"}
+                </TableHead>
+                <TableHead
+                  colSpan={2}
+                  className="font-semibold text-primary-foreground text-center border-l border-primary-foreground/20"
+                >
+                  {months?.lastMonth ?? "Last month"}
+                </TableHead>
+                <TableHead
+                  colSpan={2}
+                  className="font-semibold text-primary-foreground text-center border-l border-primary-foreground/20"
+                >
+                  {months?.lastLastMonth ?? "Month before last"}
+                </TableHead>
+              </TableRow>
+              <TableRow className="border-0 bg-primary/90 hover:bg-primary/90">
+                <TableHead className="bg-primary/90" />
+                <TableHead className="bg-primary/90" />
+                <TableHead className="font-semibold text-primary-foreground text-right border-l border-primary-foreground/20">
                   <SortableColumnHeader
-                    label={months?.currentMonth ?? "Current month"}
+                    label="Amount"
                     field="currentMonthTotal"
                     sortBy={sortBy}
                     sortOrder={sortOrder}
@@ -294,7 +324,17 @@ export default function PartwiseSalesSummaryPage() {
                 </TableHead>
                 <TableHead className="font-semibold text-primary-foreground text-right">
                   <SortableColumnHeader
-                    label={months?.lastMonth ?? "Last month"}
+                    label="Chg. Wt"
+                    field="currentMonthChargeWeight"
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSort={handleSort}
+                    className="justify-end"
+                  />
+                </TableHead>
+                <TableHead className="font-semibold text-primary-foreground text-right border-l border-primary-foreground/20">
+                  <SortableColumnHeader
+                    label="Amount"
                     field="lastMonthTotal"
                     sortBy={sortBy}
                     sortOrder={sortOrder}
@@ -304,8 +344,28 @@ export default function PartwiseSalesSummaryPage() {
                 </TableHead>
                 <TableHead className="font-semibold text-primary-foreground text-right">
                   <SortableColumnHeader
-                    label={months?.lastLastMonth ?? "Month before last"}
+                    label="Chg. Wt"
+                    field="lastMonthChargeWeight"
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSort={handleSort}
+                    className="justify-end"
+                  />
+                </TableHead>
+                <TableHead className="font-semibold text-primary-foreground text-right border-l border-primary-foreground/20">
+                  <SortableColumnHeader
+                    label="Amount"
                     field="lastLastMonthTotal"
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSort={handleSort}
+                    className="justify-end"
+                  />
+                </TableHead>
+                <TableHead className="font-semibold text-primary-foreground text-right">
+                  <SortableColumnHeader
+                    label="Chg. Wt"
+                    field="lastLastMonthChargeWeight"
                     sortBy={sortBy}
                     sortOrder={sortOrder}
                     onSort={handleSort}
@@ -317,13 +377,13 @@ export default function PartwiseSalesSummaryPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                     Loading Partwise Sales Summary…
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                     No clients found.
                   </TableCell>
                 </TableRow>
@@ -332,14 +392,23 @@ export default function PartwiseSalesSummaryPage() {
                   <TableRow key={row.customerId}>
                     <TableCell className="font-medium">{row.clientName}</TableCell>
                     <TableCell>{row.groupName || "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-right tabular-nums border-l border-border/60">
                       {formatAmount(row.currentMonthTotal)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
+                      {formatWeight(row.currentMonthChargeWeight)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums border-l border-border/60">
                       {formatAmount(row.lastMonthTotal)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
+                      {formatWeight(row.lastMonthChargeWeight)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums border-l border-border/60">
                       {formatAmount(row.lastLastMonthTotal)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatWeight(row.lastLastMonthChargeWeight)}
                     </TableCell>
                   </TableRow>
                 ))

@@ -179,7 +179,7 @@ export const shipmentBaseSchema = z.object({
   toZoneId: z.number().optional(),
   shipmentTotalValue: z.number().optional(),
   shipmentValue: z.number().optional(),
-  invoiceDate: z.string().optional(),
+  invoiceDate: z.string().optional().nullable(),
   invoiceNumber: z.string().optional(),
   reversePickup: z.boolean().default(false),
   appointmentDelivery: z.boolean().default(false),

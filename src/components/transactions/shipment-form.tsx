@@ -24,6 +24,7 @@ import {
 import * as XLSX from "xlsx"
 
 import { cn } from "@/lib/utils"
+import { toDateInputValue, toOptionalDateInputValue } from "@/lib/india-date"
 import { pickPincodeZone, pincodeZoneMissingMessage } from "@/lib/pincode-zone"
 import {
     SHIPMENT_COD_TOPAY_AMOUNT_LABEL,
@@ -281,7 +282,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         serviceMapId: shipmentRef?.serviceMapId || 0,
         shipmentValue: shipmentRef?.shipmentValue ?? 0,
         shipmentTotalValue: shipmentRef?.shipmentTotalValue ?? 0,
-        invoiceDate: toDateInputValue(shipmentRef?.invoiceDate ?? undefined),
+        invoiceDate: toOptionalDateInputValue(shipmentRef?.invoiceDate),
         invoiceNumber: strOrEmpty(shipmentRef?.invoiceNumber),
         fromZoneId: shipmentRef?.fromZoneId || 0,
         toZoneId: shipmentRef?.toZoneId || 0,
@@ -440,8 +441,10 @@ const normalizeShipmentUpdatePayload = (
     weightUnit: ProductWeightUnit = 'KG',
 ): ShipmentFormValues => {
     const { serviceMapId: _serviceMapId, ...payload } = normalizeShipmentPayload(values, weightUnit)
+    const trimmedInvoiceDate = values.invoiceDate?.trim()
     return {
         ...payload,
+        invoiceDate: trimmedInvoiceDate ? trimmedInvoiceDate : null,
         ...(version != null && version > 0 ? { version } : {}),
     }
 }
@@ -485,9 +488,6 @@ const buildPreviewFromSavedShipment = (shipment?: Shipment | null): ShipmentCalc
     }
 }
 
-const toDateInputValue = (value?: string | null, fallback = new Date().toISOString().split('T')[0]) => {
-    return value?.split('T')[0] || fallback
-}
 
 const parseNum = (value?: string): number | undefined => {
     if (!value) return undefined

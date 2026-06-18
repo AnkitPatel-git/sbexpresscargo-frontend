@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import { getTodayIndiaYyyyMmDd } from "@/lib/india-date";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -59,7 +60,7 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
     defaultValues: {
       manifestNo: initialData?.manifestNo || "",
       masterAwbNo: initialData?.masterAwbNo || "",
-      manifestDate: initialData?.manifestAt ? initialData.manifestAt.split("T")[0] : new Date().toISOString().split("T")[0],
+      manifestDate: initialData?.manifestAt ? initialData.manifestAt.split("T")[0] : getTodayIndiaYyyyMmDd(),
       manifestTime: initialData?.manifestAt ? new Date(initialData.manifestAt).toISOString().split("T")[1].substring(0, 5) : "10:00",
       location: initialData?.location || "",
       serviceCenterId: initialData?.serviceCenterId || undefined,

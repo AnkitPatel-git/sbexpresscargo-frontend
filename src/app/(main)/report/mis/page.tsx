@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { formatReportDate, formatReportDateTime } from "@/lib/format-date-only";
 import { customerService } from "@/services/masters/customer-service";
 import { productService } from "@/services/masters/product-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
@@ -79,6 +80,8 @@ const DEFAULT_COLUMNS: MisReportColumn[] = [
   "totalAmount",
   "currentStatus",
 ];
+
+const REPORT_DATE_COLUMNS = new Set<MisReportColumn>(["bookDate", "createdAt"]);
 
 const COLUMN_LABELS: Record<MisReportColumn, string> = {
   awbNo: "AWB No",
@@ -324,8 +327,10 @@ export default function MisReportPage() {
     }
   }
 
-  const formatCell = (value: string | number | null) => {
+  const formatCell = (column: MisReportColumn, value: string | number | null) => {
     if (value == null || value === "") return "—";
+    if (column === "createdAt") return formatReportDateTime(value);
+    if (REPORT_DATE_COLUMNS.has(column)) return formatReportDate(value);
     return String(value);
   };
 
@@ -692,7 +697,7 @@ export default function MisReportPage() {
                   className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}
                 >
                   {displayColumns.map((column) => (
-                    <TableCell key={`${column}-${index}`}>{formatCell(row[column])}</TableCell>
+                    <TableCell key={`${column}-${index}`}>{formatCell(column, row[column])}</TableCell>
                   ))}
                 </TableRow>
               ))

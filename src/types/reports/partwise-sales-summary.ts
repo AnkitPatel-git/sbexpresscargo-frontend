@@ -9,8 +9,11 @@ export type PartwiseSalesSummaryRow = {
   clientName: string;
   groupName: string | null;
   currentMonthTotal: number;
+  currentMonthChargeWeight: number;
   lastMonthTotal: number;
+  lastMonthChargeWeight: number;
   lastLastMonthTotal: number;
+  lastLastMonthChargeWeight: number;
 };
 
 export interface PartwiseSalesSummaryResponse {

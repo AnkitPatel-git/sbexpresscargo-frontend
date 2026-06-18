@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatReportDateTime } from "@/lib/format-date-only";
 import {
   attendanceRegisterService,
   type AttendanceMonthLogDay,
@@ -21,14 +22,7 @@ import {
 
 function formatIstTime(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return formatReportDateTime(iso);
 }
 
 function dayCodeBadgeClass(code: string): string {

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { getTodayIndiaYyyyMmDd } from "@/lib/india-date";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -59,8 +60,8 @@ export function CustomerPaymentForm({ initialData }: CustomerPaymentFormProps) {
   const form = useForm<CustomerPaymentFormValues>({
     resolver: zodResolver(customerPaymentFormSchema),
     defaultValues: {
-      date: initialData?.date ? initialData.date.split("T")[0] : new Date().toISOString().split("T")[0],
-      paidDate: initialData?.paidDate ? initialData.paidDate.split("T")[0] : new Date().toISOString().split("T")[0],
+      date: initialData?.date ? initialData.date.split("T")[0] : getTodayIndiaYyyyMmDd(),
+      paidDate: initialData?.paidDate ? initialData.paidDate.split("T")[0] : getTodayIndiaYyyyMmDd(),
       amount: initialData?.amount || "",
       customerId: initialData?.customerId || undefined,
       invoiceNo: initialData?.invoiceNo || "",
