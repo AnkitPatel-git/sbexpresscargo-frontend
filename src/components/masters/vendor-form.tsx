@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Resolver, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -29,7 +29,9 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { optionLabelForSelect, STATUS_ACTIVE_INACTIVE_OPTIONS } from "@/lib/select-closed-label"
+import { VendorFuelSurchargeTab, VendorVolumetricTab } from "@/components/masters/vendor-pricing-tabs"
 
 import { vendorService } from "@/services/masters/vendor-service"
 import { Vendor, VendorFormData } from "@/types/masters/vendor"
@@ -106,6 +108,8 @@ export function VendorForm({ initialData }: VendorFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const isEdit = !!initialData
+    const vendorId = initialData?.id ?? null
+    const [activeTab, setActiveTab] = useState("details")
     const extraBanks = useMemo((): Bank[] | undefined => {
         const b = initialData?.bank
         if (!b || !initialData?.bankId) return undefined
@@ -197,7 +201,15 @@ export function VendorForm({ initialData }: VendorFormProps) {
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-10">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="h-auto flex w-full flex-wrap justify-start rounded-full border border-border/60 bg-muted/40 p-2">
+                        <TabsTrigger value="details" className="rounded-full px-5 py-2">Vendor Details</TabsTrigger>
+                        <TabsTrigger value="fuel" className="rounded-full px-5 py-2">Fuel Surcharges</TabsTrigger>
+                        <TabsTrigger value="volumetric" className="rounded-full px-5 py-2">Vendor Volumetric</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="details" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Section 1: Basic Information */}
                     <FormSection
@@ -465,6 +477,15 @@ export function VendorForm({ initialData }: VendorFormProps) {
                             </div>
                     </FormSection>
                 </div>
+                    </TabsContent>
+
+                    <TabsContent value="fuel" className="space-y-4">
+                        <VendorFuelSurchargeTab vendorId={vendorId} />
+                    </TabsContent>
+                    <TabsContent value="volumetric" className="space-y-4">
+                        <VendorVolumetricTab vendorId={vendorId} />
+                    </TabsContent>
+                </Tabs>
 
                 <div className="flex justify-end gap-3 pt-6">
                     <Button

@@ -310,7 +310,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         odaEdlDistanceKm: shipmentRef?.odaEdlDistanceKm != null
             ? Number(shipmentRef.odaEdlDistanceKm)
             : 0,
-        commercial: shipmentRef?.commercial || false,
+        vendorPickup: shipmentRef?.vendorPickup || false,
         medicalCharges: shipmentRef?.medicalCharges ?? 0,
         paymentType: shipmentRef?.paymentType || 'CREDIT',
         instruction: shipmentRef?.instruction || '',
@@ -413,7 +413,7 @@ const normalizeShipmentPayload = (
         floorCount: normalizeNumberValue(values.floorCount),
         isEdl: Boolean(values.isEdl),
         odaEdlDistanceKm: normalizeNumberValue(values.odaEdlDistanceKm),
-        commercial: Boolean(values.commercial),
+        vendorPickup: Boolean(values.vendorPickup),
         paymentType: values.paymentType?.trim() || undefined,
         instruction: values.instruction?.trim() || undefined,
         serviceCenterId: normalizePositiveNumberValue(values.serviceCenterId),
@@ -797,7 +797,7 @@ type ShipmentFormSource = Shipment & {
     chargeWeight?: number | null
     isEdl?: boolean | null
     odaEdlDistanceKm?: number | string | null
-    commercial?: boolean | null
+    vendorPickup?: boolean | null
     oda?: boolean | null
     medicalCharges?: number | null
     paymentType?: string | null
@@ -3043,13 +3043,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             />
                                             <FormField
                                                 control={form.control}
-                                                name="commercial"
+                                                name="vendorPickup"
                                                 render={({ field }) => (
                                                     <FormItem className="flex items-center gap-2 space-y-0">
                                                         <FormControl>
                                                             <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(Boolean(v))} />
                                                         </FormControl>
-                                                        <FormLabel className="text-xs font-normal leading-none">Commercial</FormLabel>
+                                                        <FormLabel className="text-xs font-normal leading-none">Vendor Pickup</FormLabel>
                                                     </FormItem>
                                                 )}
                                             />
@@ -3593,6 +3593,24 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             {selectedForwardingOption
                                                 ? ` — ${selectedForwardingOption.vendorName} · ${formatForwardingServiceType(selectedForwardingOption.serviceType)}`
                                                 : ""}
+                                            {selectedForwardingOption?.vendorTotalVolWeight != null ? (
+                                                <span className="block mt-1 text-xs">
+                                                    Vendor vol. weight: {selectedForwardingOption.vendorTotalVolWeight}
+                                                    {selectedForwardingOption.vendorTotalChargeableWeight != null
+                                                        ? ` · Vendor chg. weight: ${selectedForwardingOption.vendorTotalChargeableWeight}`
+                                                        : ""}
+                                                    {selectedForwardingOption.weightUnit
+                                                        ? ` (${selectedForwardingOption.weightUnit})`
+                                                        : ""}
+                                                </span>
+                                            ) : initialData?.vendorTotalVolWeight != null ? (
+                                                <span className="block mt-1 text-xs">
+                                                    Vendor vol. weight: {initialData.vendorTotalVolWeight}
+                                                    {initialData.vendorTotalChargeableWeight != null
+                                                        ? ` · Vendor chg. weight: ${initialData.vendorTotalChargeableWeight}`
+                                                        : ""}
+                                                </span>
+                                            ) : null}
                                         </div>
                                     ) : null}
                                     {canViewCharges && forwardingOptionsQuery.data?.data?.customerTotalAmount != null ? (
@@ -3611,6 +3629,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 <TableRow className="border-b-0 bg-primary hover:bg-primary">
                                                     <TableHead className="text-primary-foreground first:rounded-tl-md">Vendor</TableHead>
                                                     <TableHead className="text-primary-foreground">Service</TableHead>
+                                                    <TableHead className="text-primary-foreground">Vendor Vol Wt</TableHead>
+                                                    <TableHead className="text-primary-foreground">Vendor Chg Wt</TableHead>
                                                     {canViewCharges ? (
                                                         <TableHead className="text-primary-foreground">Vendor Total</TableHead>
                                                     ) : null}
@@ -3627,6 +3647,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         >
                                                             <TableCell className="font-medium">{option.vendorName}</TableCell>
                                                             <TableCell>{formatForwardingServiceType(option.serviceType)}</TableCell>
+                                                            <TableCell>
+                                                                {option.vendorTotalVolWeight != null
+                                                                    ? `${option.vendorTotalVolWeight}${option.weightUnit ? ` ${option.weightUnit}` : ""}`
+                                                                    : "—"}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {option.vendorTotalChargeableWeight != null
+                                                                    ? `${option.vendorTotalChargeableWeight}${option.weightUnit ? ` ${option.weightUnit}` : ""}`
+                                                                    : "—"}
+                                                            </TableCell>
                                                             {canViewCharges ? (
                                                                 <TableCell>
                                                                     {option.vendorTotalAmount != null
@@ -3651,7 +3681,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 {forwardingOptions.length === 0 ? (
                                                     <TableRow>
                                                         <TableCell
-                                                            colSpan={canViewCharges ? 4 : 3}
+                                                            colSpan={canViewCharges ? 6 : 5}
                                                             className="py-8 text-center text-sm text-muted-foreground"
                                                         >
                                                             {forwardingOptionsMessage ||

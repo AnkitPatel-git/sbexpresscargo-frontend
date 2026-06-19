@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Edit, Trash2, Link as LinkIcon, Check, X, FileDown, Filter, FilePlus } from "lucide-react"
+import { Edit, Trash2, Link as LinkIcon, FileDown, Filter, FilePlus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -112,17 +112,8 @@ export default function ServiceMapPage() {
         }
     }
 
-    const decimalToNumber = (value: ServiceMap["minWeight"]) => {
-        if (typeof value === "number" || typeof value === "string") return value
-        if (value && typeof value === "object" && "d" in value) {
-            const digits = Array.isArray(value.d) ? value.d.join("") : ""
-            const exponent = value.e ?? 0
-            const sign = value.s === -1 ? "-" : ""
-            const parsed = Number(`${sign}${digits}e${exponent}`)
-            return Number.isFinite(parsed) ? parsed : ""
-        }
-        return ""
-    }
+    const formatWeightUnit = (unit: ServiceMap["weightUnit"]) =>
+        unit === "G" ? "Grams (g)" : "Kilograms (kg)"
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => serviceMapService.deleteServiceMap(id),
@@ -253,8 +244,7 @@ export default function ServiceMapPage() {
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground">Vendor</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Service Type</TableHead>
-                            <TableHead className="font-semibold text-primary-foreground">Weight (Min-Max)</TableHead>
-                            <TableHead className="text-center font-semibold text-primary-foreground">Single Pc</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Booking Weight Unit</TableHead>
                             <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Status" field="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} /></TableHead>
                             <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
                         </TableRow>
@@ -262,11 +252,11 @@ export default function ServiceMapPage() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Loading service maps...</TableCell>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Loading service maps...</TableCell>
                             </TableRow>
                         ) : rows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No service maps found.</TableCell>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No service maps found.</TableCell>
                             </TableRow>
                         ) : (
                             rows.map((serviceMap: ServiceMap, index) => (
@@ -284,14 +274,7 @@ export default function ServiceMapPage() {
                                     <TableCell>
                                         <Badge variant="outline">{serviceMap.serviceType}</Badge>
                                     </TableCell>
-                                    <TableCell className="text-foreground">{decimalToNumber(serviceMap.minWeight)} - {decimalToNumber(serviceMap.maxWeight)} kg</TableCell>
-                                    <TableCell className="text-center">
-                                        {serviceMap.isSinglePiece ? (
-                                            <Check className="mx-auto h-4 w-4 text-green-600" />
-                                        ) : (
-                                            <X className="mx-auto h-4 w-4 text-red-600" />
-                                        )}
-                                    </TableCell>
+                                    <TableCell className="text-foreground">{formatWeightUnit(serviceMap.weightUnit ?? "KG")}</TableCell>
                                     <TableCell>
                                         <Badge variant={serviceMap.status === "ACTIVE" ? "secondary" : "secondary"} className={serviceMap.status === "ACTIVE" ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200"}>
                                             {serviceMap.status}

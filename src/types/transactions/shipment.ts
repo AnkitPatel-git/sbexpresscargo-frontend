@@ -191,7 +191,7 @@ export const shipmentBaseSchema = z.object({
   chargeWeight: z.coerce.number().positive("Charge Weight is required"),
   isEdl: z.boolean().default(false),
   odaEdlDistanceKm: z.number().int().optional(),
-  commercial: z.boolean().default(false),
+  vendorPickup: z.boolean().default(false),
   paymentType: z.string().optional(),
   currency: z.string().optional(),
   instruction: z.string().optional(),
@@ -510,7 +510,9 @@ export interface Shipment {
   /** @deprecated Ignored for new bookings; merged into `isEdl` when loading legacy data. */
   oda?: boolean;
   odaEdlDistanceKm?: number | string | null;
-  commercial?: boolean;
+  vendorPickup?: boolean;
+  vendorTotalVolWeight?: number | string | null;
+  vendorTotalChargeableWeight?: number | string | null;
   instruction?: string | null;
   serviceCenterId?: number | null;
   createdAt: string;
@@ -718,6 +720,9 @@ export interface ForwardingVendorOption {
   vendorName: string;
   serviceMapId: number;
   serviceType: string | null;
+  weightUnit?: 'G' | 'KG' | null;
+  vendorTotalVolWeight?: number | null;
+  vendorTotalChargeableWeight?: number | null;
   vendorTotalAmount: number | null;
   profit: number | null;
   rateAvailable: boolean;

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { FieldErrors, Resolver, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -21,7 +21,6 @@ import {
     FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
-import { IntegerInput } from "@/components/ui/integer-input"
 import { Button } from "@/components/ui/button"
 import {
     Select,
@@ -30,7 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { optionLabelForSelect, SERVICE_MAP_SERVICE_TYPE_OPTIONS, SERVICE_MAP_STATUS_OPTIONS } from "@/lib/select-closed-label"
+import { optionLabelForSelect, SERVICE_MAP_STATUS_OPTIONS } from "@/lib/select-closed-label"
 import {
     Popover,
     PopoverContent,
@@ -44,19 +43,16 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
-import { Checkbox } from "@/components/ui/checkbox"
 import { serviceMapService } from '@/services/masters/service-map-service'
 import { vendorService } from '@/services/masters/vendor-service'
 import { ServiceMap } from '@/types/masters/service-map'
 
 const serviceMapSchema = z.object({
     vendorId: z.coerce.number().min(1, "Vendor is required"),
-    serviceType: z.enum(['AIR', 'SURFACE', 'EXPRESS']),
-    minWeight: z.coerce.number().min(0, "Min weight must be at least 0"),
-    maxWeight: z.coerce.number().min(0, "Max weight must be at least 0"),
+    serviceType: z.string().trim().min(1, "Service type is required").max(255),
+    weightUnit: z.enum(['G', 'KG']),
     status: z.enum(['ACTIVE', 'INACTIVE']),
     vendorLink: z.string().optional().or(z.literal('')),
-    isSinglePiece: z.boolean(),
 })
 
 type ServiceMapFormValues = z.infer<typeof serviceMapSchema>
@@ -94,21 +90,17 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
         resolver: zodResolver(serviceMapSchema) as Resolver<ServiceMapFormValues>,
         defaultValues: {
             vendorId: 0,
-            serviceType: 'EXPRESS',
-            minWeight: 0,
-            maxWeight: 0,
+            serviceType: '',
+            weightUnit: 'KG',
             status: 'ACTIVE',
             vendorLink: '',
-            isSinglePiece: false,
         },
         values: initialData ? {
             vendorId: initialData.vendorId || 0,
             serviceType: initialData.serviceType,
-            minWeight: Number(initialData.minWeight),
-            maxWeight: Number(initialData.maxWeight),
+            weightUnit: initialData.weightUnit ?? 'KG',
             status: initialData.status,
             vendorLink: initialData.vendorLink || '',
-            isSinglePiece: initialData.isSinglePiece,
         } : undefined
     })
 
@@ -146,7 +138,10 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
     })
 
     function onSubmit(data: ServiceMapFormValues) {
-        mutation.mutate(data)
+        mutation.mutate({
+            ...data,
+            serviceType: data.serviceType.trim(),
+        })
     }
 
     const onInvalid = (errors: FieldErrors<ServiceMapFormValues>) => {
@@ -230,68 +225,42 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                         name="serviceType"
                         render={({ field }) => (
                             <FloatingFormItem label="Service Type">
+                                <FormControl>
+                                    <Input
+                                        placeholder="e.g. Express Delhi"
+                                        {...field}
+                                        className={FLOATING_INNER_CONTROL}
+                                    />
+                                </FormControl>
+                            </FloatingFormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="weightUnit"
+                        render={({ field }) => (
+                            <FloatingFormItem label="Booking Weight Unit">
                                 <Select
-                                    key={field.value}
+                                    key={`weightUnit-${field.value}`}
                                     onValueChange={field.onChange}
-                                    value={field.value}
+                                    value={field.value || "KG"}
                                 >
                                     <FormControl>
                                         <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                            <SelectValue placeholder="Select service">
-                                                {optionLabelForSelect(field.value, SERVICE_MAP_SERVICE_TYPE_OPTIONS)}
+                                            <SelectValue placeholder="Select unit">
+                                                {field.value === "G" ? "Grams (g)" : "Kilograms (kg)"}
                                             </SelectValue>
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="EXPRESS">EXPRESS</SelectItem>
-                                        <SelectItem value="SURFACE">SURFACE</SelectItem>
-                                        <SelectItem value="AIR">AIR</SelectItem>
+                                        <SelectItem value="KG">Kilograms (kg)</SelectItem>
+                                        <SelectItem value="G">Grams (g)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </FloatingFormItem>
                         )}
                     />
-
-                    <div className="grid grid-cols-2 gap-4 md:col-span-2">
-                        <FormField
-                            control={form.control}
-                            name="minWeight"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Min Weight (kg)">
-                                    <FormControl>
-                                        <IntegerInput
-                                            className={FLOATING_INNER_CONTROL}
-                                            name={field.name}
-                                            ref={field.ref}
-                                            onBlur={field.onBlur}
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                            min={0}
-                                        />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="maxWeight"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Max Weight (kg)">
-                                    <FormControl>
-                                        <IntegerInput
-                                            className={FLOATING_INNER_CONTROL}
-                                            name={field.name}
-                                            ref={field.ref}
-                                            onBlur={field.onBlur}
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                            min={0}
-                                        />
-                                    </FormControl>
-                                </FloatingFormItem>
-                            )}
-                        />
-                    </div>
 
                     <FormField
                         control={form.control}
@@ -309,49 +278,31 @@ export function ServiceMapForm({ initialData }: ServiceMapFormProps) {
                         )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="status"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Status">
-                                    <Select
-                                        key={field.value}
-                                        onValueChange={field.onChange}
-                                        value={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select status">
-                                                    {optionLabelForSelect(field.value, SERVICE_MAP_STATUS_OPTIONS)}
-                                                </SelectValue>
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                                            <SelectItem value="INACTIVE">INACTIVE</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FloatingFormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="isSinglePiece"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Single Piece Only">
-                                    <div className="flex min-h-[1.75rem] items-center justify-end py-0.5">
-                                        <FormControl>
-                                            <Checkbox
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                    </div>
-                                </FloatingFormItem>
-                            )}
-                        />
-                    </div>
+                    <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                            <FloatingFormItem label="Status">
+                                <Select
+                                    key={field.value}
+                                    onValueChange={field.onChange}
+                                    value={field.value}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                            <SelectValue placeholder="Select status">
+                                                {optionLabelForSelect(field.value, SERVICE_MAP_STATUS_OPTIONS)}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                                        <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FloatingFormItem>
+                        )}
+                    />
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">

@@ -849,9 +849,10 @@ export function RateForm({ initialData }: RateFormProps) {
           <TabsContent value="oda-slabs" className="space-y-4">
             <RouteSlabsEditor
               title="ODA / EDL slabs"
-              description="Each row is a km band (min and max km required) with weight slabs. Zones are not used."
+              description="Each row is a km band (min and max km required) with weight slabs. Optional minimum amount applies when the weight-slab charge is lower."
               showZones={false}
               showKmBands
+              showMinimumAmount
               requireKmBands
               slabs={odaSlabs}
               setSlabs={setOdaSlabs}
@@ -915,13 +916,13 @@ function mapRouteSlabsForApi(rows: RouteSlabRow[], mode: "route" | "oda" = "rout
     if (mode === "route") {
       if (rest.fromZoneId != null && rest.fromZoneId !== undefined) slab.fromZoneId = Number(rest.fromZoneId);
       if (rest.toZoneId != null && rest.toZoneId !== undefined) slab.toZoneId = Number(rest.toZoneId);
-      if (
-        rest.minimumAmount != null &&
-        rest.minimumAmount !== undefined &&
-        Number.isFinite(Number(rest.minimumAmount))
-      ) {
-        slab.minimumAmount = Number(rest.minimumAmount);
-      }
+    }
+    if (
+      rest.minimumAmount != null &&
+      rest.minimumAmount !== undefined &&
+      Number.isFinite(Number(rest.minimumAmount))
+    ) {
+      slab.minimumAmount = Number(rest.minimumAmount);
     }
     if (rest.minKm != null && rest.minKm !== undefined && Number.isFinite(Number(rest.minKm))) slab.minKm = Number(rest.minKm);
     if (rest.maxKm != null && rest.maxKm !== undefined && Number.isFinite(Number(rest.maxKm))) slab.maxKm = Number(rest.maxKm);
@@ -1094,7 +1095,7 @@ function RouteSlabsEditor({
   showZones?: boolean;
   /** When false (base rate), min/max km inputs are hidden and km is not saved on the row. */
   showKmBands?: boolean;
-  /** When true (base rate), optional minimum amount floor per zone pair. */
+  /** When true, optional minimum amount floor per zone pair (base rate) or km band (ODA/EDL). */
   showMinimumAmount?: boolean;
   /** When true (base rate), show FLAT_G and PER_500G pricing modes. */
   extendedWeightPricingModes?: boolean;
@@ -1318,7 +1319,8 @@ function RouteSlabsEditor({
           showZones && showKmBands && "md:grid-cols-2 lg:grid-cols-4",
           showZones && !showKmBands && showMinimumAmount && "md:grid-cols-3",
           showZones && !showKmBands && !showMinimumAmount && "md:grid-cols-2",
-          !showZones && showKmBands && "md:grid-cols-2",
+          !showZones && showKmBands && showMinimumAmount && "md:grid-cols-3",
+          !showZones && showKmBands && !showMinimumAmount && "md:grid-cols-2",
         )}
       >
         {showZones ? (

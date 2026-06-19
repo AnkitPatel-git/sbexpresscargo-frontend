@@ -83,3 +83,53 @@ export interface VendorSingleResponse {
     message: string;
     data: Vendor;
 }
+
+export interface VendorProductRef {
+    id: number;
+    productCode: string;
+    productName: string;
+}
+
+export interface VendorFuelSurcharge {
+    id: number;
+    vendorId: number;
+    productId: number | null;
+    fuelChargeType: string;
+    fromDate: string;
+    toDate: string;
+    fuelSurcharge: number | string | { s?: number; e?: number; d?: number[] };
+    product?: VendorProductRef | null;
+}
+
+export interface VendorFuelSurchargeFormData {
+    productId?: number;
+    fuelChargeType: string;
+    fromDate: string;
+    toDate: string;
+    fuelSurcharge?: number;
+}
+
+export interface VendorVolumetric {
+    id: number;
+    vendorId: number;
+    productId: number;
+    cft: number | string | { s?: number; e?: number; d?: number[] };
+    product?: VendorProductRef | null;
+}
+
+export interface VendorVolumetricFormData {
+    productId: number;
+    cft?: number;
+}
+
+export interface VendorChildListResponse<T> {
+    success: boolean;
+    message?: string;
+    data: T[];
+}
+
+export interface VendorChildSingleResponse<T> {
+    success: boolean;
+    message?: string;
+    data: T;
+}

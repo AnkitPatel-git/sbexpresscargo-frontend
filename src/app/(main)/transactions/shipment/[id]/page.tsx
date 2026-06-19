@@ -345,8 +345,10 @@ export default function ShipmentDetailsPage() {
           <p><span className="text-muted-foreground">Pieces:</span> {fallbackText(shipment.pieces)}</p>
           <p><span className="text-muted-foreground">Declared Weight:</span> {fallbackText(shipment.declaredWeight)}</p>
           <p><span className="text-muted-foreground">Charge Weight:</span> {fallbackText(shipment.chargeWeight)}</p>
+          <p><span className="text-muted-foreground">Vendor Vol. Weight:</span> {fallbackText(shipment.vendorTotalVolWeight)}</p>
+          <p><span className="text-muted-foreground">Vendor Chg. Weight:</span> {fallbackText(shipment.vendorTotalChargeableWeight)}</p>
           <p><span className="text-muted-foreground">Booking Value:</span> {fallbackText(shipment.shipmentTotalValue)}</p>
-          <p><span className="text-muted-foreground">Commercial:</span> {shipment.commercial ? "Yes" : "No"}</p>
+          <p><span className="text-muted-foreground">Vendor Pickup:</span> {shipment.vendorPickup ? "Yes" : "No"}</p>
           <p><span className="text-muted-foreground">Reverse Pickup:</span> {shipment.reversePickup ? "Yes" : "No"}</p>
           <p><span className="text-muted-foreground">EDL charges:</span> {shipment.isEdl ? "Yes" : "No"}</p>
           <p><span className="text-muted-foreground">EDL distance (km):</span> {fallbackText(shipment.odaEdlDistanceKm)}</p>

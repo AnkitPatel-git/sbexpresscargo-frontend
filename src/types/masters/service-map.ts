@@ -1,7 +1,7 @@
 /** Service Map Master — Bruno `docs/bruno/master/service-map/*`. */
 
 export type ServiceMapStatus = 'ACTIVE' | 'INACTIVE';
-export type ServiceTypeEnums = 'AIR' | 'SURFACE' | 'EXPRESS';
+export type ServiceMapWeightUnit = 'G' | 'KG';
 
 export interface ServiceMapVendorRef {
     id: number;
@@ -9,21 +9,13 @@ export interface ServiceMapVendorRef {
     vendorName: string;
 }
 
-export interface ServiceMapDecimal {
-    s?: number;
-    e?: number;
-    d?: number[];
-}
-
 export interface ServiceMap {
     id: number;
     vendorId: number;
-    serviceType: ServiceTypeEnums;
-    minWeight: string | number | ServiceMapDecimal;
-    maxWeight: string | number | ServiceMapDecimal;
+    serviceType: string;
+    weightUnit: ServiceMapWeightUnit;
     status: ServiceMapStatus;
     vendorLink: string | null;
-    isSinglePiece: boolean;
     createdAt: string;
     updatedAt: string;
     createdById: number | null;
@@ -35,12 +27,10 @@ export interface ServiceMap {
 
 export interface ServiceMapFormData {
     vendorId: number;
-    serviceType: ServiceTypeEnums;
-    minWeight: number;
-    maxWeight: number;
+    serviceType: string;
+    weightUnit: ServiceMapWeightUnit;
     status: ServiceMapStatus;
     vendorLink?: string;
-    isSinglePiece: boolean;
 }
 
 export interface ServiceMapListResponse {

@@ -1,5 +1,14 @@
 import { apiFetch } from '@/lib/api-fetch';
-import { VendorFormData, VendorListResponse, VendorSingleResponse } from '@/types/masters/vendor';
+import {
+    VendorFormData,
+    VendorListResponse,
+    VendorSingleResponse,
+    VendorFuelSurchargeFormData,
+    VendorVolumetricFormData,
+    VendorChildListResponse,
+    VendorFuelSurcharge,
+    VendorVolumetric,
+} from '@/types/masters/vendor';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -138,6 +147,110 @@ export const vendorService = {
             throw new Error(error.message || 'Failed to delete vendor');
         }
 
+        return response.json();
+    },
+
+    async getVendorFuelSurcharges(vendorId: number) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/fuel-surcharges`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch vendor fuel surcharges');
+        return response.json() as Promise<VendorChildListResponse<VendorFuelSurcharge>>;
+    },
+
+    async addVendorFuelSurcharge(vendorId: number, body: VendorFuelSurchargeFormData) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/fuel-surcharges`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add vendor fuel surcharge');
+        }
+        return response.json();
+    },
+
+    async updateVendorFuelSurcharge(vendorId: number, surchargeId: number | string, body: VendorFuelSurchargeFormData) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/fuel-surcharges/${surchargeId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update vendor fuel surcharge');
+        }
+        return response.json();
+    },
+
+    async deleteVendorFuelSurcharge(vendorId: number, surchargeId: number | string) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/fuel-surcharges/${surchargeId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete vendor fuel surcharge');
+        }
+        return response.json();
+    },
+
+    async getVendorVolumetrics(vendorId: number) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/volumetrics`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch vendor volumetrics');
+        return response.json() as Promise<VendorChildListResponse<VendorVolumetric>>;
+    },
+
+    async addVendorVolumetric(vendorId: number, body: VendorVolumetricFormData) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/volumetrics`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add vendor volumetric');
+        }
+        return response.json();
+    },
+
+    async updateVendorVolumetric(vendorId: number, volumetricId: number | string, body: VendorVolumetricFormData) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/volumetrics/${volumetricId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update vendor volumetric');
+        }
+        return response.json();
+    },
+
+    async deleteVendorVolumetric(vendorId: number, volumetricId: number | string) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/volumetrics/${volumetricId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete vendor volumetric');
+        }
         return response.json();
     },
 };
