@@ -1,10 +1,10 @@
-export type PartwiseSalesSummaryMonths = {
+export type PartywiseSalesSummaryMonths = {
   currentMonth: string;
   lastMonth: string;
   lastLastMonth: string;
 };
 
-export type PartwiseSalesSummaryRow = {
+export type PartywiseSalesSummaryRow = {
   customerId: number;
   clientName: string;
   groupName: string | null;
@@ -16,19 +16,19 @@ export type PartwiseSalesSummaryRow = {
   lastLastMonthChargeWeight: number;
 };
 
-export interface PartwiseSalesSummaryResponse {
+export interface PartywiseSalesSummaryResponse {
   success: boolean;
-  data: PartwiseSalesSummaryRow[];
+  data: PartywiseSalesSummaryRow[];
   meta: {
     page: number;
     limit: number;
     total: number;
     totalPages: number;
   };
-  months: PartwiseSalesSummaryMonths;
+  months: PartywiseSalesSummaryMonths;
 }
 
-export interface PartwiseSalesSummaryQueryParams {
+export interface PartywiseSalesSummaryQueryParams {
   page?: number;
   limit?: number;
   search?: string;

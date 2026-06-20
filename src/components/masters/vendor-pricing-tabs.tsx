@@ -37,6 +37,10 @@ import type { Product } from "@/types/masters/product"
 import type {
     VendorFuelSurcharge,
     VendorFuelSurchargeFormData,
+    VendorIdcSurcharge,
+    VendorIdcSurchargeFormData,
+    VendorCafSurcharge,
+    VendorCafSurchargeFormData,
     VendorVolumetric,
     VendorVolumetricFormData,
 } from "@/types/masters/vendor"
@@ -338,6 +342,374 @@ export function VendorFuelSurchargeTab({ vendorId }: { vendorId: number | null }
                 {!editing ? (
                     <p className="mt-3 text-sm text-muted-foreground">
                         Leave Product empty to create the same fuel surcharge for every product.
+                    </p>
+                ) : null}
+            </VendorEntityDialog>
+        </VendorChildTableCard>
+    )
+}
+
+export function VendorIdcSurchargeTab({ vendorId }: { vendorId: number | null }) {
+    const queryClient = useQueryClient()
+    const productSelectId = useId()
+    const [open, setOpen] = useState(false)
+    const [editing, setEditing] = useState<VendorIdcSurcharge | null>(null)
+    const [form, setForm] = useState<VendorIdcSurchargeFormData>({
+        productId: undefined,
+        idcChargeType: "PERCENTAGE",
+        fromDate: "",
+        toDate: "",
+        idcSurcharge: undefined,
+    })
+
+    const { data } = useQuery({
+        queryKey: ["vendor-idc-surcharges", vendorId],
+        queryFn: () => vendorService.getVendorIdcSurcharges(vendorId!),
+        enabled: !!vendorId,
+    })
+    const surchargeRows = getChildRows<VendorIdcSurcharge>(data)
+
+    const mutation = useMutation({
+        mutationFn: (payload: VendorIdcSurchargeFormData) =>
+            editing
+                ? vendorService.updateVendorIdcSurcharge(vendorId!, editing.id, payload)
+                : vendorService.addVendorIdcSurcharge(vendorId!, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["vendor-idc-surcharges", vendorId] })
+            setOpen(false)
+            setEditing(null)
+            setForm({ productId: undefined, idcChargeType: "PERCENTAGE", fromDate: "", toDate: "", idcSurcharge: undefined })
+            toast.success(`IDC surcharge ${editing ? "updated" : "added"} successfully`)
+        },
+        onError: (error: Error) => toast.error(error.message),
+    })
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => vendorService.deleteVendorIdcSurcharge(vendorId!, id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["vendor-idc-surcharges", vendorId] })
+            toast.success("IDC surcharge deleted successfully")
+        },
+        onError: (error: Error) => toast.error(error.message),
+    })
+
+    if (!vendorId) return <DisabledVendorTab title="IDC" />
+
+    return (
+        <VendorChildTableCard
+            title="IDC"
+            onAdd={() => {
+                setEditing(null)
+                setForm({ productId: undefined, idcChargeType: "PERCENTAGE", fromDate: "", toDate: "", idcSurcharge: undefined })
+                setOpen(true)
+            }}
+            columns={["Product", "Type", "From Date", "To Date", "Value", "Action"]}
+            rows={surchargeRows.map((item) => [
+                item.product?.productName ?? "All Products",
+                item.idcChargeType,
+                formatDate(item.fromDate),
+                formatDate(item.toDate),
+                String(decimalToNumber(item.idcSurcharge)),
+            ])}
+            actions={surchargeRows.map((item) => (
+                <div className="flex gap-2" key={item.id}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setEditing(item)
+                            setForm({
+                                productId: item.productId ?? undefined,
+                                idcChargeType: item.idcChargeType === "FIXED" ? "FLAT" : item.idcChargeType,
+                                fromDate: item.fromDate.split("T")[0] ?? "",
+                                toDate: item.toDate.split("T")[0] ?? "",
+                                idcSurcharge: Number(decimalToNumber(item.idcSurcharge) || 0),
+                            })
+                            setOpen(true)
+                        }}
+                    >
+                        Edit
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => deleteMutation.mutate(item.id)}>
+                        Delete
+                    </Button>
+                </div>
+            ))}
+        >
+            <VendorEntityDialog
+                open={open}
+                onOpenChange={setOpen}
+                title={editing ? "Edit IDC Surcharge" : "Add IDC Surcharge"}
+                onSave={() => {
+                    if (!Number.isFinite(form.idcSurcharge)) {
+                        toast.error("Enter IDC surcharge value")
+                        return
+                    }
+                    mutation.mutate({ ...form, idcSurcharge: form.idcSurcharge })
+                }}
+                saving={mutation.isPending}
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label htmlFor={productSelectId} className="text-sm font-medium">Product</label>
+                        <DbAsyncSelect<Product>
+                            id={productSelectId}
+                            queryKey={["vendor-idc-surcharge", "products", vendorId ?? 0, editing?.id ?? "new"]}
+                            fetchPage={(page, search) =>
+                                productService.getProducts({
+                                    page,
+                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                                    search: search || undefined,
+                                    sortBy: "productName",
+                                    sortOrder: "asc",
+                                })
+                            }
+                            getItemLabel={(p) => p.productName}
+                            extraItems={
+                                editing?.productId != null && editing.product
+                                    ? [{
+                                        id: editing.productId,
+                                        productCode: editing.product.productCode ?? "",
+                                        productName: editing.product.productName ?? `Product ${editing.productId}`,
+                                        version: 1,
+                                        productType: "DOMESTIC",
+                                        status: "ACTIVE",
+                                        createdAt: "",
+                                        updatedAt: "",
+                                        createdById: null,
+                                        updatedById: null,
+                                        deletedAt: null,
+                                        deletedById: null,
+                                    }]
+                                    : undefined
+                            }
+                            value={form.productId != null ? String(form.productId) : undefined}
+                            onValueChange={(v) => setForm((prev) => ({ ...prev, productId: v ? Number(v) : undefined }))}
+                            placeholder="All products"
+                            searchPlaceholder="Search products…"
+                            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">Type</div>
+                        <Select
+                            value={form.idcChargeType}
+                            onValueChange={(v) => setForm((prev) => ({ ...prev, idcChargeType: v }))}
+                        >
+                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                                <SelectItem value="FLAT">Flat</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">From Date</div>
+                        <Input type="date" value={form.fromDate} onChange={(e) => setForm((prev) => ({ ...prev, fromDate: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">To Date</div>
+                        <Input type="date" value={form.toDate} onChange={(e) => setForm((prev) => ({ ...prev, toDate: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <div className="text-sm font-medium">IDC Surcharge</div>
+                        <DecimalInput
+                            value={form.idcSurcharge}
+                            onValueChange={(n) => setForm((prev) => ({ ...prev, idcSurcharge: n }))}
+                            min={0}
+                        />
+                    </div>
+                </div>
+                {!editing ? (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                        Leave Product empty to create the same IDC surcharge for every product.
+                    </p>
+                ) : null}
+            </VendorEntityDialog>
+        </VendorChildTableCard>
+    )
+}
+
+export function VendorCafSurchargeTab({ vendorId }: { vendorId: number | null }) {
+    const queryClient = useQueryClient()
+    const productSelectId = useId()
+    const [open, setOpen] = useState(false)
+    const [editing, setEditing] = useState<VendorCafSurcharge | null>(null)
+    const [form, setForm] = useState<VendorCafSurchargeFormData>({
+        productId: undefined,
+        cafChargeType: "PERCENTAGE",
+        fromDate: "",
+        toDate: "",
+        cafSurcharge: undefined,
+    })
+
+    const { data } = useQuery({
+        queryKey: ["vendor-caf-surcharges", vendorId],
+        queryFn: () => vendorService.getVendorCafSurcharges(vendorId!),
+        enabled: !!vendorId,
+    })
+    const surchargeRows = getChildRows<VendorCafSurcharge>(data)
+
+    const mutation = useMutation({
+        mutationFn: (payload: VendorCafSurchargeFormData) =>
+            editing
+                ? vendorService.updateVendorCafSurcharge(vendorId!, editing.id, payload)
+                : vendorService.addVendorCafSurcharge(vendorId!, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["vendor-caf-surcharges", vendorId] })
+            setOpen(false)
+            setEditing(null)
+            setForm({ productId: undefined, cafChargeType: "PERCENTAGE", fromDate: "", toDate: "", cafSurcharge: undefined })
+            toast.success(`CAF surcharge ${editing ? "updated" : "added"} successfully`)
+        },
+        onError: (error: Error) => toast.error(error.message),
+    })
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => vendorService.deleteVendorCafSurcharge(vendorId!, id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["vendor-caf-surcharges", vendorId] })
+            toast.success("CAF surcharge deleted successfully")
+        },
+        onError: (error: Error) => toast.error(error.message),
+    })
+
+    if (!vendorId) return <DisabledVendorTab title="CAF" />
+
+    return (
+        <VendorChildTableCard
+            title="CAF"
+            onAdd={() => {
+                setEditing(null)
+                setForm({ productId: undefined, cafChargeType: "PERCENTAGE", fromDate: "", toDate: "", cafSurcharge: undefined })
+                setOpen(true)
+            }}
+            columns={["Product", "Type", "From Date", "To Date", "Value", "Action"]}
+            rows={surchargeRows.map((item) => [
+                item.product?.productName ?? "All Products",
+                item.cafChargeType,
+                formatDate(item.fromDate),
+                formatDate(item.toDate),
+                String(decimalToNumber(item.cafSurcharge)),
+            ])}
+            actions={surchargeRows.map((item) => (
+                <div className="flex gap-2" key={item.id}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setEditing(item)
+                            setForm({
+                                productId: item.productId ?? undefined,
+                                cafChargeType: item.cafChargeType === "FIXED" ? "FLAT" : item.cafChargeType,
+                                fromDate: item.fromDate.split("T")[0] ?? "",
+                                toDate: item.toDate.split("T")[0] ?? "",
+                                cafSurcharge: Number(decimalToNumber(item.cafSurcharge) || 0),
+                            })
+                            setOpen(true)
+                        }}
+                    >
+                        Edit
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => deleteMutation.mutate(item.id)}>
+                        Delete
+                    </Button>
+                </div>
+            ))}
+        >
+            <VendorEntityDialog
+                open={open}
+                onOpenChange={setOpen}
+                title={editing ? "Edit CAF Surcharge" : "Add CAF Surcharge"}
+                onSave={() => {
+                    if (!Number.isFinite(form.cafSurcharge)) {
+                        toast.error("Enter CAF surcharge value")
+                        return
+                    }
+                    mutation.mutate({ ...form, cafSurcharge: form.cafSurcharge })
+                }}
+                saving={mutation.isPending}
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label htmlFor={productSelectId} className="text-sm font-medium">Product</label>
+                        <DbAsyncSelect<Product>
+                            id={productSelectId}
+                            queryKey={["vendor-caf-surcharge", "products", vendorId ?? 0, editing?.id ?? "new"]}
+                            fetchPage={(page, search) =>
+                                productService.getProducts({
+                                    page,
+                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                                    search: search || undefined,
+                                    sortBy: "productName",
+                                    sortOrder: "asc",
+                                })
+                            }
+                            getItemLabel={(p) => p.productName}
+                            extraItems={
+                                editing?.productId != null && editing.product
+                                    ? [{
+                                        id: editing.productId,
+                                        productCode: editing.product.productCode ?? "",
+                                        productName: editing.product.productName ?? `Product ${editing.productId}`,
+                                        version: 1,
+                                        productType: "DOMESTIC",
+                                        status: "ACTIVE",
+                                        createdAt: "",
+                                        updatedAt: "",
+                                        createdById: null,
+                                        updatedById: null,
+                                        deletedAt: null,
+                                        deletedById: null,
+                                    }]
+                                    : undefined
+                            }
+                            value={form.productId != null ? String(form.productId) : undefined}
+                            onValueChange={(v) => setForm((prev) => ({ ...prev, productId: v ? Number(v) : undefined }))}
+                            placeholder="All products"
+                            searchPlaceholder="Search products…"
+                            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">Type</div>
+                        <Select
+                            value={form.cafChargeType}
+                            onValueChange={(v) => setForm((prev) => ({ ...prev, cafChargeType: v }))}
+                        >
+                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                                <SelectItem value="FLAT">Flat</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">From Date</div>
+                        <Input type="date" value={form.fromDate} onChange={(e) => setForm((prev) => ({ ...prev, fromDate: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">To Date</div>
+                        <Input type="date" value={form.toDate} onChange={(e) => setForm((prev) => ({ ...prev, toDate: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <div className="text-sm font-medium">CAF Surcharge</div>
+                        <DecimalInput
+                            value={form.cafSurcharge}
+                            onValueChange={(n) => setForm((prev) => ({ ...prev, cafSurcharge: n }))}
+                            min={0}
+                        />
+                    </div>
+                </div>
+                {!editing ? (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                        Leave Product empty to create the same CAF surcharge for every product.
                     </p>
                 ) : null}
             </VendorEntityDialog>

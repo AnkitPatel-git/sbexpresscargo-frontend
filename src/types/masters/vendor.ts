@@ -109,6 +109,44 @@ export interface VendorFuelSurchargeFormData {
     fuelSurcharge?: number;
 }
 
+export interface VendorIdcSurcharge {
+    id: number;
+    vendorId: number;
+    productId: number | null;
+    idcChargeType: string;
+    fromDate: string;
+    toDate: string;
+    idcSurcharge: number | string | { s?: number; e?: number; d?: number[] };
+    product?: VendorProductRef | null;
+}
+
+export interface VendorIdcSurchargeFormData {
+    productId?: number;
+    idcChargeType: string;
+    fromDate: string;
+    toDate: string;
+    idcSurcharge?: number;
+}
+
+export interface VendorCafSurcharge {
+    id: number;
+    vendorId: number;
+    productId: number | null;
+    cafChargeType: string;
+    fromDate: string;
+    toDate: string;
+    cafSurcharge: number | string | { s?: number; e?: number; d?: number[] };
+    product?: VendorProductRef | null;
+}
+
+export interface VendorCafSurchargeFormData {
+    productId?: number;
+    cafChargeType: string;
+    fromDate: string;
+    toDate: string;
+    cafSurcharge?: number;
+}
+
 export interface VendorVolumetric {
     id: number;
     vendorId: number;

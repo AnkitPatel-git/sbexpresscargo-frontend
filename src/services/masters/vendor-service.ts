@@ -4,9 +4,13 @@ import {
     VendorListResponse,
     VendorSingleResponse,
     VendorFuelSurchargeFormData,
+    VendorIdcSurchargeFormData,
+    VendorCafSurchargeFormData,
     VendorVolumetricFormData,
     VendorChildListResponse,
     VendorFuelSurcharge,
+    VendorIdcSurcharge,
+    VendorCafSurcharge,
     VendorVolumetric,
 } from '@/types/masters/vendor';
 
@@ -198,6 +202,110 @@ export const vendorService = {
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.message || 'Failed to delete vendor fuel surcharge');
+        }
+        return response.json();
+    },
+
+    async getVendorIdcSurcharges(vendorId: number) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/idc-surcharges`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch vendor IDC surcharges');
+        return response.json() as Promise<VendorChildListResponse<VendorIdcSurcharge>>;
+    },
+
+    async addVendorIdcSurcharge(vendorId: number, body: VendorIdcSurchargeFormData) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/idc-surcharges`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add vendor IDC surcharge');
+        }
+        return response.json();
+    },
+
+    async updateVendorIdcSurcharge(vendorId: number, surchargeId: number | string, body: VendorIdcSurchargeFormData) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/idc-surcharges/${surchargeId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update vendor IDC surcharge');
+        }
+        return response.json();
+    },
+
+    async deleteVendorIdcSurcharge(vendorId: number, surchargeId: number | string) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/idc-surcharges/${surchargeId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete vendor IDC surcharge');
+        }
+        return response.json();
+    },
+
+    async getVendorCafSurcharges(vendorId: number) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/caf-surcharges`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch vendor CAF surcharges');
+        return response.json() as Promise<VendorChildListResponse<VendorCafSurcharge>>;
+    },
+
+    async addVendorCafSurcharge(vendorId: number, body: VendorCafSurchargeFormData) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/caf-surcharges`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add vendor CAF surcharge');
+        }
+        return response.json();
+    },
+
+    async updateVendorCafSurcharge(vendorId: number, surchargeId: number | string, body: VendorCafSurchargeFormData) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/caf-surcharges/${surchargeId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update vendor CAF surcharge');
+        }
+        return response.json();
+    },
+
+    async deleteVendorCafSurcharge(vendorId: number, surchargeId: number | string) {
+        const response = await apiFetch(`${API_URL}/vendor-master/${vendorId}/caf-surcharges/${surchargeId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to delete vendor CAF surcharge');
         }
         return response.json();
     },

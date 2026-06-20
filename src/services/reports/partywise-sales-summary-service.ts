@@ -1,8 +1,8 @@
 import { apiFetch } from "@/lib/api-fetch";
 import type {
-  PartwiseSalesSummaryQueryParams,
-  PartwiseSalesSummaryResponse,
-} from "@/types/reports/partwise-sales-summary";
+  PartywiseSalesSummaryQueryParams,
+  PartywiseSalesSummaryResponse,
+} from "@/types/reports/partywise-sales-summary";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
@@ -20,7 +20,7 @@ function parseFilename(response: Response, fallback: string) {
 
 function appendParams(
   queryParams: URLSearchParams,
-  params?: PartwiseSalesSummaryQueryParams,
+  params?: PartywiseSalesSummaryQueryParams,
 ) {
   queryParams.append("page", String(params?.page ?? 1));
   queryParams.append("limit", String(params?.limit ?? 20));
@@ -42,41 +42,41 @@ async function readError(response: Response, fallback: string) {
   }
 }
 
-export const partwiseSalesSummaryService = {
+export const partywiseSalesSummaryService = {
   async getReport(
-    params?: PartwiseSalesSummaryQueryParams,
-  ): Promise<PartwiseSalesSummaryResponse> {
+    params?: PartywiseSalesSummaryQueryParams,
+  ): Promise<PartywiseSalesSummaryResponse> {
     const queryParams = new URLSearchParams();
     appendParams(queryParams, params);
     const response = await apiFetch(
-      `${API_URL}/report/partwise-sales-summary?${queryParams.toString()}`,
+      `${API_URL}/report/partywise-sales-summary?${queryParams.toString()}`,
       { headers: authHeaders() },
     );
     if (!response.ok) {
       throw new Error(
-        await readError(response, "Failed to fetch Partwise Sales Summary"),
+        await readError(response, "Failed to fetch Partywise Sales Summary"),
       );
     }
     return response.json();
   },
 
   async exportCsv(
-    params?: PartwiseSalesSummaryQueryParams,
+    params?: PartywiseSalesSummaryQueryParams,
   ): Promise<{ blob: Blob; filename: string }> {
     const queryParams = new URLSearchParams();
     appendParams(queryParams, params);
     const response = await apiFetch(
-      `${API_URL}/report/partwise-sales-summary/export?${queryParams.toString()}`,
+      `${API_URL}/report/partywise-sales-summary/export?${queryParams.toString()}`,
       { headers: authHeaders() },
     );
     if (!response.ok) {
       throw new Error(
-        await readError(response, "Failed to export Partwise Sales Summary"),
+        await readError(response, "Failed to export Partywise Sales Summary"),
       );
     }
     return {
       blob: await response.blob(),
-      filename: parseFilename(response, "partwise-sales-summary.csv"),
+      filename: parseFilename(response, "partywise-sales-summary.csv"),
     };
   },
 };

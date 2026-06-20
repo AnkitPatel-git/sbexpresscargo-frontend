@@ -1266,6 +1266,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         ),
         onSuccess: (response) => {
             setChargePreview(response.data)
+            if (typeof response.data?.chargeWeight === 'number' && response.data.chargeWeight > 0) {
+                form.setValue('chargeWeight', response.data.chargeWeight, { shouldValidate: false })
+                form.clearErrors('chargeWeight')
+            }
             const editableCharges = (response.data?.rows || []).map((row) => ({
                 chargeId: normalizePositiveNumberValue(row.chargeId) ?? 0,
                 description: row.name,
@@ -1503,6 +1507,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 )
                 if (!cancelled) {
                     setChargePreview(response.data)
+                    if (typeof response.data?.chargeWeight === 'number' && response.data.chargeWeight > 0) {
+                        form.setValue('chargeWeight', response.data.chargeWeight, { shouldValidate: false })
+                        form.clearErrors('chargeWeight')
+                    }
                 }
             } catch {
                 // Silent in auto mode; explicit Calculate button shows toast.
@@ -2047,6 +2055,31 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
     }, [form, isSurfaceProduct, productWeightUnit, surfaceCft, weightCalcKey]);
 
+    const chargeWeightTriggerKey = useMemo(
+        () =>
+            JSON.stringify({
+                customerId: watchedCustomerId,
+                productId: watchedProductId,
+                bookDate: watchedBookDate,
+                shipperId: watchedShipperId,
+                consigneeId: watchedConsigneeId,
+                actualWeight: watchedActualWeight,
+                volumetricWeight: watchedVolumetricWeight,
+                piecesRows: watchedPiecesRows,
+            }),
+        [
+            watchedCustomerId,
+            watchedProductId,
+            watchedBookDate,
+            watchedShipperId,
+            watchedConsigneeId,
+            watchedActualWeight,
+            watchedVolumetricWeight,
+            watchedPiecesRows,
+        ],
+    )
+    const debouncedChargeWeightTriggerKey = useDebounce(chargeWeightTriggerKey, 450)
+
     useEffect(() => {
         const manualActualWeight = Math.max(0, Number(watchedActualWeight) || 0)
         const manualVolumetricWeight = Math.max(0, Number(watchedVolumetricWeight) || 0)
@@ -2060,18 +2093,70 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             form.setValue('volumetricWeight', resolvedVolumetric, { shouldValidate: false })
             form.clearErrors('volumetricWeight')
         }
-        const nextChargeWeight = normalizeProductBookingWeight(
+        const naturalChargeWeight = normalizeProductBookingWeight(
             Math.max(manualActualWeight, resolvedVolumetric),
             productWeightUnit,
         )
-        const currentChargeWeight = Math.max(0, Number(form.getValues('chargeWeight')) || 0)
-        if (nextChargeWeight !== currentChargeWeight) {
-            form.setValue('chargeWeight', nextChargeWeight, { shouldValidate: false })
-            if (nextChargeWeight > 0) {
-                form.clearErrors('chargeWeight')
+        if (naturalChargeWeight <= 0) {
+            return
+        }
+
+        const customerId = normalizeMasterSelectId(watchedCustomerId)
+        const productId = normalizeMasterSelectId(watchedProductId)
+        const shipperId = normalizeMasterSelectId(watchedShipperId)
+        const consigneeId = normalizeMasterSelectId(watchedConsigneeId)
+        const canResolveFlatSlabChargeWeight =
+            customerId > 0 && productId > 0 && shipperId > 0 && consigneeId > 0
+
+        const applyChargeWeight = (nextChargeWeight: number) => {
+            const currentChargeWeight = Math.max(0, Number(form.getValues('chargeWeight')) || 0)
+            if (nextChargeWeight !== currentChargeWeight) {
+                form.setValue('chargeWeight', nextChargeWeight, { shouldValidate: false })
+                if (nextChargeWeight > 0) {
+                    form.clearErrors('chargeWeight')
+                }
             }
         }
-    }, [form, productWeightUnit, watchedActualWeight, watchedVolumetricWeight, watchedPiecesRows]);
+
+        if (!canResolveFlatSlabChargeWeight) {
+            applyChargeWeight(naturalChargeWeight)
+            return
+        }
+
+        let cancelled = false
+        ;(async () => {
+            try {
+                const response = await shipmentService.calculateWeight({
+                    customerId,
+                    productId,
+                    bookDate: watchedBookDate || undefined,
+                    shipperId,
+                    consigneeId,
+                    actualWeight: manualActualWeight,
+                    volumetricWeight: resolvedVolumetric,
+                    piecesRows: (watchedPiecesRows ?? []).map((row) => ({
+                        pieces: row.pieces,
+                        length: row.length,
+                        breadth: row.breadth,
+                        height: row.height,
+                        items: (row.items ?? []).map((item) => ({
+                            totalValue: item.totalValue,
+                        })),
+                    })),
+                })
+                if (!cancelled) {
+                    applyChargeWeight(response.data?.chargeWeight ?? naturalChargeWeight)
+                }
+            } catch {
+                if (!cancelled) {
+                    applyChargeWeight(naturalChargeWeight)
+                }
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [form, productWeightUnit, debouncedChargeWeightTriggerKey, watchedBookDate, watchedConsigneeId, watchedCustomerId, watchedProductId, watchedShipperId, watchedActualWeight, watchedVolumetricWeight, watchedPiecesRows]);
 
     // --- End Calculations ---
 

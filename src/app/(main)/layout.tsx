@@ -110,7 +110,7 @@ const headerNavItems = [
   { href: "/report/mis", label: "MIS Report" },
   { href: "/report/billing-mis", label: "Billing MIS Report" },
   { href: "/report/dp-batch", label: "DP Batch Report" },
-  { href: "/report/partwise-sales-summary", label: "Partwise Sales Summary" },
+  { href: "/report/partywise-sales-summary", label: "Partywise Sales Summary" },
   { href: "/report/attendance-register", label: "Attendance register" },
   { href: "/document/invoice-generation", label: "Invoice Generation" },
   { href: "/document/invoice-print", label: "Invoice Print" },
@@ -1268,13 +1268,13 @@ const SidebarContent = ({
             </PermissionGuard>
             <PermissionGuard permission="report.partwise_sales.read">
               <LinkItem
-                href="/report/partwise-sales-summary"
-                active={isActive("/report/partwise-sales-summary")}
+                href="/report/partywise-sales-summary"
+                active={isActive("/report/partywise-sales-summary")}
                 icon={ClipboardList}
                 showTextOverride
                 inFlyout
               >
-                Partwise Sales Summary
+                Partywise Sales Summary
               </LinkItem>
             </PermissionGuard>
           </div>
@@ -1336,13 +1336,13 @@ const SidebarContent = ({
                 </PermissionGuard>
                 <PermissionGuard permission="report.partwise_sales.read">
                   <LinkItem
-                    href="/report/partwise-sales-summary"
-                    active={isActive("/report/partwise-sales-summary")}
+                    href="/report/partywise-sales-summary"
+                    active={isActive("/report/partywise-sales-summary")}
                     icon={ClipboardList}
                     showTextOverride
                     inFlyout
                   >
-                    Partwise Sales Summary
+                    Partywise Sales Summary
                   </LinkItem>
                 </PermissionGuard>
               </div>

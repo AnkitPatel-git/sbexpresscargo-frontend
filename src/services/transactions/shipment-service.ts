@@ -138,6 +138,11 @@ export const shipmentService = {
   async calculateWeight(data: {
     customerId: number;
     productId: number;
+    bookDate?: string;
+    shipperId?: number;
+    consigneeId?: number;
+    actualWeight?: number;
+    volumetricWeight?: number;
     piecesRows: Array<{
       pieces?: number;
       length?: number;

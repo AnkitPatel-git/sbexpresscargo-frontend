@@ -31,7 +31,7 @@ import {
 import { FormSection } from "@/components/ui/form-section"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { optionLabelForSelect, STATUS_ACTIVE_INACTIVE_OPTIONS } from "@/lib/select-closed-label"
-import { VendorFuelSurchargeTab, VendorVolumetricTab } from "@/components/masters/vendor-pricing-tabs"
+import { VendorCafSurchargeTab, VendorFuelSurchargeTab, VendorIdcSurchargeTab, VendorVolumetricTab } from "@/components/masters/vendor-pricing-tabs"
 
 import { vendorService } from "@/services/masters/vendor-service"
 import { Vendor, VendorFormData } from "@/types/masters/vendor"
@@ -206,6 +206,8 @@ export function VendorForm({ initialData }: VendorFormProps) {
                     <TabsList className="h-auto flex w-full flex-wrap justify-start rounded-full border border-border/60 bg-muted/40 p-2">
                         <TabsTrigger value="details" className="rounded-full px-5 py-2">Vendor Details</TabsTrigger>
                         <TabsTrigger value="fuel" className="rounded-full px-5 py-2">Fuel Surcharges</TabsTrigger>
+                        <TabsTrigger value="idc" className="rounded-full px-5 py-2">IDC</TabsTrigger>
+                        <TabsTrigger value="caf" className="rounded-full px-5 py-2">CAF</TabsTrigger>
                         <TabsTrigger value="volumetric" className="rounded-full px-5 py-2">Vendor Volumetric</TabsTrigger>
                     </TabsList>
 
@@ -481,6 +483,12 @@ export function VendorForm({ initialData }: VendorFormProps) {
 
                     <TabsContent value="fuel" className="space-y-4">
                         <VendorFuelSurchargeTab vendorId={vendorId} />
+                    </TabsContent>
+                    <TabsContent value="idc" className="space-y-4">
+                        <VendorIdcSurchargeTab vendorId={vendorId} />
+                    </TabsContent>
+                    <TabsContent value="caf" className="space-y-4">
+                        <VendorCafSurchargeTab vendorId={vendorId} />
                     </TabsContent>
                     <TabsContent value="volumetric" className="space-y-4">
                         <VendorVolumetricTab vendorId={vendorId} />

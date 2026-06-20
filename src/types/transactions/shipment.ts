@@ -662,6 +662,7 @@ export interface ShipmentCalculateResponse {
   rateMasterId?: number;
   fromZoneId?: number;
   toZoneId?: number;
+  chargeWeight?: number;
   baseFreight?: number;
   baseFreightFuelApply?: boolean;
   totalAmount?: number;
@@ -695,6 +696,7 @@ export interface ShipmentWeightPreviewResponse {
   rows: ShipmentWeightRowPreview[];
   shipmentVolumetricWeight: number;
   bookingTotalValue: number;
+  chargeWeight?: number;
 }
 
 /** `GET /transaction/shipment/:id/forwarding-rate-preview?vendorId=` — live rate engine totals. */
