@@ -110,6 +110,7 @@ const headerNavItems = [
   { href: "/report/mis", label: "MIS Report" },
   { href: "/report/billing-mis", label: "Billing MIS Report" },
   { href: "/report/vendor-billing-mis", label: "Vendor Billing MIS Report" },
+  { href: "/report/operations-mis", label: "Operations MIS Report" },
   { href: "/report/dp-batch", label: "DP Batch Report" },
   { href: "/report/partywise-sales-summary", label: "Partywise Sales Summary" },
   { href: "/report/attendance-register", label: "Attendance register" },
@@ -1256,6 +1257,17 @@ const SidebarContent = ({
                 Vendor Billing MIS Report
               </LinkItem>
             </PermissionGuard>
+            <PermissionGuard permission="report.operations_mis.read">
+              <LinkItem
+                href="/report/operations-mis"
+                active={isActive("/report/operations-mis")}
+                icon={ClipboardList}
+                showTextOverride
+                inFlyout
+              >
+                Operations MIS Report
+              </LinkItem>
+            </PermissionGuard>
             <PermissionGuard permission="report.dp_batch.read">
               <LinkItem
                 href="/report/dp-batch"
@@ -1333,6 +1345,17 @@ const SidebarContent = ({
                     inFlyout
                   >
                     Vendor Billing MIS Report
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="report.operations_mis.read">
+                  <LinkItem
+                    href="/report/operations-mis"
+                    active={isActive("/report/operations-mis")}
+                    icon={ClipboardList}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Operations MIS Report
                   </LinkItem>
                 </PermissionGuard>
                 <PermissionGuard permission="report.dp_batch.read">
