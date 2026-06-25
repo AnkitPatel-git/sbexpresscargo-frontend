@@ -3756,9 +3756,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     {selectedForwardingOption.vendorTotalChargeableWeight != null
                                                         ? ` · Vendor chg. weight: ${selectedForwardingOption.vendorTotalChargeableWeight}`
                                                         : ""}
-                                                    {selectedForwardingOption.weightUnit
-                                                        ? ` (${selectedForwardingOption.weightUnit})`
-                                                        : ""}
+                                                    {" (KG)"}
                                                 </span>
                                             ) : initialData?.vendorTotalVolWeight != null ? (
                                                 <span className="block mt-1 text-xs">
@@ -3891,12 +3889,12 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                             <TableCell>{formatForwardingServiceType(option.serviceType)}</TableCell>
                                                             <TableCell>
                                                                 {option.vendorTotalVolWeight != null
-                                                                    ? `${option.vendorTotalVolWeight}${option.weightUnit ? ` ${option.weightUnit}` : ""}`
+                                                                    ? `${option.vendorTotalVolWeight} KG`
                                                                     : "—"}
                                                             </TableCell>
                                                             <TableCell>
                                                                 {option.vendorTotalChargeableWeight != null
-                                                                    ? `${option.vendorTotalChargeableWeight}${option.weightUnit ? ` ${option.weightUnit}` : ""}`
+                                                                    ? `${option.vendorTotalChargeableWeight} KG`
                                                                     : "—"}
                                                             </TableCell>
                                                             {canViewCharges ? (
