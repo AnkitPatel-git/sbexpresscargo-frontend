@@ -155,6 +155,15 @@ export function BaseRateMatrixExcel({ rateMasterId, onImported }: BaseRateMatrix
           You can also upload a single-sheet file with only these columns.
         </p>
         <p className="text-sm text-muted-foreground mt-1">
+          <span className="font-medium text-foreground">Apply Fuel</span>,{" "}
+          <span className="font-medium text-foreground">Apply CAF</span>,{" "}
+          <span className="font-medium text-foreground">Apply IDC</span>{" "}
+          columns accept <span className="font-medium text-foreground">Yes</span> or{" "}
+          <span className="font-medium text-foreground">No</span> (blank = Yes). Set{" "}
+          <span className="font-medium text-foreground">No</span> to exclude that band from the
+          surcharge so it does not apply. CAF and IDC apply to vendor rate masters; Fuel applies to both.
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
           <span className="font-medium text-foreground">Slabs sheet:</span> same data with{" "}
           <span className="font-medium text-foreground">Pricing Mode</span> codes and optional{" "}
           <span className="font-medium text-foreground">Min Amount</span> per zone pair.
