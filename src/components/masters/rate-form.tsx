@@ -39,6 +39,7 @@ import {
 } from "@/lib/select-closed-label";
 import type {
   CreateRateMasterPayload,
+  CustomerRateRecalcSummary,
   RateChargePayload,
   RateCharge,
   RateConditionPayload,
@@ -62,6 +63,27 @@ import {
 import { BaseRateMatrixExcel } from "@/components/masters/base-rate-matrix-excel";
 
 const DEFAULT_RATE_UPDATE_TYPE = "AWB_ENTRY_RATE";
+
+function formatRecalcToastMessage(recalc: CustomerRateRecalcSummary): string | null {
+  const parts: string[] = [];
+  if (recalc.recalculated > 0) {
+    parts.push(
+      `Recalculated freight for ${recalc.recalculated} shipment${recalc.recalculated === 1 ? "" : "s"}`,
+    );
+  }
+  if (recalc.skipped > 0) {
+    parts.push(
+      `${recalc.skipped} skipped (already invoiced)`,
+    );
+  }
+  if (recalc.failed.length > 0) {
+    parts.push(`${recalc.failed.length} failed`);
+  }
+  if (parts.length === 0 && recalc.matched === 0) {
+    return null;
+  }
+  return parts.join(", ");
+}
 
 function buildRateMasterSchema(isVendorContract: boolean) {
   return z
@@ -150,6 +172,8 @@ type WeightSlabDraft = {
   rate: string;
   pricingMode?: RouteWeightSlabPricingMode;
   applyFuel?: boolean;
+  applyCaf?: boolean;
+  applyIdc?: boolean;
 };
 
 function coerceRouteWeightSlabPricingMode(mode?: string): RouteWeightSlabPricingMode {
@@ -208,6 +232,8 @@ type RateChargeDraft = {
   maxValue: string;
   sequence: string;
   applyFuel: boolean;
+  applyCaf: boolean;
+  applyIdc: boolean;
   chargeSlabs: ChargeSlabDraft[];
 };
 
@@ -234,6 +260,8 @@ type RateConditionDraft = {
   applyPerPiece: boolean;
   isPercentage: boolean;
   applyFuel: boolean;
+  applyCaf: boolean;
+  applyIdc: boolean;
   slabs: ConditionSlabFormRow[];
 };
 
@@ -665,12 +693,18 @@ export function RateForm({ initialData }: RateFormProps) {
       }
       return rateService.createRateMaster(payload);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["rate-masters"] });
       if (isEdit && initialData) {
         queryClient.invalidateQueries({ queryKey: ["rate-master", initialData.id] });
       }
       toast.success(`Rate master ${isEdit ? "updated" : "created"} successfully`);
+      const recalcMessage = response.data.recalc
+        ? formatRecalcToastMessage(response.data.recalc)
+        : null;
+      if (recalcMessage) {
+        toast.info(recalcMessage);
+      }
       if (!isEdit) {
         router.push(ratesListHref);
       }
@@ -897,6 +931,18 @@ export function RateForm({ initialData }: RateFormProps) {
   );
 }
 
+function slabApplyFlagsFromRow(row: {
+  applyFuel?: boolean;
+  applyCaf?: boolean;
+  applyIdc?: boolean;
+}) {
+  return {
+    applyFuel: row.applyFuel !== false,
+    applyCaf: row.applyCaf !== false,
+    applyIdc: row.applyIdc !== false,
+  };
+}
+
 function mapRouteSlabsForApi(rows: RouteSlabRow[], mode: "route" | "oda" = "route"): RateRouteSlabPayload[] {
   return rows.map((row) => {
     const { id: _id, rateMasterId: _rm, createdAt: _c, updatedAt: _u, deletedAt: _d, fromZone: _fz, toZone: _tz, weightSlabs, ...rest } = row;
@@ -911,6 +957,8 @@ function mapRouteSlabsForApi(rows: RouteSlabRow[], mode: "route" | "oda" = "rout
             ? ("PER_KG" as const)
             : ("FLAT" as const),
       applyFuel: (w as { applyFuel?: boolean }).applyFuel !== false,
+      applyCaf: (w as { applyCaf?: boolean }).applyCaf !== false,
+      applyIdc: (w as { applyIdc?: boolean }).applyIdc !== false,
     }));
     const slab: RateRouteSlabPayload = { weightSlabs: ws };
     if (mode === "route") {
@@ -960,6 +1008,8 @@ function mapRateChargesForApi(rows: RateChargeRow[]): RateChargePayload[] {
       if (row.sequence != null && Number.isFinite(Number(row.sequence))) next.sequence = Number(row.sequence);
       if (chargeSlabs.length > 0) next.chargeSlabs = chargeSlabs;
       next.applyFuel = (row as { applyFuel?: boolean }).applyFuel !== false;
+      next.applyCaf = (row as { applyCaf?: boolean }).applyCaf !== false;
+      next.applyIdc = (row as { applyIdc?: boolean }).applyIdc !== false;
       return next;
     })
     .filter((row): row is RateChargePayload => row != null);
@@ -989,6 +1039,8 @@ function mapSlabConditionRulesToRateChargePayloads(rows: RateConditionRow[]): Ra
         value: 0,
         isPercentage: false,
         applyFuel: (row as { applyFuel?: boolean }).applyFuel !== false,
+        applyCaf: (row as { applyCaf?: boolean }).applyCaf !== false,
+        applyIdc: (row as { applyIdc?: boolean }).applyIdc !== false,
         chargeSlabs: slabs,
       };
       return payload;
@@ -1059,6 +1111,8 @@ function buildPayload(
           next.maxValue = Number(row.maxValue);
         }
         next.applyFuel = (row as { applyFuel?: boolean }).applyFuel !== false;
+        next.applyCaf = (row as { applyCaf?: boolean }).applyCaf !== false;
+        next.applyIdc = (row as { applyIdc?: boolean }).applyIdc !== false;
         return next;
       }),
     rateCharges: dedupeRateChargePayloads([
@@ -1112,7 +1166,7 @@ function RouteSlabsEditor({
     minKm: "",
     maxKm: "",
     minimumAmount: "",
-    weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
+    weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: true, applyIdc: true }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -1140,8 +1194,10 @@ function RouteSlabsEditor({
                   ? "PER_KG"
                   : "FLAT",
               applyFuel: (item as { applyFuel?: boolean }).applyFuel !== false,
+              applyCaf: (item as { applyCaf?: boolean }).applyCaf !== false,
+              applyIdc: (item as { applyIdc?: boolean }).applyIdc !== false,
             }))
-          : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
+          : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: true, applyIdc: true }],
     });
   }, [editingIndex, extendedWeightPricingModes, slabs]);
 
@@ -1153,7 +1209,7 @@ function RouteSlabsEditor({
       minKm: "",
       maxKm: "",
       minimumAmount: "",
-      weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
+      weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: true, applyIdc: true }],
     });
     setEditingIndex(null);
   }
@@ -1170,6 +1226,8 @@ function RouteSlabsEditor({
             ? ("PER_KG" as const)
             : ("FLAT" as const),
         applyFuel: item.applyFuel !== false,
+        applyCaf: item.applyCaf !== false,
+        applyIdc: item.applyIdc !== false,
       }))
       .filter((item) => Number.isFinite(item.minWeight) && Number.isFinite(item.maxWeight) && Number.isFinite(item.rate));
     if (weightSlabs.length === 0) return;
@@ -1254,7 +1312,7 @@ function RouteSlabsEditor({
               [field]:
                 field === "pricingMode"
                   ? (value as RouteWeightSlabPricingMode)
-                  : field === "applyFuel"
+                  : field === "applyFuel" || field === "applyCaf" || field === "applyIdc"
                     ? Boolean(value)
                     : String(value),
             }
@@ -1266,7 +1324,7 @@ function RouteSlabsEditor({
   function addWeightRow() {
     setDraft((current) => ({
       ...current,
-      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true }],
+      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: true, applyIdc: true }],
     }));
   }
 
@@ -1445,6 +1503,20 @@ function RouteSlabsEditor({
                 />
                 <span className="text-sm text-foreground">Fuel basis</span>
               </div>
+              <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
+                <Checkbox
+                  checked={item.applyCaf !== false}
+                  onCheckedChange={(checked) => updateWeightSlab(index, "applyCaf", Boolean(checked))}
+                />
+                <span className="text-sm text-foreground">CAF basis</span>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
+                <Checkbox
+                  checked={item.applyIdc !== false}
+                  onCheckedChange={(checked) => updateWeightSlab(index, "applyIdc", Boolean(checked))}
+                />
+                <span className="text-sm text-foreground">IDC basis</span>
+              </div>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -1570,6 +1642,8 @@ function RateChargesEditor({
     maxValue: "",
     sequence: "",
     applyFuel: true,
+    applyCaf: true,
+    applyIdc: true,
     chargeSlabs: [{ minValue: "", maxValue: "", rate: "" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -1692,6 +1766,8 @@ function RateChargesEditor({
       maxValue: details.maxValue != null ? String(details.maxValue) : "",
       sequence: details.sequence != null ? String(details.sequence) : "",
       applyFuel: (details as { applyFuel?: boolean }).applyFuel !== false,
+      applyCaf: (details as { applyCaf?: boolean }).applyCaf !== false,
+      applyIdc: (details as { applyIdc?: boolean }).applyIdc !== false,
       chargeSlabs: (details.chargeSlabs ?? []).map((item) => ({ minValue: String(item.minValue), maxValue: String(item.maxValue), rate: String(item.rate) })),
     });
   }, [editingIndex, editingRowResponse?.data, rateCharges]);
@@ -1708,6 +1784,8 @@ function RateChargesEditor({
       maxValue: "",
       sequence: "",
       applyFuel: true,
+      applyCaf: true,
+      applyIdc: true,
       chargeSlabs: [{ minValue: "", maxValue: "", rate: "" }],
     });
     setEditingIndex(null);
@@ -1743,6 +1821,8 @@ function RateChargesEditor({
       value,
       isPercentage: draft.isPercentage,
       applyFuel: draft.applyFuel,
+      applyCaf: draft.applyCaf,
+      applyIdc: draft.applyIdc,
     };
     if (chargeId) next.chargeId = chargeId;
     if (draft.name.trim()) next.name = draft.name.trim();
@@ -1868,6 +1948,14 @@ function RateChargesEditor({
           <Checkbox checked={draft.applyFuel} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyFuel: Boolean(checked) }))} />
           <span className="text-sm font-medium text-foreground">Counts toward fuel basis</span>
         </div>
+        <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+          <Checkbox checked={draft.applyCaf} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyCaf: Boolean(checked) }))} />
+          <span className="text-sm font-medium text-foreground">CAF basis</span>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+          <Checkbox checked={draft.applyIdc} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyIdc: Boolean(checked) }))} />
+          <span className="text-sm font-medium text-foreground">IDC basis</span>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" onClick={addChargeSlabRow}>
@@ -1970,6 +2058,8 @@ function RateConditionsEditor({
     applyPerPiece: false,
     isPercentage: false,
     applyFuel: true,
+    applyCaf: true,
+    applyIdc: true,
     slabs: [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -2113,6 +2203,8 @@ function RateConditionsEditor({
       applyPerPiece: Boolean((row as { applyPerPiece?: boolean }).applyPerPiece),
       isPercentage: Boolean(details.isPercentage),
       applyFuel: (details as { applyFuel?: boolean }).applyFuel !== false,
+      applyCaf: (details as { applyCaf?: boolean }).applyCaf !== false,
+      applyIdc: (details as { applyIdc?: boolean }).applyIdc !== false,
       slabs: slabsFromRow,
     });
   }, [editingIndex, editingRowResponse?.data, rateConditions]);
@@ -2132,6 +2224,8 @@ function RateConditionsEditor({
       applyPerPiece: false,
       isPercentage: false,
       applyFuel: true,
+      applyCaf: true,
+      applyIdc: true,
       slabs: [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
     });
     setEditingIndex(null);
@@ -2187,6 +2281,8 @@ function RateConditionsEditor({
         applyPerPiece: draft.applyPerPiece,
         isPercentage: false,
         applyFuel: draft.applyFuel,
+        applyCaf: draft.applyCaf,
+        applyIdc: draft.applyIdc,
         slabs: parsedSlabs.map((s) => ({
           minValue: String(s.minValue),
           maxValue: String(s.maxValue),
@@ -2237,6 +2333,8 @@ function RateConditionsEditor({
       chargeAmount,
       isPercentage: draft.isPercentage,
       applyFuel: draft.applyFuel,
+      applyCaf: draft.applyCaf,
+      applyIdc: draft.applyIdc,
     };
     if (draft.minValue.trim() && Number.isFinite(Number(draft.minValue))) {
       next.minValue = Number(draft.minValue);
@@ -2427,6 +2525,14 @@ function RateConditionsEditor({
           <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
             <Checkbox checked={draft.applyFuel} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyFuel: Boolean(checked) }))} />
             <span className="text-sm font-medium text-foreground">Fuel basis</span>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+            <Checkbox checked={draft.applyCaf} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyCaf: Boolean(checked) }))} />
+            <span className="text-sm font-medium text-foreground">CAF basis</span>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+            <Checkbox checked={draft.applyIdc} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyIdc: Boolean(checked) }))} />
+            <span className="text-sm font-medium text-foreground">IDC basis</span>
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-border/70 px-4 py-3">
             <Checkbox

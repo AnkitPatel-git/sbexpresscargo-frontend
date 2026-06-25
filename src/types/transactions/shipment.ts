@@ -450,6 +450,9 @@ export interface ShipmentForwarding {
   shipmentId?: number;
   deliveryAwb?: string | null;
   forwardingAwb?: string | null;
+  forwardingDate?: string | null;
+  documentName?: string | null;
+  documentPath?: string | null;
   deliveryVendorId?: number | null;
   deliveryServiceMapId?: number | null;
   charges?: ShipmentCharge[];

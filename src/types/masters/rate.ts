@@ -16,6 +16,8 @@ export interface RateZoneRatePayload {
   rate: number;
   /** When true, this zone pair’s freight counts toward customer fuel surcharge basis. */
   applyFuel?: boolean;
+  applyCaf?: boolean;
+  applyIdc?: boolean;
 }
 
 export interface RateZoneRate extends RateZoneRatePayload {
@@ -38,6 +40,8 @@ export interface RateWeightSlabPayload {
   pricingMode?: RouteWeightSlabPricingMode;
   /** When true, this slab’s freight counts toward customer fuel surcharge basis. */
   applyFuel?: boolean;
+  applyCaf?: boolean;
+  applyIdc?: boolean;
 }
 
 export interface RateWeightSlab extends RateWeightSlabPayload {
@@ -129,6 +133,8 @@ export interface RateChargePayload {
   sequence?: number;
   /** When true, this tariff line amount counts toward customer fuel surcharge basis. */
   applyFuel?: boolean;
+  applyCaf?: boolean;
+  applyIdc?: boolean;
   chargeSlabs?: RateChargeSlabPayload[];
 }
 
@@ -155,6 +161,8 @@ export interface RateConditionPayload {
   maxValue?: number | null;
   /** When true, this condition’s amount counts toward customer fuel surcharge basis. */
   applyFuel?: boolean;
+  applyCaf?: boolean;
+  applyIdc?: boolean;
 }
 
 export interface RateCondition extends RateConditionPayload {
@@ -259,10 +267,26 @@ export interface RateMasterListResponse {
   meta?: { total: number; page: number; limit: number; totalPages: number };
 }
 
+export interface CustomerRateRecalcFailedItem {
+  shipmentId: number;
+  error: string;
+}
+
+export interface CustomerRateRecalcSummary {
+  matched: number;
+  recalculated: number;
+  skipped: number;
+  failed: CustomerRateRecalcFailedItem[];
+}
+
+export interface RateMasterWithRecalc extends RateMaster {
+  recalc?: CustomerRateRecalcSummary;
+}
+
 export interface RateMasterSingleResponse {
   success: boolean;
   message?: string;
-  data: RateMaster;
+  data: RateMasterWithRecalc;
 }
 
 export interface RateMasterReviewHeader {

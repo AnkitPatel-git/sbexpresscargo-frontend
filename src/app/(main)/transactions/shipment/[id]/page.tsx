@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
 import { SHIPMENT_CHARGE } from "@/lib/portal-permissions";
+import { GST_PERCENT, gstOnTotal, grandTotalWithGst } from "@/lib/gst";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormSection } from "@/components/ui/form-section";
 import { Input } from "@/components/ui/input";
@@ -378,6 +379,8 @@ export default function ShipmentDetailsPage() {
             <p><span className="text-muted-foreground">Fuel:</span> {fallbackText(fuelChargeTotal)}</p>
           ) : null}
           <p><span className="text-muted-foreground">Total Amount:</span> {fallbackText(shipment.totalAmount)}</p>
+          <p><span className="text-muted-foreground">GST ({GST_PERCENT}%):</span> {fallbackText(gstOnTotal(shipment.totalAmount))}</p>
+          <p><span className="text-muted-foreground">Grand Total:</span> {fallbackText(grandTotalWithGst(shipment.totalAmount))}</p>
           {appliedCharges.length > 0 ? (
             <div className="space-y-1 pt-2">
               {appliedCharges.map((row, index) => (
@@ -557,6 +560,12 @@ export default function ShipmentDetailsPage() {
       <div className="grid grid-cols-1 gap-4">
         <FormSection title="Forwarding" contentClassName="space-y-2 text-sm">
           <p><span className="text-muted-foreground">Forwarding AWB:</span> {fallbackText(shipment.forwarding?.forwardingAwb)}</p>
+          <p>
+            <span className="text-muted-foreground">Forwarding Date:</span>{" "}
+            {shipment.forwarding?.forwardingDate
+              ? format(new Date(shipment.forwarding.forwardingDate), "dd/MM/yyyy")
+              : "—"}
+          </p>
           <p><span className="text-muted-foreground">Vendor:</span> {fallbackText(shipment.forwarding?.deliveryVendorId)}</p>
           <p><span className="text-muted-foreground">Service Map:</span> {fallbackText(shipment.forwarding?.deliveryServiceMapId)}</p>
         </FormSection>

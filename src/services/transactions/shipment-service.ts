@@ -346,6 +346,7 @@ export const shipmentService = {
     data: {
       version: number;
       forwardingAwb: string;
+      forwardingDate?: string | null;
       deliveryVendorId?: number | null;
       deliveryServiceMapId?: number | null;
       charges?: Array<{
@@ -381,6 +382,7 @@ export const shipmentService = {
     data: {
       version: number;
       forwardingAwb: string;
+      forwardingDate?: string | null;
       deliveryVendorId?: number | null;
       deliveryServiceMapId?: number | null;
     },
@@ -408,6 +410,46 @@ export const shipmentService = {
       { headers: authHeaders() },
       "Failed to load forwarding options",
     );
+  },
+
+  async uploadForwardingDocument(
+    shipmentId: number,
+    file: File,
+  ): Promise<ApiEnvelope<{ documentName: string | null; documentPath: string | null }>> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiFetch(
+      `${API_URL}/transaction/shipment/${shipmentId}/forwarding/document`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        body: formData,
+      },
+    );
+    const json = (await response.json().catch(() => ({}))) as ApiEnvelope<{
+      documentName: string | null;
+      documentPath: string | null;
+    }> & { message?: string };
+    if (!response.ok || !json.success) {
+      throw new Error(json.message || "Failed to upload forwarding document");
+    }
+    return json;
+  },
+
+  async downloadForwardingDocument(
+    shipmentId: number,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await apiFetch(
+      `${API_URL}/transaction/shipment/${shipmentId}/forwarding/document`,
+      { headers: authHeaders() },
+    );
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to download forwarding document"));
+    }
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, `forwarding-${shipmentId}`),
+    };
   },
 
   async uploadKyc(

@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useForm, useFieldArray, Resolver, type UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -26,6 +26,7 @@ import * as XLSX from "xlsx"
 import { cn } from "@/lib/utils"
 import { toDateInputValue, toOptionalDateInputValue } from "@/lib/india-date"
 import { pickPincodeZone, pincodeZoneMissingMessage } from "@/lib/pincode-zone"
+import { GST_PERCENT, gstOnTotal, grandTotalWithGst } from "@/lib/gst"
 import {
     SHIPMENT_COD_TOPAY_AMOUNT_LABEL,
     SHIPMENT_COD_TOPAY_LABEL,
@@ -147,6 +148,7 @@ interface ShipmentFormProps {
 
 type ForwardingRow = {
     forwardingAwb: string
+    forwardingDate: string
     deliveryVendorId: number
     deliveryServiceMapId: number
 }
@@ -461,8 +463,10 @@ const normalizeForwardingPayload = (values: ForwardingRow, awbVendorId: number) 
     const awb = Number(awbVendorId) || 0
     const resolvedVendor =
         values.deliveryVendorId > 0 ? values.deliveryVendorId : awb > 0 ? awb : 0
+    const forwardingDate = values.forwardingDate.trim()
     return {
         forwardingAwb: values.forwardingAwb.trim(),
+        forwardingDate: forwardingDate || null,
         deliveryVendorId: resolvedVendor > 0 ? resolvedVendor : null,
         deliveryServiceMapId: values.deliveryServiceMapId > 0 ? values.deliveryServiceMapId : null,
     }
@@ -916,6 +920,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         const existing = initialData?.forwarding
         return {
             forwardingAwb: existing?.forwardingAwb || "",
+            forwardingDate: existing?.forwardingDate ? existing.forwardingDate.split("T")[0] : "",
             deliveryVendorId: existing?.deliveryVendorId || 0,
             deliveryServiceMapId: existing?.deliveryServiceMapId || 0,
         }
@@ -923,6 +928,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const [forwardingSelectOpen, setForwardingSelectOpen] = useState(false)
     const [forwardingSelectTarget, setForwardingSelectTarget] = useState<ForwardingVendorOption | null>(null)
     const [forwardingAwbDraft, setForwardingAwbDraft] = useState("")
+    const [forwardingDateDraft, setForwardingDateDraft] = useState("")
+    const [forwardingDocument, setForwardingDocument] = useState<{ documentName: string | null; documentPath: string | null }>(() => ({
+        documentName: initialData?.forwarding?.documentName ?? null,
+        documentPath: initialData?.forwarding?.documentPath ?? null,
+    }))
+    const forwardingDocInputRef = useRef<HTMLInputElement>(null)
+    const [downloadingForwardingDoc, setDownloadingForwardingDoc] = useState(false)
     const [kycRows, setKycRows] = useState<KycRow[]>([
         { id: generateKycRowId(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
     ])
@@ -2213,6 +2225,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             setForwardingSelectOpen(false)
             setForwardingSelectTarget(null)
             setForwardingAwbDraft("")
+            setForwardingDateDraft("")
             setIsForwardingStepComplete(true)
             toast.success('Forwarding saved')
         },
@@ -2220,6 +2233,55 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             toast.error(getErrorMessage(error, 'Failed to save forwarding'))
         },
     })
+
+    const forwardingDocMutation = useMutation({
+        mutationFn: async (file: File) => {
+            if (!savedShipment?.id) {
+                throw new Error('Please create shipment booking first')
+            }
+            return shipmentService.uploadForwardingDocument(savedShipment.id, file)
+        },
+        onSuccess: (response) => {
+            setForwardingDocument({
+                documentName: response?.data?.documentName ?? null,
+                documentPath: response?.data?.documentPath ?? null,
+            })
+            if (forwardingDocInputRef.current) {
+                forwardingDocInputRef.current.value = ''
+            }
+            toast.success('Forwarding document uploaded')
+        },
+        onError: (error: unknown) => {
+            toast.error(getErrorMessage(error, 'Failed to upload forwarding document'))
+        },
+    })
+
+    const handleForwardingDocChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (file) {
+            forwardingDocMutation.mutate(file)
+        }
+    }
+
+    const handleDownloadForwardingDoc = async () => {
+        if (!savedShipment?.id) return
+        setDownloadingForwardingDoc(true)
+        try {
+            const { blob, filename } = await shipmentService.downloadForwardingDocument(savedShipment.id)
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+            window.URL.revokeObjectURL(url)
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Failed to download forwarding document'))
+        } finally {
+            setDownloadingForwardingDoc(false)
+        }
+    }
 
     const kycMutation = useMutation({
         mutationFn: async () => {
@@ -2317,6 +2379,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             forwardingForm.deliveryServiceMapId === option.serviceMapId
         setForwardingSelectTarget(option)
         setForwardingAwbDraft(isReselect ? forwardingForm.forwardingAwb : "")
+        setForwardingDateDraft(isReselect ? forwardingForm.forwardingDate : "")
         setForwardingSelectOpen(true)
     }
 
@@ -2329,6 +2392,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         }
         forwardingMutation.mutate({
             forwardingAwb,
+            forwardingDate: forwardingDateDraft,
             deliveryVendorId: forwardingSelectTarget.vendorId,
             deliveryServiceMapId: forwardingSelectTarget.serviceMapId,
         })
@@ -3647,6 +3711,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             <div className="flex flex-wrap gap-4">
                                 <p><span className="text-muted-foreground">Sub Total (without fuel):</span> {chargePreviewSubTotalWithoutFuel ?? "—"}</p>
                                 <p><span className="text-muted-foreground">Total Amount:</span> {chargePreview.totalAmount ?? "—"}</p>
+                                <p><span className="text-muted-foreground">GST ({GST_PERCENT}%):</span> {chargePreview.totalAmount != null ? gstOnTotal(chargePreview.totalAmount) : "—"}</p>
+                                <p><span className="text-muted-foreground">Grand Total:</span> {chargePreview.totalAmount != null ? grandTotalWithGst(chargePreview.totalAmount) : "—"}</p>
                             </div>
                         </div>
                     )}
@@ -3673,11 +3739,17 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             ) : (
                                 <>
                                     {isForwardingStepComplete ? (
-                                        <div className="mb-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
+                                        <div className="mb-3 space-y-3">
+                                            <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
                                             Selected: {forwardingForm.forwardingAwb}
                                             {selectedForwardingOption
                                                 ? ` — ${selectedForwardingOption.vendorName} · ${formatForwardingServiceType(selectedForwardingOption.serviceType)}`
                                                 : ""}
+                                            {forwardingForm.forwardingDate ? (
+                                                <span className="block mt-1 text-xs">
+                                                    Forwarding date: {format(new Date(`${forwardingForm.forwardingDate}T00:00:00`), "dd/MM/yyyy")}
+                                                </span>
+                                            ) : null}
                                             {selectedForwardingOption?.vendorTotalVolWeight != null ? (
                                                 <span className="block mt-1 text-xs">
                                                     Vendor vol. weight: {selectedForwardingOption.vendorTotalVolWeight}
@@ -3696,6 +3768,91 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         : ""}
                                                 </span>
                                             ) : null}
+                                            </div>
+                                            <div className="flex flex-wrap items-end gap-3">
+                                                <FloatingFormItem label="Forwarding AWB" itemClassName="min-w-[220px]">
+                                                    <Input
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        value={forwardingForm.forwardingAwb}
+                                                        placeholder="Partner / linehaul AWB"
+                                                        onChange={(e) =>
+                                                            setForwardingForm((current) => ({
+                                                                ...current,
+                                                                forwardingAwb: e.target.value,
+                                                            }))
+                                                        }
+                                                    />
+                                                </FloatingFormItem>
+                                                <FloatingFormItem label="Forwarding Date" itemClassName="min-w-[220px]">
+                                                    <Input
+                                                        className={FLOATING_INNER_CONTROL}
+                                                        type="date"
+                                                        value={forwardingForm.forwardingDate}
+                                                        onChange={(e) =>
+                                                            setForwardingForm((current) => ({
+                                                                ...current,
+                                                                forwardingDate: e.target.value,
+                                                            }))
+                                                        }
+                                                    />
+                                                </FloatingFormItem>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={forwardingMutation.isPending || !forwardingForm.forwardingAwb.trim()}
+                                                    onClick={() => forwardingMutation.mutate(forwardingForm)}
+                                                >
+                                                    {forwardingMutation.isPending ? (
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    ) : null}
+                                                    Update forwarding details
+                                                </Button>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-3 rounded-md border border-border/70 bg-white px-3 py-2">
+                                                <span className="text-xs font-medium text-muted-foreground">Forwarding document:</span>
+                                                {forwardingDocument.documentPath ? (
+                                                    <Button
+                                                        type="button"
+                                                        variant="link"
+                                                        size="sm"
+                                                        className="h-auto p-0 text-xs"
+                                                        disabled={downloadingForwardingDoc}
+                                                        onClick={handleDownloadForwardingDoc}
+                                                    >
+                                                        {downloadingForwardingDoc ? (
+                                                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                                        ) : (
+                                                            <Download className="mr-1 h-3 w-3" />
+                                                        )}
+                                                        {forwardingDocument.documentName || 'Download'}
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">No file uploaded</span>
+                                                )}
+                                                <input
+                                                    ref={forwardingDocInputRef}
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept=".pdf,.png,.jpg,.jpeg,.webp"
+                                                    onChange={handleForwardingDocChange}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="ml-auto"
+                                                    disabled={forwardingDocMutation.isPending}
+                                                    onClick={() => forwardingDocInputRef.current?.click()}
+                                                >
+                                                    {forwardingDocMutation.isPending ? (
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <FileUp className="mr-2 h-4 w-4" />
+                                                    )}
+                                                    {forwardingDocument.documentPath ? 'Replace file' : 'Upload file'}
+                                                </Button>
+                                            </div>
                                         </div>
                                     ) : null}
                                     {canViewCharges && forwardingOptionsQuery.data?.data?.customerTotalAmount != null ? (
@@ -3801,6 +3958,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         onChange={(e) => setForwardingAwbDraft(e.target.value)}
                                         placeholder="Partner / linehaul AWB"
                                         autoFocus
+                                    />
+                                </FloatingFormItem>
+                                <FloatingFormItem label="Forwarding Date">
+                                    <Input
+                                        className={FLOATING_INNER_CONTROL}
+                                        type="date"
+                                        value={forwardingDateDraft}
+                                        onChange={(e) => setForwardingDateDraft(e.target.value)}
                                     />
                                 </FloatingFormItem>
                                 <DialogFooter>

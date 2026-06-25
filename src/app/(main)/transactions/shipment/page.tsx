@@ -58,7 +58,7 @@ export default function ShipmentsPage() {
   const { user, hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
   const isSuperAdmin = isSuperAdminRole(user?.role?.identifier);
   const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
-  const tableColSpan = 15;
+  const tableColSpan = 16;
 
   const formatInvoiceValue = (value: number | string | null | undefined) => {
     if (value == null || value === "") return "—";
@@ -379,6 +379,7 @@ export default function ShipmentsPage() {
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="Book Date" field="bookDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Forwarding Date</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Shipper</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Consignee</TableHead>
@@ -428,6 +429,11 @@ export default function ShipmentsPage() {
                   </TableCell>
                   <TableCell>{shipment.ewaybillNumber || "—"}</TableCell>
                   <TableCell>{shipment.bookDate ? format(new Date(shipment.bookDate), "dd/MM/yyyy") : "—"}</TableCell>
+                  <TableCell>
+                    {shipment.forwarding?.forwardingDate
+                      ? format(new Date(shipment.forwarding.forwardingDate), "dd/MM/yyyy")
+                      : "—"}
+                  </TableCell>
                   <TableCell>{shipment.customer?.name || shipment.customer?.code || shipment.customerId}</TableCell>
                   <TableCell>{shipment.shipper?.shipperName || shipment.shipper?.name || "—"}</TableCell>
                   <TableCell>{shipment.consignee?.consigneeName || shipment.consignee?.name || "—"}</TableCell>
