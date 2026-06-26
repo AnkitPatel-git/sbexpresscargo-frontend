@@ -49,6 +49,27 @@ export interface OperationSummary {
     };
 }
 
+export interface TatBucket {
+    withinTat: number;
+    beyondTat: number;
+    total: number;
+}
+
+export interface TatSummary {
+    summary: string;
+    reportGeneratedAt: string;
+    filters: {
+        fromDate: string;
+        toDate: string;
+        serviceCenterId?: number | null;
+        serviceCenterCode?: string | null;
+        serviceCenterName?: string | null;
+    };
+    total: TatBucket;
+    delivered: TatBucket;
+    undelivered: TatBucket;
+}
+
 export interface SalesSummary {
     success: boolean;
     data: {

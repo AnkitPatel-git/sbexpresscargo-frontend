@@ -27,8 +27,16 @@ import {
   type RateMasterContract,
 } from "@/lib/rate-master-nav";
 
-function displayName(value?: { code?: string; name?: string } | { productCode?: string; productName?: string } | null, fallback = "—") {
+function displayName(
+  value?:
+    | { code?: string; name?: string }
+    | { productCode?: string; productName?: string }
+    | { serviceType?: string }
+    | null,
+  fallback = "—",
+) {
   if (!value) return fallback;
+  if ("serviceType" in value && value.serviceType) return value.serviceType;
   if ("productName" in value) return value.productName || value.productCode || fallback;
   if ("name" in value) {
     const namedValue = value as { name?: string; code?: string };
@@ -36,6 +44,13 @@ function displayName(value?: { code?: string; name?: string } | { productCode?: 
   }
   const codedValue = value as { code?: string };
   return codedValue.code || fallback;
+}
+
+function displayRateScope(row: RateMaster, contract: RateMasterContract) {
+  if (contract === "vendor") {
+    return displayName(row.serviceMap);
+  }
+  return displayName(row.product);
 }
 
 export default function RateMasterPage() {
@@ -165,6 +180,8 @@ export default function RateMasterPage() {
     contract === "vendor" ? "Vendor rate masters" : "Customer rate masters";
   const partyColumnLabel = contract === "vendor" ? "Vendor" : "Customer";
   const partySortField = contract === "vendor" ? "vendorName" : "customerName";
+  const scopeColumnLabel = contract === "vendor" ? "Service" : "Product";
+  const scopeSortField = contract === "vendor" ? "serviceType" : "productName";
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -312,7 +329,7 @@ export default function RateMasterPage() {
                 <SortableColumnHeader label={partyColumnLabel} field={partySortField} sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
               <TableHead className="font-semibold text-primary-foreground">
-                <SortableColumnHeader label="Product" field="productName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                <SortableColumnHeader label={scopeColumnLabel} field={scopeSortField} sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="From" field="fromDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
@@ -354,7 +371,7 @@ export default function RateMasterPage() {
                         )
                       : displayName(row.customer)}
                   </TableCell>
-                  <TableCell>{displayName(row.product)}</TableCell>
+                  <TableCell>{displayRateScope(row, contract)}</TableCell>
                   <TableCell>{row.fromDate?.slice(0, 10)}</TableCell>
                   <TableCell>{row.toDate?.slice(0, 10)}</TableCell>
                   <TableCell>

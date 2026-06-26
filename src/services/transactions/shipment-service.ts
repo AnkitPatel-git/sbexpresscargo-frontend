@@ -9,6 +9,7 @@ import type {
   ShipmentListResponse,
   ShipmentSingleResponse,
   ShipmentWeightPreviewResponse,
+  VendorChargeBreakdownData,
 } from "@/types/transactions/shipment";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -409,6 +410,22 @@ export const shipmentService = {
       `${API_URL}/transaction/shipment/${shipmentId}/forwarding-options`,
       { headers: authHeaders() },
       "Failed to load forwarding options",
+    );
+  },
+
+  async getVendorChargeBreakdown(
+    shipmentId: number,
+    vendorId: number,
+    serviceMapId: number,
+  ): Promise<ApiEnvelope<VendorChargeBreakdownData>> {
+    const query = new URLSearchParams({
+      vendorId: String(vendorId),
+      serviceMapId: String(serviceMapId),
+    });
+    return requestJson(
+      `${API_URL}/transaction/shipment/${shipmentId}/vendor-charge-breakdown?${query.toString()}`,
+      { headers: authHeaders() },
+      "Failed to load vendor charge breakdown",
     );
   },
 

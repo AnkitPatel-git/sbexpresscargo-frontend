@@ -90,19 +90,27 @@ export interface VendorProductRef {
     productName: string;
 }
 
+export interface VendorServiceMapRef {
+    id: number;
+    serviceType: string;
+    weightUnit?: string;
+}
+
 export interface VendorFuelSurcharge {
     id: number;
     vendorId: number;
-    productId: number | null;
+    productId?: number | null;
+    serviceMapId: number | null;
     fuelChargeType: string;
     fromDate: string;
     toDate: string;
     fuelSurcharge: number | string | { s?: number; e?: number; d?: number[] };
     product?: VendorProductRef | null;
+    serviceMap?: VendorServiceMapRef | null;
 }
 
 export interface VendorFuelSurchargeFormData {
-    productId?: number;
+    serviceMapId?: number;
     fuelChargeType: string;
     fromDate: string;
     toDate: string;
@@ -112,16 +120,18 @@ export interface VendorFuelSurchargeFormData {
 export interface VendorIdcSurcharge {
     id: number;
     vendorId: number;
-    productId: number | null;
+    productId?: number | null;
+    serviceMapId: number | null;
     idcChargeType: string;
     fromDate: string;
     toDate: string;
     idcSurcharge: number | string | { s?: number; e?: number; d?: number[] };
     product?: VendorProductRef | null;
+    serviceMap?: VendorServiceMapRef | null;
 }
 
 export interface VendorIdcSurchargeFormData {
-    productId?: number;
+    serviceMapId?: number;
     idcChargeType: string;
     fromDate: string;
     toDate: string;
@@ -131,16 +141,18 @@ export interface VendorIdcSurchargeFormData {
 export interface VendorCafSurcharge {
     id: number;
     vendorId: number;
-    productId: number | null;
+    productId?: number | null;
+    serviceMapId: number | null;
     cafChargeType: string;
     fromDate: string;
     toDate: string;
     cafSurcharge: number | string | { s?: number; e?: number; d?: number[] };
     product?: VendorProductRef | null;
+    serviceMap?: VendorServiceMapRef | null;
 }
 
 export interface VendorCafSurchargeFormData {
-    productId?: number;
+    serviceMapId?: number;
     cafChargeType: string;
     fromDate: string;
     toDate: string;

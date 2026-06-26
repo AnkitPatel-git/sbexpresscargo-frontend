@@ -24,6 +24,7 @@ import { serviceCenterService } from "@/services/masters/service-center-service"
 import { StatsCard } from "@/components/dashboard/dashboard-metrics";
 import { SalesTrendChart, ServiceCenterSalesChart } from "@/components/dashboard/dashboard-charts";
 import { ExpressInboundSummary, ExpressOutboundSummary } from "@/components/dashboard/express-operation-summary";
+import { TatSummaryCard } from "@/components/dashboard/tat-summary";
 import { useAuth } from "@/context/auth-context";
 import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 
@@ -58,6 +59,11 @@ export function AdminDashboard() {
     queryFn: () => dashboardService.getOperationSummary({ fromDate, toDate, serviceCenterId }),
   });
 
+  const { data: tatData, isLoading: isLoadingTat, refetch: refetchTat } = useQuery({
+    queryKey: ["dashboard-tat", fromDate, toDate, serviceCenterId],
+    queryFn: () => dashboardService.getTatSummary({ fromDate, toDate, serviceCenterId }),
+  });
+
   const { data: salesData, isLoading: isLoadingSales, refetch: refetchSales } = useQuery({
     queryKey: ["dashboard-sales", fromDate, toDate, serviceCenterId],
     queryFn: () => dashboardService.getSalesSummary({ fromDate, toDate, serviceCenterId }),
@@ -75,17 +81,19 @@ export function AdminDashboard() {
 
   const refreshAll = () => {
     refetchOps();
+    refetchTat();
     refetchSales();
     refetchScSales();
   };
 
   const applyFilters = () => {
     refetchOps();
+    refetchTat();
     refetchSales();
     refetchScSales();
   };
 
-  const isLoading = isLoadingOps || isLoadingSales || isLoadingScSales;
+  const isLoading = isLoadingOps || isLoadingTat || isLoadingSales || isLoadingScSales;
 
   const salesTrend = salesData?.data.graph.series || [];
   const scSales =
@@ -258,6 +266,8 @@ export function AdminDashboard() {
               description="Completed deliveries"
             />
           </div>
+
+          <TatSummaryCard data={tatData?.data} />
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <ExpressOutboundSummary data={opsData?.data} />

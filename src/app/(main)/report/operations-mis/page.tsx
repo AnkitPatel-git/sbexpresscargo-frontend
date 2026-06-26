@@ -9,6 +9,7 @@ import { PermissionGuard } from "@/components/auth/permission-guard";
 import { SortableColumnHeader } from "@/components/ui/sortable-column-header";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ import { shipperService } from "@/services/masters/shipper-service";
 import { vendorService } from "@/services/masters/vendor-service";
 import { zoneService } from "@/services/masters/zone-service";
 import { operationsMisReportService } from "@/services/reports/operations-mis-report-service";
+import type { Vendor } from "@/types/masters/vendor";
 import type { OperationsMisReportColumnKey } from "@/types/reports/operations-mis-report";
 import { useAuth } from "@/context/auth-context";
 import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
@@ -88,9 +90,10 @@ const NUMERIC_COLUMNS = new Set<OperationsMisReportColumnKey>([
   "invoiceAmount",
   "noOfBoxes",
   "actualWeight",
-  "tat1",
-  "tat2",
-  "tat3",
+  "expectedTat1",
+  "actualTat3",
+  "vendorTat2",
+  "overTat1",
 ]);
 
 function formatCell(value: string | number | null) {
@@ -126,11 +129,10 @@ export default function OperationsMisReportPage() {
   const [appliedFilters, setAppliedFilters] = useState<OperationsMisFilters>(DEFAULT_FILTERS);
   const [draftFilters, setDraftFilters] = useState<OperationsMisFilters>(DEFAULT_FILTERS);
 
-  const { data: vendorData } = useQuery({
-    queryKey: ["operations-mis-report-vendor-options"],
-    queryFn: () =>
-      vendorService.getVendors({ page: 1, limit: 200, sortBy: "vendorName", sortOrder: "asc" }),
-    enabled: !authLoading && canReadVendors,
+  const { data: pinnedVendorData } = useQuery({
+    queryKey: ["operations-mis-report-vendor-pin", draftFilters.vendorId],
+    queryFn: () => vendorService.getVendorById(draftFilters.vendorId!),
+    enabled: !authLoading && canReadVendors && draftFilters.vendorId != null,
   });
   const { data: customerData } = useQuery({
     queryKey: ["operations-mis-report-customer-options"],
@@ -195,10 +197,9 @@ export default function OperationsMisReportPage() {
   const displayColumns = (data?.columns ?? []) as OperationsMisReportColumnKey[];
   const headers = data?.headers ?? {};
 
-  const vendorOptions = (vendorData?.data ?? []).map((vendor) => ({
-    value: String(vendor.id),
-    label: vendor.vendorCode ? `${vendor.vendorCode} - ${vendor.vendorName}` : vendor.vendorName,
-  }));
+  const formatVendorLabel = (vendor: Pick<Vendor, "vendorCode" | "vendorName">) =>
+    vendor.vendorCode ? `${vendor.vendorCode} - ${vendor.vendorName}` : vendor.vendorName;
+
   const customerOptions = (customerData?.data ?? []).map((customer) => ({
     value: String(customer.id),
     label: customer.code ? `${customer.code} - ${customer.name}` : customer.name,
@@ -384,19 +385,30 @@ export default function OperationsMisReportPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Combobox
-                    className="w-full"
+                  <DbAsyncSelect<Vendor>
+                    queryKey={["operations-mis-report-vendor-options"]}
                     placeholder="Select vendor"
-                    searchPlaceholder="Search vendor..."
-                    emptyMessage="No vendor found."
-                    value={draftFilters.vendorId ? String(draftFilters.vendorId) : ""}
-                    onChange={(value) =>
+                    searchPlaceholder="Search vendor…"
+                    disabled={!canReadVendors}
+                    value={draftFilters.vendorId ? String(draftFilters.vendorId) : undefined}
+                    onValueChange={(value) =>
                       setDraftFilters((prev) => ({
                         ...prev,
                         vendorId: value ? Number(value) : undefined,
                       }))
                     }
-                    options={vendorOptions}
+                    fetchPage={(page, search) =>
+                      vendorService.getVendors({
+                        page,
+                        limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                        search: search || undefined,
+                        sortBy: "vendorName",
+                        sortOrder: "asc",
+                      })
+                    }
+                    getItemLabel={formatVendorLabel}
+                    extraItems={pinnedVendorData?.data ? [pinnedVendorData.data] : undefined}
+                    triggerClassName="w-full"
                   />
                   <Combobox
                     className="w-full"

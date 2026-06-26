@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api-fetch';
-import { OperationSummary, SalesSummary, ServiceCenterSalesSummary } from '@/types/dashboard';
+import { OperationSummary, SalesSummary, ServiceCenterSalesSummary, TatSummary } from '@/types/dashboard';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -26,6 +26,25 @@ class DashboardService {
         const response = await apiFetch(`${this.baseUrl}/operation?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
             throw new Error('Failed to fetch operation summary');
+        }
+        return response.json();
+    }
+
+    async getTatSummary(params: { fromDate: string; toDate: string; serviceCenterId?: number; customerId?: number }): Promise<{ success: boolean; data: TatSummary }> {
+        const queryParams = new URLSearchParams({
+            fromDate: params.fromDate,
+            toDate: params.toDate,
+        });
+        if (params.serviceCenterId) {
+            queryParams.append('serviceCenterId', params.serviceCenterId.toString());
+        }
+        if (params.customerId) {
+            queryParams.append('customerId', params.customerId.toString());
+        }
+
+        const response = await apiFetch(`${this.baseUrl}/tat?${queryParams.toString()}`, { headers: getAuthHeaders() });
+        if (!response.ok) {
+            throw new Error('Failed to fetch TAT summary');
         }
         return response.json();
     }

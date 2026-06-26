@@ -28,6 +28,7 @@ import { chargeService } from "@/services/masters/charge-service";
 import { customerService } from "@/services/masters/customer-service";
 import { productService } from "@/services/masters/product-service";
 import { rateService } from "@/services/masters/rate-service";
+import { serviceMapService } from "@/services/masters/service-map-service";
 import { vendorService } from "@/services/masters/vendor-service";
 import { zoneService } from "@/services/masters/zone-service";
 import {
@@ -53,6 +54,7 @@ import type {
 } from "@/types/masters/rate";
 import type { Customer } from "@/types/masters/customer";
 import type { Product } from "@/types/masters/product";
+import type { ServiceMap } from "@/types/masters/service-map";
 import type { Vendor } from "@/types/masters/vendor";
 import type { Zone } from "@/types/masters/zone";
 import {
@@ -92,7 +94,8 @@ function buildRateMasterSchema(isVendorContract: boolean) {
       toDate: z.string().min(1, "To date is required"),
       customerId: z.string().optional(),
       vendorId: z.string().optional(),
-      productId: z.string().min(1, "Product is required"),
+      productId: z.string().optional(),
+      serviceMapId: z.string().optional(),
     })
     .superRefine((data, ctx) => {
       if (isVendorContract) {
@@ -103,12 +106,28 @@ function buildRateMasterSchema(isVendorContract: boolean) {
             path: ["vendorId"],
           });
         }
-      } else if (!data.customerId?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Customer is required",
-          path: ["customerId"],
-        });
+        if (!data.serviceMapId?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Service is required",
+            path: ["serviceMapId"],
+          });
+        }
+      } else {
+        if (!data.customerId?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Customer is required",
+            path: ["customerId"],
+          });
+        }
+        if (!data.productId?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Product is required",
+            path: ["productId"],
+          });
+        }
       }
     });
 }
@@ -118,7 +137,8 @@ type RateMasterFormValues = {
   toDate: string;
   customerId?: string;
   vendorId?: string;
-  productId: string;
+  productId?: string;
+  serviceMapId?: string;
 };
 
 type TabValue = "master" | "route-slabs" | "oda-slabs" | "rate-conditions";
@@ -271,7 +291,7 @@ type RateChargeRow = Partial<RateCharge> &
   Partial<Pick<RateCharge, "chargeId" | "name" | "calculationBase" | "minValue" | "maxValue" | "sequence">>;
 type RateConditionRow = Partial<RateCondition> &
   Pick<RateCondition, "field" | "operator" | "value" | "chargeAmount" | "isPercentage"> &
-  Partial<Pick<RateCondition, "chargeId" | "calculationBase">> & {
+  Partial<Pick<RateCondition, "chargeId" | "calculationBase" | "applyFuel" | "applyCaf" | "applyIdc">> & {
     /** `slab` rows are UI-only until save; they map to `rateCharges` with charge slabs. */
     ruleType?: ConditionRuleType;
     slabs?: ConditionSlabFormRow[];
@@ -280,16 +300,23 @@ type RateConditionRow = Partial<RateCondition> &
     rateChargeSourceId?: number;
   };
 
+function isSlabBackedRateCharge(row: { chargeSlabs?: unknown[] | null }): boolean {
+  return (row.chargeSlabs?.length ?? 0) > 0;
+}
+
 function mapRateChargesToSlabConditionRows(rows: RateCharge[] | undefined): RateConditionRow[] {
   if (!rows?.length) return [];
   return rows
-    .filter((row) => (row.chargeSlabs?.length ?? 0) > 0)
+    .filter((row) => isSlabBackedRateCharge(row))
     .map((row) => ({
       ruleType: "slab" as const,
       rateChargeSourceId: row.id,
       chargeId: row.chargeId,
       calculationBase: row.calculationBase ?? "",
       applyPerPiece: Boolean(row.applyPerPiece),
+      applyFuel: row.applyFuel !== false,
+      applyCaf: row.applyCaf === true,
+      applyIdc: row.applyIdc === true,
       // Keep values for compatibility with existing row renderer/edit flow.
       field: "",
       operator: "",
@@ -455,8 +482,21 @@ export function RateForm({ initialData }: RateFormProps) {
       customerId: "",
       vendorId: "",
       productId: "",
+      serviceMapId: "",
     },
   });
+
+  const selectedVendorId = form.watch("vendorId");
+
+  useEffect(() => {
+    if (!isVendorContract) return;
+    const sid = form.getValues("serviceMapId");
+    if (!sid) return;
+    const vendorNum = Number(selectedVendorId);
+    if (!Number.isFinite(vendorNum) || vendorNum < 1) {
+      form.setValue("serviceMapId", "", { shouldValidate: true });
+    }
+  }, [form, isVendorContract, selectedVendorId]);
 
   useEffect(() => {
     if (!initialData) {
@@ -466,6 +506,7 @@ export function RateForm({ initialData }: RateFormProps) {
         customerId: "",
         vendorId: "",
         productId: "",
+        serviceMapId: "",
       });
       setRouteSlabs([]);
       setOdaSlabs([]);
@@ -485,7 +526,14 @@ export function RateForm({ initialData }: RateFormProps) {
         initialData.vendorId != null && isVendorRateMasterRow(initialData)
           ? String(initialData.vendorId)
           : "",
-      productId: initialData.productId != null ? String(initialData.productId) : "",
+      productId:
+        initialData.productId != null && !isVendorRateMasterRow(initialData)
+          ? String(initialData.productId)
+          : "",
+      serviceMapId:
+        initialData.serviceMapId != null && isVendorRateMasterRow(initialData)
+          ? String(initialData.serviceMapId)
+          : "",
     });
     setRouteSlabs(initialData.routeRateSlabs ?? []);
     setOdaSlabs(initialData.odaRateSlabs ?? []);
@@ -495,7 +543,9 @@ export function RateForm({ initialData }: RateFormProps) {
         .filter((charge) => (charge.chargeSlabs?.length ?? 0) > 0 && charge.chargeId != null)
         .map((charge) => Number(charge.chargeId)),
     );
-    setRateCharges(allCharges);
+    // Slab-backed charges are edited via rate conditions; keep them out of rateCharges state
+    // so stale surcharge-basis flags are not re-sent on save.
+    setRateCharges(allCharges.filter((charge) => !isSlabBackedRateCharge(charge)));
     const thresholdRows = (initialData.rateConditions ?? []).filter((condition) => {
         const chargeId = condition.chargeId != null ? Number(condition.chargeId) : NaN;
         if (!Number.isFinite(chargeId) || !slabChargeIds.has(chargeId)) {
@@ -604,6 +654,27 @@ export function RateForm({ initialData }: RateFormProps) {
     ];
   }, [initialData?.product]);
 
+  const extraServiceMapRows = useMemo((): ServiceMap[] | undefined => {
+    const sm = initialData?.serviceMap;
+    if (!sm) return undefined;
+    return [
+      {
+        id: sm.id,
+        vendorId: sm.vendorId ?? initialData?.vendorId ?? 0,
+        serviceType: sm.serviceType ?? "",
+        weightUnit: (sm.weightUnit as ServiceMap["weightUnit"]) ?? "KG",
+        status: "ACTIVE",
+        vendorLink: null,
+        createdAt: "",
+        updatedAt: "",
+        createdById: null,
+        updatedById: null,
+        deletedAt: null,
+        deletedById: null,
+      },
+    ];
+  }, [initialData?.serviceMap, initialData?.vendorId]);
+
   const extraZoneRows = useMemo(
     () => collectExtraZoneRows(initialData, routeSlabs, odaSlabs),
     [initialData, routeSlabs, odaSlabs],
@@ -642,7 +713,28 @@ export function RateForm({ initialData }: RateFormProps) {
     queryKey: ["rate-form-products"],
     fetchPage: (page) => productService.getProducts({ page, limit: 10, sortBy: "productName", sortOrder: "asc" }),
     extraRows: extraProductRows,
+    enabled: !isVendorContract,
   });
+
+  const { data: vendorServiceMapsResponse, isFetching: isVendorServicesFetching } = useQuery({
+    queryKey: ["rate-form-vendor-services", selectedVendorId],
+    queryFn: () => serviceMapService.getServiceMapsByVendor(Number(selectedVendorId)),
+    enabled: isVendorContract && !!selectedVendorId && Number(selectedVendorId) > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const vendorServiceOptions = useMemo(() => {
+    const fromApi = vendorServiceMapsResponse?.data ?? [];
+    const extra = extraServiceMapRows ?? [];
+    const seen = new Set<number>();
+    const merged: ServiceMap[] = [];
+    for (const row of [...extra, ...fromApi]) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      merged.push(row);
+    }
+    return merged;
+  }, [extraServiceMapRows, vendorServiceMapsResponse?.data]);
 
   const onCustomerSelectScroll = useSelectContentInfiniteScroll({
     hasNextPage: hasNextCustomerPage,
@@ -830,35 +922,72 @@ export function RateForm({ initialData }: RateFormProps) {
                   )}
                 />
               )}
-              <FormField
-                control={form.control}
-                name="productId"
-                render={({ field }) => (
-                  <FloatingFormItem required label="Product">
-                    <Select key={field.value} onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                          <SelectValue placeholder="Select product">
-                            {optionLabelById(String(field.value), productOptions, (p) =>
-                              p.productName || p.productCode || `Product ${p.id}`,
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent onScroll={onProductSelectScroll}>
-                        {productOptions.map((product) => (
-                          <SelectItem key={product.id} value={String(product.id)}>
-                            {product.productName || product.productCode || `Product ${product.id}`}
-                          </SelectItem>
-                        ))}
-                        {isFetchingNextProductPage ? (
-                          <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                  </FloatingFormItem>
-                )}
-              />
+              {isVendorContract ? (
+                <FormField
+                  control={form.control}
+                  name="serviceMapId"
+                  render={({ field }) => (
+                    <FloatingFormItem required label="Service">
+                      <Select
+                        key={`${selectedVendorId}-${field.value}`}
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!selectedVendorId}
+                      >
+                        <FormControl>
+                          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                            <SelectValue placeholder={selectedVendorId ? "Select service" : "Select vendor first"}>
+                              {optionLabelById(String(field.value), vendorServiceOptions, (sm) =>
+                                sm.serviceType || `Service ${sm.id}`,
+                              )}
+                            </SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {vendorServiceOptions.map((serviceMap) => (
+                            <SelectItem key={serviceMap.id} value={String(serviceMap.id)}>
+                              {serviceMap.serviceType || `Service ${serviceMap.id}`}
+                            </SelectItem>
+                          ))}
+                          {isVendorServicesFetching ? (
+                            <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading services…</div>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </FloatingFormItem>
+                  )}
+                />
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="productId"
+                  render={({ field }) => (
+                    <FloatingFormItem required label="Product">
+                      <Select key={field.value} onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                            <SelectValue placeholder="Select product">
+                              {optionLabelById(String(field.value), productOptions, (p) =>
+                                p.productName || p.productCode || `Product ${p.id}`,
+                              )}
+                            </SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent onScroll={onProductSelectScroll}>
+                          {productOptions.map((product) => (
+                            <SelectItem key={product.id} value={String(product.id)}>
+                              {product.productName || product.productCode || `Product ${product.id}`}
+                            </SelectItem>
+                          ))}
+                          {isFetchingNextProductPage ? (
+                            <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">Loading more…</div>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </FloatingFormItem>
+                  )}
+                />
+              )}
             </div>
           </TabsContent>
 
@@ -877,6 +1006,7 @@ export function RateForm({ initialData }: RateFormProps) {
               setSlabs={setRouteSlabs}
               zoneLabelById={zoneLabelById}
               zoneExtraRows={extraZoneRows}
+              isVendorContract={isVendorContract}
             />
           </TabsContent>
 
@@ -892,6 +1022,7 @@ export function RateForm({ initialData }: RateFormProps) {
               setSlabs={setOdaSlabs}
               zoneLabelById={zoneLabelById}
               zoneExtraRows={extraZoneRows}
+              isVendorContract={isVendorContract}
             />
           </TabsContent>
 
@@ -901,6 +1032,7 @@ export function RateForm({ initialData }: RateFormProps) {
               setRateConditions={setRateConditions}
               rateMasterId={initialData?.id}
               isEdit={isEdit}
+              isVendorContract={isVendorContract}
             />
           </TabsContent>
         </Tabs>
@@ -938,8 +1070,8 @@ function slabApplyFlagsFromRow(row: {
 }) {
   return {
     applyFuel: row.applyFuel !== false,
-    applyCaf: row.applyCaf !== false,
-    applyIdc: row.applyIdc !== false,
+    applyCaf: row.applyCaf === true,
+    applyIdc: row.applyIdc === true,
   };
 }
 
@@ -957,8 +1089,8 @@ function mapRouteSlabsForApi(rows: RouteSlabRow[], mode: "route" | "oda" = "rout
             ? ("PER_KG" as const)
             : ("FLAT" as const),
       applyFuel: (w as { applyFuel?: boolean }).applyFuel !== false,
-      applyCaf: (w as { applyCaf?: boolean }).applyCaf !== false,
-      applyIdc: (w as { applyIdc?: boolean }).applyIdc !== false,
+      applyCaf: (w as { applyCaf?: boolean }).applyCaf === true,
+      applyIdc: (w as { applyIdc?: boolean }).applyIdc === true,
     }));
     const slab: RateRouteSlabPayload = { weightSlabs: ws };
     if (mode === "route") {
@@ -1008,8 +1140,8 @@ function mapRateChargesForApi(rows: RateChargeRow[]): RateChargePayload[] {
       if (row.sequence != null && Number.isFinite(Number(row.sequence))) next.sequence = Number(row.sequence);
       if (chargeSlabs.length > 0) next.chargeSlabs = chargeSlabs;
       next.applyFuel = (row as { applyFuel?: boolean }).applyFuel !== false;
-      next.applyCaf = (row as { applyCaf?: boolean }).applyCaf !== false;
-      next.applyIdc = (row as { applyIdc?: boolean }).applyIdc !== false;
+      next.applyCaf = (row as { applyCaf?: boolean }).applyCaf === true;
+      next.applyIdc = (row as { applyIdc?: boolean }).applyIdc === true;
       return next;
     })
     .filter((row): row is RateChargePayload => row != null);
@@ -1039,8 +1171,8 @@ function mapSlabConditionRulesToRateChargePayloads(rows: RateConditionRow[]): Ra
         value: 0,
         isPercentage: false,
         applyFuel: (row as { applyFuel?: boolean }).applyFuel !== false,
-        applyCaf: (row as { applyCaf?: boolean }).applyCaf !== false,
-        applyIdc: (row as { applyIdc?: boolean }).applyIdc !== false,
+        applyCaf: (row as { applyCaf?: boolean }).applyCaf === true,
+        applyIdc: (row as { applyIdc?: boolean }).applyIdc === true,
         chargeSlabs: slabs,
       };
       return payload;
@@ -1086,7 +1218,6 @@ function buildPayload(
     updateType: resolvedUpdateType,
     fromDate: values.fromDate,
     toDate: values.toDate,
-    productId: Number(values.productId),
     zoneRates: [],
     distanceSlabs: [],
     rateSlabs: mapRouteSlabsForApi(routeSlabs, "route"),
@@ -1111,20 +1242,22 @@ function buildPayload(
           next.maxValue = Number(row.maxValue);
         }
         next.applyFuel = (row as { applyFuel?: boolean }).applyFuel !== false;
-        next.applyCaf = (row as { applyCaf?: boolean }).applyCaf !== false;
-        next.applyIdc = (row as { applyIdc?: boolean }).applyIdc !== false;
+        next.applyCaf = (row as { applyCaf?: boolean }).applyCaf === true;
+        next.applyIdc = (row as { applyIdc?: boolean }).applyIdc === true;
         return next;
       }),
     rateCharges: dedupeRateChargePayloads([
-      ...mapRateChargesForApi(rateCharges),
+      ...mapRateChargesForApi(rateCharges.filter((charge) => !isSlabBackedRateCharge(charge))),
       ...mapSlabConditionRulesToRateChargePayloads(rateConditions),
     ]),
   };
 
   if (isVendorContract) {
     payload.vendorId = Number(values.vendorId);
+    payload.serviceMapId = Number(values.serviceMapId);
   } else {
     payload.customerId = Number(values.customerId);
+    payload.productId = Number(values.productId);
   }
 
   return payload;
@@ -1142,6 +1275,7 @@ function RouteSlabsEditor({
   setSlabs,
   zoneLabelById,
   zoneExtraRows,
+  isVendorContract,
 }: {
   title: string;
   description: string;
@@ -1159,6 +1293,8 @@ function RouteSlabsEditor({
   setSlabs: Dispatch<SetStateAction<RouteSlabRow[]>>;
   zoneLabelById: Map<number, string>;
   zoneExtraRows: Zone[];
+  /** Vendor buy-rate contract; CAF/IDC surcharge-basis toggles only apply to vendor rates. */
+  isVendorContract: boolean;
 }) {
   const [draft, setDraft] = useState<RouteSlabDraft>({
     fromZoneId: "",
@@ -1166,7 +1302,7 @@ function RouteSlabsEditor({
     minKm: "",
     maxKm: "",
     minimumAmount: "",
-    weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: true, applyIdc: true }],
+    weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: false, applyIdc: false }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -1194,10 +1330,10 @@ function RouteSlabsEditor({
                   ? "PER_KG"
                   : "FLAT",
               applyFuel: (item as { applyFuel?: boolean }).applyFuel !== false,
-              applyCaf: (item as { applyCaf?: boolean }).applyCaf !== false,
-              applyIdc: (item as { applyIdc?: boolean }).applyIdc !== false,
+              applyCaf: (item as { applyCaf?: boolean }).applyCaf === true,
+              applyIdc: (item as { applyIdc?: boolean }).applyIdc === true,
             }))
-          : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: true, applyIdc: true }],
+          : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: false, applyIdc: false }],
     });
   }, [editingIndex, extendedWeightPricingModes, slabs]);
 
@@ -1209,7 +1345,7 @@ function RouteSlabsEditor({
       minKm: "",
       maxKm: "",
       minimumAmount: "",
-      weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: true, applyIdc: true }],
+      weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: false, applyIdc: false }],
     });
     setEditingIndex(null);
   }
@@ -1226,8 +1362,8 @@ function RouteSlabsEditor({
             ? ("PER_KG" as const)
             : ("FLAT" as const),
         applyFuel: item.applyFuel !== false,
-        applyCaf: item.applyCaf !== false,
-        applyIdc: item.applyIdc !== false,
+        applyCaf: item.applyCaf === true,
+        applyIdc: item.applyIdc === true,
       }))
       .filter((item) => Number.isFinite(item.minWeight) && Number.isFinite(item.maxWeight) && Number.isFinite(item.rate));
     if (weightSlabs.length === 0) return;
@@ -1324,7 +1460,7 @@ function RouteSlabsEditor({
   function addWeightRow() {
     setDraft((current) => ({
       ...current,
-      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: true, applyIdc: true }],
+      weightSlabs: [...current.weightSlabs, { minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: false, applyIdc: false }],
     }));
   }
 
@@ -1503,20 +1639,24 @@ function RouteSlabsEditor({
                 />
                 <span className="text-sm text-foreground">Fuel basis</span>
               </div>
-              <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
-                <Checkbox
-                  checked={item.applyCaf !== false}
-                  onCheckedChange={(checked) => updateWeightSlab(index, "applyCaf", Boolean(checked))}
-                />
-                <span className="text-sm text-foreground">CAF basis</span>
-              </div>
-              <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
-                <Checkbox
-                  checked={item.applyIdc !== false}
-                  onCheckedChange={(checked) => updateWeightSlab(index, "applyIdc", Boolean(checked))}
-                />
-                <span className="text-sm text-foreground">IDC basis</span>
-              </div>
+              {isVendorContract && (
+                <>
+                  <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
+                    <Checkbox
+                      checked={item.applyCaf === true}
+                      onCheckedChange={(checked) => updateWeightSlab(index, "applyCaf", Boolean(checked))}
+                    />
+                    <span className="text-sm text-foreground">CAF basis</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
+                    <Checkbox
+                      checked={item.applyIdc === true}
+                      onCheckedChange={(checked) => updateWeightSlab(index, "applyIdc", Boolean(checked))}
+                    />
+                    <span className="text-sm text-foreground">IDC basis</span>
+                  </div>
+                </>
+              )}
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -1642,8 +1782,8 @@ function RateChargesEditor({
     maxValue: "",
     sequence: "",
     applyFuel: true,
-    applyCaf: true,
-    applyIdc: true,
+    applyCaf: false,
+    applyIdc: false,
     chargeSlabs: [{ minValue: "", maxValue: "", rate: "" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -1766,8 +1906,8 @@ function RateChargesEditor({
       maxValue: details.maxValue != null ? String(details.maxValue) : "",
       sequence: details.sequence != null ? String(details.sequence) : "",
       applyFuel: (details as { applyFuel?: boolean }).applyFuel !== false,
-      applyCaf: (details as { applyCaf?: boolean }).applyCaf !== false,
-      applyIdc: (details as { applyIdc?: boolean }).applyIdc !== false,
+      applyCaf: (details as { applyCaf?: boolean }).applyCaf === true,
+      applyIdc: (details as { applyIdc?: boolean }).applyIdc === true,
       chargeSlabs: (details.chargeSlabs ?? []).map((item) => ({ minValue: String(item.minValue), maxValue: String(item.maxValue), rate: String(item.rate) })),
     });
   }, [editingIndex, editingRowResponse?.data, rateCharges]);
@@ -1784,8 +1924,8 @@ function RateChargesEditor({
       maxValue: "",
       sequence: "",
       applyFuel: true,
-      applyCaf: true,
-      applyIdc: true,
+      applyCaf: false,
+      applyIdc: false,
       chargeSlabs: [{ minValue: "", maxValue: "", rate: "" }],
     });
     setEditingIndex(null);
@@ -2038,11 +2178,14 @@ function RateConditionsEditor({
   setRateConditions,
   rateMasterId,
   isEdit,
+  isVendorContract,
 }: {
   rateConditions: RateConditionRow[];
   setRateConditions: Dispatch<SetStateAction<RateConditionRow[]>>;
   rateMasterId?: number;
   isEdit: boolean;
+  /** Vendor buy-rate contract; enables vendor-only condition fields (e.g. VENDOR_PICKUP). */
+  isVendorContract: boolean;
 }) {
   const [draft, setDraft] = useState<RateConditionDraft>({
     id: undefined,
@@ -2058,12 +2201,28 @@ function RateConditionsEditor({
     applyPerPiece: false,
     isPercentage: false,
     applyFuel: true,
-    applyCaf: true,
-    applyIdc: true,
+    applyCaf: false,
+    applyIdc: false,
     slabs: [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const editingRowSnapshot = editingIndex !== null ? rateConditions[editingIndex] : undefined;
+
+  /** Keep surcharge-basis toggles in sync with the table row while editing (so main Save works without re-clicking Update). */
+  function patchDraftSurchargeBasis(
+    patch: Partial<Pick<RateConditionDraft, "applyFuel" | "applyCaf" | "applyIdc" | "applyPerPiece">>,
+  ) {
+    setDraft((current) => ({ ...current, ...patch }));
+    if (editingIndex === null) return;
+    setRateConditions((current) => {
+      const row = current[editingIndex];
+      if (!row) return current;
+      const copy = [...current];
+      copy[editingIndex] = { ...row, ...patch };
+      return copy;
+    });
+  }
+
   const editingRowId =
     editingIndex === null || editingRowSnapshot?.ruleType === "slab"
       ? undefined
@@ -2202,9 +2361,15 @@ function RateConditionsEditor({
       calculationBase: details.calculationBase ?? "",
       applyPerPiece: Boolean((row as { applyPerPiece?: boolean }).applyPerPiece),
       isPercentage: Boolean(details.isPercentage),
-      applyFuel: (details as { applyFuel?: boolean }).applyFuel !== false,
-      applyCaf: (details as { applyCaf?: boolean }).applyCaf !== false,
-      applyIdc: (details as { applyIdc?: boolean }).applyIdc !== false,
+      applyFuel: row.ruleType === "slab"
+        ? row.applyFuel !== false
+        : (details as { applyFuel?: boolean }).applyFuel !== false,
+      applyCaf: row.ruleType === "slab"
+        ? row.applyCaf === true
+        : (details as { applyCaf?: boolean }).applyCaf === true,
+      applyIdc: row.ruleType === "slab"
+        ? row.applyIdc === true
+        : (details as { applyIdc?: boolean }).applyIdc === true,
       slabs: slabsFromRow,
     });
   }, [editingIndex, editingRowResponse?.data, rateConditions]);
@@ -2224,8 +2389,8 @@ function RateConditionsEditor({
       applyPerPiece: false,
       isPercentage: false,
       applyFuel: true,
-      applyCaf: true,
-      applyIdc: true,
+      applyCaf: false,
+      applyIdc: false,
       slabs: [{ minValue: "", maxValue: "", rate: "", pricingMode: "FLAT" }],
     });
     setEditingIndex(null);
@@ -2377,11 +2542,14 @@ function RateConditionsEditor({
 
   const conditionFieldSelectValues = useMemo(() => {
     const base: string[] = [...CONDITION_FIELD_OPTIONS];
+    if (isVendorContract) {
+      base.push("VENDOR_PICKUP");
+    }
     if (draft.field && !base.includes(draft.field)) {
       base.push(draft.field);
     }
     return base;
-  }, [draft.field]);
+  }, [draft.field, isVendorContract]);
 
   function toggleExtraDetails(enabled: boolean) {
     setDraft((c) => ({
@@ -2523,17 +2691,21 @@ function RateConditionsEditor({
             <span className="text-sm font-medium text-foreground">Is percentage</span>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
-            <Checkbox checked={draft.applyFuel} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyFuel: Boolean(checked) }))} />
+            <Checkbox checked={draft.applyFuel} onCheckedChange={(checked) => patchDraftSurchargeBasis({ applyFuel: Boolean(checked) })} />
             <span className="text-sm font-medium text-foreground">Fuel basis</span>
           </div>
-          <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
-            <Checkbox checked={draft.applyCaf} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyCaf: Boolean(checked) }))} />
-            <span className="text-sm font-medium text-foreground">CAF basis</span>
-          </div>
-          <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
-            <Checkbox checked={draft.applyIdc} onCheckedChange={(checked) => setDraft((current) => ({ ...current, applyIdc: Boolean(checked) }))} />
-            <span className="text-sm font-medium text-foreground">IDC basis</span>
-          </div>
+          {isVendorContract && (
+            <>
+              <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+                <Checkbox checked={draft.applyCaf} onCheckedChange={(checked) => patchDraftSurchargeBasis({ applyCaf: Boolean(checked) })} />
+                <span className="text-sm font-medium text-foreground">CAF basis</span>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-border/70 px-4 py-3">
+                <Checkbox checked={draft.applyIdc} onCheckedChange={(checked) => patchDraftSurchargeBasis({ applyIdc: Boolean(checked) })} />
+                <span className="text-sm font-medium text-foreground">IDC basis</span>
+              </div>
+            </>
+          )}
           <div className="flex items-center gap-2 rounded-xl border border-border/70 px-4 py-3">
             <Checkbox
               id="rule-slab-extra"
@@ -2554,7 +2726,7 @@ function RateConditionsEditor({
               <p className="text-sm font-semibold text-foreground">Charge slabs</p>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 rounded-lg border border-border/70 px-3 py-1.5">
-                  <Checkbox checked={draft.applyPerPiece} onCheckedChange={(checked) => setDraft((c) => ({ ...c, applyPerPiece: Boolean(checked) }))} />
+                  <Checkbox checked={draft.applyPerPiece} onCheckedChange={(checked) => patchDraftSurchargeBasis({ applyPerPiece: Boolean(checked) })} />
                   <span className="text-xs font-medium text-foreground">Apply per piece</span>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={addConditionSlabRow}>

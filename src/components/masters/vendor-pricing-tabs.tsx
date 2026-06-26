@@ -32,6 +32,7 @@ import {
 import { FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item"
 import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select"
 import { productService } from "@/services/masters/product-service"
+import { serviceMapService } from "@/services/masters/service-map-service"
 import { vendorService } from "@/services/masters/vendor-service"
 import type { Product } from "@/types/masters/product"
 import type {
@@ -165,13 +166,81 @@ function VendorEntityDialog({
     )
 }
 
+function VendorServiceMapSelect({
+    id,
+    vendorId,
+    value,
+    onValueChange,
+    editingServiceMap,
+    placeholder = "All services",
+}: {
+    id?: string
+    vendorId: number
+    value?: number
+    onValueChange: (serviceMapId: number | undefined) => void
+    editingServiceMap?: { id: number; serviceType: string } | null
+    placeholder?: string
+}) {
+    const { data } = useQuery({
+        queryKey: ["vendor-service-maps", vendorId],
+        queryFn: () => serviceMapService.getServiceMapsByVendor(vendorId),
+        enabled: vendorId > 0,
+    })
+
+    const serviceMaps = useMemo(() => {
+        const rows = data?.data ?? []
+        if (
+            editingServiceMap &&
+            !rows.some((row) => row.id === editingServiceMap.id)
+        ) {
+            return [
+                {
+                    id: editingServiceMap.id,
+                    vendorId,
+                    serviceType: editingServiceMap.serviceType,
+                    weightUnit: "KG" as const,
+                    status: "ACTIVE" as const,
+                    vendorLink: null,
+                    createdAt: "",
+                    updatedAt: "",
+                    createdById: null,
+                    updatedById: null,
+                    deletedAt: null,
+                    deletedById: null,
+                },
+                ...rows,
+            ]
+        }
+        return rows
+    }, [data?.data, editingServiceMap, vendorId])
+
+    return (
+        <Select
+            value={value != null ? String(value) : "all"}
+            onValueChange={(v) => onValueChange(v === "all" ? undefined : Number(v))}
+        >
+            <SelectTrigger id={id} className={FLOATING_INNER_SELECT_TRIGGER}>
+                <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All services</SelectItem>
+                {serviceMaps.map((serviceMap) => (
+                    <SelectItem key={serviceMap.id} value={String(serviceMap.id)}>
+                        {serviceMap.serviceType || `Service ${serviceMap.id}`}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    )
+}
+
 export function VendorFuelSurchargeTab({ vendorId }: { vendorId: number | null }) {
     const queryClient = useQueryClient()
-    const fuelProductSelectId = useId()
+    const fuelServiceSelectId = useId()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<VendorFuelSurcharge | null>(null)
     const [form, setForm] = useState<VendorFuelSurchargeFormData>({
-        productId: undefined,
+        serviceMapId: undefined,
         fuelChargeType: "PERCENTAGE",
         fromDate: "",
         toDate: "",
@@ -194,7 +263,7 @@ export function VendorFuelSurchargeTab({ vendorId }: { vendorId: number | null }
             queryClient.invalidateQueries({ queryKey: ["vendor-fuel-surcharges", vendorId] })
             setOpen(false)
             setEditing(null)
-            setForm({ productId: undefined, fuelChargeType: "PERCENTAGE", fromDate: "", toDate: "", fuelSurcharge: undefined })
+            setForm({ serviceMapId: undefined, fuelChargeType: "PERCENTAGE", fromDate: "", toDate: "", fuelSurcharge: undefined })
             toast.success(`Fuel surcharge ${editing ? "updated" : "added"} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -216,12 +285,12 @@ export function VendorFuelSurchargeTab({ vendorId }: { vendorId: number | null }
             title="Fuel Surcharges"
             onAdd={() => {
                 setEditing(null)
-                setForm({ productId: undefined, fuelChargeType: "PERCENTAGE", fromDate: "", toDate: "", fuelSurcharge: undefined })
+                setForm({ serviceMapId: undefined, fuelChargeType: "PERCENTAGE", fromDate: "", toDate: "", fuelSurcharge: undefined })
                 setOpen(true)
             }}
-            columns={["Product", "Type", "From Date", "To Date", "Value", "Action"]}
+            columns={["Service", "Type", "From Date", "To Date", "Value", "Action"]}
             rows={surchargeRows.map((item) => [
-                item.product?.productName ?? "All Products",
+                item.serviceMap?.serviceType ?? "All Services",
                 item.fuelChargeType,
                 formatDate(item.fromDate),
                 formatDate(item.toDate),
@@ -236,7 +305,7 @@ export function VendorFuelSurchargeTab({ vendorId }: { vendorId: number | null }
                         onClick={() => {
                             setEditing(item)
                             setForm({
-                                productId: item.productId ?? undefined,
+                                serviceMapId: item.serviceMapId ?? undefined,
                                 fuelChargeType: item.fuelChargeType === "FIXED" ? "FLAT" : item.fuelChargeType,
                                 fromDate: item.fromDate.split("T")[0] ?? "",
                                 toDate: item.toDate.split("T")[0] ?? "",
@@ -268,43 +337,17 @@ export function VendorFuelSurchargeTab({ vendorId }: { vendorId: number | null }
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <label htmlFor={fuelProductSelectId} className="text-sm font-medium">Product</label>
-                        <DbAsyncSelect<Product>
-                            id={fuelProductSelectId}
-                            queryKey={["vendor-fuel-surcharge", "products", vendorId ?? 0, editing?.id ?? "new"]}
-                            fetchPage={(page, search) =>
-                                productService.getProducts({
-                                    page,
-                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
-                                    search: search || undefined,
-                                    sortBy: "productName",
-                                    sortOrder: "asc",
-                                })
+                        <label htmlFor={fuelServiceSelectId} className="text-sm font-medium">Service</label>
+                        <VendorServiceMapSelect
+                            id={fuelServiceSelectId}
+                            vendorId={vendorId}
+                            value={form.serviceMapId}
+                            onValueChange={(serviceMapId) => setForm((prev) => ({ ...prev, serviceMapId }))}
+                            editingServiceMap={
+                                editing?.serviceMapId != null && editing.serviceMap
+                                    ? { id: editing.serviceMapId, serviceType: editing.serviceMap.serviceType }
+                                    : null
                             }
-                            getItemLabel={(p) => p.productName}
-                            extraItems={
-                                editing?.productId != null && editing.product
-                                    ? [{
-                                        id: editing.productId,
-                                        productCode: editing.product.productCode ?? "",
-                                        productName: editing.product.productName ?? `Product ${editing.productId}`,
-                                        version: 1,
-                                        productType: "DOMESTIC",
-                                        status: "ACTIVE",
-                                        createdAt: "",
-                                        updatedAt: "",
-                                        createdById: null,
-                                        updatedById: null,
-                                        deletedAt: null,
-                                        deletedById: null,
-                                    }]
-                                    : undefined
-                            }
-                            value={form.productId != null ? String(form.productId) : undefined}
-                            onValueChange={(v) => setForm((prev) => ({ ...prev, productId: v ? Number(v) : undefined }))}
-                            placeholder="All products"
-                            searchPlaceholder="Search products…"
-                            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
                         />
                     </div>
                     <div className="space-y-2">
@@ -341,7 +384,7 @@ export function VendorFuelSurchargeTab({ vendorId }: { vendorId: number | null }
                 </div>
                 {!editing ? (
                     <p className="mt-3 text-sm text-muted-foreground">
-                        Leave Product empty to create the same fuel surcharge for every product.
+                        Leave Service empty to create the same fuel surcharge for every service.
                     </p>
                 ) : null}
             </VendorEntityDialog>
@@ -351,11 +394,11 @@ export function VendorFuelSurchargeTab({ vendorId }: { vendorId: number | null }
 
 export function VendorIdcSurchargeTab({ vendorId }: { vendorId: number | null }) {
     const queryClient = useQueryClient()
-    const productSelectId = useId()
+    const serviceSelectId = useId()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<VendorIdcSurcharge | null>(null)
     const [form, setForm] = useState<VendorIdcSurchargeFormData>({
-        productId: undefined,
+        serviceMapId: undefined,
         idcChargeType: "PERCENTAGE",
         fromDate: "",
         toDate: "",
@@ -378,7 +421,7 @@ export function VendorIdcSurchargeTab({ vendorId }: { vendorId: number | null })
             queryClient.invalidateQueries({ queryKey: ["vendor-idc-surcharges", vendorId] })
             setOpen(false)
             setEditing(null)
-            setForm({ productId: undefined, idcChargeType: "PERCENTAGE", fromDate: "", toDate: "", idcSurcharge: undefined })
+            setForm({ serviceMapId: undefined, idcChargeType: "PERCENTAGE", fromDate: "", toDate: "", idcSurcharge: undefined })
             toast.success(`IDC surcharge ${editing ? "updated" : "added"} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -400,12 +443,12 @@ export function VendorIdcSurchargeTab({ vendorId }: { vendorId: number | null })
             title="IDC"
             onAdd={() => {
                 setEditing(null)
-                setForm({ productId: undefined, idcChargeType: "PERCENTAGE", fromDate: "", toDate: "", idcSurcharge: undefined })
+                setForm({ serviceMapId: undefined, idcChargeType: "PERCENTAGE", fromDate: "", toDate: "", idcSurcharge: undefined })
                 setOpen(true)
             }}
-            columns={["Product", "Type", "From Date", "To Date", "Value", "Action"]}
+            columns={["Service", "Type", "From Date", "To Date", "Value", "Action"]}
             rows={surchargeRows.map((item) => [
-                item.product?.productName ?? "All Products",
+                item.serviceMap?.serviceType ?? "All Services",
                 item.idcChargeType,
                 formatDate(item.fromDate),
                 formatDate(item.toDate),
@@ -420,7 +463,7 @@ export function VendorIdcSurchargeTab({ vendorId }: { vendorId: number | null })
                         onClick={() => {
                             setEditing(item)
                             setForm({
-                                productId: item.productId ?? undefined,
+                                serviceMapId: item.serviceMapId ?? undefined,
                                 idcChargeType: item.idcChargeType === "FIXED" ? "FLAT" : item.idcChargeType,
                                 fromDate: item.fromDate.split("T")[0] ?? "",
                                 toDate: item.toDate.split("T")[0] ?? "",
@@ -452,43 +495,17 @@ export function VendorIdcSurchargeTab({ vendorId }: { vendorId: number | null })
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <label htmlFor={productSelectId} className="text-sm font-medium">Product</label>
-                        <DbAsyncSelect<Product>
-                            id={productSelectId}
-                            queryKey={["vendor-idc-surcharge", "products", vendorId ?? 0, editing?.id ?? "new"]}
-                            fetchPage={(page, search) =>
-                                productService.getProducts({
-                                    page,
-                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
-                                    search: search || undefined,
-                                    sortBy: "productName",
-                                    sortOrder: "asc",
-                                })
+                        <label htmlFor={serviceSelectId} className="text-sm font-medium">Service</label>
+                        <VendorServiceMapSelect
+                            id={serviceSelectId}
+                            vendorId={vendorId}
+                            value={form.serviceMapId}
+                            onValueChange={(serviceMapId) => setForm((prev) => ({ ...prev, serviceMapId }))}
+                            editingServiceMap={
+                                editing?.serviceMapId != null && editing.serviceMap
+                                    ? { id: editing.serviceMapId, serviceType: editing.serviceMap.serviceType }
+                                    : null
                             }
-                            getItemLabel={(p) => p.productName}
-                            extraItems={
-                                editing?.productId != null && editing.product
-                                    ? [{
-                                        id: editing.productId,
-                                        productCode: editing.product.productCode ?? "",
-                                        productName: editing.product.productName ?? `Product ${editing.productId}`,
-                                        version: 1,
-                                        productType: "DOMESTIC",
-                                        status: "ACTIVE",
-                                        createdAt: "",
-                                        updatedAt: "",
-                                        createdById: null,
-                                        updatedById: null,
-                                        deletedAt: null,
-                                        deletedById: null,
-                                    }]
-                                    : undefined
-                            }
-                            value={form.productId != null ? String(form.productId) : undefined}
-                            onValueChange={(v) => setForm((prev) => ({ ...prev, productId: v ? Number(v) : undefined }))}
-                            placeholder="All products"
-                            searchPlaceholder="Search products…"
-                            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
                         />
                     </div>
                     <div className="space-y-2">
@@ -525,7 +542,7 @@ export function VendorIdcSurchargeTab({ vendorId }: { vendorId: number | null })
                 </div>
                 {!editing ? (
                     <p className="mt-3 text-sm text-muted-foreground">
-                        Leave Product empty to create the same IDC surcharge for every product.
+                        Leave Service empty to create the same IDC surcharge for every service.
                     </p>
                 ) : null}
             </VendorEntityDialog>
@@ -535,11 +552,11 @@ export function VendorIdcSurchargeTab({ vendorId }: { vendorId: number | null })
 
 export function VendorCafSurchargeTab({ vendorId }: { vendorId: number | null }) {
     const queryClient = useQueryClient()
-    const productSelectId = useId()
+    const serviceSelectId = useId()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<VendorCafSurcharge | null>(null)
     const [form, setForm] = useState<VendorCafSurchargeFormData>({
-        productId: undefined,
+        serviceMapId: undefined,
         cafChargeType: "PERCENTAGE",
         fromDate: "",
         toDate: "",
@@ -562,7 +579,7 @@ export function VendorCafSurchargeTab({ vendorId }: { vendorId: number | null })
             queryClient.invalidateQueries({ queryKey: ["vendor-caf-surcharges", vendorId] })
             setOpen(false)
             setEditing(null)
-            setForm({ productId: undefined, cafChargeType: "PERCENTAGE", fromDate: "", toDate: "", cafSurcharge: undefined })
+            setForm({ serviceMapId: undefined, cafChargeType: "PERCENTAGE", fromDate: "", toDate: "", cafSurcharge: undefined })
             toast.success(`CAF surcharge ${editing ? "updated" : "added"} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -584,12 +601,12 @@ export function VendorCafSurchargeTab({ vendorId }: { vendorId: number | null })
             title="CAF"
             onAdd={() => {
                 setEditing(null)
-                setForm({ productId: undefined, cafChargeType: "PERCENTAGE", fromDate: "", toDate: "", cafSurcharge: undefined })
+                setForm({ serviceMapId: undefined, cafChargeType: "PERCENTAGE", fromDate: "", toDate: "", cafSurcharge: undefined })
                 setOpen(true)
             }}
-            columns={["Product", "Type", "From Date", "To Date", "Value", "Action"]}
+            columns={["Service", "Type", "From Date", "To Date", "Value", "Action"]}
             rows={surchargeRows.map((item) => [
-                item.product?.productName ?? "All Products",
+                item.serviceMap?.serviceType ?? "All Services",
                 item.cafChargeType,
                 formatDate(item.fromDate),
                 formatDate(item.toDate),
@@ -604,7 +621,7 @@ export function VendorCafSurchargeTab({ vendorId }: { vendorId: number | null })
                         onClick={() => {
                             setEditing(item)
                             setForm({
-                                productId: item.productId ?? undefined,
+                                serviceMapId: item.serviceMapId ?? undefined,
                                 cafChargeType: item.cafChargeType === "FIXED" ? "FLAT" : item.cafChargeType,
                                 fromDate: item.fromDate.split("T")[0] ?? "",
                                 toDate: item.toDate.split("T")[0] ?? "",
@@ -636,43 +653,17 @@ export function VendorCafSurchargeTab({ vendorId }: { vendorId: number | null })
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <label htmlFor={productSelectId} className="text-sm font-medium">Product</label>
-                        <DbAsyncSelect<Product>
-                            id={productSelectId}
-                            queryKey={["vendor-caf-surcharge", "products", vendorId ?? 0, editing?.id ?? "new"]}
-                            fetchPage={(page, search) =>
-                                productService.getProducts({
-                                    page,
-                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
-                                    search: search || undefined,
-                                    sortBy: "productName",
-                                    sortOrder: "asc",
-                                })
+                        <label htmlFor={serviceSelectId} className="text-sm font-medium">Service</label>
+                        <VendorServiceMapSelect
+                            id={serviceSelectId}
+                            vendorId={vendorId}
+                            value={form.serviceMapId}
+                            onValueChange={(serviceMapId) => setForm((prev) => ({ ...prev, serviceMapId }))}
+                            editingServiceMap={
+                                editing?.serviceMapId != null && editing.serviceMap
+                                    ? { id: editing.serviceMapId, serviceType: editing.serviceMap.serviceType }
+                                    : null
                             }
-                            getItemLabel={(p) => p.productName}
-                            extraItems={
-                                editing?.productId != null && editing.product
-                                    ? [{
-                                        id: editing.productId,
-                                        productCode: editing.product.productCode ?? "",
-                                        productName: editing.product.productName ?? `Product ${editing.productId}`,
-                                        version: 1,
-                                        productType: "DOMESTIC",
-                                        status: "ACTIVE",
-                                        createdAt: "",
-                                        updatedAt: "",
-                                        createdById: null,
-                                        updatedById: null,
-                                        deletedAt: null,
-                                        deletedById: null,
-                                    }]
-                                    : undefined
-                            }
-                            value={form.productId != null ? String(form.productId) : undefined}
-                            onValueChange={(v) => setForm((prev) => ({ ...prev, productId: v ? Number(v) : undefined }))}
-                            placeholder="All products"
-                            searchPlaceholder="Search products…"
-                            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
                         />
                     </div>
                     <div className="space-y-2">
@@ -709,7 +700,7 @@ export function VendorCafSurchargeTab({ vendorId }: { vendorId: number | null })
                 </div>
                 {!editing ? (
                     <p className="mt-3 text-sm text-muted-foreground">
-                        Leave Product empty to create the same CAF surcharge for every product.
+                        Leave Service empty to create the same CAF surcharge for every service.
                     </p>
                 ) : null}
             </VendorEntityDialog>

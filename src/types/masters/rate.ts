@@ -225,6 +225,13 @@ export interface RateVendorRef {
   vendorName?: string;
 }
 
+export interface RateServiceMapRef {
+  id: number;
+  serviceType?: string | null;
+  weightUnit?: string | null;
+  vendorId?: number | null;
+}
+
 export interface RateProductRef {
   id: number;
   productCode?: string;
@@ -241,6 +248,7 @@ export interface RateMaster {
   customerId?: number | null;
   vendorId?: number | null;
   productId?: number | null;
+  serviceMapId?: number | null;
   flatRate?: number | null;
   weightUnitStep?: number | null;
   createdAt?: string;
@@ -252,6 +260,7 @@ export interface RateMaster {
   customer?: RateCustomerRef | null;
   vendor?: RateVendorRef | null;
   product?: RateProductRef | null;
+  serviceMap?: RateServiceMapRef | null;
   zoneRates?: RateZoneRate[];
   distanceSlabs?: RateDistanceSlab[];
   routeRateSlabs?: RateRouteRateSlab[];
@@ -298,6 +307,7 @@ export interface RateMasterReviewHeader {
   customerId?: number;
   vendorId?: number;
   productId?: number;
+  serviceMapId?: number;
   weightUnitStep?: number | null;
 }
 
@@ -334,7 +344,10 @@ export interface CreateRateMasterPayload {
   customerId?: number;
   /** Vendor buy-rate contract; mutually exclusive with `customerId`. */
   vendorId?: number;
-  productId: number;
+  /** Customer contract product. */
+  productId?: number;
+  /** Vendor buy-rate service (required when `vendorId` is set). */
+  serviceMapId?: number;
   weightUnitStep?: number;
   zoneRates?: RateZoneRatePayload[];
   distanceSlabs?: RateDistanceSlabPayload[];

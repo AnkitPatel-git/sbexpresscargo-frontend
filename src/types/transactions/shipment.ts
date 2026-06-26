@@ -729,6 +729,7 @@ export interface ForwardingVendorOption {
   vendorTotalVolWeight?: number | null;
   vendorTotalChargeableWeight?: number | null;
   vendorTotalAmount: number | null;
+  vendorTotalAmountWithGst?: number | null;
   profit: number | null;
   rateAvailable: boolean;
 }
@@ -738,6 +739,26 @@ export interface ForwardingOptionsData {
   options: ForwardingVendorOption[];
   noVendorsAvailable?: boolean;
   message?: string | null;
+}
+
+/** `GET /transaction/shipment/:id/vendor-charge-breakdown?vendorId=&serviceMapId=` */
+export interface VendorChargeBreakdownRow {
+  kind: string;
+  chargeCode: string | null;
+  description: string | null;
+  rate: number | null;
+  amount: number | null;
+  gstRate: number | null;
+}
+
+export interface VendorChargeBreakdownData {
+  vendorId: number;
+  serviceMapId: number;
+  weightUnit?: 'G' | 'KG' | null;
+  vendorTotalVolWeight?: number | null;
+  vendorTotalChargeableWeight?: number | null;
+  rows: VendorChargeBreakdownRow[];
+  totalAmount: number | null;
 }
 
 export interface ApiEnvelope<T> {

@@ -25,6 +25,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { customerService } from "@/services/masters/customer-service";
 import { productService } from "@/services/masters/product-service";
 import { rateService } from "@/services/masters/rate-service";
+import { serviceMapService } from "@/services/masters/service-map-service";
 import { vendorService } from "@/services/masters/vendor-service";
 import type { RateMaster } from "@/types/masters/rate";
 import {
@@ -47,10 +48,12 @@ function rateTemplateLabel(rm: RateMaster) {
   const party = isVendorRateMasterRow(rm)
     ? rm.vendor?.vendorName || rm.vendor?.vendorCode || `Vendor #${rm.vendorId ?? "?"}`
     : rm.customer?.name || rm.customer?.code || `Customer #${rm.customerId ?? "?"}`;
-  const prod = rm.product?.productName || rm.product?.productCode || `Product #${rm.productId ?? "?"}`;
+  const scope = isVendorRateMasterRow(rm)
+    ? rm.serviceMap?.serviceType || `Service #${rm.serviceMapId ?? "?"}`
+    : rm.product?.productName || rm.product?.productCode || `Product #${rm.productId ?? "?"}`;
   const from = rm.fromDate?.slice(0, 10) ?? "";
   const to = rm.toDate?.slice(0, 10) ?? "";
-  return `#${rm.id} — ${party} / ${prod} (${from} → ${to})`;
+  return `#${rm.id} — ${party} / ${scope} (${from} → ${to})`;
 }
 
 export function DuplicateRateMasterCard() {
@@ -66,6 +69,7 @@ export function DuplicateRateMasterCard() {
   const [customerId, setCustomerId] = useState(0);
   const [vendorId, setVendorId] = useState(0);
   const [productId, setProductId] = useState(0);
+  const [serviceMapId, setServiceMapId] = useState(0);
   const [sourceRateMasterId, setSourceRateMasterId] = useState(0);
   const [customerSearch, setCustomerSearch] = useState("");
   const [vendorSearch, setVendorSearch] = useState("");
@@ -86,6 +90,8 @@ export function DuplicateRateMasterCard() {
     prevVendorContractRef.current = isVendorContract;
     setCustomerId(0);
     setVendorId(0);
+    setServiceMapId(0);
+    setProductId(0);
     setSourceRateMasterId(0);
     setCustomerSearch("");
     setVendorSearch("");
@@ -133,6 +139,13 @@ export function DuplicateRateMasterCard() {
         sortBy: "productName",
         sortOrder: "asc",
       }),
+    enabled: !isVendorContract,
+  });
+
+  const { data: serviceMapsData } = useQuery({
+    queryKey: ["duplicate-rate-service-maps", vendorId],
+    queryFn: () => serviceMapService.getServiceMapsByVendor(vendorId),
+    enabled: isVendorContract && vendorId > 0,
   });
 
   const { data: ratesData, isFetching: ratesLoading } = useQuery({
@@ -181,11 +194,23 @@ export function DuplicateRateMasterCard() {
   useEffect(() => {
     if (sourceRateMasterId <= 0) return;
     const template = sourceRate ?? selectedTemplateRate;
+    if (isVendorContract) {
+      const sid = template?.serviceMapId;
+      if (sid != null && sid > 0) {
+        setServiceMapId(sid);
+      }
+      return;
+    }
     const pid = template?.productId;
     if (pid != null && pid > 0) {
       setProductId(pid);
     }
-  }, [sourceRateMasterId, sourceRate, selectedTemplateRate]);
+  }, [sourceRateMasterId, sourceRate, selectedTemplateRate, isVendorContract]);
+
+  useEffect(() => {
+    if (!isVendorContract) return;
+    setServiceMapId(0);
+  }, [vendorId, isVendorContract]);
 
   useEffect(() => {
     if (!isGroupMode || sourceRateMasterId <= 0 || !sourceRate?.toDate) return;
@@ -252,6 +277,15 @@ export function DuplicateRateMasterCard() {
     [productsData?.data],
   );
 
+  const serviceMapOptions = useMemo(
+    () =>
+      (serviceMapsData?.data ?? []).map((sm) => ({
+        value: sm.id,
+        label: sm.serviceType || `Service #${sm.id}`,
+      })),
+    [serviceMapsData?.data],
+  );
+
   const rateOptions = useMemo(
     () =>
       (ratesData?.data ?? []).map((rm) => ({
@@ -267,8 +301,9 @@ export function DuplicateRateMasterCard() {
         sourceRateMasterId: sourceRateMasterId,
         fromDate,
         toDate,
-        ...(isVendorContract ? { targetVendorId: vendorId } : { customerId }),
-        productId,
+        ...(isVendorContract
+          ? { targetVendorId: vendorId, serviceMapId }
+          : { customerId, productId }),
       }),
     onSuccess: (res) => {
       const id = res?.data?.id;
@@ -312,8 +347,7 @@ export function DuplicateRateMasterCard() {
   const canSubmitSingle =
     fromDate &&
     toDate &&
-    (isVendorContract ? vendorId > 0 : customerId > 0) &&
-    productId > 0 &&
+    (isVendorContract ? vendorId > 0 && serviceMapId > 0 : customerId > 0 && productId > 0) &&
     sourceRateMasterId > 0;
 
   const canSubmitGroup =
@@ -336,7 +370,7 @@ export function DuplicateRateMasterCard() {
         </CardTitle>
         <CardDescription>
           {isVendorContract
-            ? "Choose dates, vendor, and product for the new buy-rate contract, pick a vendor rate to copy slabs and charges from, then submit. You can adjust details on the next screen."
+            ? "Choose dates, vendor, and service for the new buy-rate contract, pick a vendor rate to copy slabs and charges from, then submit. You can adjust details on the next screen."
             : "Choose dates and product, pick a saved rate to copy from, then duplicate to one customer or to every customer in the template customer's group."}
         </CardDescription>
       </CardHeader>
@@ -403,18 +437,32 @@ export function DuplicateRateMasterCard() {
           </div>
         )}
 
-        <div className="space-y-2">
-          <Label>Product (new rate)</Label>
-          <Combobox
-            options={productOptions}
-            value={productId > 0 ? productId : ""}
-            onChange={(v) => setProductId(Number(v) || 0)}
-            placeholder="Select product"
-            searchPlaceholder="Search products…"
-            searchValue={productSearch}
-            onSearchValueChange={setProductSearch}
-          />
-        </div>
+        {isVendorContract ? (
+          <div className="space-y-2">
+            <Label>Service (new rate)</Label>
+            <Combobox
+              options={serviceMapOptions}
+              value={serviceMapId > 0 ? serviceMapId : ""}
+              onChange={(v) => setServiceMapId(Number(v) || 0)}
+              placeholder={vendorId > 0 ? "Select service" : "Select vendor first"}
+              searchPlaceholder="Search services…"
+              disabled={vendorId <= 0}
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>Product (new rate)</Label>
+            <Combobox
+              options={productOptions}
+              value={productId > 0 ? productId : ""}
+              onChange={(v) => setProductId(Number(v) || 0)}
+              placeholder="Select product"
+              searchPlaceholder="Search products…"
+              searchValue={productSearch}
+              onSearchValueChange={setProductSearch}
+            />
+          </div>
+        )}
         <div className="space-y-2">
           <Label>Template rate to copy from</Label>
           <Combobox
@@ -423,7 +471,7 @@ export function DuplicateRateMasterCard() {
             onChange={(v) => setSourceRateMasterId(Number(v) || 0)}
             placeholder={
               isVendorContract
-                ? "Search by id, vendor, or product…"
+                ? "Search by id, vendor, or service…"
                 : "Search by id, customer, or product…"
             }
             searchPlaceholder="Search saved rates…"

@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatsCard } from "@/components/dashboard/dashboard-metrics";
 import { ExpressOutboundSummary } from "@/components/dashboard/express-operation-summary";
+import { TatSummaryCard } from "@/components/dashboard/tat-summary";
 import { dashboardService } from "@/services/dashboard-service";
 import { useAuth } from "@/context/auth-context";
 import type { OperationSummary } from "@/types/dashboard";
@@ -62,15 +63,30 @@ export function CustomerDashboard() {
     enabled: scopedCustomerId != null,
   });
 
+  const { data: tatData, refetch: refetchTat } = useQuery({
+    queryKey: ["dashboard-customer-tat", fromDate, toDate, scopedCustomerId],
+    queryFn: () =>
+      dashboardService.getTatSummary({
+        fromDate,
+        toDate,
+        customerId: scopedCustomerId,
+      }),
+    enabled: scopedCustomerId != null,
+  });
+
   const buckets = opsData?.data.outbound.buckets;
   const summary = opsData?.data.outbound.summary;
 
-  const applyFilters = () => void refetch();
+  const applyFilters = () => {
+    void refetch();
+    void refetchTat();
+  };
 
   const resetFilters = () => {
     setFromDate(format(subDays(new Date(), 30), "yyyy-MM-dd"));
     setToDate(format(new Date(), "yyyy-MM-dd"));
     void refetch();
+    void refetchTat();
   };
 
   if (!isMounted) {
@@ -223,6 +239,8 @@ export function CustomerDashboard() {
           </ul>
         </CardContent>
       </Card>
+
+      <TatSummaryCard data={tatData?.data} />
 
       <ExpressOutboundSummary data={opsData?.data} />
 

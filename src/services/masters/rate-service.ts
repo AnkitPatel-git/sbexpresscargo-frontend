@@ -137,7 +137,8 @@ export const rateService = {
     toDate: string;
     customerId?: number;
     targetVendorId?: number;
-    productId: number;
+    productId?: number;
+    serviceMapId?: number;
   }): Promise<RateMasterSingleResponse> {
     return requestJson(
       `${API_URL}/rate-master/duplicate`,

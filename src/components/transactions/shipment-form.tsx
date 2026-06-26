@@ -158,6 +158,14 @@ const formatForwardingServiceType = (serviceType: string | null | undefined) => 
     return serviceType.charAt(0) + serviceType.slice(1).toLowerCase()
 }
 
+const formatChargeAmount = (amount: number | null | undefined) => {
+    if (amount == null || Number.isNaN(amount)) return "—"
+    return amount.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })
+}
+
 type KycRow = {
     id: string
     type: string
@@ -927,6 +935,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     })
     const [forwardingSelectOpen, setForwardingSelectOpen] = useState(false)
     const [forwardingSelectTarget, setForwardingSelectTarget] = useState<ForwardingVendorOption | null>(null)
+    const [chargeBreakdownTarget, setChargeBreakdownTarget] = useState<ForwardingVendorOption | null>(null)
     const [forwardingAwbDraft, setForwardingAwbDraft] = useState("")
     const [forwardingDateDraft, setForwardingDateDraft] = useState("")
     const [forwardingDocument, setForwardingDocument] = useState<{ documentName: string | null; documentPath: string | null }>(() => ({
@@ -2403,6 +2412,25 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         forwardingForm.deliveryServiceMapId === option.serviceMapId &&
         Boolean(forwardingForm.forwardingAwb.trim())
 
+    const vendorChargeBreakdownQuery = useQuery({
+        queryKey: [
+            'vendor-charge-breakdown',
+            previewShipmentId,
+            chargeBreakdownTarget?.vendorId,
+            chargeBreakdownTarget?.serviceMapId,
+        ],
+        queryFn: () =>
+            shipmentService.getVendorChargeBreakdown(
+                previewShipmentId!,
+                chargeBreakdownTarget!.vendorId,
+                chargeBreakdownTarget!.serviceMapId,
+            ),
+        enabled: Boolean(previewShipmentId) && Boolean(chargeBreakdownTarget),
+        staleTime: 30_000,
+    })
+
+    const vendorChargeBreakdown = vendorChargeBreakdownQuery.data?.data ?? null
+
     const addKycRow = () => {
         setKycRows((prev) => [
             ...prev,
@@ -3872,7 +3900,10 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     <TableHead className="text-primary-foreground">Vendor Vol Wt</TableHead>
                                                     <TableHead className="text-primary-foreground">Vendor Chg Wt</TableHead>
                                                     {canViewCharges ? (
-                                                        <TableHead className="text-primary-foreground">Vendor Total</TableHead>
+                                                        <>
+                                                            <TableHead className="text-primary-foreground">Vendor Total</TableHead>
+                                                            <TableHead className="text-primary-foreground">Vendor Total (incl. GST)</TableHead>
+                                                        </>
                                                     ) : null}
                                                     <TableHead className="text-right text-primary-foreground last:rounded-tr-md">Action</TableHead>
                                                 </TableRow>
@@ -3898,11 +3929,27 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                                     : "—"}
                                                             </TableCell>
                                                             {canViewCharges ? (
-                                                                <TableCell>
-                                                                    {option.vendorTotalAmount != null
-                                                                        ? option.vendorTotalAmount
-                                                                        : "—"}
-                                                                </TableCell>
+                                                                <>
+                                                                    <TableCell>
+                                                                        {option.vendorTotalAmount != null ? (
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="link"
+                                                                                size="sm"
+                                                                                className="h-auto p-0 font-medium underline-offset-2"
+                                                                                onClick={() => setChargeBreakdownTarget(option)}
+                                                                                title="View vendor charge breakdown"
+                                                                            >
+                                                                                {formatChargeAmount(option.vendorTotalAmount)}
+                                                                            </Button>
+                                                                        ) : (
+                                                                            "—"
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell className="font-medium">
+                                                                        {formatChargeAmount(option.vendorTotalAmountWithGst)}
+                                                                    </TableCell>
+                                                                </>
                                                             ) : null}
                                                             <TableCell className="text-right">
                                                                 <Button
@@ -3921,7 +3968,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                 {forwardingOptions.length === 0 ? (
                                                     <TableRow>
                                                         <TableCell
-                                                            colSpan={canViewCharges ? 6 : 5}
+                                                            colSpan={canViewCharges ? 7 : 5}
                                                             className="py-8 text-center text-sm text-muted-foreground"
                                                         >
                                                             {forwardingOptionsMessage ||
@@ -3984,6 +4031,87 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                         )}
                                         Submit
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
+                        <Dialog
+                            open={Boolean(chargeBreakdownTarget)}
+                            onOpenChange={(open) => {
+                                if (!open) setChargeBreakdownTarget(null)
+                            }}
+                        >
+                            <DialogContent className="sm:max-w-lg">
+                                <DialogHeader>
+                                    <DialogTitle>Vendor Charge Breakdown</DialogTitle>
+                                    <DialogDescription>
+                                        {chargeBreakdownTarget
+                                            ? `${chargeBreakdownTarget.vendorName} · ${formatForwardingServiceType(chargeBreakdownTarget.serviceType)}`
+                                            : ""}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                {vendorChargeBreakdownQuery.isPending ? (
+                                    <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Loading charges…
+                                    </div>
+                                ) : vendorChargeBreakdownQuery.isError ? (
+                                    <p className="py-6 text-sm text-destructive">
+                                        {getErrorMessage(vendorChargeBreakdownQuery.error, 'Could not load vendor charges')}
+                                    </p>
+                                ) : vendorChargeBreakdown && vendorChargeBreakdown.rows.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {vendorChargeBreakdown.vendorTotalChargeableWeight != null ? (
+                                            <p className="text-xs text-muted-foreground">
+                                                Chargeable weight: {vendorChargeBreakdown.vendorTotalChargeableWeight}
+                                                {vendorChargeBreakdown.weightUnit ? ` ${vendorChargeBreakdown.weightUnit}` : ""}
+                                            </p>
+                                        ) : null}
+                                        <div className="overflow-hidden rounded-md border border-border/70">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow className="border-b-0 bg-primary hover:bg-primary">
+                                                        <TableHead className="text-primary-foreground first:rounded-tl-md">Charge</TableHead>
+                                                        <TableHead className="text-right text-primary-foreground last:rounded-tr-md">Amount</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {vendorChargeBreakdown.rows.map((charge, index) => (
+                                                        <TableRow key={`${charge.kind}-${charge.chargeCode ?? index}`}>
+                                                            <TableCell>
+                                                                {charge.description || charge.chargeCode || charge.kind}
+                                                            </TableCell>
+                                                            <TableCell className="text-right tabular-nums">
+                                                                {formatChargeAmount(charge.amount)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                    <TableRow className="border-t bg-muted/40 font-semibold">
+                                                        <TableCell>Total</TableCell>
+                                                        <TableCell className="text-right tabular-nums">
+                                                            {formatChargeAmount(vendorChargeBreakdown.totalAmount)}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Computed live from the vendor rate for this service (incl. GST). These are the charges that will be saved if you select this vendor.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="py-6 text-sm text-muted-foreground">
+                                        No vendor charges available for this service.
+                                    </p>
+                                )}
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setChargeBreakdownTarget(null)}
+                                    >
+                                        Close
                                     </Button>
                                 </DialogFooter>
                             </DialogContent>
