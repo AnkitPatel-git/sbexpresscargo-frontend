@@ -29,9 +29,9 @@ import {
 
 function displayName(
   value?:
-    | { code?: string; name?: string }
-    | { productCode?: string; productName?: string }
-    | { serviceType?: string }
+    | { code?: string | null; name?: string | null }
+    | { productCode?: string | null; productName?: string | null }
+    | { serviceType?: string | null }
     | null,
   fallback = "—",
 ) {
