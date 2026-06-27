@@ -141,6 +141,16 @@ type RateMasterFormValues = {
   serviceMapId?: string;
 };
 
+function resolveVendorIdFromRateMaster(data: Pick<RateMaster, "vendorId" | "vendor" | "serviceMap">): string {
+  const id = data.vendorId ?? data.vendor?.id ?? data.serviceMap?.vendorId;
+  return id != null && Number(id) > 0 ? String(id) : "";
+}
+
+function resolveServiceMapIdFromRateMaster(data: Pick<RateMaster, "serviceMapId" | "serviceMap">): string {
+  const id = data.serviceMapId ?? data.serviceMap?.id;
+  return id != null && Number(id) > 0 ? String(id) : "";
+}
+
 type TabValue = "master" | "route-slabs" | "oda-slabs" | "rate-conditions";
 
 const RATE_TABS: Array<{ value: TabValue; label: string }> = [
@@ -317,12 +327,14 @@ function mapRateChargesToSlabConditionRows(rows: RateCharge[] | undefined): Rate
       applyFuel: row.applyFuel !== false,
       applyCaf: row.applyCaf === true,
       applyIdc: row.applyIdc === true,
-      // Keep values for compatibility with existing row renderer/edit flow.
-      field: "",
-      operator: "",
-      value: 0,
+      // Optional standard field condition (gate) stored on the rate charge.
+      field: row.conditionField ?? "",
+      operator: row.conditionOperator ?? "",
+      value: row.conditionValue != null ? row.conditionValue : 0,
       chargeAmount: 0,
       isPercentage: false,
+      minValue: row.minValue != null ? row.minValue : undefined,
+      maxValue: row.maxValue != null ? row.maxValue : undefined,
       charge: row.charge,
       slabs: (row.chargeSlabs ?? []).map((slab) => ({
         minValue: String(slab.minValue),
@@ -489,16 +501,6 @@ export function RateForm({ initialData }: RateFormProps) {
   const selectedVendorId = form.watch("vendorId");
 
   useEffect(() => {
-    if (!isVendorContract) return;
-    const sid = form.getValues("serviceMapId");
-    if (!sid) return;
-    const vendorNum = Number(selectedVendorId);
-    if (!Number.isFinite(vendorNum) || vendorNum < 1) {
-      form.setValue("serviceMapId", "", { shouldValidate: true });
-    }
-  }, [form, isVendorContract, selectedVendorId]);
-
-  useEffect(() => {
     if (!initialData) {
       form.reset({
         fromDate: "",
@@ -523,16 +525,16 @@ export function RateForm({ initialData }: RateFormProps) {
           ? String(initialData.customerId)
           : "",
       vendorId:
-        initialData.vendorId != null && isVendorRateMasterRow(initialData)
-          ? String(initialData.vendorId)
+        isVendorRateMasterRow(initialData)
+          ? resolveVendorIdFromRateMaster(initialData)
           : "",
       productId:
         initialData.productId != null && !isVendorRateMasterRow(initialData)
           ? String(initialData.productId)
           : "",
       serviceMapId:
-        initialData.serviceMapId != null && isVendorRateMasterRow(initialData)
-          ? String(initialData.serviceMapId)
+        isVendorRateMasterRow(initialData)
+          ? resolveServiceMapIdFromRateMaster(initialData)
           : "",
     });
     setRouteSlabs(initialData.routeRateSlabs ?? []);
@@ -867,7 +869,16 @@ export function RateForm({ initialData }: RateFormProps) {
                   name="vendorId"
                   render={({ field }) => (
                     <FloatingFormItem required label="Vendor">
-                      <Select key={field.value} onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        key={field.value}
+                        onValueChange={(value) => {
+                          if (value !== field.value && form.getValues("serviceMapId")) {
+                            form.setValue("serviceMapId", "", { shouldValidate: false });
+                          }
+                          field.onChange(value);
+                        }}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
                             <SelectValue placeholder="Select vendor">
@@ -1175,6 +1186,21 @@ function mapSlabConditionRulesToRateChargePayloads(rows: RateConditionRow[]): Ra
         applyIdc: (row as { applyIdc?: boolean }).applyIdc === true,
         chargeSlabs: slabs,
       };
+      if (row.minValue != null && Number.isFinite(Number(row.minValue))) {
+        payload.minValue = Number(row.minValue);
+      }
+      if (row.maxValue != null && Number.isFinite(Number(row.maxValue))) {
+        payload.maxValue = Number(row.maxValue);
+      }
+      // Optional standard field condition (gate). Only sent when all three set.
+      const gateField = row.field?.trim() ?? "";
+      const gateOperator = row.operator?.trim() ?? "";
+      const gateValue = Number(row.value);
+      if (gateField && gateOperator && Number.isFinite(gateValue)) {
+        payload.conditionField = gateField;
+        payload.conditionOperator = gateOperator;
+        payload.conditionValue = gateValue;
+      }
       return payload;
     })
     .filter((row): row is RateChargePayload => row != null);
@@ -2331,6 +2357,70 @@ function RateConditionsEditor({
     },
   });
 
+  // Charge-slab rules are persisted as rate charges. In edit mode they save immediately
+  // (like standard rules) so the client never has to also click "Update Rate Master".
+  const createSlabChargeMutation = useMutation({
+    mutationFn: async ({ payload }: { payload: RateChargePayload; targetIndex: number | null }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.createRateCharge(rateMasterId, payload);
+    },
+    onSuccess: (response, variables) => {
+      const mapped = mapRateChargesToSlabConditionRows([response.data])[0];
+      if (mapped) {
+        setRateConditions((current) => {
+          const copy = [...current];
+          if (variables.targetIndex != null && copy[variables.targetIndex]) {
+            copy[variables.targetIndex] = mapped;
+          } else {
+            copy.push(mapped);
+          }
+          return copy;
+        });
+      }
+      toast.success("Charge slab rule saved");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to save charge slab rule");
+    },
+  });
+  const updateSlabChargeMutation = useMutation({
+    mutationFn: async ({ rateChargeId, payload }: { rateChargeId: number; payload: RateChargePayload; targetIndex: number }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.updateRateCharge(rateMasterId, rateChargeId, payload);
+    },
+    onSuccess: (response, variables) => {
+      const mapped = mapRateChargesToSlabConditionRows([response.data])[0];
+      if (mapped) {
+        setRateConditions((current) => current.map((row, i) => (i === variables.targetIndex ? mapped : row)));
+      }
+      toast.success("Charge slab rule updated");
+      resetDraft();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update charge slab rule");
+    },
+  });
+  const deleteSlabChargeMutation = useMutation({
+    mutationFn: async ({ rateChargeId }: { rateChargeId: number; index: number }) => {
+      if (!rateMasterId) throw new Error("Rate master id is required");
+      return rateService.deleteRateCharge(rateMasterId, rateChargeId);
+    },
+    onSuccess: (_, variables) => {
+      const { index } = variables;
+      setRateConditions((current) => current.filter((_, i) => i !== index));
+      toast.success("Charge slab rule deleted");
+      if (editingIndex === index) {
+        resetDraft();
+      } else if (editingIndex !== null && index < editingIndex) {
+        setEditingIndex((current) => (current === null ? current : current - 1));
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete charge slab rule");
+    },
+  });
+
   useEffect(() => {
     if (editingIndex === null) return;
     const row = rateConditions[editingIndex];
@@ -2355,21 +2445,29 @@ function RateConditionsEditor({
       value: String(details.value ?? ""),
       chargeAmount: String(details.chargeAmount ?? ""),
       minValue:
-        details.minValue != null ? String(details.minValue) : "",
+        row.ruleType === "slab"
+          ? row.minValue != null
+            ? String(row.minValue)
+            : ""
+          : details.minValue != null
+            ? String(details.minValue)
+            : "",
       maxValue:
-        details.maxValue != null ? String(details.maxValue) : "",
+        row.ruleType === "slab"
+          ? row.maxValue != null
+            ? String(row.maxValue)
+            : ""
+          : details.maxValue != null
+            ? String(details.maxValue)
+            : "",
       calculationBase: details.calculationBase ?? "",
       applyPerPiece: Boolean((row as { applyPerPiece?: boolean }).applyPerPiece),
       isPercentage: Boolean(details.isPercentage),
-      applyFuel: row.ruleType === "slab"
-        ? row.applyFuel !== false
-        : (details as { applyFuel?: boolean }).applyFuel !== false,
-      applyCaf: row.ruleType === "slab"
-        ? row.applyCaf === true
-        : (details as { applyCaf?: boolean }).applyCaf === true,
-      applyIdc: row.ruleType === "slab"
-        ? row.applyIdc === true
-        : (details as { applyIdc?: boolean }).applyIdc === true,
+      // Surcharge-basis flags live on the table row (patchDraftSurchargeBasis syncs there).
+      // Prefer row over stale getRateConditionById response so standard-rule CAF/IDC edits stick.
+      applyFuel: (row as { applyFuel?: boolean }).applyFuel !== false,
+      applyCaf: (row as { applyCaf?: boolean }).applyCaf === true,
+      applyIdc: (row as { applyIdc?: boolean }).applyIdc === true,
       slabs: slabsFromRow,
     });
   }, [editingIndex, editingRowResponse?.data, rateConditions]);
@@ -2456,18 +2554,54 @@ function RateConditionsEditor({
         })),
         charge: ch ? { id: ch.id, code: ch.code, name: ch.name, calculationBase: ch.calculationBase } : undefined,
       };
+      if (draft.minValue.trim() && Number.isFinite(Number(draft.minValue))) {
+        nextRow.minValue = Number(draft.minValue);
+      } else {
+        nextRow.minValue = undefined;
+      }
+      if (draft.maxValue.trim() && Number.isFinite(Number(draft.maxValue))) {
+        nextRow.maxValue = Number(draft.maxValue);
+      } else {
+        nextRow.maxValue = undefined;
+      }
+
+      // Resolve the target row + existing rate charge id (update vs create).
+      let targetIndex: number | null = editingIndex;
+      let sourceId: number | undefined =
+        editingIndex !== null ? rateConditions[editingIndex]?.rateChargeSourceId : undefined;
+      if (editingIndex === null) {
+        const duplicateIndex = rateConditions.findIndex(
+          (row) => row.ruleType === "slab" && normalizeMasterSelectId(row.chargeId) === chargeId,
+        );
+        if (duplicateIndex >= 0) {
+          targetIndex = duplicateIndex;
+          sourceId = rateConditions[duplicateIndex]?.rateChargeSourceId;
+        }
+      }
+
+      // Edit mode: persist immediately so the client does not also have to save the rate master.
+      if (isEdit && rateMasterId) {
+        const chargePayload = mapSlabConditionRulesToRateChargePayloads([nextRow])[0];
+        if (!chargePayload) {
+          toast.error("Unable to build charge slab payload");
+          return;
+        }
+        if (sourceId && targetIndex !== null) {
+          updateSlabChargeMutation.mutate({ rateChargeId: sourceId, payload: chargePayload, targetIndex });
+        } else {
+          createSlabChargeMutation.mutate({ payload: chargePayload, targetIndex });
+        }
+        return;
+      }
+
+      // Create mode (rate master not saved yet): stage locally; persisted with the master on create.
       setRateConditions((current) => {
         const copy = [...current];
-        if (editingIndex === null) {
-          const duplicateIndex = copy.findIndex(
-            (row) =>
-              row.ruleType === "slab" &&
-              normalizeMasterSelectId(row.chargeId) === chargeId,
-          );
-          if (duplicateIndex >= 0) copy[duplicateIndex] = { ...copy[duplicateIndex], ...nextRow, rateChargeSourceId: copy[duplicateIndex]?.rateChargeSourceId };
-          else copy.push(nextRow);
+        if (targetIndex !== null && copy[targetIndex]) {
+          copy[targetIndex] = { ...copy[targetIndex], ...nextRow, rateChargeSourceId: copy[targetIndex]?.rateChargeSourceId };
+        } else {
+          copy.push(nextRow);
         }
-        else copy[editingIndex] = { ...copy[editingIndex], ...nextRow, rateChargeSourceId: copy[editingIndex]?.rateChargeSourceId };
         return copy;
       });
       toast.success(editingIndex === null ? "Charge slab rule added (saved with rate master)" : "Charge slab rule updated");
@@ -2528,6 +2662,10 @@ function RateConditionsEditor({
 
   function removeRow(index: number) {
     const row = rateConditions[index];
+    if (isEdit && rateMasterId && row?.ruleType === "slab" && row.rateChargeSourceId) {
+      deleteSlabChargeMutation.mutate({ rateChargeId: row.rateChargeSourceId, index });
+      return;
+    }
     if (isEdit && rateMasterId && row?.id && row.ruleType !== "slab") {
       deleteMutation.mutate({ rowId: row.id, index });
       return;
@@ -2793,7 +2931,7 @@ function RateConditionsEditor({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="success" onClick={saveDraft} disabled={createMutation.isPending || updateMutation.isPending}>
+        <Button type="button" variant="success" onClick={saveDraft} disabled={createMutation.isPending || updateMutation.isPending || createSlabChargeMutation.isPending || updateSlabChargeMutation.isPending}>
           {editingIndex === null ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
           {editingIndex === null ? "Add" : "Update"}
         </Button>
@@ -2835,9 +2973,15 @@ function RateConditionsEditor({
                       <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">Standard</span>
                     )}
                   </TableCell>
-                  <TableCell>{row.field}</TableCell>
-                  <TableCell>{row.ruleType === "slab" ? "—" : getConditionOperatorLabel(row.operator)}</TableCell>
-                  <TableCell>{row.ruleType === "slab" ? "—" : row.value}</TableCell>
+                  <TableCell>{row.field || "—"}</TableCell>
+                  <TableCell>
+                    {row.ruleType === "slab"
+                      ? row.field
+                        ? getConditionOperatorLabel(row.operator)
+                        : "—"
+                      : getConditionOperatorLabel(row.operator)}
+                  </TableCell>
+                  <TableCell>{row.ruleType === "slab" ? (row.field ? row.value : "—") : row.value}</TableCell>
                   <TableCell>
                     {row.charge != null
                       ? row.charge.code
@@ -2868,7 +3012,11 @@ function RateConditionsEditor({
                         size="icon"
                         className="h-8 w-8 text-[var(--express-danger)]"
                         onClick={() => removeRow(index)}
-                        disabled={deleteMutation.isPending && row.ruleType !== "slab"}
+                        disabled={
+                          row.ruleType === "slab"
+                            ? deleteSlabChargeMutation.isPending
+                            : deleteMutation.isPending
+                        }
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

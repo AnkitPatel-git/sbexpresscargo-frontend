@@ -131,6 +131,10 @@ export interface RateChargePayload {
   minValue?: number;
   maxValue?: number;
   sequence?: number;
+  /** Optional gate: tariff line + slabs only apply when this condition is met. */
+  conditionField?: string | null;
+  conditionOperator?: string | null;
+  conditionValue?: number | null;
   /** When true, this tariff line amount counts toward customer fuel surcharge basis. */
   applyFuel?: boolean;
   applyCaf?: boolean;

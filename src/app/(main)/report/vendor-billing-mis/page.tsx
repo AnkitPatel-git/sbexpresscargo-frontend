@@ -87,6 +87,7 @@ const STATUS_OPTIONS = [
 ];
 
 const NUMERIC_COLUMNS = new Set<VendorBillingMisReportColumnKey>([
+  "odaKm",
   "qty",
   "actualWeight",
   "length",
@@ -110,6 +111,7 @@ const NUMERIC_COLUMNS = new Set<VendorBillingMisReportColumnKey>([
   "fuelCharges",
   "cafCharges",
   "idcCharges",
+  "efssAndFmCharges",
   "totalAmount",
   "gst",
   "invoiceAmount",
