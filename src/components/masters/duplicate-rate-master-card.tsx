@@ -195,8 +195,18 @@ export function DuplicateRateMasterCard() {
     if (sourceRateMasterId <= 0) return;
     const template = sourceRate ?? selectedTemplateRate;
     if (isVendorContract) {
+      // Service maps belong to a specific vendor, so only pre-fill from the
+      // template when duplicating to that same vendor. For a different target
+      // vendor the user must pick a service map from the vendor-scoped list,
+      // otherwise the backend rejects it ("Service map X not found for vendor Y").
       const sid = template?.serviceMapId;
-      if (sid != null && sid > 0) {
+      const templateVendorId = template?.vendorId;
+      if (
+        sid != null &&
+        sid > 0 &&
+        templateVendorId != null &&
+        templateVendorId === vendorId
+      ) {
         setServiceMapId(sid);
       }
       return;
@@ -205,7 +215,7 @@ export function DuplicateRateMasterCard() {
     if (pid != null && pid > 0) {
       setProductId(pid);
     }
-  }, [sourceRateMasterId, sourceRate, selectedTemplateRate, isVendorContract]);
+  }, [sourceRateMasterId, sourceRate, selectedTemplateRate, isVendorContract, vendorId]);
 
   useEffect(() => {
     if (!isVendorContract) return;
