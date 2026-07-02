@@ -23,7 +23,7 @@ export type ShipmentBulkImportJobStatus = {
   created: number;
   updated: number;
   failed: number;
-  failures: Array<{ row: number; message: string }>;
+  failures: Array<{ row: number; message: string; awbNo?: string | null }>;
   successes: Array<{ row: number; awbNo: string }>;
   fatalError?: { message?: string } | null;
 };
@@ -193,7 +193,7 @@ export const shipmentService = {
     created: number;
     updated: number;
     failed: number;
-    failures: Array<{ row: number; message: string }>;
+    failures: Array<{ row: number; message: string; awbNo?: string | null }>;
     successes: Array<{ row: number; awbNo: string }>;
     bulkUploadLogId?: number;
   }> {
@@ -301,7 +301,7 @@ export const shipmentService = {
   async bulkForwardingFromExcel(file: File): Promise<{
     updated: number;
     failed: number;
-    failures: Array<{ row: number; message: string }>;
+    failures: Array<{ row: number; message: string; awbNo?: string | null }>;
     successes: Array<{ row: number; awbNo: string }>;
     bulkUploadLogId?: number;
   }> {
@@ -317,7 +317,7 @@ export const shipmentService = {
       data?: {
         updated: number;
         failed: number;
-        failures: Array<{ row: number; message: string }>;
+        failures: Array<{ row: number; message: string; awbNo?: string | null }>;
         successes: Array<{ row: number; awbNo: string }>;
         bulkUploadLogId?: number;
       };

@@ -29,6 +29,7 @@ import type { UtilityUser } from "@/types/utilities/user";
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
 
 type ShipmentFilters = {
+  search: string;
   awbNo: string;
   ewaybillNumber: string;
   clientName: string;
@@ -40,6 +41,7 @@ type ShipmentFilters = {
 };
 
 const defaultFilters: ShipmentFilters = {
+  search: "",
   awbNo: "",
   ewaybillNumber: "",
   clientName: "",
@@ -320,13 +322,13 @@ export default function ShipmentsPage() {
         <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.create}>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Input
-              placeholder="Search by AWB..."
-              value={appliedFilters.awbNo}
+              placeholder="Search AWB, customer name or code..."
+              value={appliedFilters.search}
               onChange={(e) => {
-                setAppliedFilters((prev) => ({ ...prev, awbNo: e.target.value }));
+                setAppliedFilters((prev) => ({ ...prev, search: e.target.value }));
                 setPage(1);
               }}
-              className="h-8 w-full sm:w-[240px]"
+              className="h-8 w-full sm:w-[280px]"
             />
             <div className="flex flex-wrap gap-2">
             <Button

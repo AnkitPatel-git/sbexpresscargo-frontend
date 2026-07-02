@@ -1,11 +1,9 @@
 import { API_BASE_URL, bearerHeaders } from "@/lib/api-base";
 import { apiFetch } from "@/lib/api-fetch";
 
-/** Matches backend: CSV export allowed only when failure count is strictly greater than this. */
-export const BULK_UPLOAD_ERRORS_CSV_FAILURE_THRESHOLD = 10;
-
+/** Error CSV is available whenever at least one row failed. */
 export function canDownloadBulkUploadErrorsCsv(failedCount: number): boolean {
-  return failedCount > BULK_UPLOAD_ERRORS_CSV_FAILURE_THRESHOLD;
+  return failedCount > 0;
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {

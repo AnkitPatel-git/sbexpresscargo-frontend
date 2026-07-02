@@ -36,7 +36,7 @@ export default function ShipmentBulkImportPage() {
     created: number;
     updated: number;
     failed: number;
-    failures: Array<{ row: number; message: string }>;
+    failures: Array<{ row: number; message: string; awbNo?: string | null }>;
     successes: Array<{ row: number; awbNo: string }>;
     bulkUploadLogId?: number;
   } | null>(null);
@@ -254,6 +254,11 @@ export default function ShipmentBulkImportPage() {
           <p className="text-sm font-medium">
             Created: {summary.created} · Updated: {summary.updated} · Failed: {summary.failed}
           </p>
+          {summary.failed > 0 && summary.created === 0 && summary.updated === 0 ? (
+            <p className="text-sm text-destructive">
+              No shipments were saved. Fix the failed rows below and upload the file again.
+            </p>
+          ) : null}
           {summary.successes.length > 0 && (
             <div>
               <p className="mb-2 text-sm font-medium text-muted-foreground">Successful rows</p>
@@ -285,13 +290,17 @@ export default function ShipmentBulkImportPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-24">Row</TableHead>
+                      <TableHead className="w-36">AWB</TableHead>
                       <TableHead>Message</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {summary.failures.map((f) => (
-                      <TableRow key={f.row}>
+                      <TableRow key={`${f.row}-${f.awbNo ?? ""}-${f.message}`}>
                         <TableCell>{f.row}</TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {f.awbNo?.trim() || "—"}
+                        </TableCell>
                         <TableCell className="text-sm">{f.message}</TableCell>
                       </TableRow>
                     ))}

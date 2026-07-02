@@ -32,7 +32,7 @@ export default function ShipmentBulkForwardingPage() {
   const [summary, setSummary] = useState<{
     updated: number;
     failed: number;
-    failures: Array<{ row: number; message: string }>;
+    failures: Array<{ row: number; message: string; awbNo?: string | null }>;
     successes: Array<{ row: number; awbNo: string }>;
     bulkUploadLogId?: number;
   } | null>(null);
@@ -204,13 +204,17 @@ export default function ShipmentBulkForwardingPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-24">Row</TableHead>
+                      <TableHead className="w-36">AWB</TableHead>
                       <TableHead>Message</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {summary.failures.map((f) => (
-                      <TableRow key={f.row}>
+                      <TableRow key={`${f.row}-${f.awbNo ?? ""}-${f.message}`}>
                         <TableCell>{f.row}</TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {f.awbNo?.trim() || "—"}
+                        </TableCell>
                         <TableCell className="text-sm">{f.message}</TableCell>
                       </TableRow>
                     ))}
