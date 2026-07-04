@@ -7,7 +7,10 @@ export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // Define protected and public routes
-    const isPublicRoute = pathname === '/login'
+    const isPublicRoute =
+        pathname === '/login' ||
+        pathname === '/forgot-password' ||
+        pathname === '/reset-password'
     const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/users') || pathname.startsWith('/masters') || pathname.startsWith('/transactions') || pathname.startsWith('/utilities') || pathname.startsWith('/settings')
 
     if (isProtectedRoute && !token) {
@@ -23,5 +26,5 @@ export function proxy(request: NextRequest) {
 
 // See "Matching Paths" below to learn more
 export const config = {
-    matcher: ['/dashboard/:path*', '/users/:path*', '/login', '/masters/:path*', '/transactions/:path*', '/utilities/:path*', '/settings/:path*'],
+    matcher: ['/dashboard/:path*', '/users/:path*', '/login', '/forgot-password', '/reset-password', '/masters/:path*', '/transactions/:path*', '/utilities/:path*', '/settings/:path*'],
 }

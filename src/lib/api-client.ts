@@ -53,5 +53,15 @@ export const authApi = {
             method: "POST",
             body: JSON.stringify(credentials),
         }),
+    forgotPassword: (payload: { email: string }) =>
+        apiClient<ApiResponse<null>>("/utilities/users/forgot-password", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        }),
+    resetPassword: (payload: { token: string; newPassword: string }) =>
+        apiClient<ApiResponse<null>>("/utilities/users/reset-password", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        }),
     getProfile: () => apiClient<ApiResponse<UtilityUser>>("/utilities/users/profile"),
 };

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw, Edit, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Edit, Trash2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { userService } from "@/services/user-service";
@@ -34,6 +34,11 @@ export default function UserSetupPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [isOpen, setIsOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [resetUser, setResetUser] = useState<{ id: number; username: string } | null>(null);
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -152,6 +157,44 @@ export default function UserSetupPage() {
     },
     onError: (error: Error) => toast.error(error.message || "Failed to update status"),
   });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: () => {
+      if (!resetUser) {
+        throw new Error("No user selected");
+      }
+      return userService.adminResetPassword(resetUser.id, {
+        newPassword: resetPasswordForm.newPassword,
+      });
+    },
+    onSuccess: () => {
+      toast.success(`Password reset for ${resetUser?.username ?? "user"}`);
+      setResetUser(null);
+      setResetPasswordForm({ newPassword: "", confirmPassword: "" });
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to reset password"),
+  });
+
+  const openResetPassword = (user: { id: number; username: string }) => {
+    setResetUser({ id: user.id, username: user.username });
+    setResetPasswordForm({ newPassword: "", confirmPassword: "" });
+  };
+
+  const submitResetPassword = () => {
+    if (!resetPasswordForm.newPassword || !resetPasswordForm.confirmPassword) {
+      toast.error("Please fill both password fields");
+      return;
+    }
+    if (resetPasswordForm.newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    resetPasswordMutation.mutate();
+  };
 
   const openEdit = (user: any) => {
     setEditId(user.id);
@@ -361,6 +404,16 @@ export default function UserSetupPage() {
                           type="button"
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8"
+                          title="Reset password"
+                          onClick={() => openResetPassword(u)}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-red-500"
                           onClick={() => statusMutation.mutate({ id: u.id, status: u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" })}
                         >
@@ -415,6 +468,68 @@ export default function UserSetupPage() {
           <Button type="button" variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>{">"}</Button>
         </div>
       )}
+
+      <Dialog
+        open={resetUser != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetUser(null);
+            setResetPasswordForm({ newPassword: "", confirmPassword: "" });
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Set a new password for <span className="font-medium text-foreground">{resetUser?.username}</span>.
+          </p>
+          <div className="grid gap-3">
+            <OutlinedFieldShell label="New Password">
+              <Input
+                type="password"
+                value={resetPasswordForm.newPassword}
+                onChange={(e) =>
+                  setResetPasswordForm((p) => ({ ...p, newPassword: e.target.value }))
+                }
+                className={FLOATING_INNER_CONTROL}
+                autoComplete="new-password"
+              />
+            </OutlinedFieldShell>
+            <OutlinedFieldShell label="Confirm Password">
+              <Input
+                type="password"
+                value={resetPasswordForm.confirmPassword}
+                onChange={(e) =>
+                  setResetPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))
+                }
+                className={FLOATING_INNER_CONTROL}
+                autoComplete="new-password"
+              />
+            </OutlinedFieldShell>
+          </div>
+          <div className="mt-2 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setResetUser(null);
+                setResetPasswordForm({ newPassword: "", confirmPassword: "" });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={submitResetPassword}
+              disabled={resetPasswordMutation.isPending}
+            >
+              {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -69,6 +69,12 @@ export const userService = {
       body: JSON.stringify({ status }),
     }),
 
+  adminResetPassword: (id: number | string, payload: { newPassword: string }) =>
+    apiClient<MessageResponse>(`${USERS}/${id}/reset-password`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   listSessions: () => apiClient<PaginatedResponse<SessionRecord>>(`${USERS}/sessions`),
 
   forceLogoff: (sessionId: number | string) =>
