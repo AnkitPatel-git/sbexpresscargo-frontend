@@ -18,6 +18,8 @@ export interface TrackingListItem {
     paymentType: string;
     manifestType: string | null;
     currentStatus?: string | null;
+    createdBy?: { id: number; username?: string | null } | null;
+    updatedBy?: { id: number; username?: string | null } | null;
 }
 
 export interface TrackingListResponse {

@@ -60,7 +60,10 @@ export default function ShipmentsPage() {
   const { user, hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
   const isSuperAdmin = isSuperAdminRole(user?.role?.identifier);
   const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
-  const tableColSpan = 16;
+  const tableColSpan = 18;
+
+  const auditUsername = (user?: { username?: string | null } | null) =>
+    user?.username?.trim() || "—";
 
   const formatInvoiceValue = (value: number | string | null | undefined) => {
     if (value == null || value === "") return "—";
@@ -369,7 +372,7 @@ export default function ShipmentsPage() {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
-        <Table className="min-w-[1500px] border-0">
+        <Table className="min-w-[1700px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
               <TableHead className="font-semibold text-primary-foreground">
@@ -407,6 +410,8 @@ export default function ShipmentsPage() {
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="Invoice Value" field="shipmentTotalValue" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Created By</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">Last Updated By</TableHead>
               <TableHead className="text-center font-semibold text-primary-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -447,6 +452,8 @@ export default function ShipmentsPage() {
                   <TableCell>{shipment.pieces ?? "—"}</TableCell>
                   <TableCell>{formatActualWeight(shipment.declaredWeight)}</TableCell>
                   <TableCell>{formatInvoiceValue(shipment.shipmentTotalValue)}</TableCell>
+                  <TableCell>{auditUsername(shipment.createdBy)}</TableCell>
+                  <TableCell>{auditUsername(shipment.updatedBy)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
                       <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.update}>

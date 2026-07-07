@@ -191,10 +191,6 @@ export default function MisReportPage() {
     if (filtersOpen) setDraftFilters(appliedFilters);
   }, [appliedFilters, filtersOpen]);
 
-  useEffect(() => {
-    if (columnsOpen) setDraftColumns(selectedColumns);
-  }, [columnsOpen, selectedColumns]);
-
   const listParams = useMemo(
     () => ({
       page,
@@ -224,7 +220,13 @@ export default function MisReportPage() {
   const to = Math.min(page * limit, total);
 
   const allColumns = data?.availableColumns?.length ? data.availableColumns : MIS_REPORT_COLUMNS;
-  const displayColumns = data?.columns?.length ? data.columns : selectedColumns;
+  const displayColumns = selectedColumns.length > 0 ? selectedColumns : (data?.columns ?? DEFAULT_COLUMNS);
+
+  const formatDialogColumns = useMemo(() => {
+    const selectedSet = new Set(draftColumns);
+    const unselected = allColumns.filter((column) => !selectedSet.has(column));
+    return [...draftColumns, ...unselected];
+  }, [allColumns, draftColumns]);
 
   const allowedCustomerIds = new Set(effectiveCustomerIds);
   const customerOptions = (customerData?.data ?? [])
@@ -293,8 +295,7 @@ export default function MisReportPage() {
     const target = direction === "up" ? index - 1 : index + 1;
     if (target < 0 || target >= draftColumns.length) return;
     const next = [...draftColumns];
-    const [picked] = next.splice(index, 1);
-    next.splice(target, 0, picked);
+    [next[index], next[target]] = [next[target], next[index]];
     setDraftColumns(next);
   };
 
@@ -543,7 +544,13 @@ export default function MisReportPage() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={columnsOpen} onOpenChange={setColumnsOpen}>
+          <Dialog
+            open={columnsOpen}
+            onOpenChange={(open) => {
+              if (open) setDraftColumns(selectedColumns);
+              setColumnsOpen(open);
+            }}
+          >
             <DialogTrigger asChild>
               <Button type="button" variant="outline" className="h-9 gap-2">
                 <Columns3 className="h-4 w-4" />
@@ -557,17 +564,26 @@ export default function MisReportPage() {
               </DialogHeader>
 
               <div className="max-h-[52vh] space-y-2 overflow-y-auto rounded-md border p-2">
-                {allColumns.map((column) => {
+                {formatDialogColumns.map((column) => {
                   const checked = draftColumns.includes(column);
                   const index = draftColumns.indexOf(column);
                   return (
-                    <div key={column} className="flex items-center justify-between rounded-md border px-3 py-2">
+                    <div
+                      key={column}
+                      className={cn(
+                        "flex items-center justify-between rounded-md border px-3 py-2",
+                        checked && "border-primary/30 bg-primary/5",
+                      )}
+                    >
                       <label className="flex items-center gap-2 text-sm">
                         <Checkbox
                           checked={checked}
                           onCheckedChange={(state) => toggleColumn(column, state === true)}
                         />
                         {COLUMN_LABELS[column]}
+                        {checked ? (
+                          <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                        ) : null}
                       </label>
                       <div className="flex items-center gap-1">
                         <Button
@@ -576,7 +592,11 @@ export default function MisReportPage() {
                           size="icon"
                           className="h-7 w-7"
                           disabled={!checked || index <= 0}
-                          onClick={() => moveColumn(column, "up")}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            moveColumn(column, "up");
+                          }}
                         >
                           <ArrowUp className="h-3.5 w-3.5" />
                         </Button>
@@ -586,7 +606,11 @@ export default function MisReportPage() {
                           size="icon"
                           className="h-7 w-7"
                           disabled={!checked || index < 0 || index >= draftColumns.length - 1}
-                          onClick={() => moveColumn(column, "down")}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            moveColumn(column, "down");
+                          }}
                         >
                           <ArrowDown className="h-3.5 w-3.5" />
                         </Button>

@@ -85,6 +85,29 @@ export const shipmentService = {
     return requestJson(`${API_URL}/transaction/shipment/${id}`, { headers: authHeaders() }, "Failed to fetch shipment");
   },
 
+  async findShipmentByAwb(awbNo: string): Promise<ShipmentListResponse["data"][number] | null> {
+    const trimmed = awbNo.trim();
+    if (!trimmed) return null;
+
+    const response = await this.getShipments({
+      awbNo: trimmed,
+      search: trimmed,
+      page: 1,
+      limit: 10,
+      sortBy: "id",
+      sortOrder: "desc",
+    });
+    const rows = response.data ?? [];
+    if (rows.length === 0) return null;
+
+    const normalized = trimmed.toLowerCase();
+    return (
+      rows.find((row) => row.awbNo?.trim().toLowerCase() === normalized) ??
+      rows.find((row) => row.awbNo?.trim().toLowerCase().includes(normalized)) ??
+      rows[0]
+    );
+  },
+
   async createShipment(data: ShipmentFormPayload): Promise<ShipmentSingleResponse> {
     return requestJson(
       `${API_URL}/transaction/shipment`,

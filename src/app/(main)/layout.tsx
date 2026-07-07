@@ -48,8 +48,11 @@ import {
   Receipt,
   RefreshCw,
   Banknote,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/context/auth-context";
+import { shipmentService } from "@/services/transactions/shipment-service";
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { SHIPMENT_BOOKING_PORTAL } from "@/lib/portal-permissions";
 import { cn } from "@/lib/utils";
@@ -1584,6 +1587,7 @@ function DashboardLayoutClient({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
   const [showMenuSuggestions, setShowMenuSuggestions] = useState(false);
+  const [isAwbSearchLoading, setIsAwbSearchLoading] = useState(false);
   const searchBoxRef = useRef<HTMLDivElement | null>(null);
 
   const isCustomerVisibleHref = (href: string) =>
@@ -1611,25 +1615,29 @@ function DashboardLayoutClient({
     )
     .slice(0, 8);
 
-  const navigateFromSearch = (searchValue: string) => {
-    const query = searchValue.trim().toLowerCase();
-    if (!query) return;
+  const openAwbDetails = async (searchValue: string) => {
+    const awbQuery = searchValue.trim();
+    if (!awbQuery || isAwbSearchLoading) return;
 
-    const exact = visibleHeaderNavItems.find(
-      (item) => item.label.toLowerCase() === query,
-    );
-    const startsWith = visibleHeaderNavItems.find((item) =>
-      item.label.toLowerCase().startsWith(query),
-    );
-    const contains = visibleHeaderNavItems.find((item) =>
-      item.label.toLowerCase().includes(query),
-    );
-    const target = exact ?? startsWith ?? contains;
-
-    if (!target) return;
+    setIsAwbSearchLoading(true);
     setShowMenuSuggestions(false);
-    setMenuSearch(target.label);
-    router.push(target.href);
+    try {
+      const shipment = await shipmentService.findShipmentByAwb(awbQuery);
+      if (!shipment?.id) {
+        toast.error(`AWB not found: ${awbQuery}`);
+        return;
+      }
+      setMenuSearch("");
+      router.push(`/transactions/shipment/${shipment.id}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to search AWB");
+    } finally {
+      setIsAwbSearchLoading(false);
+    }
+  };
+
+  const navigateFromSearch = (searchValue: string) => {
+    void openAwbDetails(searchValue);
   };
 
   const refreshCurrentPage = () => {
@@ -1800,20 +1808,37 @@ function DashboardLayoutClient({
                     }
                   }}
                   className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-slate-700 outline-none focus:ring-0"
-                  placeholder="Tracking"
-                  aria-label="Menu search"
+                  placeholder="Search AWB number"
+                  aria-label="AWB search"
+                  disabled={isAwbSearchLoading}
                 />
                 <button
                   type="button"
                   onClick={() => navigateFromSearch(menuSearch)}
-                  className="flex shrink-0 items-center justify-center bg-[#1f2d3d] px-3 text-white hover:bg-[#162231]"
-                  title="Search"
+                  disabled={isAwbSearchLoading || !menuSearch.trim()}
+                  className="flex shrink-0 items-center justify-center bg-[#1f2d3d] px-3 text-white hover:bg-[#162231] disabled:cursor-not-allowed disabled:opacity-60"
+                  title="Open AWB details"
                 >
-                  <Search className="h-4 w-4" />
+                  {isAwbSearchLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               {showMenuSuggestions && menuSearch.trim().length > 0 && (
                 <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-border bg-white shadow-lg">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm font-medium text-slate-800 hover:bg-slate-100"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      void openAwbDetails(menuSearch);
+                    }}
+                  >
+                    <span>Open AWB details</span>
+                    <span className="text-xs text-muted-foreground">{menuSearch.trim()}</span>
+                  </button>
                   {filteredMenuItems.length > 0 ? (
                     filteredMenuItems.map((item) => (
                       <button
@@ -1835,7 +1860,7 @@ function DashboardLayoutClient({
                     ))
                   ) : (
                     <div className="px-3 py-2 text-sm text-muted-foreground">
-                      No menu found
+                      Press Enter to open AWB details
                     </div>
                   )}
                 </div>

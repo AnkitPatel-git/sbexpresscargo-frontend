@@ -43,6 +43,10 @@ function safeFormatDate(iso: string | null | undefined, fmt: string) {
     }
 }
 
+function auditUsername(user?: { username?: string | null } | null) {
+    return user?.username?.trim() || "—";
+}
+
 export default function TrackingPage() {
     const queryClient = useQueryClient();
     const [searchInput, setSearchInput] = useState("");
@@ -475,7 +479,7 @@ export default function TrackingPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="border rounded-md">
-                                    <Table className="min-w-[1040px] border-0">
+                                    <Table className="min-w-[1240px] border-0">
                                         <TableHeader>
                                             <TableRow className="border-0 bg-primary hover:bg-primary">
                                                 <TableHead className="h-11 font-semibold text-primary-foreground"><SortableColumnHeader label="AWB No" field="awbNo" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
@@ -484,6 +488,8 @@ export default function TrackingPage() {
                                                 <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Destination" field="destination" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
                                                 <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Pcs / Wt" field="pieces" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
                                                 <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Payment" field="paymentType" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground">Created By</TableHead>
+                                                <TableHead className="font-semibold text-primary-foreground">Last Updated By</TableHead>
                                                 <TableHead className="font-semibold text-primary-foreground"><SortableColumnHeader label="Status" field="currentStatus" sortBy={listSortBy} sortOrder={listSortOrder} onSort={handleListSort} /></TableHead>
                                             </TableRow>
                                             <TableRow>
@@ -493,25 +499,27 @@ export default function TrackingPage() {
                                                 <TableHead className="p-2"><Input placeholder="Destination" className="h-8 border-border bg-background text-xs" value={listFilters.destination} onChange={(e) => setListFilters((f) => ({ ...f, destination: e.target.value }))} /></TableHead>
                                                 <TableHead className="p-2"><Input placeholder="Pcs / Wt" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                                                 <TableHead className="p-2"><Input placeholder="Payment" className="h-8 border-border bg-background text-xs" value={listFilters.payment} onChange={(e) => setListFilters((f) => ({ ...f, payment: e.target.value }))} /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Created by" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
+                                                <TableHead className="p-2"><Input placeholder="Updated by" className="h-8 border-border bg-background text-xs" disabled /></TableHead>
                                                 <TableHead className="p-2"><Input placeholder="Status" className="h-8 border-border bg-background text-xs" value={listFilters.status} onChange={(e) => setListFilters((f) => ({ ...f, status: e.target.value }))} /></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {isListLoading ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={7} className="text-center py-10">
+                                                    <TableCell colSpan={9} className="text-center py-10">
                                                         <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
                                                     </TableCell>
                                                 </TableRow>
                                             ) : listError ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={7} className="text-center py-10 text-red-500">
+                                                    <TableCell colSpan={9} className="text-center py-10 text-red-500">
                                                         Failed to load tracking list
                                                     </TableCell>
                                                 </TableRow>
                                             ) : listFilteredRows.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={7} className="text-center py-10">
+                                                    <TableCell colSpan={9} className="text-center py-10">
                                                         No shipments found.
                                                     </TableCell>
                                                 </TableRow>
@@ -543,6 +551,8 @@ export default function TrackingPage() {
                                                         <TableCell>
                                                             <Badge variant="secondary">{formatShipmentPaymentTypeLabel(item.paymentType)}</Badge>
                                                         </TableCell>
+                                                        <TableCell>{auditUsername(item.createdBy)}</TableCell>
+                                                        <TableCell>{auditUsername(item.updatedBy)}</TableCell>
                                                         <TableCell>
                                                             <Badge variant="outline" className="font-normal">
                                                                 {formatShipmentStatusLabel(item.currentStatus)}

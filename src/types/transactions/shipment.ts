@@ -605,7 +605,16 @@ export interface Shipment {
     createdAt?: string;
     updatedAt?: string;
   } | null;
-  updatedBy?: unknown | null;
+  updatedBy?: {
+    id: number;
+    username?: string;
+    email?: string;
+    roleId?: number;
+    mobile?: string | null;
+    status?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  } | null;
   deletedBy?: unknown | null;
 }
 
