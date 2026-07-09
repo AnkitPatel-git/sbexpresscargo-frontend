@@ -162,13 +162,15 @@ export interface VendorCafSurchargeFormData {
 export interface VendorVolumetric {
     id: number;
     vendorId: number;
-    productId: number;
+    productId?: number | null;
+    serviceMapId: number | null;
     cft: number | string | { s?: number; e?: number; d?: number[] };
     product?: VendorProductRef | null;
+    serviceMap?: VendorServiceMapRef | null;
 }
 
 export interface VendorVolumetricFormData {
-    productId: number;
+    serviceMapId?: number;
     cft?: number;
 }
 

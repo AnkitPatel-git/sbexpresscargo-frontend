@@ -30,11 +30,8 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item"
-import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select"
-import { productService } from "@/services/masters/product-service"
 import { serviceMapService } from "@/services/masters/service-map-service"
 import { vendorService } from "@/services/masters/vendor-service"
-import type { Product } from "@/types/masters/product"
 import type {
     VendorFuelSurcharge,
     VendorFuelSurchargeFormData,
@@ -173,6 +170,9 @@ function VendorServiceMapSelect({
     onValueChange,
     editingServiceMap,
     placeholder = "All services",
+    surfaceOnly = false,
+    allowAll = true,
+    excludeServiceMapIds,
 }: {
     id?: string
     vendorId: number
@@ -180,15 +180,26 @@ function VendorServiceMapSelect({
     onValueChange: (serviceMapId: number | undefined) => void
     editingServiceMap?: { id: number; serviceType: string } | null
     placeholder?: string
+    surfaceOnly?: boolean
+    allowAll?: boolean
+    excludeServiceMapIds?: Set<number>
 }) {
     const { data } = useQuery({
-        queryKey: ["vendor-service-maps", vendorId],
+        queryKey: ["vendor-service-maps", vendorId, surfaceOnly ? "surface" : "all"],
         queryFn: () => serviceMapService.getServiceMapsByVendor(vendorId),
         enabled: vendorId > 0,
     })
 
     const serviceMaps = useMemo(() => {
-        const rows = data?.data ?? []
+        const rows = (data?.data ?? []).filter((row) => {
+            if (surfaceOnly && !(row.serviceType ?? "").toLowerCase().includes("surface")) {
+                return false
+            }
+            if (excludeServiceMapIds?.has(row.id)) {
+                return false
+            }
+            return true
+        })
         if (
             editingServiceMap &&
             !rows.some((row) => row.id === editingServiceMap.id)
@@ -212,18 +223,18 @@ function VendorServiceMapSelect({
             ]
         }
         return rows
-    }, [data?.data, editingServiceMap, vendorId])
+    }, [data?.data, editingServiceMap, excludeServiceMapIds, surfaceOnly, vendorId])
 
     return (
         <Select
-            value={value != null ? String(value) : "all"}
+            value={value != null ? String(value) : allowAll ? "all" : undefined}
             onValueChange={(v) => onValueChange(v === "all" ? undefined : Number(v))}
         >
             <SelectTrigger id={id} className={FLOATING_INNER_SELECT_TRIGGER}>
                 <SelectValue placeholder={placeholder} />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="all">All services</SelectItem>
+                {allowAll ? <SelectItem value="all">All services</SelectItem> : null}
                 {serviceMaps.map((serviceMap) => (
                     <SelectItem key={serviceMap.id} value={String(serviceMap.id)}>
                         {serviceMap.serviceType || `Service ${serviceMap.id}`}
@@ -710,10 +721,10 @@ export function VendorCafSurchargeTab({ vendorId }: { vendorId: number | null })
 
 export function VendorVolumetricTab({ vendorId }: { vendorId: number | null }) {
     const queryClient = useQueryClient()
-    const volumetricProductSelectId = useId()
+    const volumetricServiceSelectId = useId()
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<VendorVolumetric | null>(null)
-    const [form, setForm] = useState<VendorVolumetricFormData>({ productId: 0, cft: undefined })
+    const [form, setForm] = useState<VendorVolumetricFormData>({ serviceMapId: undefined, cft: undefined })
 
     const { data } = useQuery({
         queryKey: ["vendor-volumetrics", vendorId],
@@ -721,9 +732,13 @@ export function VendorVolumetricTab({ vendorId }: { vendorId: number | null }) {
         enabled: !!vendorId,
     })
     const volumetricRows = getChildRows<VendorVolumetric>(data)
-    const takenProductIds = useMemo(() => {
-        const s = new Set(volumetricRows.map((r) => r.productId))
-        if (editing) s.delete(editing.productId)
+    const takenServiceMapIds = useMemo(() => {
+        const s = new Set(
+            volumetricRows
+                .map((r) => r.serviceMapId)
+                .filter((id): id is number => id != null),
+        )
+        if (editing?.serviceMapId != null) s.delete(editing.serviceMapId)
         return s
     }, [volumetricRows, editing])
 
@@ -736,7 +751,7 @@ export function VendorVolumetricTab({ vendorId }: { vendorId: number | null }) {
             queryClient.invalidateQueries({ queryKey: ["vendor-volumetrics", vendorId] })
             setOpen(false)
             setEditing(null)
-            setForm({ productId: 0, cft: undefined })
+            setForm({ serviceMapId: undefined, cft: undefined })
             toast.success(`Volumetric ${editing ? "updated" : "added"} successfully`)
         },
         onError: (error: Error) => toast.error(error.message),
@@ -758,12 +773,12 @@ export function VendorVolumetricTab({ vendorId }: { vendorId: number | null }) {
             title="Vendor Volumetric"
             onAdd={() => {
                 setEditing(null)
-                setForm({ productId: 0, cft: undefined })
+                setForm({ serviceMapId: undefined, cft: undefined })
                 setOpen(true)
             }}
-            columns={["Product", "CFT", "Action"]}
+            columns={["Service", "CFT", "Action"]}
             rows={volumetricRows.map((item) => [
-                item.product?.productName ?? "-",
+                item.serviceMap?.serviceType ?? item.product?.productName ?? "-",
                 String(decimalToNumber(item.cft)),
             ])}
             actions={volumetricRows.map((item) => (
@@ -775,7 +790,7 @@ export function VendorVolumetricTab({ vendorId }: { vendorId: number | null }) {
                         onClick={() => {
                             setEditing(item)
                             setForm({
-                                productId: item.productId,
+                                serviceMapId: item.serviceMapId ?? undefined,
                                 cft: Number(decimalToNumber(item.cft) || 0),
                             })
                             setOpen(true)
@@ -794,8 +809,8 @@ export function VendorVolumetricTab({ vendorId }: { vendorId: number | null }) {
                 onOpenChange={setOpen}
                 title={editing ? "Edit Volumetric" : "Add Volumetric"}
                 onSave={() => {
-                    if (!form.productId || form.productId < 1) {
-                        toast.error("Select a product")
+                    if (!form.serviceMapId || form.serviceMapId < 1) {
+                        toast.error("Select a surface service")
                         return
                     }
                     if (!Number.isFinite(form.cft) || (form.cft as number) <= 0) {
@@ -807,48 +822,27 @@ export function VendorVolumetricTab({ vendorId }: { vendorId: number | null }) {
                 saving={mutation.isPending}
             >
                 <p className="mb-3 text-sm text-muted-foreground">
-                    One row per product. CFT is used for vendor forwarding volumetric weight (L×W×H / divisor × CFT for surface).
+                    One row per surface service. CFT is used for vendor forwarding volumetric weight (L×W×H / divisor × CFT for surface).
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <label htmlFor={volumetricProductSelectId} className="text-sm font-medium">Product</label>
-                        <DbAsyncSelect<Product>
-                            id={volumetricProductSelectId}
-                            queryKey={["vendor-volumetric", "products", vendorId ?? 0, editing?.id ?? "new"]}
-                            fetchPage={(page, search) =>
-                                productService.getProducts({
-                                    page,
-                                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
-                                    search: search || undefined,
-                                    sortBy: "productName",
-                                    sortOrder: "asc",
-                                })
+                        <label htmlFor={volumetricServiceSelectId} className="text-sm font-medium">Service</label>
+                        <VendorServiceMapSelect
+                            id={volumetricServiceSelectId}
+                            vendorId={vendorId}
+                            value={form.serviceMapId}
+                            onValueChange={(serviceMapId) =>
+                                setForm((prev) => ({ ...prev, serviceMapId }))
                             }
-                            getItemLabel={(p) => p.productName}
-                            visibleItem={(p) => !takenProductIds.has(p.id)}
-                            extraItems={
-                                editing?.productId != null && editing.product
-                                    ? [{
-                                        id: editing.productId,
-                                        productCode: editing.product.productCode ?? "",
-                                        productName: editing.product.productName ?? `Product ${editing.productId}`,
-                                        version: 1,
-                                        productType: "DOMESTIC",
-                                        status: "ACTIVE",
-                                        createdAt: "",
-                                        updatedAt: "",
-                                        createdById: null,
-                                        updatedById: null,
-                                        deletedAt: null,
-                                        deletedById: null,
-                                    }]
-                                    : undefined
+                            editingServiceMap={
+                                editing?.serviceMapId != null && editing.serviceMap
+                                    ? { id: editing.serviceMapId, serviceType: editing.serviceMap.serviceType }
+                                    : null
                             }
-                            value={form.productId > 0 ? String(form.productId) : undefined}
-                            onValueChange={(v) => setForm((prev) => ({ ...prev, productId: Number(v) }))}
-                            placeholder="Select product"
-                            searchPlaceholder="Search products…"
-                            triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+                            placeholder="Select surface service"
+                            surfaceOnly
+                            allowAll={false}
+                            excludeServiceMapIds={takenServiceMapIds}
                         />
                     </div>
                     <div className="space-y-2">
