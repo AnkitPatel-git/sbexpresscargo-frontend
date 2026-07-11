@@ -29,6 +29,16 @@ function fb(v?: string | number | null): string {
     return String(v);
 }
 
+/** Compact multi-ref display: "CI1 / CI2, CI3" → "CI1,CI2,CI3" */
+function formatDrsReferenceNo(raw?: string | null): string {
+    if (!raw?.trim()) return "";
+    const parts = String(raw)
+        .split(/[,/;|\s]+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+    return parts.join(",");
+}
+
 function stateFrom(
     entity: Shipment["shipper"] | Shipment["consignee"],
 ): string {
@@ -208,7 +218,14 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
 
                 <div className={cn(cell, "border border-t-0 border-black")}>
                     <div className={lbl}>REFERENCE NUMBER:</div>
-                    <div className={cn(val, "py-0.5")}>{fb(shipment.referenceNo) || "—"}</div>
+                    <div
+                        className={cn(
+                            val,
+                            "max-h-[2.1em] overflow-hidden py-0.5 leading-tight break-all line-clamp-2",
+                        )}
+                    >
+                        {formatDrsReferenceNo(shipment.referenceNo) || "—"}
+                    </div>
                 </div>
 
                 {/* Goods / pieces — compact row height */}

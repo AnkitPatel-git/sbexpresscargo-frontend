@@ -437,12 +437,23 @@ export interface ShipmentStatus {
   receiverName?: string | null;
   podFilePath?: string | null;
   source?: string | null;
+  location?: string | null;
+  subStatus?: string | null;
+  scannedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
   createdById?: number | null;
   updatedById?: number | null;
   deletedAt?: string | null;
   deletedById?: number | null;
+  user?: {
+    id: number;
+    username?: string;
+  } | null;
+  createdBy?: {
+    id: number;
+    username?: string;
+  } | null;
 }
 
 export interface ShipmentForwarding {

@@ -20,17 +20,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
+import { formatShipmentStatusLabel } from "@/lib/shipment-status-label";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
 import {
   formatShipmentPaymentTypeLabel,
   SHIPMENT_COD_TOPAY_LABEL,
 } from "@/lib/shipment-payment-label";
-import type { Shipment, ShipmentCharge } from "@/types/transactions/shipment";
+import type { Shipment, ShipmentCharge, ShipmentStatus } from "@/types/transactions/shipment";
 
 const fallbackText = (value?: string | number | null) => {
   if (value === null || value === undefined || value === "") return "—";
   return String(value);
 };
+
+function statusCreatorLabel(status: ShipmentStatus): string | null {
+  const username =
+    status.createdBy?.username?.trim() ||
+    status.user?.username?.trim() ||
+    null;
+  if (username) return username;
+  const source = status.source?.trim().toUpperCase();
+  if (source === "CARRIER") return "carrier";
+  if (source === "CORE" || source === "SYSTEM") return "system";
+  return null;
+}
 
 function chargeRowLabel(row: ShipmentCharge) {
   return row.description?.trim() || row.chargeType?.trim() || (row.chargeId ? `Charge #${row.chargeId}` : "Charge");
@@ -362,12 +375,18 @@ export default function ShipmentDetailsPage() {
           {statuses.length === 0 ? (
             <p className="text-muted-foreground">No status history found.</p>
           ) : (
-            statuses.map((status) => (
-              <div key={status.id} className="rounded-md border border-border bg-muted/20 p-3">
-                <p className="font-medium">{status.status}</p>
-                <p className="text-xs text-muted-foreground">{status.remark || "—"}</p>
-              </div>
-            ))
+            statuses.map((status) => {
+              const creator = statusCreatorLabel(status);
+              return (
+                <div key={status.id} className="rounded-md border border-border bg-muted/20 p-3">
+                  <p className="font-medium">{formatShipmentStatusLabel(status.status)}</p>
+                  {creator ? (
+                    <p className="text-xs text-muted-foreground">by {creator}</p>
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">{status.remark || "—"}</p>
+                </div>
+              );
+            })
           )}
         </FormSection>
 
