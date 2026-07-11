@@ -11,6 +11,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -1013,6 +1023,7 @@ export function RateForm({ initialData }: RateFormProps) {
               showKmBands={false}
               showMinimumAmount
               extendedWeightPricingModes
+              enableBulkSelect
               slabs={routeSlabs}
               setSlabs={setRouteSlabs}
               zoneLabelById={zoneLabelById}
@@ -1297,6 +1308,7 @@ function RouteSlabsEditor({
   showMinimumAmount = false,
   extendedWeightPricingModes = false,
   requireKmBands = false,
+  enableBulkSelect = false,
   slabs,
   setSlabs,
   zoneLabelById,
@@ -1315,6 +1327,8 @@ function RouteSlabsEditor({
   extendedWeightPricingModes?: boolean;
   /** When true (ODA/EDL), min and max km are required and max must be greater than min. */
   requireKmBands?: boolean;
+  /** When true, show checkbox multi-select and bulk delete for the slab table. */
+  enableBulkSelect?: boolean;
   slabs: RouteSlabRow[];
   setSlabs: Dispatch<SetStateAction<RouteSlabRow[]>>;
   zoneLabelById: Map<number, string>;
@@ -1331,6 +1345,8 @@ function RouteSlabsEditor({
     weightSlabs: [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: false, applyIdc: false }],
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (editingIndex === null) return;
@@ -1362,6 +1378,17 @@ function RouteSlabsEditor({
           : [{ minWeight: "", maxWeight: "", rate: "", pricingMode: "FLAT", applyFuel: true, applyCaf: false, applyIdc: false }],
     });
   }, [editingIndex, extendedWeightPricingModes, slabs]);
+
+  useEffect(() => {
+    setSelectedIndexes((current) => {
+      if (current.size === 0) return current;
+      const next = new Set<number>();
+      for (const index of current) {
+        if (index >= 0 && index < slabs.length) next.add(index);
+      }
+      return next.size === current.size ? current : next;
+    });
+  }, [slabs.length]);
 
   function resetDraft() {
     setDraft({
@@ -1457,11 +1484,60 @@ function RouteSlabsEditor({
 
   function removeRow(index: number) {
     setSlabs((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setSelectedIndexes((current) => {
+      const next = new Set<number>();
+      for (const selected of current) {
+        if (selected === index) continue;
+        next.add(selected > index ? selected - 1 : selected);
+      }
+      return next;
+    });
     if (editingIndex === index) {
       resetDraft();
     } else if (editingIndex !== null && index < editingIndex) {
       setEditingIndex((current) => (current === null ? current : current - 1));
     }
+  }
+
+  function toggleRowSelected(index: number, checked: boolean) {
+    setSelectedIndexes((current) => {
+      const next = new Set(current);
+      if (checked) next.add(index);
+      else next.delete(index);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    if (!checked) {
+      setSelectedIndexes(new Set());
+      return;
+    }
+    setSelectedIndexes(new Set(slabs.map((_, index) => index)));
+  }
+
+  function confirmBulkDelete() {
+    const toRemove = selectedIndexes;
+    if (toRemove.size === 0) {
+      setBulkDeleteOpen(false);
+      return;
+    }
+    setSlabs((current) => current.filter((_, index) => !toRemove.has(index)));
+    if (editingIndex !== null && toRemove.has(editingIndex)) {
+      resetDraft();
+    } else if (editingIndex !== null) {
+      const removedBefore = [...toRemove].filter((index) => index < editingIndex).length;
+      if (removedBefore > 0) {
+        setEditingIndex(editingIndex - removedBefore);
+      }
+    }
+    setSelectedIndexes(new Set());
+    setBulkDeleteOpen(false);
+    toast.success(
+      toRemove.size === 1
+        ? "1 base rate row removed"
+        : `${toRemove.size} base rate rows removed`,
+    );
   }
 
   function updateWeightSlab(index: number, field: keyof WeightSlabDraft, value: string | boolean) {
@@ -1525,6 +1601,16 @@ function RouteSlabsEditor({
     () => mergeZoneExtrasForPick(zoneExtraRows, draft.toZoneId),
     [zoneExtraRows, draft.toZoneId],
   );
+
+  const selectedCount = selectedIndexes.size;
+  const allSelected = slabs.length > 0 && selectedCount === slabs.length;
+  const someSelected = selectedCount > 0 && selectedCount < slabs.length;
+  const tableColSpan =
+    (enableBulkSelect ? 1 : 0) +
+    (showZones ? 2 : 0) +
+    (showKmBands ? 1 : 0) +
+    (showMinimumAmount ? 1 : 0) +
+    2;
 
   return (
     <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
@@ -1710,10 +1796,50 @@ function RouteSlabsEditor({
         </Button>
       </div>
 
+      {enableBulkSelect && selectedCount > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold tabular-nums">{selectedCount}</span>
+            {selectedCount === 1 ? " row selected" : " rows selected"}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedIndexes(new Set())}
+            >
+              Clear selection
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete selected
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="overflow-x-auto rounded-md border border-border">
         <Table>
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
+              {enableBulkSelect ? (
+                <TableHead className="w-12 px-3 font-semibold text-primary-foreground">
+                  <Checkbox
+                    aria-label="Select all base rate rows"
+                    className="border-primary-foreground/70 data-[state=checked]:bg-background data-[state=checked]:text-primary data-[state=indeterminate]:bg-background data-[state=indeterminate]:text-primary"
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={(checked) => toggleSelectAll(checked === true)}
+                    disabled={slabs.length === 0}
+                  />
+                </TableHead>
+              ) : null}
               {showZones ? (
                 <>
                   <TableHead className="font-semibold text-primary-foreground">From Zone</TableHead>
@@ -1733,51 +1859,112 @@ function RouteSlabsEditor({
           <TableBody>
             {slabs.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={(showZones ? 2 : 0) + (showKmBands ? 1 : 0) + (showMinimumAmount ? 1 : 0) + 2}
-                  className="h-24 text-center text-muted-foreground"
-                >
+                <TableCell colSpan={tableColSpan} className="h-24 text-center text-muted-foreground">
                   No slabs yet. Add at least one weight slab per row.
                 </TableCell>
               </TableRow>
             ) : (
-              slabs.map((row, index) => (
-                <TableRow key={`${row.id ?? "new"}-${index}`} className={cn("border-border", index % 2 === 1 ? "bg-muted/40" : "bg-card")}>
-                  {showZones ? (
-                    <>
-                      <TableCell className="max-w-[12rem] truncate">
-                        {routeSlabZoneCellLabel(row.fromZoneId ?? null, row.fromZone ?? null, zoneLabelById)}
+              slabs.map((row, index) => {
+                const isSelected = selectedIndexes.has(index);
+                return (
+                  <TableRow
+                    key={`${row.id ?? "new"}-${index}`}
+                    data-state={isSelected ? "selected" : undefined}
+                    className={cn(
+                      "border-border",
+                      isSelected
+                        ? "bg-primary/5"
+                        : index % 2 === 1
+                          ? "bg-muted/40"
+                          : "bg-card",
+                    )}
+                  >
+                    {enableBulkSelect ? (
+                      <TableCell className="w-12 px-3">
+                        <Checkbox
+                          aria-label={`Select base rate row ${index + 1}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) =>
+                            toggleRowSelected(index, checked === true)
+                          }
+                        />
                       </TableCell>
-                      <TableCell className="max-w-[12rem] truncate">
-                        {routeSlabZoneCellLabel(row.toZoneId ?? null, row.toZone ?? null, zoneLabelById)}
+                    ) : null}
+                    {showZones ? (
+                      <>
+                        <TableCell className="max-w-[12rem] truncate">
+                          {routeSlabZoneCellLabel(row.fromZoneId ?? null, row.fromZone ?? null, zoneLabelById)}
+                        </TableCell>
+                        <TableCell className="max-w-[12rem] truncate">
+                          {routeSlabZoneCellLabel(row.toZoneId ?? null, row.toZone ?? null, zoneLabelById)}
+                        </TableCell>
+                      </>
+                    ) : null}
+                    {showKmBands ? (
+                      <TableCell>
+                        {row.minKm != null || row.maxKm != null
+                          ? `${row.minKm ?? "—"} – ${row.maxKm ?? "—"}`
+                          : "—"}
                       </TableCell>
-                    </>
-                  ) : null}
-                  {showKmBands ? (
+                    ) : null}
+                    {showMinimumAmount ? (
+                      <TableCell>{row.minimumAmount != null ? row.minimumAmount : "—"}</TableCell>
+                    ) : null}
+                    <TableCell>{row.weightSlabs?.length ?? 0}</TableCell>
                     <TableCell>
-                      {row.minKm != null || row.maxKm != null ? `${row.minKm ?? "—"} – ${row.maxKm ?? "—"}` : "—"}
+                      <div className="flex justify-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[var(--express-link)]"
+                          onClick={() => setEditingIndex(index)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[var(--express-danger)]"
+                          onClick={() => removeRow(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
-                  ) : null}
-                  {showMinimumAmount ? (
-                    <TableCell>{row.minimumAmount != null ? row.minimumAmount : "—"}</TableCell>
-                  ) : null}
-                  <TableCell>{row.weightSlabs?.length ?? 0}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-center gap-1">
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-link)]" onClick={() => setEditingIndex(index)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-[var(--express-danger)]" onClick={() => removeRow(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
+
+      {enableBulkSelect ? (
+        <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Delete {selectedCount === 1 ? "this base rate row" : `${selectedCount} base rate rows`}?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Selected rows will be removed from this rate master. Save the form to persist the
+                change.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
+                onClick={confirmBulkDelete}
+              >
+                Delete selected
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
     </div>
   );
 }

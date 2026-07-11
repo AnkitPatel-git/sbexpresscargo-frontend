@@ -31,6 +31,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { formatReportDate, formatReportDateTime } from "@/lib/format-date-only";
 import { customerService } from "@/services/masters/customer-service";
+import { customerGroupService } from "@/services/masters/customer-group-service";
 import { productService } from "@/services/masters/product-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
 import { shipperService } from "@/services/masters/shipper-service";
@@ -47,6 +48,7 @@ type MisReportFilters = {
   bookDateFrom: string;
   bookDateTo: string;
   customerId?: number;
+  customerGroupId?: number;
   shipperId?: number;
   serviceCenterId?: number;
   productId?: number;
@@ -132,6 +134,7 @@ export default function MisReportPage() {
     isLoading: authLoading,
   } = useAuth();
   const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
+  const canReadCustomerGroups = canReadCustomers;
   const canReadShippers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.shipper);
   const canReadZones = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.zone);
   const canReadProducts = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.product);
@@ -164,6 +167,17 @@ export default function MisReportPage() {
     queryKey: ["mis-report-customer-options"],
     queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
     enabled: !authLoading && canReadCustomers && !isCustomerUser,
+  });
+  const { data: customerGroupData } = useQuery({
+    queryKey: ["mis-report-customer-group-options"],
+    queryFn: () =>
+      customerGroupService.getCustomerGroups({
+        page: 1,
+        limit: 100,
+        sortBy: "name",
+        sortOrder: "asc",
+      }),
+    enabled: !authLoading && canReadCustomerGroups && !isCustomerUser,
   });
   const { data: shipperData } = useQuery({
     queryKey: ["mis-report-shipper-options"],
@@ -237,6 +251,10 @@ export default function MisReportPage() {
       value: String(customer.id),
       label: customer.code ? `${customer.code} - ${customer.name}` : customer.name,
     }));
+  const customerGroupOptions = (customerGroupData?.data ?? []).map((group) => ({
+    value: String(group.id),
+    label: group.code ? `${group.code} - ${group.name}` : group.name,
+  }));
   const shipperOptions = (shipperData?.data ?? []).map((shipper) => ({
     value: String(shipper.id),
     label: shipper.shipperCode ? `${shipper.shipperCode} - ${shipper.shipperName}` : shipper.shipperName,
@@ -462,6 +480,22 @@ export default function MisReportPage() {
                   options={customerOptions}
                   disabled={isCustomerUser}
                 />
+                {!isCustomerUser && canReadCustomerGroups ? (
+                  <Combobox
+                    className="w-full"
+                    placeholder="Select customer group"
+                    searchPlaceholder="Search customer group..."
+                    emptyMessage="No customer group found."
+                    value={draftFilters.customerGroupId ? String(draftFilters.customerGroupId) : ""}
+                    onChange={(value) =>
+                      setDraftFilters((prev) => ({
+                        ...prev,
+                        customerGroupId: value ? Number(value) : undefined,
+                      }))
+                    }
+                    options={customerGroupOptions}
+                  />
+                ) : null}
                 <Combobox
                   className="w-full"
                   placeholder="Select shipper"

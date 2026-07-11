@@ -32,6 +32,9 @@ function appendParams(queryParams: URLSearchParams, params?: MisReportQueryParam
   if (params?.bookDateFrom) queryParams.append("bookDateFrom", params.bookDateFrom);
   if (params?.bookDateTo) queryParams.append("bookDateTo", params.bookDateTo);
   if (params?.customerId) queryParams.append("customerId", String(params.customerId));
+  if (params?.customerGroupId) {
+    queryParams.append("customerGroupId", String(params.customerGroupId));
+  }
   if (params?.shipperId) queryParams.append("shipperId", String(params.shipperId));
   if (params?.serviceCenterId) queryParams.append("serviceCenterId", String(params.serviceCenterId));
   if (params?.productId) queryParams.append("productId", String(params.productId));

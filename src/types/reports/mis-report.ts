@@ -50,6 +50,7 @@ export interface MisReportQueryParams {
   bookDateFrom?: string;
   bookDateTo?: string;
   customerId?: number;
+  customerGroupId?: number;
   shipperId?: number;
   serviceCenterId?: number;
   productId?: number;
