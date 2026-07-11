@@ -111,6 +111,9 @@ export default function ServiceablePincodesPage() {
 
     async function handleExportCsv() {
         setExporting(true)
+        const toastId = toast.loading("Exporting serviceable pincodes…", {
+            description: "Large datasets may take a minute. Please keep this tab open.",
+        })
         try {
             const { blob, filename } = await serviceablePincodeService.exportServiceablePincodes({
                 search: debouncedSearch,
@@ -127,9 +130,11 @@ export default function ServiceablePincodesPage() {
             a.download = filename
             a.click()
             URL.revokeObjectURL(url)
-            toast.success("Serviceable pincodes exported")
+            toast.success("Serviceable pincodes exported", { id: toastId })
         } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Failed to export serviceable pincodes")
+            toast.error(e instanceof Error ? e.message : "Failed to export serviceable pincodes", {
+                id: toastId,
+            })
         } finally {
             setExporting(false)
         }

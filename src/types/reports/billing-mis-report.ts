@@ -30,6 +30,7 @@ export interface BillingMisReportQueryParams {
   bookDateFrom?: string;
   bookDateTo?: string;
   customerId?: number;
+  customerGroupId?: number;
   shipperId?: number;
   serviceCenterId?: number;
   productId?: number;
