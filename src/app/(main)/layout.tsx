@@ -115,6 +115,7 @@ const headerNavItems = [
   { href: "/report/vendor-billing-mis", label: "Vendor Billing MIS Report" },
   { href: "/report/operations-mis", label: "Operations MIS Report" },
   { href: "/report/dp-batch", label: "DP Batch Report" },
+  { href: "/report/air-surface-batch", label: "Air/Surface Batch Report" },
   { href: "/report/partywise-sales-summary", label: "Partywise Sales Summary" },
   { href: "/report/attendance-register", label: "Attendance register" },
   { href: "/document/invoice-generation", label: "Invoice Generation" },
@@ -1282,6 +1283,17 @@ const SidebarContent = ({
                 DP Batch Report
               </LinkItem>
             </PermissionGuard>
+            <PermissionGuard permission="report.air_surface_batch.read">
+              <LinkItem
+                href="/report/air-surface-batch"
+                active={isActive("/report/air-surface-batch")}
+                icon={ClipboardList}
+                showTextOverride
+                inFlyout
+              >
+                Air/Surface Batch Report
+              </LinkItem>
+            </PermissionGuard>
             <PermissionGuard permission="report.attendance.read">
               <LinkItem
                 href="/report/attendance-register"
@@ -1370,6 +1382,17 @@ const SidebarContent = ({
                     inFlyout
                   >
                     DP Batch Report
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="report.air_surface_batch.read">
+                  <LinkItem
+                    href="/report/air-surface-batch"
+                    active={isActive("/report/air-surface-batch")}
+                    icon={ClipboardList}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Air/Surface Batch Report
                   </LinkItem>
                 </PermissionGuard>
                 <PermissionGuard permission="report.attendance.read">

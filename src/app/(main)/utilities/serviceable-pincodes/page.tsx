@@ -78,9 +78,10 @@ export default function ServiceablePincodesPage() {
     const [importFile, setImportFile] = useState<File | null>(null)
     const [importSummary, setImportSummary] = useState<{
         created: number
+        updated: number
         failed: number
         failures: Array<{ row: number; message: string }>
-        successes: Array<{ row: number; pinCode: string }>
+        successes: Array<{ row: number; pinCode: string; action?: "created" | "updated" }>
         bulkUploadLogId?: number
     } | null>(null)
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
@@ -162,13 +163,15 @@ export default function ServiceablePincodesPage() {
                 const ok = result.successes ?? []
                 const sample = ok.slice(0, 8).map((s) => s.pinCode).join(", ")
                 const suffix = sample ? ` (${sample}${ok.length > 8 ? ", …" : ""})` : ""
-                toast.success(`Import completed: ${result.created} row(s) created${suffix}`)
+                toast.success(
+                    `Import completed: ${result.created} created, ${result.updated} updated${suffix}`,
+                )
                 setImportOpen(false)
                 setImportFile(null)
                 if (importFileInputRef.current) importFileInputRef.current.value = ""
             } else {
                 toast.message("Import finished with some errors", {
-                    description: `${result.created} created, ${result.failed} failed. See the dialog for details.`,
+                    description: `${result.created} created, ${result.updated} updated, ${result.failed} failed. See the dialog for details.`,
                 })
             }
         },
@@ -321,7 +324,12 @@ export default function ServiceablePincodesPage() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                    <PermissionGuard permission="utility.serviceable_pincode.create">
+                    <PermissionGuard
+                        anyOf={[
+                            "utility.serviceable_pincode.create",
+                            "utility.serviceable_pincode.update",
+                        ]}
+                    >
                         <Button
                             type="button"
                             variant="ghost"
@@ -477,7 +485,7 @@ export default function ServiceablePincodesPage() {
                     <DialogHeader>
                         <DialogTitle>Import serviceable pincodes</DialogTitle>
                         <DialogDescription>
-                            Download the Excel template (sheet &quot;Pincodes&quot;). Use country, state, and city names (missing countries, states, and cities are created automatically), zone codes, and Yes/No for serviceable / EDL / embargo. Then upload a .xlsx or .xls file; the result shows how many rows succeeded and any per-row errors.
+                            Download the Excel template (sheet &quot;Pincodes&quot;). Use country, state, and city names (missing countries, states, and cities are created automatically), one zone code per row, and Yes/No for serviceable / EDL / embargo. Re-uploading the same file updates existing pin codes and creates new ones.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col gap-4 py-2">
@@ -514,18 +522,19 @@ export default function ServiceablePincodesPage() {
                                 {importFile ? `Selected: ${importFile.name}` : "Choose Excel file (.xlsx / .xls)"}
                             </Button>
                         </div>
-                        {importSummary && (importSummary.created > 0 || importSummary.failed > 0) && (
+                        {importSummary && (importSummary.created > 0 || importSummary.updated > 0 || importSummary.failed > 0) && (
                             <div className="max-h-52 space-y-3 overflow-y-auto rounded-md border border-border bg-muted/40 p-3 text-sm">
                                 <p className="font-medium text-foreground">
-                                    {importSummary.created} added · {importSummary.failed} failed
+                                    {importSummary.created} added · {importSummary.updated} updated · {importSummary.failed} failed
                                 </p>
-                                {importSummary.created > 0 && (
+                                {(importSummary.created > 0 || importSummary.updated > 0) && (
                                     <div>
                                         <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Successful rows</p>
                                         <ul className="list-inside list-disc space-y-0.5 text-muted-foreground">
                                             {(importSummary.successes ?? []).slice(0, 40).map((s) => (
                                                 <li key={`ok-${s.row}-${s.pinCode}`}>
                                                     Row {s.row}: {s.pinCode}
+                                                    {s.action ? ` (${s.action})` : ""}
                                                 </li>
                                             ))}
                                         </ul>
@@ -578,7 +587,12 @@ export default function ServiceablePincodesPage() {
                         <Button type="button" variant="outline" onClick={() => onImportDialogOpenChange(false)}>
                             Close
                         </Button>
-                        <PermissionGuard permission="utility.serviceable_pincode.create">
+                        <PermissionGuard
+                            anyOf={[
+                                "utility.serviceable_pincode.create",
+                                "utility.serviceable_pincode.update",
+                            ]}
+                        >
                             <Button
                                 type="button"
                                 disabled={!importFile || importMutation.isPending}

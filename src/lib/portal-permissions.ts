@@ -57,6 +57,7 @@ const PORTAL_TRANSACTION_MASTER_LOOKUP = [
   "report.billing_mis.read",
   "report.vendor_billing_mis.read",
   "report.dp_batch.read",
+  "report.air_surface_batch.read",
   "report.attendance.read",
   "report.partwise_sales.read",
   "dashboard.core.read",

@@ -1,5 +1,9 @@
 import { apiFetch } from "@/lib/api-fetch";
-import type { DpBatchMode, DpBatchReportQueryParams, DpBatchReportResponse } from "@/types/reports/dp-batch-report";
+import type {
+  AirSurfaceBatchMode,
+  AirSurfaceBatchReportQueryParams,
+  AirSurfaceBatchReportResponse,
+} from "@/types/reports/air-surface-batch-report";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
@@ -9,7 +13,7 @@ function authHeaders() {
   };
 }
 
-function appendParams(queryParams: URLSearchParams, params?: DpBatchReportQueryParams) {
+function appendParams(queryParams: URLSearchParams, params?: AirSurfaceBatchReportQueryParams) {
   queryParams.append("page", String(params?.page ?? 1));
   queryParams.append("limit", String(params?.limit ?? 20));
   queryParams.append("sortBy", params?.sortBy ?? "awbNo");
@@ -44,32 +48,38 @@ async function readError(response: Response, fallback: string) {
   return fallback;
 }
 
-export const dpBatchReportService = {
-  async getDpBatchReport(params?: DpBatchReportQueryParams): Promise<DpBatchReportResponse> {
+export const airSurfaceBatchReportService = {
+  async getAirSurfaceBatchReport(
+    params?: AirSurfaceBatchReportQueryParams,
+  ): Promise<AirSurfaceBatchReportResponse> {
     const queryParams = new URLSearchParams();
     appendParams(queryParams, params);
-    const response = await apiFetch(`${API_URL}/report/dp-batch?${queryParams.toString()}`, {
+    const response = await apiFetch(`${API_URL}/report/air-surface-batch?${queryParams.toString()}`, {
       headers: authHeaders(),
     });
     if (!response.ok) {
-      throw new Error(await readError(response, "Failed to fetch DP Batch report"));
+      throw new Error(await readError(response, "Failed to fetch Air/Surface Batch report"));
     }
     return response.json();
   },
 
-  async exportDpBatchReportXlsx(
-    params?: DpBatchReportQueryParams,
+  async exportAirSurfaceBatchReportXlsx(
+    params?: AirSurfaceBatchReportQueryParams,
   ): Promise<{ blob: Blob; filename: string }> {
     const queryParams = new URLSearchParams();
     appendParams(queryParams, params);
-    const response = await apiFetch(`${API_URL}/report/dp-batch/export?${queryParams.toString()}`, {
-      headers: authHeaders(),
-    });
+    const response = await apiFetch(
+      `${API_URL}/report/air-surface-batch/export?${queryParams.toString()}`,
+      { headers: authHeaders() },
+    );
     if (!response.ok) {
-      throw new Error(await readError(response, "Failed to export DP Batch report"));
+      throw new Error(await readError(response, "Failed to export Air/Surface Batch report"));
     }
-    return { blob: await response.blob(), filename: parseFilename(response, "dp-mode-manifest.xlsx") };
+    return {
+      blob: await response.blob(),
+      filename: parseFilename(response, "air-surface-mode-manifest.xlsx"),
+    };
   },
 };
 
-export type { DpBatchMode };
+export type { AirSurfaceBatchMode };

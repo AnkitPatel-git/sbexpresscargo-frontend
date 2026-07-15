@@ -33,31 +33,31 @@ import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-p
 import { customerService } from "@/services/masters/customer-service";
 import { productService } from "@/services/masters/product-service";
 import { serviceCenterService } from "@/services/masters/service-center-service";
-import { dpBatchReportService } from "@/services/reports/dp-batch-report-service";
-import type { DpBatchMode } from "@/types/reports/dp-batch-report";
+import { airSurfaceBatchReportService } from "@/services/reports/air-surface-batch-report-service";
+import type { AirSurfaceBatchMode } from "@/types/reports/air-surface-batch-report";
 
-type DpBatchFilters = {
+type AirSurfaceBatchFilters = {
   awbNo: string;
   bookDateFrom: string;
   bookDateTo: string;
   customerId?: number;
   serviceCenterId?: number;
   productId?: number;
-  mode?: DpBatchMode;
+  mode?: AirSurfaceBatchMode;
 };
 
-const DEFAULT_FILTERS: DpBatchFilters = {
+const DEFAULT_FILTERS: AirSurfaceBatchFilters = {
   awbNo: "",
   bookDateFrom: "",
   bookDateTo: "",
 };
 
-const MODE_OPTIONS: { value: DpBatchMode; label: string }[] = [
+const MODE_OPTIONS: { value: AirSurfaceBatchMode; label: string }[] = [
   { value: "AIR", label: "Air" },
   { value: "SURFACE", label: "Surface" },
 ];
 
-export default function DpBatchReportPage() {
+export default function AirSurfaceBatchReportPage() {
   const {
     isCustomerUser,
     defaultCustomerId,
@@ -80,8 +80,8 @@ export default function DpBatchReportPage() {
   const [sortBy, setSortBy] = useState("awbNo");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState<DpBatchFilters>(DEFAULT_FILTERS);
-  const [draftFilters, setDraftFilters] = useState<DpBatchFilters>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<AirSurfaceBatchFilters>(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] = useState<AirSurfaceBatchFilters>(DEFAULT_FILTERS);
 
   useEffect(() => {
     if (!isCustomerUser || !scopedCustomerId) return;
@@ -94,17 +94,17 @@ export default function DpBatchReportPage() {
   }, [appliedFilters, filtersOpen]);
 
   const { data: customerData } = useQuery({
-    queryKey: ["dp-batch-report-customer-options"],
+    queryKey: ["air-surface-batch-report-customer-options"],
     queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
     enabled: !authLoading && canReadCustomers && !isCustomerUser,
   });
   const { data: productData } = useQuery({
-    queryKey: ["dp-batch-report-product-options"],
+    queryKey: ["air-surface-batch-report-product-options"],
     queryFn: () => productService.getProducts({ page: 1, limit: 100, sortBy: "productName", sortOrder: "asc" }),
     enabled: !authLoading && canReadProducts,
   });
   const { data: serviceCenterData } = useQuery({
-    queryKey: ["dp-batch-report-service-center-options"],
+    queryKey: ["air-surface-batch-report-service-center-options"],
     queryFn: () =>
       serviceCenterService.getServiceCenters({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
     enabled: !authLoading && canReadServiceCenters && !isCustomerUser,
@@ -150,8 +150,8 @@ export default function DpBatchReportPage() {
   );
 
   const { data, isLoading } = useQuery({
-    queryKey: ["dp-batch-report", listParams],
-    queryFn: () => dpBatchReportService.getDpBatchReport(listParams),
+    queryKey: ["air-surface-batch-report", listParams],
+    queryFn: () => airSurfaceBatchReportService.getAirSurfaceBatchReport(listParams),
     enabled: !authLoading,
   });
 
@@ -178,7 +178,7 @@ export default function DpBatchReportPage() {
   };
 
   const resetFilters = () => {
-    const next: DpBatchFilters = {
+    const next: AirSurfaceBatchFilters = {
       ...DEFAULT_FILTERS,
       ...(scopedCustomerId ? { customerId: scopedCustomerId } : {}),
     };
@@ -192,16 +192,16 @@ export default function DpBatchReportPage() {
 
   async function handleExport() {
     try {
-      const { blob, filename } = await dpBatchReportService.exportDpBatchReportXlsx(listParams);
+      const { blob, filename } = await airSurfaceBatchReportService.exportAirSurfaceBatchReportXlsx(listParams);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("DP Batch report exported");
+      toast.success("Air/Surface Batch report exported");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export DP Batch report");
+      toast.error(error instanceof Error ? error.message : "Failed to export Air/Surface Batch report");
     }
   }
 
@@ -221,9 +221,9 @@ export default function DpBatchReportPage() {
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
       <div className="mb-1">
-        <h1 className="text-lg font-semibold tracking-tight">DP Batch Report</h1>
+        <h1 className="text-lg font-semibold tracking-tight">Air/Surface Batch Report</h1>
         <p className="text-sm text-muted-foreground">
-          Air/Surface batch control — filter by product or mode, then export Excel (DP Mode Manifest).
+          Air/Surface batch control — filter by product or mode, then export Excel (Surface/Air Mode Manifest).
         </p>
       </div>
 
@@ -263,7 +263,7 @@ export default function DpBatchReportPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Filter DP Batch Report</DialogTitle>
+                <DialogTitle>Filter Air/Surface Batch Report</DialogTitle>
                 <DialogDescription>
                   Use product for a specific service, or mode for all Air/Surface products.
                 </DialogDescription>
@@ -310,7 +310,7 @@ export default function DpBatchReportPage() {
                   onValueChange={(value) =>
                     setDraftFilters((prev) => ({
                       ...prev,
-                      mode: value === "__ALL__" ? undefined : (value as DpBatchMode),
+                      mode: value === "__ALL__" ? undefined : (value as AirSurfaceBatchMode),
                       ...(value !== "__ALL__" ? { productId: undefined } : {}),
                     }))
                   }
@@ -375,7 +375,7 @@ export default function DpBatchReportPage() {
             </DialogContent>
           </Dialog>
 
-          <PermissionGuard permission="report.dp_batch.read">
+          <PermissionGuard permission="report.air_surface_batch.read">
             <Button type="button" variant="outline" className="h-9 gap-2" onClick={() => void handleExport()}>
               <FileUp className="h-4 w-4" />
               Export Excel
@@ -385,7 +385,7 @@ export default function DpBatchReportPage() {
             type="button"
             variant="outline"
             className="h-9 gap-2"
-            onClick={() => queryClient.refetchQueries({ queryKey: ["dp-batch-report"], type: "active" })}
+            onClick={() => queryClient.refetchQueries({ queryKey: ["air-surface-batch-report"], type: "active" })}
           >
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -424,7 +424,7 @@ export default function DpBatchReportPage() {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-border">
-        <Table className="min-w-[1000px] border-0">
+        <Table className="min-w-[1100px] border-0">
           <TableHeader>
             <TableRow className="border-0 bg-primary hover:bg-primary">
               <TableHead className="font-semibold text-primary-foreground">
@@ -436,6 +436,7 @@ export default function DpBatchReportPage() {
               <TableHead className="font-semibold text-primary-foreground">ORG</TableHead>
               <TableHead className="font-semibold text-primary-foreground">CONSIGNEE</TableHead>
               <TableHead className="font-semibold text-primary-foreground">PIN CODE</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">PRODUCT TYPE</TableHead>
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="PCS." field="id" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
               </TableHead>
@@ -454,13 +455,13 @@ export default function DpBatchReportPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                  Loading DP Batch report...
+                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                  Loading Air/Surface Batch report...
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                   No report data found.
                 </TableCell>
               </TableRow>
@@ -475,6 +476,7 @@ export default function DpBatchReportPage() {
                   <TableCell>{formatCell(row.org)}</TableCell>
                   <TableCell>{formatCell(row.consignee)}</TableCell>
                   <TableCell>{formatCell(row.pinCode)}</TableCell>
+                  <TableCell>{formatCell(row.productType)}</TableCell>
                   <TableCell>{formatCell(row.pcs)}</TableCell>
                   <TableCell>{formatCell(row.wgt)}</TableCell>
                   <TableCell>{formatCell(row.content)}</TableCell>

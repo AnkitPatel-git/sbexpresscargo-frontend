@@ -163,9 +163,10 @@ export const serviceablePincodeService = {
 
     async importServiceablePincodesFromExcel(file: File): Promise<{
         created: number;
+        updated: number;
         failed: number;
         failures: Array<{ row: number; message: string }>;
-        successes: Array<{ row: number; pinCode: string }>;
+        successes: Array<{ row: number; pinCode: string; action?: 'created' | 'updated' }>;
         bulkUploadLogId?: number;
     }> {
         const formData = new FormData();
@@ -179,9 +180,10 @@ export const serviceablePincodeService = {
             success?: boolean;
             data?: {
                 created: number;
+                updated: number;
                 failed: number;
                 failures: Array<{ row: number; message: string }>;
-                successes: Array<{ row: number; pinCode: string }>;
+                successes: Array<{ row: number; pinCode: string; action?: 'created' | 'updated' }>;
                 bulkUploadLogId?: number;
             };
             message?: string;
@@ -192,6 +194,9 @@ export const serviceablePincodeService = {
         if (!json.success || json.data == null) {
             throw new Error('Invalid import response');
         }
-        return json.data;
+        return {
+            ...json.data,
+            updated: json.data.updated ?? 0,
+        };
     },
 };

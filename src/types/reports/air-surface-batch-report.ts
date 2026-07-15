@@ -1,19 +1,20 @@
-export type DpBatchMode = "AIR" | "SURFACE";
+export type AirSurfaceBatchMode = "AIR" | "SURFACE";
 
-export interface DpBatchReportRow {
+export interface AirSurfaceBatchReportRow {
   srNo: number;
   awbNo: string | null;
   org: string | null;
   consignee: string | null;
   pinCode: string | null;
+  productType: string | null;
   pcs: number;
   wgt: number | null;
   content: string | null;
 }
 
-export interface DpBatchReportResponse {
+export interface AirSurfaceBatchReportResponse {
   success: boolean;
-  data: DpBatchReportRow[];
+  data: AirSurfaceBatchReportRow[];
   meta: {
     page: number;
     limit: number;
@@ -22,7 +23,7 @@ export interface DpBatchReportResponse {
   };
 }
 
-export interface DpBatchReportQueryParams {
+export interface AirSurfaceBatchReportQueryParams {
   page?: number;
   limit?: number;
   search?: string;
@@ -34,5 +35,5 @@ export interface DpBatchReportQueryParams {
   customerId?: number;
   serviceCenterId?: number;
   productId?: number;
-  mode?: DpBatchMode;
+  mode?: AirSurfaceBatchMode;
 }
