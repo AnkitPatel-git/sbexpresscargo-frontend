@@ -46,7 +46,9 @@ function statusCreatorLabel(status: ShipmentStatus): string | null {
 }
 
 function chargeRowLabel(row: ShipmentCharge) {
-  return row.description?.trim() || row.chargeType?.trim() || (row.chargeId ? `Charge #${row.chargeId}` : "Charge");
+  const label =
+    row.description?.trim() || row.chargeType?.trim() || (row.chargeId ? `Charge #${row.chargeId}` : "Charge");
+  return row.isManual ? `${label} (Custom)` : label;
 }
 
 function isFuelChargeRow(row: ShipmentCharge): boolean {
@@ -407,6 +409,7 @@ export default function ShipmentDetailsPage() {
                   <div className="font-medium">{chargeRowLabel(row)}</div>
                   <div className="text-muted-foreground">
                     Amount: {fallbackText(row.amount)} | Total: {fallbackText(row.total ?? row.amount)}
+                    {row.isManual ? " | Custom" : ""}
                     {row.fuelApply ? " | Fuel applied" : ""}
                   </div>
                 </div>

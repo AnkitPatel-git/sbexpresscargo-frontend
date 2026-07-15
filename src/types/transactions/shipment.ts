@@ -82,19 +82,25 @@ export const pieceRowSchema = z.object({
 });
 
 export const shipmentChargeSchema = z.object({
-  chargeId: z.number().min(1, "Charge is required"),
+  chargeId: z.number().min(0).optional(),
   description: z.string().optional(),
-  rate: z.number().int().optional(),
-  amount: z.number().int().optional(),
+  rate: z.number().optional(),
+  amount: z.number().optional(),
   fuelApply: z.boolean().default(false),
-  fuelAmount: z.number().int().optional(),
+  fuelAmount: z.number().optional(),
   taxApply: z.boolean().default(false),
   taxOnFuel: z.boolean().default(false),
-  igst: z.number().int().optional(),
-  cgst: z.number().int().optional(),
-  sgst: z.number().int().optional(),
-  total: z.number().int().optional(),
+  igst: z.number().optional(),
+  cgst: z.number().optional(),
+  sgst: z.number().optional(),
+  total: z.number().optional(),
   chargeType: z.string().optional(),
+  isManual: z.boolean().optional(),
+});
+
+export const customShipmentChargeSchema = z.object({
+  description: z.string().default(""),
+  amount: z.number().min(0).default(0),
 });
 
 export const shipmentBaseSchema = z.object({
@@ -221,6 +227,7 @@ export const shipmentBaseSchema = z.object({
   codAmount: z.number().int().optional(),
   piecesRows: z.array(pieceRowSchema).optional(),
   charges: z.array(shipmentChargeSchema).optional(),
+  customCharges: z.array(customShipmentChargeSchema).optional(),
 });
 
 function appendShipmentValidation(
@@ -679,6 +686,8 @@ export interface ShipmentCalculateRow {
   field?: string;
   operator?: string;
   value?: number;
+  fuelApply?: boolean;
+  isManual?: boolean;
 }
 
 export interface ShipmentCalculateResponse {

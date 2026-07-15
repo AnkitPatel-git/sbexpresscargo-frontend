@@ -329,6 +329,12 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         codAmount: shipmentRef?.codAmount || 0,
         piecesRows: normalizePieceRows(shipmentRef?.piecesRows),
         charges: [],
+        customCharges: (shipmentRef?.charges || [])
+            .filter((row) => row.isManual === true)
+            .map((row) => ({
+                description: row.description?.trim() || '',
+                amount: Number(row.amount) || 0,
+            })),
     }
 }
 
@@ -431,15 +437,37 @@ const normalizeShipmentPayload = (
         isCod: Boolean(values.isCod),
         codAmount: normalizeNumberValue(values.codAmount),
         piecesRows,
-        charges: (values.charges || []).map((row) => ({
-            chargeId: normalizePositiveNumberValue(row.chargeId) ?? 0,
-            description: row.description?.trim() || undefined,
-            amount: normalizeNumberValue(row.amount) ?? 0,
-            fuelApply: Boolean(row.fuelApply),
-            taxApply: Boolean(row.taxApply),
-            taxOnFuel: Boolean(row.taxOnFuel),
-            chargeType: row.chargeType?.trim() || undefined,
-        })),
+        charges: [
+            ...(values.charges || [])
+                .filter((row) => row.isManual !== true)
+                .map((row) => ({
+                    chargeId: normalizePositiveNumberValue(row.chargeId) ?? 0,
+                    description: row.description?.trim() || undefined,
+                    amount: normalizeNumberValue(row.amount) ?? 0,
+                    fuelApply: Boolean(row.fuelApply),
+                    taxApply: Boolean(row.taxApply),
+                    taxOnFuel: Boolean(row.taxOnFuel),
+                    chargeType: row.chargeType?.trim() || undefined,
+                    isManual: false,
+                })),
+            ...(values.customCharges || [])
+                .map((row) => ({
+                    description: row.description?.trim() || '',
+                    amount: normalizeNumberValue(row.amount) ?? 0,
+                }))
+                .filter((row) => row.description.length > 0 && row.amount > 0)
+                .map((row) => ({
+                    chargeId: 0,
+                    description: row.description,
+                    amount: row.amount,
+                    fuelApply: false,
+                    taxApply: false,
+                    taxOnFuel: false,
+                    chargeType: 'OTHER',
+                    isManual: true,
+                })),
+        ],
+        customCharges: values.customCharges || [],
     }
 
     return payload
@@ -450,7 +478,11 @@ const normalizeShipmentUpdatePayload = (
     version?: number,
     weightUnit: ProductWeightUnit = 'KG',
 ): ShipmentFormValues => {
-    const { serviceMapId: _serviceMapId, ...payload } = normalizeShipmentPayload(values, weightUnit)
+    const {
+        serviceMapId: _serviceMapId,
+        customCharges: _customCharges,
+        ...payload
+    } = normalizeShipmentPayload(values, weightUnit)
     const trimmedInvoiceDate = values.invoiceDate?.trim()
     return {
         ...payload,
@@ -463,7 +495,8 @@ const normalizeShipmentCalculatePayload = (
     values: ShipmentFormValues,
     weightUnit: ProductWeightUnit = 'KG',
 ): ShipmentFormValues => {
-    const { serviceMapId: _serviceMapId, charges: _charges, ...payload } = normalizeShipmentPayload(values, weightUnit)
+    const { serviceMapId: _serviceMapId, customCharges: _customCharges, ...payload } =
+        normalizeShipmentPayload(values, weightUnit)
     return payload
 }
 
@@ -482,13 +515,17 @@ const normalizeForwardingPayload = (values: ForwardingRow, awbVendorId: number) 
 
 const buildPreviewFromSavedShipment = (shipment?: Shipment | null): ShipmentCalculateResponse | null => {
     if (!shipment) return null
-    const rows = (shipment.charges || []).map((row) => ({
-        type: 'RATE_CHARGE' as const,
-        name: row.description || row.chargeType || `Charge ${row.chargeId || ''}`.trim(),
-        amount: Number(row.amount) || 0,
-        calculationBase: undefined,
-        isPercentage: false,
-    }))
+    const rows = (shipment.charges || [])
+        .filter((row) => row.isManual !== true)
+        .map((row) => ({
+            type: 'RATE_CHARGE' as const,
+            name: row.description || row.chargeType || `Charge ${row.chargeId || ''}`.trim(),
+            amount: Number(row.amount) || 0,
+            calculationBase: undefined,
+            isPercentage: false,
+            fuelApply: row.fuelApply === true,
+            isManual: false,
+        }))
     return {
         rateMasterId: shipment.rateMasterId ?? undefined,
         fromZoneId: shipment.fromZoneId ?? undefined,
@@ -948,7 +985,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         { id: generateKycRowId(), type: "AADHAAR", entryType: "ID_PROOF", entryDate: format(new Date(), "yyyy-MM-dd") },
     ])
     const existingKycDocuments: ShipmentKycDocument[] = initialData?.kycDocuments || []
-    const [chargePreview, setChargePreview] = useState<ShipmentCalculateResponse | null>(null)
+    const [chargePreview, setChargePreview] = useState<ShipmentCalculateResponse | null>(() =>
+        buildPreviewFromSavedShipment(initialData),
+    )
     const [customerSearch, setCustomerSearch] = useState('')
     const [shipperSearch, setShipperSearch] = useState('')
     const [consigneeSearch, setConsigneeSearch] = useState('')
@@ -996,7 +1035,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 fuelApply: chargePreview.baseFreightFuelApply === true,
             }]
             : []
-        const sortedRows = [...(chargePreview.rows || [])].sort((a, b) => {
+        const sortedRows = [...(chargePreview.rows || [])]
+            .filter((row) => row.isManual !== true)
+            .sort((a, b) => {
             const isEdlA = /(?:\bEDL\b|ODA)/i.test(`${a.name || ''} ${(a as { chargeType?: string }).chargeType || ''}`)
             const isEdlB = /(?:\bEDL\b|ODA)/i.test(`${b.name || ''} ${(b as { chargeType?: string }).chargeType || ''}`)
             const isFuelA = /(?:\bFUEL\b)/i.test(`${a.name || ''} ${(a as { chargeType?: string }).chargeType || ''}`)
@@ -1253,6 +1294,42 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         name: "piecesRows"
     })
 
+    const {
+        fields: customChargeFields,
+        append: appendCustomCharge,
+        remove: removeCustomCharge,
+    } = useFieldArray({
+        control: form.control,
+        name: "customCharges",
+    })
+
+    const watchedCustomCharges = form.watch('customCharges')
+    const customChargesSum = useMemo(() => {
+        return (watchedCustomCharges || []).reduce((sum, row) => {
+            const amount = Number(row.amount) || 0
+            const name = String(row.description || '').trim()
+            if (!name || !(amount > 0)) return sum
+            return sum + amount
+        }, 0)
+    }, [watchedCustomCharges])
+
+    const systemQuoteTotal = useMemo(() => {
+        if (!chargePreview || chargePreview.totalAmount == null) return null
+        const manualsInQuote = (chargePreview.rows || [])
+            .filter((row) => row.isManual === true)
+            .reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+        return Math.round(((Number(chargePreview.totalAmount) || 0) - manualsInQuote) * 100) / 100
+    }, [chargePreview])
+
+    const chargeDisplayTotal = useMemo(() => {
+        if (systemQuoteTotal == null && customChargesSum <= 0) return null
+        return Math.round(((systemQuoteTotal ?? 0) + customChargesSum) * 100) / 100
+    }, [systemQuoteTotal, customChargesSum])
+
+    const chargeDisplaySubTotalWithoutFuel = useMemo(() => {
+        if (chargePreviewSubTotalWithoutFuel == null && customChargesSum <= 0) return null
+        return Math.round(((chargePreviewSubTotalWithoutFuel ?? 0) + customChargesSum) * 100) / 100
+    }, [chargePreviewSubTotalWithoutFuel, customChargesSum])
 
     const addPieceItem = (pieceIndex: number) => {
         const currentItems = form.getValues(`piecesRows.${pieceIndex}.items`) || []
@@ -1291,13 +1368,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 form.setValue('chargeWeight', response.data.chargeWeight, { shouldValidate: false })
                 form.clearErrors('chargeWeight')
             }
-            const editableCharges = (response.data?.rows || []).map((row) => ({
+            const editableCharges = (response.data?.rows || [])
+                .filter((row) => row.isManual !== true)
+                .map((row) => ({
                 chargeId: normalizePositiveNumberValue(row.chargeId) ?? 0,
                 description: row.name,
                 amount: Math.round(Number(row.amount) || 0),
                 fuelApply: row.type !== 'CONDITION' ? true : false,
                 taxApply: false,
                 taxOnFuel: false,
+                isManual: false,
             }))
             form.setValue('charges', editableCharges, { shouldDirty: true, shouldValidate: false })
             toast.success("Charges calculated")
@@ -2195,7 +2275,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 )
             }
             return shipmentService.createShipment(
-                normalizeShipmentPayload(values, productWeightUnitRef.current),
+                (() => {
+                    const {
+                        serviceMapId: _serviceMapId,
+                        customCharges: _customCharges,
+                        ...payload
+                    } = normalizeShipmentPayload(values, productWeightUnitRef.current)
+                    return payload
+                })(),
             )
         },
         onSuccess: (response) => {
@@ -3734,13 +3821,119 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             </TableBody>
                         </Table>
                     </div>
-                    {chargePreview && (
+
+                    <div className="mt-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-foreground">Custom charges</p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    appendCustomCharge({ description: '', amount: 0 })
+                                }
+                            >
+                                <Plus className="mr-2 h-4 w-4" /> Add custom charge
+                            </Button>
+                        </div>
+                        <div className="overflow-hidden rounded-md border border-border/70 bg-muted/20">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="border-b-0 bg-primary hover:bg-primary">
+                                        <TableHead className="whitespace-nowrap text-primary-foreground">
+                                            Charge name
+                                        </TableHead>
+                                        <TableHead className="whitespace-nowrap text-primary-foreground">
+                                            Amount
+                                        </TableHead>
+                                        <TableHead className="w-[72px] whitespace-nowrap text-primary-foreground">
+                                            {" "}
+                                        </TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {customChargeFields.map((field, index) => (
+                                        <TableRow key={field.id}>
+                                            <TableCell>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`customCharges.${index}.description`}
+                                                    render={({ field: descField }) => (
+                                                        <FormItem className="space-y-0">
+                                                            <FormControl>
+                                                                <Input
+                                                                    placeholder="e.g. Loading, Packaging"
+                                                                    {...descField}
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`customCharges.${index}.amount`}
+                                                    render={({ field: amountField }) => (
+                                                        <FormItem className="space-y-0">
+                                                            <FormControl>
+                                                                <Input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    step="0.01"
+                                                                    placeholder="0"
+                                                                    value={amountField.value ?? ''}
+                                                                    onChange={(event) => {
+                                                                        const next = event.target.value
+                                                                        amountField.onChange(
+                                                                            next === ''
+                                                                                ? 0
+                                                                                : Number(next),
+                                                                        )
+                                                                    }}
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => removeCustomCharge(index)}
+                                                    aria-label="Remove custom charge"
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {customChargeFields.length === 0 && (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan={3}
+                                                className="py-6 text-center text-sm text-muted-foreground"
+                                            >
+                                                Optional extras such as loading, unloading, or packaging.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+
+                    {(chargePreview || customChargesSum > 0) && (
                         <div className="mt-3 rounded-md border border-border/70 bg-muted/20 p-3 text-sm">
                             <div className="flex flex-wrap gap-4">
-                                <p><span className="text-muted-foreground">Sub Total (without fuel):</span> {chargePreviewSubTotalWithoutFuel ?? "—"}</p>
-                                <p><span className="text-muted-foreground">Total Amount:</span> {chargePreview.totalAmount ?? "—"}</p>
-                                <p><span className="text-muted-foreground">GST ({GST_PERCENT}%):</span> {chargePreview.totalAmount != null ? gstOnTotal(chargePreview.totalAmount) : "—"}</p>
-                                <p><span className="text-muted-foreground">Grand Total:</span> {chargePreview.totalAmount != null ? grandTotalWithGst(chargePreview.totalAmount) : "—"}</p>
+                                <p><span className="text-muted-foreground">Sub Total (without fuel):</span> {chargeDisplaySubTotalWithoutFuel ?? "—"}</p>
+                                <p><span className="text-muted-foreground">Total Amount:</span> {chargeDisplayTotal ?? "—"}</p>
+                                <p><span className="text-muted-foreground">GST ({GST_PERCENT}%):</span> {chargeDisplayTotal != null ? gstOnTotal(chargeDisplayTotal) : "—"}</p>
+                                <p><span className="text-muted-foreground">Grand Total:</span> {chargeDisplayTotal != null ? grandTotalWithGst(chargeDisplayTotal) : "—"}</p>
                             </div>
                         </div>
                     )}
