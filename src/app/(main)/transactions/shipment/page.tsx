@@ -240,7 +240,7 @@ export default function ShipmentsPage() {
                 </DialogHeader>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Input
-                    placeholder="AWB no"
+                    placeholder="AWB no (comma-separated OK)"
                     value={draftFilters.awbNo}
                     onChange={(e) => setDraftFilters((prev) => ({ ...prev, awbNo: e.target.value }))}
                   />
@@ -325,13 +325,13 @@ export default function ShipmentsPage() {
         <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.create}>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Input
-              placeholder="Search AWB, customer name or code..."
+              placeholder="Search AWBs (123,456), customer name or code..."
               value={appliedFilters.search}
               onChange={(e) => {
                 setAppliedFilters((prev) => ({ ...prev, search: e.target.value }));
                 setPage(1);
               }}
-              className="h-8 w-full sm:w-[280px]"
+              className="h-8 w-full sm:w-[320px]"
             />
             <div className="flex flex-wrap gap-2">
             <Button

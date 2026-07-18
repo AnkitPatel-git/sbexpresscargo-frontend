@@ -103,6 +103,7 @@ const NUMERIC_COLUMNS = new Set<BillingMisReportColumnKey>([
   "reversePickupCharges",
   "floorDeliveryCharges",
   "fuelCharges",
+  "extraCharges",
   "totalAmount",
   "gst",
   "invoiceAmount",

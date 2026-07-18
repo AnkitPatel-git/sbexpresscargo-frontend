@@ -42,13 +42,63 @@ export interface InvoiceGenerationPayload {
   showAwb?: boolean;
 }
 
+export interface InvoicePreviewAwbLine {
+  shipmentId: number;
+  awbNo?: string;
+  bookDate?: string | null;
+  createdAt: string;
+}
+
+export interface InvoicePreviewResult {
+  customerId: number | null;
+  serviceCenterId: number | null;
+  fromDate: string;
+  toDate: string;
+  productType: string | null;
+  registerType: string | null;
+  awbCount: number;
+  totalAmount: number;
+  fuelAmount: number;
+  igst: number;
+  cgst: number;
+  sgst: number;
+  grandTotal: number;
+  awbLines?: InvoicePreviewAwbLine[];
+}
+
+export interface InvoiceGenerateResult {
+  createdInvoiceId: number | null;
+  invoiceNo?: string;
+  shipmentCount: number;
+  totals: {
+    baseAmount: number;
+    fuelAmount: number;
+    igst: number;
+    cgst: number;
+    sgst: number;
+    grandTotal: number;
+    awbCount: number;
+  };
+}
+
+/** Tax-invoice PDF layout (must match backend InvoicePdfFormat). */
+export type InvoicePdfFormat = "CUSTOMER_1" | "CUSTOMER_2";
+
+export const INVOICE_PDF_FORMAT_OPTIONS: Array<{
+  value: InvoicePdfFormat;
+  label: string;
+}> = [
+  { value: "CUSTOMER_1", label: "Customer 1 Tax Invoice" },
+  { value: "CUSTOMER_2", label: "Customer 2 Tax Invoice" },
+];
+
 /** POST /document/invoice/send-email (Bruno: Send Invoice Email) */
 export interface InvoiceSendEmailPayload {
   fromDate?: string;
   toDate?: string;
   serviceCenterId?: number;
   productType?: string;
-  invoiceFormat?: string;
+  invoiceFormat?: InvoicePdfFormat | string;
   customerId?: number;
   invoiceStatus?: string;
   year?: string;
@@ -66,3 +116,4 @@ export interface InvoiceSendEmailPayload {
   ssl?: boolean;
   emailDocument?: string;
 }
+
