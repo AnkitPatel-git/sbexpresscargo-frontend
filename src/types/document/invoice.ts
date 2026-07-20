@@ -14,13 +14,62 @@ export interface PaginatedMeta {
 export interface InvoiceRecord {
   id: number;
   invoiceNo?: string;
+  invoiceDate?: string;
+  customerCode?: string;
   customerName?: string;
   fromDate?: string;
   toDate?: string;
+  awbCount?: number;
+  totalAmount?: number;
   grandTotal?: number;
-  status?: string;
+  status?: InvoiceStatus;
   locked?: boolean;
   [key: string]: unknown;
+}
+
+export type InvoiceStatus = "DRAFT" | "LOCKED";
+
+export type InvoiceLockAction = "LOCK" | "UNLOCK";
+
+export interface InvoiceLockLogEntry {
+  id: number;
+  invoiceId: number;
+  invoiceNo?: string;
+  invoiceDate?: string;
+  action: InvoiceLockAction;
+  serviceCenterId?: number | null;
+  createdAt: string;
+}
+
+export interface InvoiceDetail {
+  id: number;
+  invoiceNo?: string;
+  invoiceDate?: string;
+  customerId?: number;
+  customerName?: string | null;
+  fromDate?: string;
+  toDate?: string;
+  totalAmount?: number | null;
+  igst?: number | null;
+  cgst?: number | null;
+  sgst?: number | null;
+  grandTotal?: number | null;
+  awbCount?: number;
+  status?: InvoiceStatus;
+  awbLines?: Array<{
+    shipmentId: number;
+    awbNo?: string;
+    origin?: string;
+    destination?: string;
+    createdAt?: string;
+  }>;
+}
+
+export interface InvoiceLockLogQuery {
+  fromDate?: string;
+  toDate?: string;
+  lockType?: InvoiceLockAction;
+  serviceCenterId?: number;
 }
 
 export interface InvoiceListResponse {

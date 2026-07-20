@@ -2,10 +2,14 @@ import { apiClient } from "@/lib/api-client";
 import { apiFetch } from "@/lib/api-fetch";
 import {
   ApiResponse,
+  InvoiceDetail,
   InvoiceGenerationPayload,
   InvoiceListResponse,
+  InvoiceLockLogEntry,
+  InvoiceLockLogQuery,
   InvoicePdfFormat,
   InvoiceSendEmailPayload,
+  InvoiceStatus,
 } from "@/types/document/invoice";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -33,11 +37,17 @@ function parseFilename(response: Response, fallback: string) {
 }
 
 export const invoiceService = {
-  listInvoices: (params: { page?: number; limit?: number; search?: string } = {}) => {
+  listInvoices: (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: InvoiceStatus;
+  } = {}) => {
     const query = new URLSearchParams();
     if (params.page) query.append("page", String(params.page));
     if (params.limit) query.append("limit", String(params.limit));
     if (params.search) query.append("search", params.search);
+    if (params.status) query.append("status", params.status);
     return apiClient<InvoiceListResponse>(`/document/invoice?${query.toString()}`);
   },
 
@@ -59,20 +69,31 @@ export const invoiceService = {
     ),
 
   getInvoiceById: (id: number | string) =>
-    apiClient<ApiResponse<unknown>>(`/document/invoice/${id}`),
+    apiClient<ApiResponse<InvoiceDetail>>(`/document/invoice/${id}`),
 
   lockInvoice: (id: number | string) =>
-    apiClient<ApiResponse<unknown>>(`/document/invoice/${id}/lock`, {
+    apiClient<ApiResponse<InvoiceDetail>>(`/document/invoice/${id}/lock`, {
       method: "POST",
     }),
 
   unlockInvoice: (id: number | string) =>
-    apiClient<ApiResponse<unknown>>(`/document/invoice/${id}/unlock`, {
+    apiClient<ApiResponse<InvoiceDetail>>(`/document/invoice/${id}/unlock`, {
       method: "POST",
     }),
 
-  getInvoiceLockLog: () =>
-    apiClient<ApiResponse<unknown>>("/document/invoice/lock-log"),
+  getInvoiceLockLog: (params: InvoiceLockLogQuery = {}) => {
+    const query = new URLSearchParams();
+    if (params.fromDate) query.append("fromDate", params.fromDate);
+    if (params.toDate) query.append("toDate", params.toDate);
+    if (params.lockType) query.append("lockType", params.lockType);
+    if (params.serviceCenterId) {
+      query.append("serviceCenterId", String(params.serviceCenterId));
+    }
+    const qs = query.toString();
+    return apiClient<ApiResponse<InvoiceLockLogEntry[]>>(
+      `/document/invoice/lock-log${qs ? `?${qs}` : ""}`,
+    );
+  },
 
   sendInvoiceEmail: (payload: InvoiceSendEmailPayload) =>
     apiClient<ApiResponse<unknown>>("/document/invoice/send-email", {
