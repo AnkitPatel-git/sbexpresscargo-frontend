@@ -28,6 +28,7 @@ export type AttendanceRegisterExportParams = {
   month: number;
   serviceCenterId?: number;
   customerId?: number;
+  search?: string;
 };
 
 export type AttendanceRegisterSummary = {
@@ -77,6 +78,9 @@ function buildQuery(params: AttendanceRegisterExportParams) {
   }
   if (params.customerId != null) {
     q.append("customerId", String(params.customerId));
+  }
+  if (params.search?.trim()) {
+    q.append("search", params.search.trim());
   }
   return q.toString();
 }

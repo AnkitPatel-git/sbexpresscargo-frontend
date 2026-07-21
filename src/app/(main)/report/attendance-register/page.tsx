@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Calendar, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Calendar, Download, Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -30,6 +31,7 @@ import { serviceCenterService } from "@/services/masters/service-center-service"
 import { AttendanceUserMonthLogDialog } from "@/components/reports/attendance-user-month-log-dialog";
 import { attendanceRegisterService } from "@/services/reports/attendance-register-service";
 import { useAuth } from "@/context/auth-context";
+import { useDebounce } from "@/hooks/use-debounce";
 import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 
 function istCalendarParts(): { year: number; month: number } {
@@ -49,6 +51,8 @@ function AttendanceRegisterPanel() {
   const [customerId, setCustomerId] = useState<string>(
     isCustomerUser && Number(defaultCustomerId) > 0 ? String(defaultCustomerId) : "all",
   );
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
   const [downloading, setDownloading] = useState(false);
   const [logDialog, setLogDialog] = useState<{
     userId: number;
@@ -74,8 +78,9 @@ function AttendanceRegisterPanel() {
           : customerId === "all"
             ? undefined
             : Number(customerId),
+      search: debouncedSearch.trim() || undefined,
     }),
-    [year, month, serviceCenterId, customerId, isCustomerUser, defaultCustomerId],
+    [year, month, serviceCenterId, customerId, isCustomerUser, defaultCustomerId, debouncedSearch],
   );
 
   const { data, isFetching, isError, error, isLoading } = useQuery({
@@ -222,6 +227,29 @@ function AttendanceRegisterPanel() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="attendance-search">Search employee</Label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="attendance-search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name…"
+              className="pl-8 pr-8"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
