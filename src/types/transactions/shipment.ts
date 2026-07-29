@@ -101,6 +101,7 @@ export const shipmentChargeSchema = z.object({
 export const customShipmentChargeSchema = z.object({
   description: z.string().default(""),
   amount: z.number().min(0).default(0),
+  fuelApplicable: z.boolean().default(false),
 });
 
 export const shipmentBaseSchema = z.object({

@@ -691,8 +691,9 @@ export default function TrackingPage() {
                     <DialogHeader>
                         <DialogTitle>Bulk tracking from Excel</DialogTitle>
                         <DialogDescription>
-                            One row per AWB. Status must be a valid ShipmentStatusType (e.g. IN_TRANSIT). Sub-status is required when status is DELIVERY_ATTEMPTED.
-                            Remove the sample row before uploading.
+                            One row per AWB. Use the Status and Sub status dropdowns in the template (values come from the system list).
+                            Sub status is required when Status is DELIVERY_ATTEMPTED. Remove the sample row before uploading.
+                            An &quot;Allowed values&quot; sheet in the template lists every valid option.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">

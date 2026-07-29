@@ -1,5 +1,6 @@
 import { apiFetch } from "@/lib/api-fetch";
 import type {
+  BillingMisChargeRecalcJobStatus,
   BillingMisReportQueryParams,
   BillingMisReportResponse,
 } from "@/types/reports/billing-mis-report";
@@ -88,5 +89,41 @@ export const billingMisReportService = {
       blob: await response.blob(),
       filename: parseFilename(response, "billing-mis-report.xlsx"),
     };
+  },
+
+  async startRecalculateCharges(
+    params?: BillingMisReportQueryParams,
+  ): Promise<BillingMisChargeRecalcJobStatus> {
+    const queryParams = new URLSearchParams();
+    appendParams(queryParams, params);
+    const response = await apiFetch(
+      `${API_URL}/report/billing-mis/recalculate-charges?${queryParams.toString()}`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to recalculate Billing MIS charges"));
+    }
+    const payload = (await response.json()) as {
+      success: boolean;
+      data: BillingMisChargeRecalcJobStatus;
+    };
+    return payload.data;
+  },
+
+  async getRecalculateChargesStatus(jobId: string): Promise<BillingMisChargeRecalcJobStatus> {
+    const response = await apiFetch(`${API_URL}/report/billing-mis/recalculate-charges/${jobId}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to fetch recalculation status"));
+    }
+    const payload = (await response.json()) as {
+      success: boolean;
+      data: BillingMisChargeRecalcJobStatus;
+    };
+    return payload.data;
   },
 };

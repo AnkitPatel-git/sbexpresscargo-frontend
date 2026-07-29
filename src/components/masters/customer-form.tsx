@@ -110,6 +110,7 @@ const customerSchema = z.object({
     origin: z.string().optional().or(z.literal("")),
     gstNo: z.string().optional().or(z.literal("")),
     customerType: z.enum(['CREDIT', 'DEBIT']),
+    weightRoundOff: z.enum(['ROUND_OFF_AT_0', 'ROUND_OFF_AT_100', 'ROUND_OFF_AT_500']),
     registerType: z.enum(['REGISTERED', 'UNREGISTERED']),
     createDefaultShipper: z.boolean().default(false),
 })
@@ -322,6 +323,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             origin: '',
             gstNo: '',
             customerType: 'CREDIT',
+            weightRoundOff: 'ROUND_OFF_AT_0',
             registerType: 'REGISTERED',
             createDefaultShipper: false,
         },
@@ -350,6 +352,11 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             origin: initialData.origin || '',
             gstNo: initialData.gstNo || '',
             customerType: coerceCustomerEnum(['CREDIT', 'DEBIT'] as const, 'CREDIT', initialData.customerType),
+            weightRoundOff: coerceCustomerEnum(
+                ['ROUND_OFF_AT_0', 'ROUND_OFF_AT_100', 'ROUND_OFF_AT_500'] as const,
+                'ROUND_OFF_AT_0',
+                initialData.weightRoundOff,
+            ),
             registerType: coerceCustomerEnum(
                 ['REGISTERED', 'UNREGISTERED'] as const,
                 'REGISTERED',
@@ -695,6 +702,38 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                 <SelectContent>
                                                     <SelectItem value="CREDIT">Credit</SelectItem>
                                                     <SelectItem value="DEBIT">Debit</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="weightRoundOff"
+                                    render={({ field }) => (
+                                        <FloatingFormItem required label="Weight Round Off">
+                                            <Select
+                                                key={`weightRoundOff-${field.value}`}
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                            >
+                                                <FormControl>
+                                                    <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                        <SelectValue placeholder="Select round off">
+                                                            {(() => {
+                                                                const v = String(field.value ?? '').toUpperCase()
+                                                                if (v === 'ROUND_OFF_AT_0') return 'Round Off At 0'
+                                                                if (v === 'ROUND_OFF_AT_100') return 'Round Off At 100'
+                                                                if (v === 'ROUND_OFF_AT_500') return 'Round Off At 500'
+                                                                return undefined
+                                                            })()}
+                                                        </SelectValue>
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="ROUND_OFF_AT_0">Round Off At 0</SelectItem>
+                                                    <SelectItem value="ROUND_OFF_AT_100">Round Off At 100</SelectItem>
+                                                    <SelectItem value="ROUND_OFF_AT_500">Round Off At 500</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </FloatingFormItem>

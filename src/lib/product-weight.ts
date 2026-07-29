@@ -14,10 +14,10 @@ export function roundProductBookingGramWeight(value: number): number {
   return Math.ceil(value / PRODUCT_BOOKING_GRAM_SLAB) * PRODUCT_BOOKING_GRAM_SLAB
 }
 
-/** Kg products: standard half-up rounding to whole kg (10.499 → 10, 10.5 → 11). */
+/** Kg products: preserve decimal kg input (rounded only to 2 decimals). */
 export function roundProductBookingKgWeight(value: number): number {
   if (!Number.isFinite(value) || value <= 0) return 0
-  return Math.round(value)
+  return round2(value)
 }
 
 function round2(value: number): number {

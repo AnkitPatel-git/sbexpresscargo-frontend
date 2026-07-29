@@ -18,6 +18,24 @@ export interface BillingMisReportResponse {
   headers: Record<BillingMisReportColumnKey, string>;
 }
 
+export interface BillingMisChargeRecalcJobStatus {
+  id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  startedAt: string;
+  updatedAt: string;
+  finishedAt?: string;
+  total: number;
+  processed: number;
+  recalculated: number;
+  skippedInvoiced: number;
+  failed: Array<{
+    shipmentId: number;
+    error: string;
+  }>;
+  lastShipmentId?: number;
+  error?: string;
+}
+
 export interface BillingMisReportQueryParams {
   page?: number;
   limit?: number;

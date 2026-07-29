@@ -135,6 +135,7 @@ export default function BillingMisReportPage() {
   const canReadShippers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.shipper);
   const canReadZones = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.zone);
   const canReadProducts = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.product);
+  const canRecalculateCharges = hasPermission("shipment.charge.calculate");
   const canReadServiceCenters = hasMasterLookupForPortalTransaction(
     hasPermission,
     MASTER_READ.serviceCenter,
@@ -151,6 +152,7 @@ export default function BillingMisReportPage() {
   const [sortBy, setSortBy] = useState("bookDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<BillingMisFilters>(DEFAULT_FILTERS);
   const [draftFilters, setDraftFilters] = useState<BillingMisFilters>(DEFAULT_FILTERS);
 
@@ -304,6 +306,62 @@ export default function BillingMisReportPage() {
       toast.success("Billing MIS report exported");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to export Billing MIS report");
+    }
+  }
+
+  async function handleRecalculateCharges() {
+    const confirmed = window.confirm(
+      "Recalculate charges for all non-invoiced shipments matching the current Billing MIS filters?",
+    );
+    if (!confirmed) return;
+
+    setIsRecalculating(true);
+    const toastId = toast.loading("Starting charge recalculation...", {
+      duration: Infinity,
+    });
+    try {
+      const job = await billingMisReportService.startRecalculateCharges(listParams);
+      let status = job;
+
+      toast.loading(
+        `Charge recalculation started. Done: ${status.processed} | In queue: ${Math.max(status.total - status.processed, 0)}`,
+        { id: toastId, duration: Infinity },
+      );
+
+      while (status.status === "pending" || status.status === "running") {
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+        status = await billingMisReportService.getRecalculateChargesStatus(status.id);
+        toast.loading(
+          `Charge recalculation in progress. Done: ${status.processed} | In queue: ${Math.max(status.total - status.processed, 0)}`,
+          { id: toastId, duration: Infinity },
+        );
+      }
+
+      if (status.status === "failed") {
+        throw new Error(status.error || "Charge recalculation failed");
+      }
+
+      const parts = [
+        `Done: ${status.processed}`,
+        "In queue: 0",
+        `${status.recalculated} recalculated`,
+        `${status.skippedInvoiced} skipped invoiced`,
+      ];
+      if (status.failed.length > 0) {
+        parts.push(`${status.failed.length} failed`);
+      }
+      toast.success(`Charge recalculation completed: ${parts.join(", ")}`, {
+        id: toastId,
+        duration: Infinity,
+      });
+      await queryClient.refetchQueries({ queryKey: ["billing-mis-report"], type: "active" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to recalculate charges", {
+        id: toastId,
+        duration: Infinity,
+      });
+    } finally {
+      setIsRecalculating(false);
     }
   }
 
@@ -546,6 +604,18 @@ export default function BillingMisReportPage() {
               <FileUp className="h-4 w-4" />
               Export Excel
             </Button>
+            {canRecalculateCharges ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 gap-2"
+                onClick={() => void handleRecalculateCharges()}
+                disabled={isRecalculating}
+              >
+                <RefreshCw className={cn("h-4 w-4", isRecalculating ? "animate-spin" : "")} />
+                {isRecalculating ? "Recalculating..." : "Recalculate Charges"}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

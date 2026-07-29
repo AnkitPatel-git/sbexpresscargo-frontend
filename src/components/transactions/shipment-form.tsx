@@ -334,6 +334,7 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
             .map((row) => ({
                 description: row.description?.trim() || '',
                 amount: Number(row.amount) || 0,
+                fuelApplicable: row.fuelApply === true,
             })),
     }
 }
@@ -454,13 +455,14 @@ const normalizeShipmentPayload = (
                 .map((row) => ({
                     description: row.description?.trim() || '',
                     amount: normalizeNumberValue(row.amount) ?? 0,
+                    fuelApplicable: row.fuelApplicable === true,
                 }))
                 .filter((row) => row.description.length > 0 && row.amount > 0)
                 .map((row) => ({
                     chargeId: 0,
                     description: row.description,
                     amount: row.amount,
-                    fuelApply: false,
+                    fuelApply: row.fuelApplicable,
                     taxApply: false,
                     taxOnFuel: false,
                     chargeType: 'OTHER',
@@ -3830,7 +3832,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                 variant="outline"
                                 size="sm"
                                 onClick={() =>
-                                    appendCustomCharge({ description: '', amount: 0 })
+                                    appendCustomCharge({ description: '', amount: 0, fuelApplicable: false })
                                 }
                             >
                                 <Plus className="mr-2 h-4 w-4" /> Add custom charge
@@ -3845,6 +3847,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         </TableHead>
                                         <TableHead className="whitespace-nowrap text-primary-foreground">
                                             Amount
+                                        </TableHead>
+                                        <TableHead className="w-[80px] whitespace-nowrap text-center text-primary-foreground">
+                                            Fuel?
                                         </TableHead>
                                         <TableHead className="w-[72px] whitespace-nowrap text-primary-foreground">
                                             {" "}
@@ -3899,6 +3904,22 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                     )}
                                                 />
                                             </TableCell>
+                                            <TableCell className="text-center">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`customCharges.${index}.fuelApplicable`}
+                                                    render={({ field: fuelField }) => (
+                                                        <FormItem className="flex items-center justify-center space-y-0">
+                                                            <FormControl>
+                                                                <Checkbox
+                                                                    checked={fuelField.value === true}
+                                                                    onCheckedChange={fuelField.onChange}
+                                                                />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
                                             <TableCell>
                                                 <Button
                                                     type="button"
@@ -3915,7 +3936,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     {customChargeFields.length === 0 && (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={3}
+                                                colSpan={4}
                                                 className="py-6 text-center text-sm text-muted-foreground"
                                             >
                                                 Optional extras such as loading, unloading, or packaging.
