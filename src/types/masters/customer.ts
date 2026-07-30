@@ -90,7 +90,7 @@ export interface Customer {
     origin: string | null;
     gstNo: string | null;
     customerType: 'CREDIT' | 'DEBIT' | string;
-    weightRoundOff: 'ROUND_OFF_AT_0' | 'ROUND_OFF_AT_100' | 'ROUND_OFF_AT_500' | string;
+    weightRoundOff: 'ROUND_OFF_AT_0' | 'ROUND_OFF_AT_500' | string;
     registerType: 'REGISTERED' | 'UNREGISTERED' | string | null;
     defaultShipperId?: number | null;
     onboardingDefaultShipperRequested?: boolean;
@@ -129,7 +129,7 @@ export interface CustomerFormData {
     origin?: string;
     gstNo?: string;
     customerType?: 'CREDIT' | 'DEBIT' | string;
-    weightRoundOff?: 'ROUND_OFF_AT_0' | 'ROUND_OFF_AT_100' | 'ROUND_OFF_AT_500' | string;
+    weightRoundOff?: 'ROUND_OFF_AT_0' | 'ROUND_OFF_AT_500' | string;
     registerType?: 'REGISTERED' | 'UNREGISTERED' | string;
     createDefaultShipper?: boolean;
     version?: number;

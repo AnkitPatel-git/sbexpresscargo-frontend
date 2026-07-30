@@ -110,7 +110,7 @@ const customerSchema = z.object({
     origin: z.string().optional().or(z.literal("")),
     gstNo: z.string().optional().or(z.literal("")),
     customerType: z.enum(['CREDIT', 'DEBIT']),
-    weightRoundOff: z.enum(['ROUND_OFF_AT_0', 'ROUND_OFF_AT_100', 'ROUND_OFF_AT_500']),
+    weightRoundOff: z.enum(['ROUND_OFF_AT_0', 'ROUND_OFF_AT_500']),
     registerType: z.enum(['REGISTERED', 'UNREGISTERED']),
     createDefaultShipper: z.boolean().default(false),
 })
@@ -353,9 +353,11 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             gstNo: initialData.gstNo || '',
             customerType: coerceCustomerEnum(['CREDIT', 'DEBIT'] as const, 'CREDIT', initialData.customerType),
             weightRoundOff: coerceCustomerEnum(
-                ['ROUND_OFF_AT_0', 'ROUND_OFF_AT_100', 'ROUND_OFF_AT_500'] as const,
+                ['ROUND_OFF_AT_0', 'ROUND_OFF_AT_500'] as const,
                 'ROUND_OFF_AT_0',
-                initialData.weightRoundOff,
+                initialData.weightRoundOff === 'ROUND_OFF_AT_100'
+                    ? 'ROUND_OFF_AT_0'
+                    : initialData.weightRoundOff,
             ),
             registerType: coerceCustomerEnum(
                 ['REGISTERED', 'UNREGISTERED'] as const,
@@ -722,18 +724,16 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                         <SelectValue placeholder="Select round off">
                                                             {(() => {
                                                                 const v = String(field.value ?? '').toUpperCase()
-                                                                if (v === 'ROUND_OFF_AT_0') return 'Round Off At 0'
-                                                                if (v === 'ROUND_OFF_AT_100') return 'Round Off At 100'
-                                                                if (v === 'ROUND_OFF_AT_500') return 'Round Off At 500'
+                                                                if (v === 'ROUND_OFF_AT_0') return 'Round'
+                                                                if (v === 'ROUND_OFF_AT_500') return 'Roundoff'
                                                                 return undefined
                                                             })()}
                                                         </SelectValue>
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="ROUND_OFF_AT_0">Round Off At 0</SelectItem>
-                                                    <SelectItem value="ROUND_OFF_AT_100">Round Off At 100</SelectItem>
-                                                    <SelectItem value="ROUND_OFF_AT_500">Round Off At 500</SelectItem>
+                                                    <SelectItem value="ROUND_OFF_AT_0">Round</SelectItem>
+                                                    <SelectItem value="ROUND_OFF_AT_500">Roundoff</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </FloatingFormItem>

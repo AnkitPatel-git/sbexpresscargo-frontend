@@ -32,32 +32,23 @@ API_BACKEND_URL=https://backend.portal.sbexpresscargo.com/api
 
 - [PM2](https://pm2.keymetrics.io/): `npm install -g pm2`
 - Dependencies: `npm install`
-- **Build:** `npm run build` (PM2 runs `next start`, which needs `.next`)
 
 ## Commands
 
 From that repo’s project root:
 
 ```bash
-npm run build
-npm run pm2:start
-
+npm run pm2:start     # builds, then starts
 npm run pm2:stop
-npm run pm2:restart
+npm run pm2:restart   # builds, then restarts
 pm2 logs $PM2_APP_NAME
 pm2 status
 pm2 save
 ```
 
-Same as:
+`pm2:start` / `pm2:restart` run `npm run build` first (creates `.next`), then call PM2.
 
-```bash
-pm2 start pm2/ecosystem.config.cjs
-pm2 stop pm2/ecosystem.config.cjs
-pm2 restart pm2/ecosystem.config.cjs
-```
-
-After code changes: `npm run build` then `npm run pm2:restart`.
+After code changes: `npm run pm2:restart`.
 
 ## Config summary
 

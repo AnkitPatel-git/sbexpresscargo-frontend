@@ -120,6 +120,8 @@ import { useAuth } from '@/context/auth-context'
 import { MASTER_READ, SHIPMENT_CHARGE, UTILITY_READ, hasMasterLookupForPortalTransaction } from '@/lib/portal-permissions'
 import {
     type ProductWeightUnit,
+    applyCustomerContentVolumetricKg,
+    DEFAULT_CUSTOMER_WEIGHT_ROUND_OFF,
     kgToProductBookingWeight,
     normalizeProductBookingWeight,
     resolveShipmentVolumetricWeight,
@@ -2086,6 +2088,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         const cft = decimalToFiniteNumber(match?.cft)
         return cft && cft > 0 ? cft : 0
     }, [customerVolumetricOptions, isSurfaceProduct, watchedProductId])
+    const customerWeightRoundOff = useMemo(() => {
+        const mode = String(customerBookingDefaults?.weightRoundOff ?? '').toUpperCase()
+        if (mode === 'ROUND_OFF_AT_500') return 'ROUND_OFF_AT_500'
+        return DEFAULT_CUSTOMER_WEIGHT_ROUND_OFF
+    }, [customerBookingDefaults?.weightRoundOff])
     const weightCalcKey = useDebounce(
         JSON.stringify(
             (watchedPiecesRows || []).map((row) => ({
@@ -2117,9 +2124,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             const height = Math.max(0, Number(row.height) || 0)
             if (pcs <= 0 || length <= 0 || breadth <= 0 || height <= 0) return 0
             const lbh = length * breadth * height
-            const volKg = isSurfaceProduct
-                ? ((lbh / 27000) * surfaceCft) * pcs
-                : (lbh / 5000) * pcs
+            const perPieceKg = isSurfaceProduct
+                ? (lbh / 27000) * surfaceCft
+                : lbh / 5000
+            const volKg = applyCustomerContentVolumetricKg(
+                perPieceKg,
+                pcs,
+                customerWeightRoundOff,
+            )
             return kgToProductBookingWeight(volKg, productWeightUnit)
         })
 
@@ -2156,7 +2168,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                 { shouldValidate: false },
             )
         }
-    }, [form, isSurfaceProduct, productWeightUnit, surfaceCft, weightCalcKey]);
+    }, [form, isSurfaceProduct, productWeightUnit, surfaceCft, customerWeightRoundOff, weightCalcKey]);
 
     const chargeWeightTriggerKey = useMemo(
         () =>

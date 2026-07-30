@@ -71,6 +71,46 @@ export function kgToProductBookingWeight(
   return normalizeProductBookingWeight(kg, unit)
 }
 
+export type CustomerWeightRoundOff = 'ROUND_OFF_AT_0' | 'ROUND_OFF_AT_500'
+
+export const DEFAULT_CUSTOMER_WEIGHT_ROUND_OFF: CustomerWeightRoundOff =
+  'ROUND_OFF_AT_0'
+
+/**
+ * Customer kg round-off:
+ * - ROUND_OFF_AT_0 (Round): any fraction → next whole kg
+ * - ROUND_OFF_AT_500 (Roundoff): fraction ≤ 0.5 keep whole; else +1
+ */
+export function applyCustomerKgWeightRoundOff(
+  value: number,
+  mode: CustomerWeightRoundOff | string | null | undefined,
+): number {
+  if (!Number.isFinite(value) || value <= 0) return 0
+  const normalized = String(mode ?? DEFAULT_CUSTOMER_WEIGHT_ROUND_OFF).toUpperCase()
+  const whole = Math.floor(value)
+  const fraction = value - whole
+  if (fraction <= 0) return whole
+  if (normalized === 'ROUND_OFF_AT_500') {
+    return fraction <= 0.5 ? whole : whole + 1
+  }
+  return whole + 1
+}
+
+/**
+ * Volumetric at content (single box) level, then × pieces.
+ * e.g. Round + 12.1 kg/box + 3 pcs → 13 × 3 = 39
+ */
+export function applyCustomerContentVolumetricKg(
+  perPieceKg: number,
+  pieces: number,
+  mode: CustomerWeightRoundOff | string | null | undefined,
+): number {
+  if (!Number.isFinite(perPieceKg) || perPieceKg <= 0) return 0
+  const pcs = Math.max(0, Number(pieces) || 0)
+  if (pcs <= 0) return 0
+  return round2(applyCustomerKgWeightRoundOff(perPieceKg, mode) * pcs)
+}
+
 export function productWeightLabel(
   unit: ProductWeightUnit | string | null | undefined,
 ): string {
