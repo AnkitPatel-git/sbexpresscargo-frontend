@@ -78,8 +78,8 @@ export const DEFAULT_CUSTOMER_WEIGHT_ROUND_OFF: CustomerWeightRoundOff =
 
 /**
  * Customer kg round-off:
- * - ROUND_OFF_AT_0 (Round): any fraction → next whole kg
- * - ROUND_OFF_AT_500 (Roundoff): fraction ≤ 0.5 keep whole; else +1
+ * - ROUND_OFF_AT_0 (Roundup): any fraction → next whole kg
+ * - ROUND_OFF_AT_500 (Round): fraction ≤ 0.5 keep whole; else +1
  */
 export function applyCustomerKgWeightRoundOff(
   value: number,
@@ -98,7 +98,7 @@ export function applyCustomerKgWeightRoundOff(
 
 /**
  * Volumetric at content (single box) level, then × pieces.
- * e.g. Round + 12.1 kg/box + 3 pcs → 13 × 3 = 39
+ * e.g. Roundup + 12.1 kg/box + 3 pcs → 13 × 3 = 39
  */
 export function applyCustomerContentVolumetricKg(
   perPieceKg: number,

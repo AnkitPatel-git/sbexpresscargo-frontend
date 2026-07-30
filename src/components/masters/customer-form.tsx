@@ -724,16 +724,16 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                                                         <SelectValue placeholder="Select round off">
                                                             {(() => {
                                                                 const v = String(field.value ?? '').toUpperCase()
-                                                                if (v === 'ROUND_OFF_AT_0') return 'Round'
-                                                                if (v === 'ROUND_OFF_AT_500') return 'Roundoff'
+                                                                if (v === 'ROUND_OFF_AT_0') return 'Roundup'
+                                                                if (v === 'ROUND_OFF_AT_500') return 'Round'
                                                                 return undefined
                                                             })()}
                                                         </SelectValue>
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="ROUND_OFF_AT_0">Round</SelectItem>
-                                                    <SelectItem value="ROUND_OFF_AT_500">Roundoff</SelectItem>
+                                                    <SelectItem value="ROUND_OFF_AT_0">Roundup</SelectItem>
+                                                    <SelectItem value="ROUND_OFF_AT_500">Round</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </FloatingFormItem>

@@ -62,6 +62,7 @@ export interface TrackingDetailResponse {
     data: {
         awbNo: string;
         currentStatus?: string | null;
+        expectedDeliveryDate?: string | null;
         customerDetails: any;
         podDetails: any;
         forwardingDetails: any;
@@ -139,9 +140,10 @@ export interface ManualUpdatePayload {
     awbNo: string;
     status: string;
     remark?: string;
-    serviceCenterId?: number;
     subStatus?: string;
     location?: string;
+    /** YYYY-MM-DD expected delivery override */
+    expectedDeliveryDate?: string;
 }
 
 export interface DeadLetterLog {

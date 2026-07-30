@@ -691,9 +691,10 @@ export default function TrackingPage() {
                     <DialogHeader>
                         <DialogTitle>Bulk tracking from Excel</DialogTitle>
                         <DialogDescription>
-                            One row per AWB. Use the Status and Sub status dropdowns in the template (values come from the system list).
-                            Sub status is required when Status is DELIVERY_ATTEMPTED. Remove the sample row before uploading.
-                            An &quot;Allowed values&quot; sheet in the template lists every valid option.
+                            One row per AWB. Use separate Date and Time columns for the event (DD/MM/YYYY and HH:mm).
+                            Expected date of delivery is optional (DD/MM/YYYY). Use the Status and Sub status dropdowns
+                            in the template. Sub status is required when Status is DELIVERY_ATTEMPTED. Remove the sample
+                            row before uploading. An &quot;Allowed values&quot; sheet lists every valid option.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
@@ -795,13 +796,16 @@ export default function TrackingPage() {
                     initialData={(() => {
                         const rows = detailData?.data?.statusDetails;
                         const latestStatus = rows && rows.length > 0 ? rows[rows.length - 1] : undefined;
+                        const shipmentEdd = detailData?.data?.expectedDeliveryDate;
                         return latestStatus
                             ? {
                                 status: latestStatus.status,
                                 remark: latestStatus.remarks || latestStatus.remark || "",
-                                serviceCenterId: latestStatus.serviceCenterId ?? undefined,
                                 subStatus: latestStatus.subStatus ?? "",
                                 location: latestStatus.location ?? "",
+                                expectedDeliveryDate: shipmentEdd
+                                    ? String(shipmentEdd).slice(0, 10)
+                                    : "",
                             }
                             : undefined;
                     })()}

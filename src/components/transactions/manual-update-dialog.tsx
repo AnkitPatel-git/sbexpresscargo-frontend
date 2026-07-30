@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/form";
 import {
     FloatingFormItem,
-    FLOATING_INNER_COMBO,
+    FLOATING_INNER_CONTROL,
     FLOATING_INNER_SELECT_TRIGGER,
     FLOATING_INNER_TEXTAREA,
 } from "@/components/ui/floating-form-item";
@@ -35,23 +35,20 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { Textarea } from "@/components/ui/textarea";
 import { trackingService } from "@/services/transactions/tracking-service";
-import { serviceCenterService } from "@/services/masters/service-center-service";
-import { Combobox } from "@/components/ui/combobox";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
 import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
-import { useAuth } from "@/context/auth-context";
-import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 
 const formSchema = z
     .object({
         status: z.string().min(1, "Status is required"),
         remark: z.string().optional(),
-        serviceCenterId: z.number().optional(),
         subStatus: z.string().max(128).optional(),
         location: z.string().max(512).optional(),
+        expectedDeliveryDate: z.string().optional(),
     })
     .superRefine((data, ctx) => {
         if (data.status === "DELIVERY_ATTEMPTED" && !data.subStatus?.trim()) {
@@ -70,53 +67,36 @@ interface ManualUpdateDialogProps {
     initialData?: {
         status: string;
         remark?: string;
-        serviceCenterId?: number;
         subStatus?: string;
         location?: string;
+        expectedDeliveryDate?: string;
     };
 }
 
 export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: ManualUpdateDialogProps) {
     const queryClient = useQueryClient();
-    const { hasPermission, isLoading: authLoading } = useAuth();
-    const canReadServiceCenters = hasMasterLookupForPortalTransaction(
-        hasPermission,
-        MASTER_READ.serviceCenter,
-    );
-
-    const { data: serviceCentersData } = useQuery({
-        queryKey: ["service-centers"],
-        queryFn: () => serviceCenterService.getServiceCenters(),
-        enabled: !authLoading && canReadServiceCenters,
-    });
-
-    const serviceCenterOptions = serviceCentersData?.data?.map(sc => ({
-        label: sc.name,
-        value: sc.id
-    })) || [];
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             status: initialData?.status || "",
             remark: initialData?.remark || "",
-            serviceCenterId: initialData?.serviceCenterId,
             subStatus: initialData?.subStatus || "",
             location: initialData?.location || "",
+            expectedDeliveryDate: initialData?.expectedDeliveryDate || "",
         },
     });
 
     const watchedStatus = useWatch({ control: form.control, name: "status" });
 
-    // Reset form when initialData changes or modal opens
     useEffect(() => {
         if (isOpen && initialData) {
             form.reset({
                 status: initialData.status,
                 remark: initialData.remark || "",
-                serviceCenterId: initialData.serviceCenterId,
                 subStatus: initialData.subStatus || "",
                 location: initialData.location || "",
+                expectedDeliveryDate: initialData.expectedDeliveryDate || "",
             });
         }
     }, [isOpen, initialData, form]);
@@ -125,7 +105,13 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
         mutationFn: (values: z.infer<typeof formSchema>) =>
             trackingService.manualUpdateStatus({
                 awbNo,
-                ...values,
+                status: values.status,
+                remark: values.remark,
+                subStatus: values.subStatus,
+                location: values.location,
+                expectedDeliveryDate: values.expectedDeliveryDate?.trim()
+                    ? values.expectedDeliveryDate.trim()
+                    : undefined,
             }),
         onSuccess: (data) => {
             toast.success(data.message || "Status updated successfully");
@@ -134,8 +120,8 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
             onClose();
             form.reset();
         },
-        onError: (error: any) => {
-            toast.error(error.message || "Failed to update status");
+        onError: (error: unknown) => {
+            toast.error(error instanceof Error ? error.message : "Failed to update status");
         },
     });
 
@@ -176,24 +162,6 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </FloatingFormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="serviceCenterId"
-                            render={({ field }) => (
-                                <FloatingFormItem label="Service Center">
-                                    <FormControl>
-                                        <Combobox
-                                            options={serviceCenterOptions}
-                                            value={field.value}
-                                            onChange={field.onChange}
-                                            placeholder="Select Service Center"
-                                            className={FLOATING_INNER_COMBO}
-                                        />
-                                    </FormControl>
                                 </FloatingFormItem>
                             )}
                         />
@@ -251,6 +219,23 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                                             placeholder="Hub, city, or PIN area"
                                             {...field}
                                             className={FLOATING_INNER_TEXTAREA}
+                                        />
+                                    </FormControl>
+                                </FloatingFormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="expectedDeliveryDate"
+                            render={({ field }) => (
+                                <FloatingFormItem label="Expected date of delivery">
+                                    <FormControl>
+                                        <Input
+                                            type="date"
+                                            {...field}
+                                            value={field.value || ""}
+                                            className={FLOATING_INNER_CONTROL}
                                         />
                                     </FormControl>
                                 </FloatingFormItem>
