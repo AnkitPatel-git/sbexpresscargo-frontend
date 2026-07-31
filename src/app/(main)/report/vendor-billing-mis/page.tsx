@@ -140,6 +140,7 @@ export default function VendorBillingMisReportPage() {
     hasPermission,
     MASTER_READ.serviceCenter,
   );
+  const canRecalculateCharges = hasPermission("shipment.charge.calculate");
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -148,6 +149,7 @@ export default function VendorBillingMisReportPage() {
   const [sortBy, setSortBy] = useState("bookDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<VendorBillingMisFilters>(DEFAULT_FILTERS);
   const [draftFilters, setDraftFilters] = useState<VendorBillingMisFilters>(DEFAULT_FILTERS);
 
@@ -280,6 +282,66 @@ export default function VendorBillingMisReportPage() {
       toast.success("Vendor Billing MIS report exported");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to export Vendor Billing MIS report");
+    }
+  }
+
+  async function handleRecalculateCharges() {
+    const confirmed = window.confirm(
+      "Recalculate vendor charges for all shipments matching the current Vendor Billing MIS filters? Customer charges will not be changed.",
+    );
+    if (!confirmed) return;
+
+    setIsRecalculating(true);
+    const toastId = toast.loading("Starting vendor charge recalculation...", {
+      duration: Infinity,
+    });
+    try {
+      const job = await vendorBillingMisReportService.startRecalculateCharges(listParams);
+      let status = job;
+
+      toast.loading(
+        `Vendor charge recalculation started. Done: ${status.processed} | In queue: ${Math.max(status.total - status.processed, 0)}`,
+        { id: toastId, duration: Infinity },
+      );
+
+      while (status.status === "pending" || status.status === "running") {
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+        status = await vendorBillingMisReportService.getRecalculateChargesStatus(status.id);
+        toast.loading(
+          `Vendor charge recalculation in progress. Done: ${status.processed} | In queue: ${Math.max(status.total - status.processed, 0)}`,
+          { id: toastId, duration: Infinity },
+        );
+      }
+
+      if (status.status === "failed") {
+        throw new Error(status.error || "Vendor charge recalculation failed");
+      }
+
+      const parts = [
+        `Done: ${status.processed}`,
+        "In queue: 0",
+        `${status.recalculated} recalculated`,
+        `${status.skippedNoRate} no vendor rate`,
+        `${status.skippedNoForwarding} skipped (no vendor/service)`,
+      ];
+      if (status.failed.length > 0) {
+        parts.push(`${status.failed.length} failed`);
+      }
+      toast.success(`Vendor charge recalculation completed: ${parts.join(", ")}`, {
+        id: toastId,
+        duration: Infinity,
+      });
+      await queryClient.refetchQueries({ queryKey: ["vendor-billing-mis-report"], type: "active" });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to recalculate vendor charges",
+        {
+          id: toastId,
+          duration: Infinity,
+        },
+      );
+    } finally {
+      setIsRecalculating(false);
     }
   }
 
@@ -543,6 +605,18 @@ export default function VendorBillingMisReportPage() {
               <FileUp className="h-4 w-4" />
               Export Excel
             </Button>
+            {canRecalculateCharges ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 gap-2"
+                onClick={() => void handleRecalculateCharges()}
+                disabled={isRecalculating}
+              >
+                <RefreshCw className={cn("h-4 w-4", isRecalculating ? "animate-spin" : "")} />
+                {isRecalculating ? "Recalculating..." : "Recalculate Charges"}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

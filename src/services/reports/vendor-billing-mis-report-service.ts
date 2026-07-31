@@ -1,5 +1,6 @@
 import { apiFetch } from "@/lib/api-fetch";
 import type {
+  VendorBillingMisChargeRecalcJobStatus,
   VendorBillingMisReportQueryParams,
   VendorBillingMisReportResponse,
 } from "@/types/reports/vendor-billing-mis-report";
@@ -92,5 +93,46 @@ export const vendorBillingMisReportService = {
       blob: await response.blob(),
       filename: parseFilename(response, "vendor-billing-mis-report.xlsx"),
     };
+  },
+
+  async startRecalculateCharges(
+    params?: VendorBillingMisReportQueryParams,
+  ): Promise<VendorBillingMisChargeRecalcJobStatus> {
+    const queryParams = new URLSearchParams();
+    appendParams(queryParams, params);
+    const response = await apiFetch(
+      `${API_URL}/report/vendor-billing-mis/recalculate-charges?${queryParams.toString()}`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(
+        await readError(response, "Failed to recalculate Vendor Billing MIS charges"),
+      );
+    }
+    const payload = (await response.json()) as {
+      success: boolean;
+      data: VendorBillingMisChargeRecalcJobStatus;
+    };
+    return payload.data;
+  },
+
+  async getRecalculateChargesStatus(
+    jobId: string,
+  ): Promise<VendorBillingMisChargeRecalcJobStatus> {
+    const response = await apiFetch(
+      `${API_URL}/report/vendor-billing-mis/recalculate-charges/${jobId}`,
+      { headers: authHeaders() },
+    );
+    if (!response.ok) {
+      throw new Error(await readError(response, "Failed to fetch recalculation status"));
+    }
+    const payload = (await response.json()) as {
+      success: boolean;
+      data: VendorBillingMisChargeRecalcJobStatus;
+    };
+    return payload.data;
   },
 };
