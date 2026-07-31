@@ -151,7 +151,9 @@ export function BaseRateMatrixExcel({ rateMasterId, onImported }: BaseRateMatrix
           <span className="font-medium text-foreground">From Weight</span>,{" "}
           <span className="font-medium text-foreground">To Weight</span>,{" "}
           <span className="font-medium text-foreground">Basis</span> (Flat (kg band), Per kg, Flat (g band), Per 500 g),{" "}
-          <span className="font-medium text-foreground">Rate</span>. Use grams in From/To Weight for gram-based bands.
+          <span className="font-medium text-foreground">Rate</span>, optional{" "}
+          <span className="font-medium text-foreground">Min Amount</span> (zone-pair floor; put on the first weight band row).
+          Use grams in From/To Weight for gram-based bands.
           You can also upload a single-sheet file with only these columns.
         </p>
         <p className="text-sm text-muted-foreground mt-1">
@@ -165,8 +167,8 @@ export function BaseRateMatrixExcel({ rateMasterId, onImported }: BaseRateMatrix
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           <span className="font-medium text-foreground">Slabs sheet:</span> same data with{" "}
-          <span className="font-medium text-foreground">Pricing Mode</span> codes and optional{" "}
-          <span className="font-medium text-foreground">Min Amount</span> per zone pair.
+          <span className="font-medium text-foreground">Pricing Mode</span> codes (FLAT / PER_KG / FLAT_G / PER_500G)
+          and optional <span className="font-medium text-foreground">Min Amount</span>.
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           <span className="font-medium text-foreground">BaseRate sheet:</span> simple zone×zone per-kg matrix — requires{" "}
