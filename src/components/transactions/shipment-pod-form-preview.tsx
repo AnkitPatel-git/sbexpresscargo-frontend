@@ -141,14 +141,13 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                 </div>
 
                 {/* ACCOUNT row — wider CUSTOMER column; row grows for long names */}
-                <div className="grid auto-rows-min grid-cols-[minmax(0,12%)_minmax(0,32%)_minmax(0,18%)_minmax(0,18%)_minmax(0,20%)] border border-t-0 border-black">
+                <div className="grid auto-rows-min grid-cols-[minmax(0,14%)_minmax(0,38%)_minmax(0,24%)_minmax(0,24%)] border border-t-0 border-black">
                     {(
                         [
                             ["ACCOUNT:", fb(shipment.customer?.code)],
                             ["CUSTOMER:", fb(shipment.customer?.name)],
                             ["ORIGIN:", originCity],
                             ["DESTINATION:", destCity],
-                            ["FORWARDING NO.:", fb(shipment.forwarding?.forwardingAwb)],
                         ] as const
                     ).map(([label, value]) => (
                         <div

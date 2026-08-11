@@ -80,6 +80,7 @@ export const hasMasterLookupForShipmentBooking = hasMasterLookupForPortalTransac
 
 export const UTILITY_READ = {
   serviceablePincode: "utility.serviceable_pincode.read",
+  vendorServiceablePincode: "utility.vendor_serviceable_pincode.read",
 } as const;
 
 /** Shipment commercial / charge calculator (separate from shipment.core.*). */

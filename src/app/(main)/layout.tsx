@@ -85,6 +85,7 @@ const headerNavItems = [
   { href: "/masters/products", label: "Product" },
   { href: "/masters/zones", label: "Zone" },
   { href: "/utilities/serviceable-pincodes", label: "Serviceable Pincode" },
+  { href: "/utilities/vendor-serviceable-pincodes", label: "Vendor Pincode" },
   { href: "/masters/countries", label: "Country" },
   { href: "/masters/states", label: "State Master" },
   { href: "/masters/cities", label: "City Master" },
@@ -166,6 +167,12 @@ const MASTER_GROUP_ITEMS = {
       label: "Serviceable Pincode",
       icon: Search,
       permission: "utility.serviceable_pincode.read",
+    },
+    {
+      href: "/utilities/vendor-serviceable-pincodes",
+      label: "Vendor Pincode",
+      icon: Search,
+      permission: "utility.vendor_serviceable_pincode.read",
     },
     {
       href: "/masters/contents",
