@@ -13,6 +13,11 @@ export interface VendorServiceablePincodeVendor {
     vendorName: string;
 }
 
+export interface VendorServiceablePincodeServiceMap {
+    id: number;
+    serviceType: string | null;
+}
+
 export interface VendorServiceablePincodeMasterPin {
     id: number;
     pinCode: string;
@@ -35,6 +40,8 @@ export interface VendorServiceablePincode {
     id: number;
     vendorId: number;
     serviceablePincodeId: number;
+    /** Null = all services for the vendor. */
+    serviceMapId?: number | null;
     zoneId: number;
     serviceable: boolean;
     edl: boolean;
@@ -44,6 +51,7 @@ export interface VendorServiceablePincode {
     areaName?: string | null;
     vendor?: VendorServiceablePincodeVendor | null;
     serviceablePincode?: VendorServiceablePincodeMasterPin | null;
+    serviceMap?: VendorServiceablePincodeServiceMap | null;
     zone?: VendorServiceablePincodeZone | null;
     createdAt?: string;
     updatedAt?: string;
@@ -52,6 +60,8 @@ export interface VendorServiceablePincode {
 export interface VendorServiceablePincodeFormData {
     vendorId: number;
     serviceablePincodeId: number;
+    /** Null/omit = all services. */
+    serviceMapId?: number | null;
     zoneId: number;
     serviceable: boolean;
     edl: boolean;

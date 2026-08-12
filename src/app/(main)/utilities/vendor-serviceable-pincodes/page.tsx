@@ -388,12 +388,13 @@ export default function VendorServiceablePincodesPage() {
                 </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
-                <Table className="min-w-[1200px] border-0">
+                <Table className="min-w-[1280px] border-0">
                     <TableHeader>
                         <TableRow className="border-0 bg-primary hover:bg-primary">
                             <TableHead className="h-11 font-semibold text-primary-foreground">Vendor Code</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Vendor Name</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Pin Code</TableHead>
+                            <TableHead className="font-semibold text-primary-foreground">Service</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">City</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Area</TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Zone</TableHead>
@@ -410,11 +411,11 @@ export default function VendorServiceablePincodesPage() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">Loading vendor pincodes...</TableCell>
+                                <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">Loading vendor pincodes...</TableCell>
                             </TableRow>
                         ) : rows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">No vendor pincodes found.</TableCell>
+                                <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">No vendor pincodes found.</TableCell>
                             </TableRow>
                         ) : (
                             rows.map((row: VendorServiceablePincode, index) => (
@@ -422,6 +423,9 @@ export default function VendorServiceablePincodesPage() {
                                     <TableCell className="font-medium text-foreground">{row.vendor?.vendorCode || '-'}</TableCell>
                                     <TableCell className="text-foreground">{row.vendor?.vendorName || '-'}</TableCell>
                                     <TableCell className="font-medium text-foreground">{row.pinCode ?? row.serviceablePincode?.pinCode ?? '-'}</TableCell>
+                                    <TableCell className="text-foreground">
+                                        {row.serviceMap?.serviceType ?? (row.serviceMapId == null ? 'All' : `-`)}
+                                    </TableCell>
                                     <TableCell className="text-foreground">{row.cityName ?? row.serviceablePincode?.cityName ?? '-'}</TableCell>
                                     <TableCell className="text-foreground">{row.areaName ?? row.serviceablePincode?.areaName ?? '-'}</TableCell>
                                     <TableCell className="text-foreground">{row.zone?.code ?? '-'}</TableCell>
@@ -484,7 +488,7 @@ export default function VendorServiceablePincodesPage() {
                     <DialogHeader>
                         <DialogTitle>Import vendor pincodes</DialogTitle>
                         <DialogDescription>
-                            Download the Excel template (sheet &quot;VendorPincodes&quot;). Use vendor code, master pin code, zone code, and Yes/No for serviceable / EDL. Re-uploading updates existing vendor+pincode mappings.
+                            Download the Excel template (sheet &quot;VendorPincodes&quot;). Use vendor code, master pin code, optional service type (blank = all services), zone code, and Yes/No for serviceable / EDL. Re-uploading updates existing vendor+pincode+service mappings.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col gap-4 py-2">

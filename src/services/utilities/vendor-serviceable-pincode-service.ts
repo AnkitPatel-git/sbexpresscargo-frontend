@@ -26,6 +26,7 @@ export const vendorServiceablePincodeService = {
         vendorCode?: string;
         pinCode?: string;
         zoneId?: number;
+        serviceMapId?: number;
     }): Promise<VendorServiceablePincodeListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page !== undefined) queryParams.append('page', params.page.toString());
@@ -37,6 +38,9 @@ export const vendorServiceablePincodeService = {
         if (params?.vendorCode) queryParams.append('vendorCode', params.vendorCode);
         if (params?.pinCode) queryParams.append('pinCode', params.pinCode);
         if (params?.zoneId !== undefined) queryParams.append('zoneId', params.zoneId.toString());
+        if (params?.serviceMapId !== undefined) {
+            queryParams.append('serviceMapId', params.serviceMapId.toString());
+        }
 
         const response = await apiFetch(
             `${API_BASE_URL}/utilities/vendor-serviceable-pincodes?${queryParams.toString()}`,
@@ -118,6 +122,7 @@ export const vendorServiceablePincodeService = {
         vendorCode?: string;
         pinCode?: string;
         zoneId?: number;
+        serviceMapId?: number;
     }): Promise<{ blob: Blob; filename: string }> {
         const queryParams = new URLSearchParams();
         if (params?.page !== undefined) queryParams.append('page', params.page.toString());
@@ -129,6 +134,9 @@ export const vendorServiceablePincodeService = {
         if (params?.vendorCode) queryParams.append('vendorCode', params.vendorCode);
         if (params?.pinCode) queryParams.append('pinCode', params.pinCode);
         if (params?.zoneId !== undefined) queryParams.append('zoneId', params.zoneId.toString());
+        if (params?.serviceMapId !== undefined) {
+            queryParams.append('serviceMapId', params.serviceMapId.toString());
+        }
 
         const response = await apiFetch(
             `${API_BASE_URL}/utilities/vendor-serviceable-pincodes/export?${queryParams.toString()}`,

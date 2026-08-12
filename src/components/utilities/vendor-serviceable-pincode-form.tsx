@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { vendorServiceablePincodeService } from '@/services/utilities/vendor-serviceable-pincode-service'
 import { vendorService } from '@/services/masters/vendor-service'
+import { serviceMapService } from '@/services/masters/service-map-service'
 import { serviceablePincodeService } from '@/services/utilities/serviceable-pincode-service'
 import { zoneService } from '@/services/masters/zone-service'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -42,6 +43,8 @@ import type { Zone } from '@/types/masters/zone'
 const formSchema = z.object({
     vendorId: z.number().min(1, "Vendor is required"),
     serviceablePincodeId: z.number().min(1, "Master pincode is required"),
+    /** null = all services for the vendor */
+    serviceMapId: z.number().min(1).nullable(),
     zoneId: z.number().min(1, "Zone is required"),
     serviceable: z.boolean(),
     edl: z.boolean(),
@@ -81,6 +84,7 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
 
     const [vendorOpen, setVendorOpen] = useState(false)
     const [pincodeOpen, setPincodeOpen] = useState(false)
+    const [serviceOpen, setServiceOpen] = useState(false)
     const [zoneOpen, setZoneOpen] = useState(false)
     const [vendorSearch, setVendorSearch] = useState('')
     const [pincodeSearch, setPincodeSearch] = useState('')
@@ -120,6 +124,18 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
         }
     })
 
+    const [pickedService, setPickedService] = useState<{
+        id: number
+        serviceType: string
+    } | null>(() =>
+        initialData?.serviceMapId && initialData.serviceMap
+            ? {
+                  id: initialData.serviceMapId,
+                  serviceType: initialData.serviceMap.serviceType ?? `Service #${initialData.serviceMapId}`,
+              }
+            : null,
+    )
+
     const [pickedZone, setPickedZone] = useState<{ id: number; name: string; code: string } | null>(() => {
         const z = initialData?.zone
         if (!z) return null
@@ -131,6 +147,7 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
         defaultValues: {
             vendorId: initialData?.vendorId ?? 0,
             serviceablePincodeId: initialData?.serviceablePincodeId ?? 0,
+            serviceMapId: initialData?.serviceMapId ?? null,
             zoneId: initialData?.zoneId ?? 0,
             serviceable: initialData?.serviceable ?? true,
             edl: Boolean(initialData?.edl),
@@ -140,6 +157,7 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
 
     const selectedVendorId = useWatch({ control: form.control, name: 'vendorId' })
     const selectedPincodeId = useWatch({ control: form.control, name: 'serviceablePincodeId' })
+    const selectedServiceMapId = useWatch({ control: form.control, name: 'serviceMapId' })
     const selectedZoneId = useWatch({ control: form.control, name: 'zoneId' })
 
     const { data: vendorsData, isFetching: isVendorsFetching } = useQuery({
@@ -165,6 +183,13 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
                 sortOrder: 'asc',
             }),
         enabled: pincodeOpen || !!selectedPincodeId,
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const { data: serviceMapsData, isFetching: isServiceMapsFetching } = useQuery({
+        queryKey: ['service-maps-by-vendor-vsp', selectedVendorId],
+        queryFn: () => serviceMapService.getServiceMapsByVendor(selectedVendorId),
+        enabled: selectedVendorId > 0,
         staleTime: 5 * 60 * 1000,
     })
 
@@ -226,6 +251,16 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
         }
         return [...extras, ...fromApi]
     }, [pickedPincode, pincodesData?.data])
+
+    const serviceMapOptions = useMemo(() => {
+        const fromApi = serviceMapsData?.data ?? []
+        const seen = new Set(fromApi.map((s) => s.id))
+        const extras: Array<{ id: number; serviceType: string | null }> = []
+        if (pickedService?.id && !seen.has(pickedService.id)) {
+            extras.push({ id: pickedService.id, serviceType: pickedService.serviceType })
+        }
+        return [...extras, ...fromApi]
+    }, [pickedService, serviceMapsData?.data])
 
     const zoneOptions = useMemo(() => {
         const vendorZones = vendorZonesData?.data ?? []
@@ -290,6 +325,25 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
         return null
     }, [initialData, pickedPincode, pincodeOptions, selectedPincodeId])
 
+    const selectedService = useMemo(() => {
+        if (selectedServiceMapId == null) return null
+        if (pickedService && pickedService.id === selectedServiceMapId) return pickedService
+        const fromList = serviceMapOptions.find((s) => s.id === selectedServiceMapId)
+        if (fromList) {
+            return {
+                id: fromList.id,
+                serviceType: fromList.serviceType ?? `Service #${fromList.id}`,
+            }
+        }
+        if (initialData?.serviceMapId === selectedServiceMapId && initialData.serviceMap) {
+            return {
+                id: initialData.serviceMap.id,
+                serviceType: initialData.serviceMap.serviceType ?? `Service #${initialData.serviceMap.id}`,
+            }
+        }
+        return null
+    }, [initialData, pickedService, selectedServiceMapId, serviceMapOptions])
+
     const selectedZone = useMemo(() => {
         if (pickedZone && pickedZone.id === selectedZoneId) return pickedZone
         const fromOptions = zoneOptions.find((z) => z.id === selectedZoneId)
@@ -313,10 +367,26 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
     }, [zoneOpen])
 
     useEffect(() => {
+        // Changing vendor clears service unless it still belongs to the new vendor list.
+        if (!(selectedVendorId > 0)) {
+            form.setValue('serviceMapId', null)
+            setPickedService(null)
+            return
+        }
+        if (selectedServiceMapId == null) return
+        const stillValid = (serviceMapsData?.data ?? []).some((s) => s.id === selectedServiceMapId)
+        if (!stillValid && pickedService?.id !== selectedServiceMapId) {
+            form.setValue('serviceMapId', null)
+            setPickedService(null)
+        }
+    }, [form, pickedService?.id, selectedServiceMapId, selectedVendorId, serviceMapsData?.data])
+
+    useEffect(() => {
         if (!initialData) return
         form.reset({
             vendorId: initialData.vendorId ?? 0,
             serviceablePincodeId: initialData.serviceablePincodeId ?? 0,
+            serviceMapId: initialData.serviceMapId ?? null,
             zoneId: initialData.zoneId ?? 0,
             serviceable: initialData.serviceable ?? true,
             edl: Boolean(initialData.edl),
@@ -337,6 +407,14 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
                 areaName: initialData.serviceablePincode.areaName ?? initialData.areaName ?? '',
             })
         }
+        if (initialData.serviceMapId && initialData.serviceMap) {
+            setPickedService({
+                id: initialData.serviceMapId,
+                serviceType: initialData.serviceMap.serviceType ?? `Service #${initialData.serviceMapId}`,
+            })
+        } else {
+            setPickedService(null)
+        }
         if (initialData.zone) {
             setPickedZone({
                 id: initialData.zone.id,
@@ -351,6 +429,7 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
             const payload: VendorServiceablePincodeFormData = {
                 vendorId: data.vendorId,
                 serviceablePincodeId: data.serviceablePincodeId,
+                serviceMapId: data.serviceMapId ?? null,
                 zoneId: data.zoneId,
                 serviceable: data.serviceable,
                 edl: data.edl,
@@ -434,6 +513,8 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
                                                                     vendorName: vendor.vendorName,
                                                                     vendorCode: vendor.vendorCode,
                                                                 })
+                                                                form.setValue('serviceMapId', null)
+                                                                setPickedService(null)
                                                                 setVendorOpen(false)
                                                             }}
                                                         >
@@ -526,6 +607,93 @@ export function VendorServiceablePincodeForm({ initialData }: VendorServiceableP
                                                     <div className="flex items-center justify-center p-3 text-sm text-muted-foreground">
                                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                         Loading pincodes...
+                                                    </div>
+                                                ) : null}
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </FloatingFormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="serviceMapId"
+                        render={({ field }) => (
+                            <FloatingFormItem label="Vendor Service (optional)">
+                                <Popover open={serviceOpen} onOpenChange={setServiceOpen}>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                disabled={!(selectedVendorId > 0)}
+                                                className={cn(
+                                                    FLOATING_INNER_COMBO,
+                                                    field.value == null && "text-muted-foreground",
+                                                )}
+                                            >
+                                                <span className="truncate">
+                                                    {selectedService
+                                                        ? selectedService.serviceType
+                                                        : selectedVendorId > 0
+                                                          ? "All services"
+                                                          : "Select vendor first"}
+                                                </span>
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Search service..." />
+                                            <CommandList>
+                                                <CommandEmpty>No service found.</CommandEmpty>
+                                                <CommandGroup className="max-h-64 overflow-auto">
+                                                    <CommandItem
+                                                        value="all-services"
+                                                        onSelect={() => {
+                                                            field.onChange(null)
+                                                            setPickedService(null)
+                                                            setServiceOpen(false)
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                field.value == null ? "opacity-100" : "opacity-0",
+                                                            )}
+                                                        />
+                                                        All services
+                                                    </CommandItem>
+                                                    {serviceMapOptions.map((sm) => (
+                                                        <CommandItem
+                                                            key={sm.id}
+                                                            value={`${sm.serviceType ?? ''} ${sm.id}`}
+                                                            onSelect={() => {
+                                                                field.onChange(sm.id)
+                                                                setPickedService({
+                                                                    id: sm.id,
+                                                                    serviceType: sm.serviceType ?? `Service #${sm.id}`,
+                                                                })
+                                                                setServiceOpen(false)
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    sm.id === field.value ? "opacity-100" : "opacity-0",
+                                                                )}
+                                                            />
+                                                            {sm.serviceType || `Service #${sm.id}`}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                                {isServiceMapsFetching ? (
+                                                    <div className="flex items-center justify-center p-3 text-sm text-muted-foreground">
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Loading services...
                                                     </div>
                                                 ) : null}
                                             </CommandList>
