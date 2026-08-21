@@ -18,7 +18,10 @@ export const MIS_REPORT_COLUMNS = [
   "shipmentTotalValue",
   "baseFreight",
   "totalAmount",
+  "createdBy",
   "createdAt",
+  "updatedBy",
+  "updatedAt",
 ] as const;
 
 export type MisReportColumn = (typeof MIS_REPORT_COLUMNS)[number];

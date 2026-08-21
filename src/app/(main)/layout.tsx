@@ -112,6 +112,7 @@ const headerNavItems = [
   { href: "/transactions/customer-payment", label: "Customer Payment" },
   { href: "/transactions/receipt", label: "Receipts" },
   { href: "/report/mis", label: "MIS Report" },
+  { href: "/report/dimension-mis", label: "Dimension MIS Report" },
   { href: "/report/billing-mis", label: "Billing MIS Report" },
   { href: "/report/vendor-billing-mis", label: "Vendor Billing MIS Report" },
   { href: "/report/operations-mis", label: "Operations MIS Report" },
@@ -1246,6 +1247,17 @@ const SidebarContent = ({
                 MIS Report
               </LinkItem>
             </PermissionGuard>
+            <PermissionGuard permission="report.dimension_mis.read">
+              <LinkItem
+                href="/report/dimension-mis"
+                active={isActive("/report/dimension-mis")}
+                icon={ClipboardList}
+                showTextOverride
+                inFlyout
+              >
+                Dimension MIS Report
+              </LinkItem>
+            </PermissionGuard>
             <PermissionGuard permission="report.billing_mis.read">
               <LinkItem
                 href="/report/billing-mis"
@@ -1345,6 +1357,17 @@ const SidebarContent = ({
                     inFlyout
                   >
                     MIS Report
+                  </LinkItem>
+                </PermissionGuard>
+                <PermissionGuard permission="report.dimension_mis.read">
+                  <LinkItem
+                    href="/report/dimension-mis"
+                    active={isActive("/report/dimension-mis")}
+                    icon={ClipboardList}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Dimension MIS Report
                   </LinkItem>
                 </PermissionGuard>
                 <PermissionGuard permission="report.billing_mis.read">

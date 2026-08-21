@@ -54,6 +54,7 @@ const PORTAL_TRANSACTION_MASTER_LOOKUP = [
   "transaction.customer_payment.update",
   "transaction.customer_payment.all",
   "report.mis.read",
+  "report.dimension_mis.read",
   "report.billing_mis.read",
   "report.vendor_billing_mis.read",
   "report.dp_batch.read",

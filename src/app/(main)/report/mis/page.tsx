@@ -81,9 +81,14 @@ const DEFAULT_COLUMNS: MisReportColumn[] = [
   "chargeWeight",
   "totalAmount",
   "currentStatus",
+  "createdBy",
+  "createdAt",
+  "updatedBy",
+  "updatedAt",
 ];
 
-const REPORT_DATE_COLUMNS = new Set<MisReportColumn>(["bookDate", "createdAt"]);
+const REPORT_DATE_COLUMNS = new Set<MisReportColumn>(["bookDate"]);
+const REPORT_DATETIME_COLUMNS = new Set<MisReportColumn>(["createdAt", "updatedAt"]);
 
 const COLUMN_LABELS: Record<MisReportColumn, string> = {
   awbNo: "AWB No",
@@ -105,7 +110,10 @@ const COLUMN_LABELS: Record<MisReportColumn, string> = {
   shipmentTotalValue: "Shipment Value",
   baseFreight: "Base Freight",
   totalAmount: "Total Amount",
+  createdBy: "Created By",
   createdAt: "Created At",
+  updatedBy: "Updated By",
+  updatedAt: "Updated At",
 };
 
 const STATUS_OPTIONS = [
@@ -349,7 +357,7 @@ export default function MisReportPage() {
   const formatCell = (column: MisReportColumn, value: string | number | null) => {
     if (value == null || value === "") return "—";
     const dateValue = typeof value === "number" ? String(value) : value;
-    if (column === "createdAt") return formatReportDateTime(dateValue);
+    if (REPORT_DATETIME_COLUMNS.has(column)) return formatReportDateTime(dateValue);
     if (REPORT_DATE_COLUMNS.has(column)) return formatReportDate(dateValue);
     return String(value);
   };
