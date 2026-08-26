@@ -104,6 +104,7 @@ import { serviceablePincodeService } from '@/services/utilities/serviceable-pinc
 import {
     EWAYBILL_MANDATORY_INVOICE_THRESHOLD,
     getEwaybillRequiredMessage,
+    resolveShipmentInvoiceValue,
     roundShipmentTotalValue,
     createShipmentSchema,
     ShipmentFormValues,
@@ -292,8 +293,8 @@ const buildShipmentFormValues = (shipment?: Shipment | null): ShipmentFormValues
         productId: shipmentRef?.productId || 0,
         vendorId: shipmentRef?.vendorId || 0,
         serviceMapId: shipmentRef?.serviceMapId || 0,
-        shipmentValue: shipmentRef?.shipmentValue ?? 0,
-        shipmentTotalValue: shipmentRef?.shipmentTotalValue ?? 0,
+        shipmentValue: normalizeNumberValue(shipmentRef?.shipmentValue) ?? 0,
+        shipmentTotalValue: normalizeNumberValue(shipmentRef?.shipmentTotalValue) ?? 0,
         invoiceDate: toOptionalDateInputValue(shipmentRef?.invoiceDate),
         invoiceNumber: strOrEmpty(shipmentRef?.invoiceNumber),
         fromZoneId: shipmentRef?.fromZoneId || 0,
@@ -1480,15 +1481,46 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const watchedReversePickup = form.watch('reversePickup')
     const watchedAppointmentDelivery = form.watch('appointmentDelivery')
     const watchedShipmentTotalValue = form.watch('shipmentTotalValue')
-    const isEwaybillRequired =
-        Number(watchedShipmentTotalValue) > EWAYBILL_MANDATORY_INVOICE_THRESHOLD
+    const watchedShipmentValue = form.watch('shipmentValue')
     const watchedActualWeight = form.watch('actualWeight')
     const watchedVolumetricWeight = form.watch('volumetricWeight')
     const watchedIsEdl = form.watch('isEdl')
     const watchedOdaEdlDistanceKm = form.watch('odaEdlDistanceKm')
     const watchedPiecesRowsForPricing = form.watch('piecesRows')
+    const watchedEwaybillNumber = form.watch('ewaybillNumber')
+    const isEwaybillRequired =
+        resolveShipmentInvoiceValue(
+            watchedShipmentTotalValue,
+            watchedShipmentValue,
+            watchedPiecesRowsForPricing,
+        ) > EWAYBILL_MANDATORY_INVOICE_THRESHOLD
     const watchedShipperPinCode = form.watch('shipper.pinCode')
     const watchedConsigneePinCode = form.watch('consignee.pinCode')
+
+    useEffect(() => {
+        const message = getEwaybillRequiredMessage(
+            watchedShipmentTotalValue,
+            watchedShipmentValue,
+            watchedEwaybillNumber,
+            watchedPiecesRowsForPricing,
+        )
+        const current = form.getFieldState('ewaybillNumber').error?.message
+        if (message) {
+            if (current !== message) {
+                form.setError('ewaybillNumber', { type: 'manual', message })
+            }
+            return
+        }
+        if (current) {
+            form.clearErrors('ewaybillNumber')
+        }
+    }, [
+        form,
+        watchedEwaybillNumber,
+        watchedPiecesRowsForPricing,
+        watchedShipmentTotalValue,
+        watchedShipmentValue,
+    ])
 
     const { data: customerVolumetricsData } = useQuery({
         queryKey: ['shipment-customer-volumetrics', watchedCustomerId],
@@ -2160,8 +2192,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         if (nextVolumetricWeight > 0) {
             form.clearErrors('volumetricWeight')
         }
-        // On edit, preserve backend booking total until user changes piece/item rows.
-        if (!(isEditRef.current && !form.formState.isDirty)) {
+        if (!(isEditRef.current && !form.formState.isDirty) && bookingTotalValue > 0) {
             form.setValue(
                 'shipmentTotalValue',
                 roundShipmentTotalValue(bookingTotalValue) ?? 0,
@@ -2571,6 +2602,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             values.shipmentTotalValue,
             values.shipmentValue,
             values.ewaybillNumber,
+            values.piecesRows,
         )
         if (ewaybillMessage) {
             form.setError('ewaybillNumber', { type: 'manual', message: ewaybillMessage })

@@ -12,6 +12,39 @@ import {
 /** E-waybill is mandatory when invoice value exceeds this amount (Indian GST rules). */
 export const EWAYBILL_MANDATORY_INVOICE_THRESHOLD = 50_000;
 
+function toInvoiceAmount(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.replace(/,/g, "").trim());
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+  return NaN;
+}
+
+/** Highest of header invoice value and piece-item totals. */
+export function resolveShipmentInvoiceValue(
+  shipmentTotalValue: unknown,
+  shipmentValue?: unknown,
+  piecesRows?: Array<{ items?: Array<{ totalValue?: unknown }> | null }> | null,
+): number {
+  const pieceSum = (piecesRows ?? []).reduce((sum, row) => {
+    return (
+      sum +
+      (row.items ?? []).reduce((itemSum, item) => {
+        const amount = toInvoiceAmount(item.totalValue);
+        return itemSum + (Number.isFinite(amount) ? amount : 0);
+      }, 0)
+    );
+  }, 0);
+  const header = toInvoiceAmount(shipmentTotalValue);
+  const fallback = toInvoiceAmount(shipmentValue);
+  return Math.max(
+    Number.isFinite(header) ? header : 0,
+    Number.isFinite(fallback) ? fallback : 0,
+    pieceSum,
+  );
+}
+
 export const SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES = 2;
 export const SHIPMENT_ACTUAL_WEIGHT_DECIMAL_PLACES = 2;
 
@@ -47,12 +80,14 @@ export function getEwaybillRequiredMessage(
   shipmentTotalValue: number | undefined | null,
   shipmentValue: number | undefined | null,
   ewaybillNumber: string | undefined | null,
+  piecesRows?: Array<{ items?: Array<{ totalValue?: unknown }> | null }> | null,
 ): string | null {
-  const invoiceValue = Number(shipmentTotalValue ?? shipmentValue);
-  if (
-    !Number.isFinite(invoiceValue) ||
-    invoiceValue <= EWAYBILL_MANDATORY_INVOICE_THRESHOLD
-  ) {
+  const invoiceValue = resolveShipmentInvoiceValue(
+    shipmentTotalValue,
+    shipmentValue,
+    piecesRows,
+  );
+  if (invoiceValue <= EWAYBILL_MANDATORY_INVOICE_THRESHOLD) {
     return null;
   }
   const ewaybill =
@@ -360,6 +395,20 @@ function appendShipmentValidation(
       code: z.ZodIssueCode.custom,
       path: ["shipmentTotalValue"],
       message: `Invoice value can have at most ${SHIPMENT_TOTAL_VALUE_DECIMAL_PLACES} decimal places`,
+    })
+  }
+
+  const ewaybillMessage = getEwaybillRequiredMessage(
+    values.shipmentTotalValue,
+    values.shipmentValue,
+    values.ewaybillNumber,
+    values.piecesRows,
+  )
+  if (ewaybillMessage) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["ewaybillNumber"],
+      message: ewaybillMessage,
     })
   }
 

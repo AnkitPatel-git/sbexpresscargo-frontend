@@ -60,7 +60,7 @@ export function ExpressOutboundSummary({ data }: { data: OperationSummary | unde
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <PillTitle>Outbound Summary</PillTitle>
+        <PillTitle>Outbound Summary (Forward)</PillTitle>
         <button type="button" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted" aria-label="Menu">
           <Menu className="h-4 w-4" />
         </button>
@@ -95,7 +95,7 @@ export function ExpressInboundSummary({ data }: { data: OperationSummary | undef
   return (
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <PillTitle>Inbound Summary</PillTitle>
+        <PillTitle>Inbound Summary (Reverse Pickup)</PillTitle>
         <button type="button" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted" aria-label="Menu">
           <Menu className="h-4 w-4" />
         </button>
