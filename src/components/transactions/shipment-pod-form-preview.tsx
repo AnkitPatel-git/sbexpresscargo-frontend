@@ -44,11 +44,19 @@ function formatDrsPieceAwb(awbNo: string, pieceIndex: number): string {
     return `${awbNo.trim()}.${String(n).padStart(3, "0")}`;
 }
 
+type DrsPieceRow = {
+    pieces?: number | null;
+    length?: number | null;
+    breadth?: number | null;
+    height?: number | null;
+    volumetricWeight?: number | null;
+};
+
 function expandDrsPieceCopies(
     awbNo: string,
     rows: Shipment["piecesRows"] | null | undefined,
 ): Array<{ awbNo: string; pieceLabel: string; dimensionLine: string }> {
-    const sourceRows = rows?.length ? rows : [{}];
+    const sourceRows: DrsPieceRow[] = rows?.length ? rows : [{}];
     const drafts: Array<{ dimensionLine: string }> = [];
     for (const row of sourceRows) {
         const count = Math.max(1, Math.trunc(Number(row.pieces ?? 1)) || 1);
