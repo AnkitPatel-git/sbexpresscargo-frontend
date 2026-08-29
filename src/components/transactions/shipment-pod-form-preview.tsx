@@ -39,6 +39,41 @@ function formatDrsReferenceNo(raw?: string | null): string {
     return parts.join(",");
 }
 
+function formatDrsPieceAwb(awbNo: string, pieceIndex: number): string {
+    const n = Number.isInteger(pieceIndex) && pieceIndex > 0 ? pieceIndex : 1;
+    return `${awbNo.trim()}.${String(n).padStart(3, "0")}`;
+}
+
+function expandDrsPieceCopies(
+    awbNo: string,
+    rows: Shipment["piecesRows"] | null | undefined,
+): Array<{ awbNo: string; pieceLabel: string; dimensionLine: string }> {
+    const sourceRows = rows?.length ? rows : [{}];
+    const drafts: Array<{ dimensionLine: string }> = [];
+    for (const row of sourceRows) {
+        const count = Math.max(1, Math.trunc(Number(row.pieces ?? 1)) || 1);
+        const l = row.length != null && Number.isFinite(Number(row.length)) ? Number(row.length) : 0;
+        const b = row.breadth != null && Number.isFinite(Number(row.breadth)) ? Number(row.breadth) : 0;
+        const h = row.height != null && Number.isFinite(Number(row.height)) ? Number(row.height) : 0;
+        const volTotal =
+            row.volumetricWeight != null && Number.isFinite(Number(row.volumetricWeight))
+                ? Number(row.volumetricWeight)
+                : null;
+        const volEach = volTotal != null ? volTotal / count : null;
+        const dimensionLine =
+            volEach != null ? `${l}*${b}*${h}=${volEach.toFixed(3)}` : `${l}*${b}*${h}`;
+        for (let i = 0; i < count; i += 1) {
+            drafts.push({ dimensionLine });
+        }
+    }
+    const totalPieces = drafts.length;
+    return drafts.map((draft, index) => ({
+        awbNo: formatDrsPieceAwb(awbNo, index + 1),
+        pieceLabel: `${index + 1}/${totalPieces}`,
+        dimensionLine: draft.dimensionLine,
+    }));
+}
+
 function stateFrom(
     entity: Shipment["shipper"] | Shipment["consignee"],
 ): string {
@@ -64,21 +99,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
         consignee?.serviceablePincode?.cityName?.trim().toUpperCase() ||
         (shipment.destination?.split(",").pop()?.trim().toUpperCase() ?? "—");
 
-    const piecesTotal =
-        shipment.pieces ??
-        ((shipment.piecesRows || []).reduce((s, r) => s + (Number(r.pieces) || 0), 0) ||
-            1);
-
-    const first = (shipment.piecesRows || [])[0];
-    const l = first?.length != null ? Number(first.length) : 0;
-    const b = first?.breadth != null ? Number(first.breadth) : 0;
-    const h = first?.height != null ? Number(first.height) : 0;
-    const volSum = (shipment.piecesRows || []).reduce(
-        (s, r) => s + (Number(r.volumetricWeight) || 0),
-        0,
-    );
-    const cw = shipment.chargeWeight != null ? Number(shipment.chargeWeight) : volSum;
-    const dimensionLine = `${l}*${b}*${h}*${piecesTotal}=${Number.isFinite(cw) ? cw.toFixed(3) : "0.000"}`;
+    const copies = expandDrsPieceCopies(shipment.awbNo, shipment.piecesRows);
 
     const goodsNames = new Set<string>();
     for (const row of shipment.piecesRows || []) {
@@ -104,10 +125,14 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
     const val = "text-[11px] font-normal leading-snug break-words min-h-[1.1rem]";
 
     return (
+        <div className="space-y-8">
+            {copies.map((copy, pageIndex) => (
         <div
+            key={copy.awbNo}
             className={cn(
                 "overflow-x-auto rounded-sm border-2 border-black bg-white text-black shadow-sm",
                 "print:shadow-none print:border-black",
+                pageIndex < copies.length - 1 && "print:break-after-page",
             )}
         >
             <div className="min-w-[520px] p-2 sm:min-w-0 sm:p-3">
@@ -122,7 +147,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                                 height={72}
                                 className="h-[52px] w-full bg-white object-contain object-center"
                                 style={{ backgroundColor: "#ffffff" }}
-                                priority
+                                priority={pageIndex === 0}
                             />
                         </div>
                     </div>
@@ -134,6 +159,9 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                         ))}
                     </div>
                     <div className="flex min-h-[78px] min-w-0 flex-col items-center justify-center px-1 py-1 text-center">
+                        <div className="text-[11px] font-bold leading-tight break-all">
+                            {copy.awbNo}
+                        </div>
                         <div className="text-[8px] font-medium text-neutral-500">
                             AWB barcode on downloaded PDF
                         </div>
@@ -209,7 +237,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                         <div className={cn(cell, "flex min-h-[4rem] flex-1 flex-col")}>
                             <div className={lbl}>DIMENSION IN CM:</div>
                             <div className="flex min-h-0 flex-1 items-center justify-center px-0.5 py-1 text-center text-[10px] leading-tight break-words">
-                                {dimensionLine}
+                                {copy.dimensionLine}
                             </div>
                         </div>
                     </div>
@@ -236,7 +264,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                     <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black py-0.5")}>
                         <div className={lbl}>PIECES:</div>
                         <div className="flex min-h-[1.75rem] flex-1 items-center justify-center text-base font-bold">
-                            {piecesTotal}
+                            {copy.pieceLabel}
                         </div>
                     </div>
                     <div className={cn(cell, "flex min-h-0 min-w-0 flex-col border-r border-black py-0.5")}>
@@ -322,6 +350,8 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                 <p className="mt-2 text-center text-[10px] font-bold">*** Subject to Mumbai Jurisdiction ***</p>
                 <p className="pb-1 text-center text-xs font-bold">THANK YOU FOR COUNTING ON SB Express Cargo</p>
             </div>
+        </div>
+            ))}
         </div>
     );
 }

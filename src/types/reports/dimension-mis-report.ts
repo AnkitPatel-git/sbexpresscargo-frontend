@@ -26,7 +26,7 @@ export interface DimensionMisReportQueryParams {
   sortOrder?: "asc" | "desc";
   awbNo?: string;
   forwardingAwb?: string;
-  ewaybillNumber?: string;
+  referenceNo?: string;
   bookDateFrom?: string;
   bookDateTo?: string;
   customerId?: number;

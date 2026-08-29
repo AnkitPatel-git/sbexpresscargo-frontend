@@ -42,6 +42,7 @@ import {
     bulkUploadLogService,
     canDownloadBulkUploadErrorsCsv,
 } from "@/services/utilities/bulk-upload-log-service"
+import { BulkUploadOriginalFileButton } from "@/components/utilities/bulk-upload-original-file-button"
 import { VendorServiceablePincode } from "@/types/utilities/vendor-serviceable-pincode"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useAuth } from "@/context/auth-context"
@@ -530,6 +531,12 @@ export default function VendorServiceablePincodesPage() {
                                 <p className="font-medium text-foreground">
                                     {importSummary.created} added · {importSummary.updated} updated · {importSummary.failed} failed
                                 </p>
+                                {importSummary.bulkUploadLogId != null ? (
+                                    <BulkUploadOriginalFileButton
+                                        logId={importSummary.bulkUploadLogId}
+                                        className="w-full gap-2"
+                                    />
+                                ) : null}
                                 {(importSummary.created > 0 || importSummary.updated > 0) && (
                                     <div>
                                         <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Successful rows</p>

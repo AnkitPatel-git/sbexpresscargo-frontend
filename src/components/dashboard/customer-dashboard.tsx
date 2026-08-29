@@ -75,7 +75,7 @@ export function CustomerDashboard() {
   });
 
   const buckets = opsData?.data.outbound.buckets;
-  const summary = opsData?.data.outbound.summary;
+  const kpis = opsData?.data.kpis;
 
   const applyFilters = () => {
     void refetch();
@@ -187,10 +187,10 @@ export function CustomerDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total bookings"
-          value={summary?.booking ?? 0}
+          value={kpis?.totalBooking ?? 0}
           icon={Package}
           color="purple"
-          description="Shipments you booked in this period"
+          description="All bookings that are not deleted"
         />
         <StatsCard
           title="Out for delivery"

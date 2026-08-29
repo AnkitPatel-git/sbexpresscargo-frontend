@@ -33,6 +33,7 @@ import {
     bulkUploadLogService,
     canDownloadBulkUploadErrorsCsv,
 } from "@/services/utilities/bulk-upload-log-service"
+import { BulkUploadOriginalFileButton } from "@/components/utilities/bulk-upload-original-file-button"
 import { Content } from "@/types/masters/content"
 import { PermissionGuard } from "@/components/auth/permission-guard"
 import { useDebounce } from "@/hooks/use-debounce"
@@ -379,6 +380,12 @@ export default function ContentsPage() {
                                 <p className="font-medium text-foreground">
                                     Created {importSummary.created}; Failed {importSummary.failed}
                                 </p>
+                                {importSummary.bulkUploadLogId != null ? (
+                                    <BulkUploadOriginalFileButton
+                                        logId={importSummary.bulkUploadLogId}
+                                        className="mt-2 w-full gap-2"
+                                    />
+                                ) : null}
                                 {importSummary.failures.length > 0 ? (
                                     <div className="mt-2 space-y-2">
                                         <div className="max-h-32 overflow-auto text-muted-foreground">

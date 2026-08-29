@@ -20,6 +20,7 @@ import {
     bulkUploadLogService,
     canDownloadBulkUploadErrorsCsv,
 } from "@/services/utilities/bulk-upload-log-service"
+import { BulkUploadOriginalFileButton } from "@/components/utilities/bulk-upload-original-file-button"
 
 type MasterExcelImportButtonProps = {
     master: string
@@ -163,6 +164,9 @@ export function MasterExcelImportButton({ master, label, queryKey }: MasterExcel
                                 <p className="font-medium text-foreground">
                                     {summary.created} added · {summary.failed} failed
                                 </p>
+                                {summary.bulkUploadLogId != null ? (
+                                    <BulkUploadOriginalFileButton logId={summary.bulkUploadLogId} className="w-full gap-2" />
+                                ) : null}
                                 {summary.successes.length > 0 ? (
                                     <div>
                                         <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Successful rows</p>

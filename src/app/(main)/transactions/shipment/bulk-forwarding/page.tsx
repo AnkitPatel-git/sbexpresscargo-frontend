@@ -22,6 +22,7 @@ import {
   bulkUploadLogService,
   canDownloadBulkUploadErrorsCsv,
 } from "@/services/utilities/bulk-upload-log-service";
+import { BulkUploadOriginalFileButton } from "@/components/utilities/bulk-upload-original-file-button";
 
 export default function ShipmentBulkForwardingPage() {
   const queryClient = useQueryClient();
@@ -173,6 +174,9 @@ export default function ShipmentBulkForwardingPage() {
           <p className="text-sm font-medium">
             Updated: {summary.updated} · Failed: {summary.failed}
           </p>
+          {summary.bulkUploadLogId != null ? (
+            <BulkUploadOriginalFileButton logId={summary.bulkUploadLogId} className="gap-2" />
+          ) : null}
           {summary.successes.length > 0 && (
             <div>
               <p className="mb-2 text-sm font-medium text-muted-foreground">Successful rows</p>

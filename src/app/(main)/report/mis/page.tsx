@@ -44,7 +44,7 @@ import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-p
 type MisReportFilters = {
   awbNo: string;
   forwardingAwb: string;
-  ewaybillNumber: string;
+  referenceNo: string;
   bookDateFrom: string;
   bookDateTo: string;
   customerId?: number;
@@ -60,14 +60,14 @@ type MisReportFilters = {
 const DEFAULT_FILTERS: MisReportFilters = {
   awbNo: "",
   forwardingAwb: "",
-  ewaybillNumber: "",
+  referenceNo: "",
   bookDateFrom: "",
   bookDateTo: "",
 };
 
 const DEFAULT_COLUMNS: MisReportColumn[] = [
   "awbNo",
-  "ewaybillNumber",
+  "referenceNo",
   "forwardingAwb",
   "bookDate",
   "customerName",
@@ -93,7 +93,7 @@ const REPORT_DATETIME_COLUMNS = new Set<MisReportColumn>(["createdAt", "updatedA
 const COLUMN_LABELS: Record<MisReportColumn, string> = {
   awbNo: "AWB No",
   forwardingAwb: "FWD. No",
-  ewaybillNumber: "Ref No",
+  referenceNo: "Ref No",
   bookDate: "Booking Date",
   customerName: "Customer Name",
   shipperName: "Shipper Name",
@@ -424,9 +424,10 @@ export default function MisReportPage() {
                 />
                 <Input
                   placeholder="Ref No"
-                  value={draftFilters.ewaybillNumber}
+                  maxLength={225}
+                  value={draftFilters.referenceNo}
                   onChange={(event) =>
-                    setDraftFilters((prev) => ({ ...prev, ewaybillNumber: event.target.value }))
+                    setDraftFilters((prev) => ({ ...prev, referenceNo: event.target.value }))
                   }
                 />
                 <Input

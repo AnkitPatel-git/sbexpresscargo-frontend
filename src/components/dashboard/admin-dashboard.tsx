@@ -11,6 +11,7 @@ import {
   Truck,
   TrendingUp,
   TrendingDown,
+  MapPin,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 
@@ -246,22 +247,22 @@ export function AdminDashboard() {
           <div className="grid gap-4 md:grid-cols-3">
             <StatsCard
               title="Total Bookings"
-              value={opsData?.data.outbound.summary.booking ?? 0}
+              value={opsData?.data.kpis?.totalBooking ?? 0}
               icon={Package}
               color="purple"
-              description="Number of shipments booked"
+              description="All bookings that are not deleted"
             />
             <StatsCard
-              title="Manifesting"
-              value={opsData?.data.outbound.summary.manifesting ?? 0}
-              icon={Package}
+              title="In Transit"
+              value={opsData?.data.kpis?.inTransit ?? 0}
+              icon={Truck}
               color="blue"
-              description="Active manifest events"
+              description="From booking until delivered or cancelled"
             />
             <StatsCard
               title="Successful Deliveries"
-              value={opsData?.data.inbound.summary.delivered ?? 0}
-              icon={Truck}
+              value={opsData?.data.kpis?.successfulDeliveries ?? 0}
+              icon={MapPin}
               color="green"
               description="Completed deliveries"
             />

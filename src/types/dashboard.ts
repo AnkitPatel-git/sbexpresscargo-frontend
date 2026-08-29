@@ -8,6 +8,11 @@ export interface OperationSummary {
         serviceCenterCode?: string | null;
         serviceCenterName?: string | null;
     };
+    kpis?: {
+        totalBooking: number;
+        inTransit: number;
+        successfulDeliveries: number;
+    };
     outbound: {
         summary: {
             pickupInscan: number;

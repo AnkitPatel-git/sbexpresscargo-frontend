@@ -28,7 +28,7 @@ function appendParams(queryParams: URLSearchParams, params?: MisReportQueryParam
 
   if (params?.awbNo) queryParams.append("awbNo", params.awbNo);
   if (params?.forwardingAwb) queryParams.append("forwardingAwb", params.forwardingAwb);
-  if (params?.ewaybillNumber) queryParams.append("ewaybillNumber", params.ewaybillNumber);
+  if (params?.referenceNo) queryParams.append("referenceNo", params.referenceNo);
   if (params?.bookDateFrom) queryParams.append("bookDateFrom", params.bookDateFrom);
   if (params?.bookDateTo) queryParams.append("bookDateTo", params.bookDateTo);
   if (params?.customerId) queryParams.append("customerId", String(params.customerId));

@@ -1,7 +1,7 @@
 export const MIS_REPORT_COLUMNS = [
   "awbNo",
   "forwardingAwb",
-  "ewaybillNumber",
+  "referenceNo",
   "bookDate",
   "customerName",
   "shipperName",
@@ -49,7 +49,7 @@ export interface MisReportQueryParams {
   sortOrder?: "asc" | "desc";
   awbNo?: string;
   forwardingAwb?: string;
-  ewaybillNumber?: string;
+  referenceNo?: string;
   bookDateFrom?: string;
   bookDateTo?: string;
   customerId?: number;

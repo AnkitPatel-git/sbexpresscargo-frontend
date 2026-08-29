@@ -24,6 +24,7 @@ import {
   bulkUploadLogService,
   canDownloadBulkUploadErrorsCsv,
 } from "@/services/utilities/bulk-upload-log-service";
+import { BulkUploadOriginalFileButton } from "@/components/utilities/bulk-upload-original-file-button";
 
 export default function ShipmentBulkImportPage() {
   const queryClient = useQueryClient();
@@ -254,6 +255,9 @@ export default function ShipmentBulkImportPage() {
           <p className="text-sm font-medium">
             Created: {summary.created} · Updated: {summary.updated} · Failed: {summary.failed}
           </p>
+          {summary.bulkUploadLogId != null ? (
+            <BulkUploadOriginalFileButton logId={summary.bulkUploadLogId} className="gap-2" />
+          ) : null}
           {summary.failed > 0 && summary.created === 0 && summary.updated === 0 ? (
             <p className="text-sm text-destructive">
               No shipments were saved. Fix the failed rows below and upload the file again.

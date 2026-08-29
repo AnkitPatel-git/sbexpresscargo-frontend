@@ -341,6 +341,7 @@ export default function OperationsMisReportPage() {
                   />
                   <Input
                     placeholder="Reference No"
+                    maxLength={225}
                     value={draftFilters.referenceNo}
                     onChange={(event) =>
                       setDraftFilters((prev) => ({ ...prev, referenceNo: event.target.value }))

@@ -384,7 +384,9 @@ export default function ShipmentsPage() {
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="Book Date" field="bookDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
-              <TableHead className="font-semibold text-primary-foreground">Forwarding Date</TableHead>
+              <TableHead className="font-semibold text-primary-foreground">
+                <SortableColumnHeader label="Forwarding Date" field="forwardingDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+              </TableHead>
               <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Shipper</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Consignee</TableHead>

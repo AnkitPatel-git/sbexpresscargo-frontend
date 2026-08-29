@@ -61,9 +61,9 @@ interface DashboardMetricsProps {
     cashOutstanding: number;
   };
   operationSummary: {
-    booking: number;
-    manifesting: number;
-    delivered: number;
+    totalBooking: number;
+    inTransit: number;
+    successfulDeliveries: number;
   };
 }
 
@@ -101,21 +101,21 @@ export function DashboardMetrics({ salesTotal, operationSummary }: DashboardMetr
       />
       <StatsCard
         title="Total Bookings"
-        value={operationSummary.booking}
+        value={operationSummary.totalBooking}
         icon={Package}
         color="purple"
-        description="Number of shipments booked"
+        description="All bookings that are not deleted"
       />
       <StatsCard
-        title="Manifesting"
-        value={operationSummary.manifesting}
-        icon={Package}
+        title="In Transit"
+        value={operationSummary.inTransit}
+        icon={Truck}
         color="primary"
-        description="Active manifest events"
+        description="From booking until delivered or cancelled"
       />
       <StatsCard
-        title="Delivered"
-        value={operationSummary.delivered}
+        title="Successful Deliveries"
+        value={operationSummary.successfulDeliveries}
         icon={Truck}
         color="green"
         description="Successfully delivered"

@@ -42,7 +42,7 @@ import { MASTER_READ, hasMasterLookupForPortalTransaction } from "@/lib/portal-p
 type DimensionMisFilters = {
   awbNo: string;
   forwardingAwb: string;
-  ewaybillNumber: string;
+  referenceNo: string;
   bookDateFrom: string;
   bookDateTo: string;
   customerId?: number;
@@ -58,7 +58,7 @@ type DimensionMisFilters = {
 const DEFAULT_FILTERS: DimensionMisFilters = {
   awbNo: "",
   forwardingAwb: "",
-  ewaybillNumber: "",
+  referenceNo: "",
   bookDateFrom: "",
   bookDateTo: "",
 };
@@ -360,10 +360,11 @@ export default function DimensionMisReportPage() {
                     }
                   />
                   <Input
-                    placeholder="Ewaybill No"
-                    value={draftFilters.ewaybillNumber}
+                    placeholder="Ref No"
+                    maxLength={225}
+                    value={draftFilters.referenceNo}
                     onChange={(event) =>
-                      setDraftFilters((prev) => ({ ...prev, ewaybillNumber: event.target.value }))
+                      setDraftFilters((prev) => ({ ...prev, referenceNo: event.target.value }))
                     }
                   />
                   <Input
