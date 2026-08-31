@@ -1,11 +1,11 @@
 info:
-  name: PATCH /api/mobile/notifications/read-all
+  name: GET /api/mobile/lookup/shipment-tracking-statuses
   type: http
-  seq: 3
+  seq: 99
 
 http:
-  method: PATCH
-  url: "{{baseUrl}}/api/mobile/notifications/read-all"
+  method: GET
+  url: "{{baseUrl}}/api/mobile/lookup/shipment-tracking-statuses"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}

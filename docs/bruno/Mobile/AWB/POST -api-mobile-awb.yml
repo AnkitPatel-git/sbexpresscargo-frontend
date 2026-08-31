@@ -23,16 +23,20 @@ http:
         "customerId": 1,
         "serviceCenterId": 1,
         "productId": 1,
+        "fromZoneId": 1,
+        "toZoneId": 2,
         "shipmentTotalValue": 45000,
         "invoiceDate": "2026-04-15",
         "invoiceNumber": "INV/IND/2026/10451",
+        "paymentType": "CREDIT",
+        "vendorPickup": false,
         "reversePickup": true,
         "appointmentDelivery": false,
         "floorDelivery": true,
         "floorCount": 2,
-        "km": 590,
+        "isEdl": false,
+        "odaEdlDistanceKm": 0,
         "actualWeight": 12,
-        "commercial": true,
         "instruction": "Handle with care. Keep dry. Do not stack more than 3 units.",
         "isCod": false,
         "codAmount": 0,
@@ -42,7 +46,7 @@ http:
           "contactPerson": "Amit Malviya",
           "address1": "Plot No. 15, Scheme 78, Part-II, Vijay Nagar",
           "address2": "Near Palasia Square, Indore",
-          "pinCodeId": 400001,
+          "pinCodeId": 101,
           "zoneId": 1,
           "telephone": "07314823100",
           "mobile": "9826712345",
@@ -54,7 +58,7 @@ http:
           "contactPerson": "Nitin Desai",
           "address1": "Shop No. 12, Kalbadevi Cloth Market",
           "address2": "Near Mangaldas Market, Mumbai",
-          "pinCodeId": 110001,
+          "pinCodeId": 202,
           "zoneId": 2,
           "telephone": "02223456789",
           "mobile": "9820456789",
@@ -89,3 +93,43 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: edl on
+    request:
+      url: "{{baseUrl}}/api/mobile/awb"
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      body:
+        type: json
+        data: |-
+          {
+            "bookDate": "2026-04-15T10:00:00.000Z",
+            "bookTime": "10:30",
+            "customerId": 1,
+            "serviceCenterId": 1,
+            "productId": 1,
+            "fromZoneId": 1,
+            "toZoneId": 2,
+            "shipmentTotalValue": 45000,
+            "paymentType": "CREDIT",
+            "isEdl": true,
+            "odaEdlDistanceKm": 45,
+            "actualWeight": 12,
+            "isCod": false,
+            "shipperId": 10,
+            "consigneeId": 20,
+            "piecesRows": [
+              {
+                "pieces": 3,
+                "length": 60,
+                "breadth": 40,
+                "height": 30,
+                "items": [{ "contentId": 1, "quantity": 10, "totalValue": 35000 }]
+              }
+            ]
+          }

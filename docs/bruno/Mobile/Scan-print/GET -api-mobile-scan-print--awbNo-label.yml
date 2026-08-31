@@ -1,18 +1,21 @@
 info:
-  name: PATCH /api/mobile/notifications/:id/read
+  name: GET /api/mobile/scan-print/:awbNo/label
   type: http
-  seq: 2
+  seq: 1
 
 http:
-  method: PATCH
-  url: "{{baseUrl}}/api/mobile/notifications/{{id}}/read"
+  method: GET
+  url: "{{baseUrl}}/api/mobile/scan-print/{{awbNo}}/label"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
       disabled: true
+    - name: Accept
+      value: application/pdf
+      disabled: true
   params:
-    - name: id
-      value: "1"
+    - name: awbNo
+      value: "AWB100001"
       type: path
   auth: inherit
 

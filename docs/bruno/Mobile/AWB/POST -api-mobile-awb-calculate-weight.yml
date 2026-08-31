@@ -1,0 +1,41 @@
+info:
+  name: POST /api/mobile/awb/calculate-weight
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/mobile/awb/calculate-weight"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "customerId": 1,
+        "productId": 1,
+        "bookDate": "2026-04-15T10:00:00.000Z",
+        "actualWeight": 12,
+        "shipperId": 10,
+        "consigneeId": 20,
+        "piecesRows": [
+          {
+            "pieces": 3,
+            "length": 60,
+            "breadth": 40,
+            "height": 30,
+            "items": [{ "totalValue": 45000 }]
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

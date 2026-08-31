@@ -5,29 +5,17 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/mobile/lookup/exceptions"
+  url: "{{baseUrl}}/api/mobile/lookup/exceptions?page=1&limit=50"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
       disabled: true
   params:
     - name: page
-      value: "0"
+      value: "1"
       type: query
     - name: limit
-      value: "0"
-      type: query
-    - name: sortBy
-      value: string
-      type: query
-    - name: sortOrder
-      value: asc
-      type: query
-    - name: search
-      value: string
-      type: query
-    - name: serviceCenterId
-      value: "0"
+      value: "50"
       type: query
   auth: inherit
 

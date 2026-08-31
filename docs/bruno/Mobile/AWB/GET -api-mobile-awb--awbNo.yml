@@ -1,19 +1,15 @@
 info:
   name: GET /api/mobile/awb/:awbNo
   type: http
-  seq: 1
+  seq: 4
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/mobile/awb/{{awbNo}}"
+  url: "{{baseUrl}}/api/mobile/awb/AWB100001"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
       disabled: true
-  params:
-    - name: awbNo
-      value: "1"
-      type: path
   auth: inherit
 
 settings:
@@ -21,3 +17,44 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: operational detail
+    request:
+      url: "{{baseUrl}}/api/mobile/awb/AWB100001"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Success",
+            "data": {
+              "id": 1,
+              "awbNo": "AWB100001",
+              "ewaybillNumber": "EWB2310045678901",
+              "referenceNo": "REF/MOB/001",
+              "paymentType": "CREDIT",
+              "currentStatus": "BOOKED",
+              "isCod": false,
+              "codAmount": null,
+              "shipmentTotalValue": 363,
+              "isEdl": false,
+              "odaEdlDistanceKm": 0,
+              "vendorPickup": false,
+              "reversePickup": true,
+              "appointmentDelivery": true,
+              "floorDelivery": true,
+              "floorCount": 3,
+              "fromZoneId": 3,
+              "toZoneId": 1,
+              "declaredWeight": 12,
+              "chargeWeight": 12,
+              "productWeightUnit": "KG"
+            }
+          }

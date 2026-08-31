@@ -1,0 +1,41 @@
+info:
+  name: POST /api/mobile/tracking/:awbNo/status
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/mobile/tracking/{{awbNo}}/status"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+      disabled: true
+  params:
+    - name: awbNo
+      value: "AWB100001"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "status": "DELIVERED",
+        "location": "Mumbai Hub — BKC",
+        "scannedAt": "2026-05-11T10:30:00.000Z",
+        "subStatus": "",
+        "remark": "Optional free-text note",
+        "receiverName": "Rahul Sharma"
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: awbNo
+      value: AWB-20260519-000001
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

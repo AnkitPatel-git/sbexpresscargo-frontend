@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/mobile/lookup/pincodes"
+  url: "{{baseUrl}}/api/mobile/lookup/pincodes?page=1&limit=20&search=452001&serviceable=true"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
@@ -18,25 +18,23 @@ http:
       value: "20"
       type: query
     - name: search
-      value: ""
+      value: "452001"
       type: query
-      description: Search pin code, city, or area
-    - name: countryId
-      value: ""
-      type: query
-      disabled: true
-    - name: stateId
-      value: ""
-      type: query
-      disabled: true
-    - name: cityId
-      value: ""
-      type: query
-      disabled: true
     - name: serviceable
       value: "true"
       type: query
-      description: "true | false — omit for all"
+    - name: countryId
+      value: "1"
+      type: query
+      disabled: true
+    - name: stateId
+      value: "1"
+      type: query
+      disabled: true
+    - name: cityId
+      value: "1"
+      type: query
+      disabled: true
   auth: inherit
 
 settings:
@@ -44,3 +42,56 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+examples:
+  - name: list item
+    request:
+      url: "{{baseUrl}}/api/mobile/lookup/pincodes"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      params:
+        - name: page
+          value: "1"
+          type: query
+        - name: limit
+          value: "20"
+          type: query
+        - name: search
+          value: "452001"
+          type: query
+        - name: serviceable
+          value: "true"
+          type: query
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Success",
+            "data": {
+              "items": [
+                {
+                  "id": 101,
+                  "pinCode": "452001",
+                  "cityName": "DEWASH",
+                  "areaName": "ANIL SHREE NAGAR",
+                  "countryId": 1,
+                  "stateId": 1,
+                  "cityId": 1,
+                  "serviceable": true,
+                  "edl": false,
+                  "odaEdlDistanceKm": null,
+                  "zones": [{ "id": 1, "code": "CZ", "name": "CENTRAL ZONE", "zoneType": "DOMESTIC" }],
+                  "zoneIds": [1],
+                  "selectedZoneId": 1
+                }
+              ],
+              "total": 1,
+              "page": 1,
+              "limit": 20
+            }
+          }

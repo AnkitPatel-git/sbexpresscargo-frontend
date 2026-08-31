@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/mobile/lookup/pin-zones"
+  url: "{{baseUrl}}/api/mobile/lookup/pin-zones?pincode=452001"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
@@ -47,6 +47,8 @@ examples:
               "pincode": "452001",
               "found": true,
               "serviceable": true,
+              "edl": false,
+              "odaEdlDistanceKm": null,
               "countryId": 1,
               "stateId": 1,
               "cityId": 1,
@@ -57,12 +59,51 @@ examples:
               "city": { "id": 1, "cityName": "DEWASH" },
               "zones": [
                 {
-                  "zoneId": 1,
+                  "id": 1,
                   "code": "CZ",
                   "name": "CENTRAL ZONE",
                   "zoneType": "DOMESTIC"
                 }
-              ]
+              ],
+              "zoneIds": [1],
+              "selectedZoneId": 1
+            }
+          }
+  - name: found — edl pincode
+    request:
+      url: "{{baseUrl}}/api/mobile/lookup/pin-zones"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{accessToken}}
+      params:
+        - name: pincode
+          value: "452002"
+          type: query
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "success": true,
+            "message": "Success",
+            "data": {
+              "pincode": "452002",
+              "found": true,
+              "serviceable": true,
+              "edl": true,
+              "odaEdlDistanceKm": 45,
+              "zones": [
+                {
+                  "id": 2,
+                  "code": "WZ",
+                  "name": "WEST ZONE",
+                  "zoneType": "DOMESTIC"
+                }
+              ],
+              "zoneIds": [2],
+              "selectedZoneId": 2
             }
           }
   - name: not found
@@ -88,7 +129,11 @@ examples:
               "pincode": "560001",
               "found": false,
               "serviceable": null,
-              "zones": []
+              "edl": null,
+              "odaEdlDistanceKm": null,
+              "zones": [],
+              "zoneIds": [],
+              "selectedZoneId": null
             }
           }
   - name: validation — missing pincode
