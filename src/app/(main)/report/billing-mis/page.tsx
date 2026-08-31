@@ -111,6 +111,13 @@ const NUMERIC_COLUMNS = new Set<BillingMisReportColumnKey>([
   "vendorCharges",
 ]);
 
+const MULTILINE_COLUMNS = new Set<BillingMisReportColumnKey>([
+  "length",
+  "breadth",
+  "height",
+  "noOfBox",
+]);
+
 function formatCell(value: string | number | null) {
   if (value == null || value === "") return "—";
   if (typeof value === "number") {
@@ -700,7 +707,10 @@ export default function BillingMisReportPage() {
                       return (
                         <TableCell
                           key={`${column}-${index}`}
-                          className={NUMERIC_COLUMNS.has(column) ? "text-right tabular-nums" : undefined}
+                          className={cn(
+                            NUMERIC_COLUMNS.has(column) && "text-right tabular-nums",
+                            MULTILINE_COLUMNS.has(column) && "whitespace-pre-line align-top",
+                          )}
                         >
                           {formatCell(value)}
                         </TableCell>

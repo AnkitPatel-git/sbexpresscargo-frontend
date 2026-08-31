@@ -81,13 +81,13 @@ const STATUS_OPTIONS = [
 ];
 
 const NUMERIC_COLUMNS = new Set<DimensionMisReportColumnKey>([
+  "totalNoOfBoxes",
   "length",
   "breadth",
   "height",
   "pieces",
   "actualWeight",
   "volumetricWeight",
-  "chargeWeight",
   "shipmentChargeWeight",
 ]);
 
