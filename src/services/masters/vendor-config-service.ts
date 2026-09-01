@@ -14,7 +14,6 @@ type VendorConfigListParams = {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
     vendorId?: number;
-    customerId?: number;
     serviceMapId?: number;
     environment?: string;
     isActive?: boolean;
@@ -29,7 +28,6 @@ export const vendorConfigService = {
         queryParams.append('sortBy', params?.sortBy ?? 'updatedAt');
         queryParams.append('sortOrder', params?.sortOrder ?? 'desc');
         if (params?.vendorId != null) queryParams.append('vendorId', String(params.vendorId));
-        if (params?.customerId != null) queryParams.append('customerId', String(params.customerId));
         if (params?.serviceMapId != null) queryParams.append('serviceMapId', String(params.serviceMapId));
         if (params?.environment) queryParams.append('environment', params.environment);
         if (params?.isActive != null) queryParams.append('isActive', String(params.isActive));

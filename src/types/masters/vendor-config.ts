@@ -1,15 +1,11 @@
 export type VendorConfigEnvironment = 'SANDBOX' | 'PRODUCTION';
 
+export type TrackingAdapterCode = 'DELHIVERY' | 'BLUEDART';
+
 export interface VendorConfigVendor {
     id: number;
     vendorCode: string;
     vendorName: string;
-}
-
-export interface VendorConfigCustomer {
-    id: number;
-    code: string;
-    name: string;
 }
 
 export interface VendorConfigServiceMap {
@@ -23,10 +19,11 @@ export interface VendorConfig {
     vendorId: number;
     serviceMapId: number;
     environment: VendorConfigEnvironment;
-    customerId: number | null;
     apiKey: string | null;
     secretKey: string | null;
     baseUrl: string | null;
+    extraConfig?: Record<string, unknown> | null;
+    adapter?: string | null;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
@@ -34,17 +31,17 @@ export interface VendorConfig {
     deletedById: number | null;
     vendor: VendorConfigVendor | null;
     serviceMap: VendorConfigServiceMap | null;
-    customer: VendorConfigCustomer | null;
 }
 
 export interface VendorConfigFormData {
     vendorId: number;
     serviceMapId: number;
     environment: VendorConfigEnvironment;
-    customerId?: number | null;
     apiKey?: string;
     secretKey?: string;
     baseUrl?: string;
+    extraConfig?: Record<string, unknown>;
+    adapter?: string | null;
     isActive: boolean;
 }
 

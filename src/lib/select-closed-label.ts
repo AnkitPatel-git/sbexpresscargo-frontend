@@ -48,6 +48,11 @@ export const VENDOR_ENVIRONMENT_OPTIONS = [
   { value: "PRODUCTION" as const, label: "Production" },
 ] as const
 
+export const TRACKING_ADAPTER_OPTIONS = [
+  { value: "DELHIVERY" as const, label: "Delhivery" },
+  { value: "BLUEDART" as const, label: "BlueDart" },
+] as const
+
 export const EXCEPTION_TYPE_OPTIONS = [
   { value: "UNDELIVERED" as const, label: "UNDELIVERED" },
   { value: "DELIVERED" as const, label: "DELIVERED" },

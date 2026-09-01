@@ -45,7 +45,6 @@ import {
     optionLabelForSelect,
     VENDOR_CONFIG_ENVIRONMENT_FILTER_OPTIONS,
 } from "@/lib/select-closed-label"
-import { customerService } from "@/services/masters/customer-service"
 import { serviceMapService } from "@/services/masters/service-map-service"
 import { vendorConfigService } from "@/services/masters/vendor-config-service"
 import { vendorService } from "@/services/masters/vendor-service"
@@ -63,7 +62,6 @@ export default function VendorConfigPage() {
         search: "",
         vendorId: "all",
         serviceMapId: "all",
-        customerId: "all",
         environment: "all",
         isActive: "all",
     }
@@ -79,7 +77,7 @@ export default function VendorConfigPage() {
     }, [appliedFilters, filtersOpen])
 
     const { data, isLoading } = useQuery({
-        queryKey: ["vendor-configs", page, limit, debouncedSearch, appliedFilters.vendorId, appliedFilters.serviceMapId, appliedFilters.customerId, appliedFilters.environment, appliedFilters.isActive, sortBy, sortOrder],
+        queryKey: ["vendor-configs", page, limit, debouncedSearch, appliedFilters.vendorId, appliedFilters.serviceMapId, appliedFilters.environment, appliedFilters.isActive, sortBy, sortOrder],
         queryFn: () =>
             vendorConfigService.getVendorConfigs({
                 page,
@@ -89,7 +87,6 @@ export default function VendorConfigPage() {
                 sortOrder,
                 vendorId: appliedFilters.vendorId === "all" ? undefined : Number(appliedFilters.vendorId),
                 serviceMapId: appliedFilters.serviceMapId === "all" ? undefined : Number(appliedFilters.serviceMapId),
-                customerId: appliedFilters.customerId === "all" ? undefined : Number(appliedFilters.customerId),
                 environment: appliedFilters.environment === "all" ? undefined : appliedFilters.environment,
                 isActive:
                     appliedFilters.isActive === "all"
@@ -101,11 +98,6 @@ export default function VendorConfigPage() {
     const { data: vendorsResponse } = useQuery({
         queryKey: ["vendor-config-page-vendors"],
         queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: "vendorName", sortOrder: "asc" }),
-    })
-
-    const { data: customersResponse } = useQuery({
-        queryKey: ["vendor-config-page-customers"],
-        queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
     })
 
     const { data: serviceMapsResponse } = useQuery({
@@ -207,21 +199,6 @@ export default function VendorConfigPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Select value={draftFilters.customerId} onValueChange={(value) => setDraftFilters((current) => ({ ...current, customerId: value }))}>
-                                    <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Customer">
-                                        {draftFilters.customerId === "all"
-                                            ? "All customers"
-                                            : optionLabelById(draftFilters.customerId, customersResponse?.data, (c) => c.name)}
-                                    </SelectValue></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All customers</SelectItem>
-                                        {customersResponse?.data?.map((customer) => (
-                                            <SelectItem key={customer.id} value={String(customer.id)}>
-                                                {customer.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
                                 <Select value={draftFilters.environment} onValueChange={(value) => setDraftFilters((current) => ({ ...current, environment: value }))}>
                                     <SelectTrigger className="h-9 border-border bg-background text-xs"><SelectValue placeholder="Environment">
                                         {optionLabelForSelect(draftFilters.environment, VENDOR_CONFIG_ENVIRONMENT_FILTER_OPTIONS)}
@@ -283,10 +260,10 @@ export default function VendorConfigPage() {
                                 <SortableColumnHeader label="Service Map" field="serviceMapId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">
-                                <SortableColumnHeader label="Customer" field="customerId" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                                <SortableColumnHeader label="Environment" field="environment" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">
-                                <SortableColumnHeader label="Environment" field="environment" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                                <SortableColumnHeader label="Adapter" field="adapter" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                             </TableHead>
                             <TableHead className="font-semibold text-primary-foreground">Base URL</TableHead>
                             <TableHead className="font-semibold text-primary-foreground text-center">
@@ -327,8 +304,8 @@ export default function VendorConfigPage() {
                                             ? `${vendorConfig.serviceMap.serviceType}${vendorConfig.serviceMap.vendorLink ? ` - ${vendorConfig.serviceMap.vendorLink}` : ""}`
                                             : "-"}
                                     </TableCell>
-                                    <TableCell className="text-foreground">{vendorConfig.customer?.name || "-"}</TableCell>
                                     <TableCell className="text-foreground">{vendorConfig.environment}</TableCell>
+                                    <TableCell className="text-foreground">{vendorConfig.adapter || vendorConfig.vendor?.vendorCode || "-"}</TableCell>
                                     <TableCell className="max-w-[220px] truncate text-xs text-foreground">
                                         {vendorConfig.baseUrl || "-"}
                                     </TableCell>

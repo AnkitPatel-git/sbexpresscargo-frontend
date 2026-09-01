@@ -30,23 +30,34 @@ import {
 } from "@/components/ui/select"
 import { FormSection } from "@/components/ui/form-section"
 import { Switch } from "@/components/ui/switch"
-import { optionLabelById, optionLabelForSelect, VENDOR_ENVIRONMENT_OPTIONS } from "@/lib/select-closed-label"
+import { optionLabelById, optionLabelForSelect, TRACKING_ADAPTER_OPTIONS, VENDOR_ENVIRONMENT_OPTIONS } from "@/lib/select-closed-label"
 
 import { vendorConfigService } from "@/services/masters/vendor-config-service"
 import { vendorService } from "@/services/masters/vendor-service"
-import { customerService } from "@/services/masters/customer-service"
 import { serviceMapService } from "@/services/masters/service-map-service"
 import { VendorConfig } from "@/types/masters/vendor-config"
+
+const trackingAdapterSchema = z.enum(["DELHIVERY", "BLUEDART"])
 
 const vendorConfigSchema = z.object({
     vendorId: z.coerce.number().int().positive("Vendor is required"),
     serviceMapId: z.coerce.number().int().positive("Service map is required"),
     environment: z.enum(["SANDBOX", "PRODUCTION"]),
-    customerId: z.union([z.coerce.number().int().positive(), z.null()]).optional(),
+    adapter: trackingAdapterSchema,
     apiKey: z.string().optional().or(z.literal("")),
     secretKey: z.string().optional().or(z.literal("")),
     baseUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+    loginId: z.string().optional().or(z.literal("")),
+    licenseKey: z.string().optional().or(z.literal("")),
     isActive: z.boolean().default(true),
+}).superRefine((data, ctx) => {
+    if (data.adapter !== "BLUEDART") return
+    if (!data.loginId?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Login ID is required for BlueDart", path: ["loginId"] })
+    }
+    if (!data.licenseKey?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "License key is required for BlueDart", path: ["licenseKey"] })
+    }
 })
 
 type VendorConfigFormValues = z.infer<typeof vendorConfigSchema>
@@ -65,11 +76,6 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
         queryFn: () => vendorService.getVendors({ page: 1, limit: 100, sortBy: "vendorName", sortOrder: "asc" }),
     })
 
-    const { data: customersResponse } = useQuery({
-        queryKey: ["vendor-config-form-customers"],
-        queryFn: () => customerService.getCustomers({ page: 1, limit: 100, sortBy: "name", sortOrder: "asc" }),
-    })
-
     const { data: serviceMapsResponse } = useQuery({
         queryKey: ["vendor-config-form-service-maps"],
         queryFn: () => serviceMapService.getServiceMaps({ page: 1, limit: 100, sortBy: "vendor", sortOrder: "asc" }),
@@ -81,10 +87,12 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
             vendorId: 0,
             serviceMapId: 0,
             environment: "SANDBOX",
-            customerId: null,
+            adapter: "DELHIVERY",
             apiKey: "",
             secretKey: "",
             baseUrl: "",
+            loginId: "",
+            licenseKey: "",
             isActive: true,
         },
     })
@@ -96,10 +104,12 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
             vendorId: initialData.vendorId,
             serviceMapId: initialData.serviceMapId,
             environment: initialData.environment,
-            customerId: initialData.customerId,
+            adapter: knownTrackingAdapter(initialData.adapter) || knownTrackingAdapter(initialData.vendor?.vendorCode) || "DELHIVERY",
             apiKey: initialData.apiKey ?? "",
             secretKey: initialData.secretKey ?? "",
             baseUrl: initialData.baseUrl ?? "",
+            loginId: extraConfigString(initialData.extraConfig, "loginId"),
+            licenseKey: extraConfigString(initialData.extraConfig, "licenseKey"),
             isActive: initialData.isActive,
         })
     }, [form, initialData])
@@ -110,10 +120,17 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                 vendorId: data.vendorId,
                 serviceMapId: data.serviceMapId,
                 environment: data.environment,
-                customerId: data.customerId ?? undefined,
+                adapter: data.adapter,
                 apiKey: data.apiKey || undefined,
                 secretKey: data.secretKey || undefined,
                 baseUrl: data.baseUrl || undefined,
+                extraConfig:
+                    data.adapter === "BLUEDART"
+                        ? {
+                              loginId: data.loginId?.trim(),
+                              licenseKey: data.licenseKey?.trim(),
+                          }
+                        : undefined,
                 isActive: data.isActive,
             }
 
@@ -139,6 +156,8 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
     const onSubmit = (data: VendorConfigFormValues) => {
         mutation.mutate(data)
     }
+
+    const selectedAdapter = form.watch("adapter")
 
     return (
         <Form {...form}>
@@ -251,12 +270,25 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
 
                             <FormField
                                 control={form.control}
-                                name="isActive"
+                                name="adapter"
                                 render={({ field }) => (
-                                    <FloatingFormItem label="Active">
-                                        <FormControl>
-                                            <Switch checked={field.value} onCheckedChange={(value) => field.onChange(Boolean(value))} />
-                                        </FormControl>
+                                    <FloatingFormItem required label="Tracking Adapter*">
+                                        <Select key={`adapter-${field.value}`} onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                                                    <SelectValue placeholder="Select adapter">
+                                                        {optionLabelForSelect(field.value, TRACKING_ADAPTER_OPTIONS)}
+                                                    </SelectValue>
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {TRACKING_ADAPTER_OPTIONS.map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </FloatingFormItem>
                                 )}
                             />
@@ -264,36 +296,12 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
 
                         <FormField
                             control={form.control}
-                            name="customerId"
+                            name="isActive"
                             render={({ field }) => (
-                                <FloatingFormItem label="Customer">
-                                    <Select
-                                        key={`cust-${field.value ?? "none"}`}
-                                        onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
-                                        value={field.value ? String(field.value) : "none"}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                                                <SelectValue placeholder="Select customer">
-                                                    {field.value
-                                                        ? optionLabelById(
-                                                              String(field.value),
-                                                              customersResponse?.data,
-                                                              (c) => c.name,
-                                                          )
-                                                        : "None"}
-                                                </SelectValue>
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="none">None</SelectItem>
-                                            {customersResponse?.data?.map((customer) => (
-                                                <SelectItem key={customer.id} value={String(customer.id)}>
-                                                    {customer.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                <FloatingFormItem label="Active">
+                                    <FormControl>
+                                        <Switch checked={field.value} onCheckedChange={(value) => field.onChange(Boolean(value))} />
+                                    </FormControl>
                                 </FloatingFormItem>
                             )}
                         />
@@ -310,6 +318,7 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                         }
                         contentClassName="space-y-4"
                     >
+                        {selectedAdapter === "DELHIVERY" || selectedAdapter === "BLUEDART" ? null : (
                         <FormField
                             control={form.control}
                             name="baseUrl"
@@ -326,14 +335,15 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                                 </FloatingFormItem>
                             )}
                         />
+                        )}
 
                         <FormField
                             control={form.control}
                             name="apiKey"
                             render={({ field }) => (
-                                <FloatingFormItem label="API Key">
+                                <FloatingFormItem label={selectedAdapter === "BLUEDART" ? "Client ID" : "Username / API Key"}>
                                     <FormControl>
-                                        <Input placeholder="API key" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                        <Input placeholder={selectedAdapter === "BLUEDART" ? "Client ID" : "API username"} {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
                                     </FormControl>
                                 </FloatingFormItem>
                             )}
@@ -343,11 +353,11 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                             control={form.control}
                             name="secretKey"
                             render={({ field }) => (
-                                <FloatingFormItem label="Secret Key">
+                                <FloatingFormItem label={selectedAdapter === "BLUEDART" ? "Client Secret" : "Password / Secret Key"}>
                                     <FormControl>
                                         <Input
                                             type="password"
-                                            placeholder="Secret key"
+                                            placeholder={selectedAdapter === "BLUEDART" ? "Client secret" : "API password"}
                                             {...field}
                                             value={field.value || ""}
                                             className={FLOATING_INNER_CONTROL}
@@ -356,6 +366,33 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
                                 </FloatingFormItem>
                             )}
                         />
+
+                        {selectedAdapter === "BLUEDART" ? (
+                            <>
+                                <FormField
+                                    control={form.control}
+                                    name="loginId"
+                                    render={({ field }) => (
+                                        <FloatingFormItem required label="Login ID*">
+                                            <FormControl>
+                                                <Input placeholder="BlueDart login ID" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="licenseKey"
+                                    render={({ field }) => (
+                                        <FloatingFormItem required label="License Key*">
+                                            <FormControl>
+                                                <Input placeholder="BlueDart license key" {...field} value={field.value || ""} className={FLOATING_INNER_CONTROL} />
+                                            </FormControl>
+                                        </FloatingFormItem>
+                                    )}
+                                />
+                            </>
+                        ) : null}
                     </FormSection>
                 </div>
 
@@ -383,4 +420,16 @@ export function VendorConfigForm({ initialData }: VendorConfigFormProps) {
             </form>
         </Form>
     )
+}
+
+function knownTrackingAdapter(value: string | null | undefined): "DELHIVERY" | "BLUEDART" | "" {
+    const code = value?.trim().toUpperCase()
+    if (code === "DELHIVERY" || code === "BLUEDART") return code
+    return ""
+}
+
+function extraConfigString(extra: Record<string, unknown> | null | undefined, key: string): string {
+    if (!extra) return ""
+    const value = extra[key] ?? extra[key.toLowerCase()] ?? extra[key.toUpperCase()]
+    return typeof value === "string" ? value : ""
 }
