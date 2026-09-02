@@ -29,14 +29,19 @@ function fb(v?: string | number | null): string {
     return String(v);
 }
 
-/** Compact multi-ref display: "CI1 / CI2, CI3" → "CI1,CI2,CI3" */
+/** Multi-ref display: split punctuation/spaces and glued `CLS…-1CLS…-1` tokens. */
 function formatDrsReferenceNo(raw?: string | null): string {
     if (!raw?.trim()) return "";
     const parts = String(raw)
         .split(/[,/;|\s]+/)
-        .map((part) => part.trim())
-        .filter(Boolean);
-    return parts.join(",");
+        .flatMap((part) =>
+            part
+                .trim()
+                .split(/(?<=\d)(?=[A-Za-z]+\d)/)
+                .map((token) => token.trim())
+                .filter(Boolean),
+        );
+    return parts.join(", ");
 }
 
 function stateFrom(
@@ -220,7 +225,7 @@ export function ShipmentPodFormPreview({ shipment }: { shipment: Shipment }) {
                     <div
                         className={cn(
                             val,
-                            "max-h-[2.1em] overflow-hidden py-0.5 leading-tight break-all line-clamp-2",
+                            "py-0.5 leading-tight break-words whitespace-normal",
                         )}
                     >
                         {formatDrsReferenceNo(shipment.referenceNo) || "—"}
