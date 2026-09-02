@@ -5,6 +5,7 @@ export const SHIPMENT_STATUS_OPTIONS = [
     { label: "Picked up", value: "PICKED_UP" },
     { label: "Pickup failed", value: "PICKUP_FAILED" },
     { label: "In transit", value: "IN_TRANSIT" },
+    { label: "Paper work inscan", value: "PAPER_WORK_INSCAN" },
     { label: "Out for delivery", value: "OUT_FOR_DELIVERY" },
     { label: "Delivery attempted (NDR)", value: "DELIVERY_ATTEMPTED" },
     { label: "Partial delivered", value: "PARTIAL_DELIVERED" },
