@@ -33,21 +33,13 @@ import { ManualUpdateDialog } from "@/components/transactions/manual-update-dial
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
-
-function safeFormatDate(iso: string | null | undefined, fmt: string) {
-    if (!iso) return "—";
-    try {
-        return format(new Date(iso), fmt);
-    } catch {
-        return "—";
-    }
-}
+import { formatIndiaDateTime } from "@/lib/india-date";
 
 function formatDateOnly(iso: string | null | undefined) {
     if (!iso) return "—";
     const day = String(iso).slice(0, 10);
     const match = day.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return safeFormatDate(iso, "dd MMM yyyy");
+    if (!match) return formatIndiaDateTime(iso).replace(/, \d{2}:\d{2}$/, "") || "—";
     const year = Number(match[1]);
     const month = Number(match[2]);
     const date = Number(match[3]);
@@ -410,7 +402,7 @@ export default function TrackingPage() {
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-gray-500">Booking date</p>
-                                        <p>{d.shipmentDetails.date ? format(new Date(d.shipmentDetails.date), "dd MMM yyyy, HH:mm") : "—"}</p>
+                                        <p>{formatIndiaDateTime(d.shipmentDetails.date)}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-gray-500">Expected delivery</p>
@@ -460,7 +452,7 @@ export default function TrackingPage() {
                                                         <TableRow key={row.id ?? idx} className={idx % 2 === 1 ? "bg-muted/30" : ""}>
                                                             <TableCell className="text-muted-foreground">{row.sequence ?? idx + 1}</TableCell>
                                                             <TableCell className="whitespace-nowrap text-sm">
-                                                                {safeFormatDate(row.eventAt, "dd MMM yyyy, HH:mm")}
+                                                                {formatIndiaDateTime(row.eventAt)}
                                                             </TableCell>
                                                             <TableCell className="whitespace-nowrap text-sm">
                                                                 {formatDateOnly(row.expectedDeliveryDate)}
@@ -556,7 +548,7 @@ export default function TrackingPage() {
                                                             {item.awbNo}
                                                         </TableCell>
                                                         <TableCell>
-                                                            {item.bookingDate ? format(new Date(item.bookingDate), "dd MMM yyyy") : "-"}
+                                                            {item.bookingDate ? formatDateOnly(item.bookingDate) : "-"}
                                                         </TableCell>
                                                         <TableCell className="max-w-[200px] truncate" title={item.origin ?? item.city ?? ""}>
                                                             {item.origin ?? item.city ?? "—"}
@@ -674,7 +666,7 @@ export default function TrackingPage() {
                                                     {log.error}
                                                 </TableCell>
                                                 <TableCell>{log.retryCount}</TableCell>
-                                                <TableCell>{format(new Date(log.createdAt), "dd MMM, HH:mm")}</TableCell>
+                                                <TableCell>{formatIndiaDateTime(log.createdAt)}</TableCell>
                                                 <TableCell>
                                                     <Button
                                                         variant="ghost"

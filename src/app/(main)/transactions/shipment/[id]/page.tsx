@@ -27,6 +27,7 @@ import {
   SHIPMENT_COD_TOPAY_LABEL,
 } from "@/lib/shipment-payment-label";
 import type { Shipment, ShipmentCharge, ShipmentStatus } from "@/types/transactions/shipment";
+import { naiveDateTimeToIndiaIso, formatIndiaTime } from "@/lib/india-date";
 
 const fallbackText = (value?: string | number | null) => {
   if (value === null || value === undefined || value === "") return "—";
@@ -92,7 +93,7 @@ export default function ShipmentDetailsPage() {
         location: statusLocation.trim() || undefined,
         subStatus: statusSubStatus.trim() || undefined,
         scannedAt: statusScannedAt
-          ? new Date(statusScannedAt).toISOString()
+          ? naiveDateTimeToIndiaIso(statusScannedAt)
           : undefined,
       });
     },
@@ -331,7 +332,7 @@ export default function ShipmentDetailsPage() {
           <p><span className="text-muted-foreground">AWB No:</span> {fallbackText(shipment.awbNo)}</p>
           <p><span className="text-muted-foreground">E-waybill:</span> {fallbackText(shipment.ewaybillNumber)}</p>
           <p><span className="text-muted-foreground">Book Date:</span> {shipment.bookDate ? format(new Date(shipment.bookDate), "dd/MM/yyyy") : "—"}</p>
-          <p><span className="text-muted-foreground">Book Time:</span> {fallbackText(shipment.bookTime)}</p>
+          <p><span className="text-muted-foreground">Book Time:</span> {formatIndiaTime(shipment.bookTime?.trim() || shipment.createdAt)}</p>
           <p><span className="text-muted-foreground">Reference No:</span> {fallbackText(shipment.referenceNo)}</p>
           <p><span className="text-muted-foreground">Status:</span> {fallbackText(currentStatus)}</p>
         </FormSection>
@@ -444,7 +445,7 @@ export default function ShipmentDetailsPage() {
           <Input placeholder="Reason / remark" value={statusReason} onChange={(e) => setStatusReason(e.target.value)} />
           <div className="space-y-1">
             <Label htmlFor="status-scanned-at" className="text-xs font-medium">
-              Scanned at (optional)
+              Scanned at (optional, IST)
             </Label>
             <Input
               id="status-scanned-at"
