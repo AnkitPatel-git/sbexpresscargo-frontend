@@ -2704,7 +2704,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         render={({ field }) => (
                                             <FloatingFormItem label="Reference No" itemClassName="md:col-span-1">
                                                 <FormControl>
-                                                    <Input {...field} value={field.value || ""} maxLength={225} className={FLOATING_INNER_CONTROL} />
+                                                    <Input {...field} value={field.value || ""} maxLength={512} className={FLOATING_INNER_CONTROL} />
                                                 </FormControl>
                                             </FloatingFormItem>
                                         )}

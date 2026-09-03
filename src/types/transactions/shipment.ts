@@ -145,7 +145,7 @@ export const shipmentBaseSchema = z.object({
   ewaybillNumber: z.string().optional(),
   bookDate: z.string().min(1, "Book Date is required"),
   bookTime: z.string().optional(),
-  referenceNo: z.string().max(225, "Reference No at most 225 characters").optional(),
+  referenceNo: z.string().max(512, "Reference No at most 512 characters").optional(),
   customerId: z.number().optional(),
   clientId: z.number().optional(),
   shipperId: z.number().optional(),
