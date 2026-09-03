@@ -55,6 +55,7 @@ export interface ShipmentTrackingStatusRow {
     serviceCenterCode: string | null;
     serviceCenterName: string | null;
     receiverName: string | null;
+    expectedDeliveryDate?: string | null;
 }
 
 export interface TrackingDetailResponse {
@@ -85,6 +86,7 @@ export interface TrackingDetailResponse {
             userName?: string | null;
             serviceCenterCode?: string | null;
             status?: string;
+            expectedDeliveryDate?: string | null;
         }>;
         comment: any[];
         shipmentLog: any[];

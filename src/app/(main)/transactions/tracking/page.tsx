@@ -43,6 +43,17 @@ function safeFormatDate(iso: string | null | undefined, fmt: string) {
     }
 }
 
+function formatDateOnly(iso: string | null | undefined) {
+    if (!iso) return "—";
+    const day = String(iso).slice(0, 10);
+    const match = day.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return safeFormatDate(iso, "dd MMM yyyy");
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const date = Number(match[3]);
+    return format(new Date(year, month - 1, date), "dd MMM yyyy");
+}
+
 function auditUsername(user?: { username?: string | null } | null) {
     return user?.username?.trim() || "—";
 }
@@ -402,6 +413,10 @@ export default function TrackingPage() {
                                         <p>{d.shipmentDetails.date ? format(new Date(d.shipmentDetails.date), "dd MMM yyyy, HH:mm") : "—"}</p>
                                     </div>
                                     <div>
+                                        <p className="text-sm font-medium text-gray-500">Expected delivery</p>
+                                        <p>{formatDateOnly(d.expectedDeliveryDate)}</p>
+                                    </div>
+                                    <div>
                                         <p className="text-sm font-medium text-gray-500">Origin — destination</p>
                                         <p>{d.shipmentDetails.origin} — {d.shipmentDetails.destination}</p>
                                     </div>
@@ -423,6 +438,7 @@ export default function TrackingPage() {
                                                 <TableRow className="bg-muted/50">
                                                     <TableHead className="w-12">#</TableHead>
                                                     <TableHead>Event time</TableHead>
+                                                    <TableHead>EDD</TableHead>
                                                     <TableHead>Status</TableHead>
                                                     <TableHead>Sub-status</TableHead>
                                                     <TableHead>Location</TableHead>
@@ -435,7 +451,7 @@ export default function TrackingPage() {
                                             <TableBody>
                                                 {timeline.length === 0 ? (
                                                     <TableRow>
-                                                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                                                        <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                                                             No tracking events yet.
                                                         </TableCell>
                                                     </TableRow>
@@ -445,6 +461,9 @@ export default function TrackingPage() {
                                                             <TableCell className="text-muted-foreground">{row.sequence ?? idx + 1}</TableCell>
                                                             <TableCell className="whitespace-nowrap text-sm">
                                                                 {safeFormatDate(row.eventAt, "dd MMM yyyy, HH:mm")}
+                                                            </TableCell>
+                                                            <TableCell className="whitespace-nowrap text-sm">
+                                                                {formatDateOnly(row.expectedDeliveryDate)}
                                                             </TableCell>
                                                             <TableCell className="font-medium">{formatShipmentStatusLabel(row.status)}</TableCell>
                                                             <TableCell className="text-sm">{row.subStatus ? formatShipmentStatusLabel(row.subStatus) : "—"}</TableCell>
