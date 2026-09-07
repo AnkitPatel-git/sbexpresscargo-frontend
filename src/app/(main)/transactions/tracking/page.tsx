@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, FilePlus, FileUp, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Loader2, RefreshCcw, Download, Info, FilePlus, FileUp, Plus, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
 import { formatIndiaDateTime, naiveDateTimeToIndiaIso, toDatetimeLocalInputValue } from "@/lib/india-date";
+import { DateTime24Input } from "@/components/ui/time-24-select";
 import { useAuth } from "@/context/auth-context";
 import { isSuperAdminRole } from "@/lib/portal-permissions";
 
@@ -86,11 +87,6 @@ export default function TrackingPage() {
     const [editEvent, setEditEvent] = useState<ShipmentTrackingStatusRow | null>(null);
     const [editScannedAt, setEditScannedAt] = useState("");
     const [deleteEvent, setDeleteEvent] = useState<ShipmentTrackingStatusRow | null>(null);
-
-    const { data: metricsData } = useQuery({
-        queryKey: ["trackingMetrics"],
-        queryFn: () => trackingService.getMetrics(),
-    });
 
     const { data: listData, isLoading: isListLoading, error: listError } = useQuery({
         queryKey: ["trackingSearch", page, limit, searchTerm, listSortBy, listSortOrder],
@@ -310,62 +306,6 @@ export default function TrackingPage() {
                         <Plus className="mr-1 h-4 w-4" /> Add Tracking Update
                     </Button>
                 </div>
-            </div>
-
-            {/* Metrics Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Shipments</p>
-                                <h3 className="text-2xl font-bold">{metricsData?.data?.totalShipments || 0}</h3>
-                            </div>
-                            <div className="bg-blue-100 p-2 rounded-full">
-                                <Search className="h-5 w-5 text-primary" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">In Transit</p>
-                                <h3 className="text-2xl font-bold">{metricsData?.data?.inTransit || 0}</h3>
-                            </div>
-                            <div className="bg-yellow-100 p-2 rounded-full">
-                                <Clock className="h-5 w-5 text-yellow-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Delivered</p>
-                                <h3 className="text-2xl font-bold">{metricsData?.data?.delivered || 0}</h3>
-                            </div>
-                            <div className="bg-green-100 p-2 rounded-full">
-                                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Exceptions</p>
-                                <h3 className="text-2xl font-bold">{metricsData?.data?.exceptions || 0}</h3>
-                            </div>
-                            <div className="bg-red-100 p-2 rounded-full">
-                                <AlertCircle className="h-5 w-5 text-red-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
 
             {activeView === 'search' && (
@@ -913,12 +853,11 @@ export default function TrackingPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-2">
-                        <Label htmlFor="tracking-event-scanned-at">Event time (IST)</Label>
-                        <Input
+                        <Label htmlFor="tracking-event-scanned-at">Event time (IST, 24h)</Label>
+                        <DateTime24Input
                             id="tracking-event-scanned-at"
-                            type="datetime-local"
                             value={editScannedAt}
-                            onChange={(e) => setEditScannedAt(e.target.value)}
+                            onChange={setEditScannedAt}
                         />
                     </div>
                     <DialogFooter>

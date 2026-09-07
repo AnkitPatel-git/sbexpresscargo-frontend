@@ -21,6 +21,7 @@ import {
   FLOATING_INNER_SELECT_TRIGGER,
 } from "@/components/ui/floating-form-item";
 import { Input } from "@/components/ui/input";
+import { Time24Select } from "@/components/ui/time-24-select";
 import { IntegerInput } from "@/components/ui/integer-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -182,9 +183,13 @@ export function ManifestForm({ initialData }: ManifestFormProps) {
             control={form.control}
             name="manifestTime"
             render={({ field }) => (
-              <FloatingFormItem label="Manifest Time">
+              <FloatingFormItem label="Manifest Time (24h)">
                 <FormControl>
-                  <Input type="time" {...field} className={FLOATING_INNER_CONTROL} />
+                  <Time24Select
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    selectClassName={`${FLOATING_INNER_CONTROL} min-w-[3.5rem] border-0 shadow-none`}
+                  />
                 </FormControl>
               </FloatingFormItem>
             )}

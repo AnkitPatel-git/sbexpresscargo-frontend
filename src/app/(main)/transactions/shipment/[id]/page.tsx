@@ -28,6 +28,7 @@ import {
 } from "@/lib/shipment-payment-label";
 import type { Shipment, ShipmentCharge, ShipmentStatus } from "@/types/transactions/shipment";
 import { naiveDateTimeToIndiaIso, formatIndiaTime } from "@/lib/india-date";
+import { DateTime24Input } from "@/components/ui/time-24-select";
 
 const fallbackText = (value?: string | number | null) => {
   if (value === null || value === undefined || value === "") return "—";
@@ -445,13 +446,12 @@ export default function ShipmentDetailsPage() {
           <Input placeholder="Reason / remark" value={statusReason} onChange={(e) => setStatusReason(e.target.value)} />
           <div className="space-y-1">
             <Label htmlFor="status-scanned-at" className="text-xs font-medium">
-              Scanned at (optional, IST)
+              Scanned at (optional, IST 24h)
             </Label>
-            <Input
+            <DateTime24Input
               id="status-scanned-at"
-              type="datetime-local"
               value={statusScannedAt}
-              onChange={(e) => setStatusScannedAt(e.target.value)}
+              onChange={setStatusScannedAt}
             />
           </div>
           <div className="space-y-1">

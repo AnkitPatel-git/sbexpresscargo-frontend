@@ -50,6 +50,7 @@ import {
     OutlinedFormSection,
 } from "@/components/ui/floating-form-item"
 import { Input } from "@/components/ui/input"
+import { Time24Select } from "@/components/ui/time-24-select"
 import { DecimalInput } from "@/components/ui/decimal-input"
 import { IntegerInput } from "@/components/ui/integer-input"
 import { Button } from "@/components/ui/button"
@@ -2683,17 +2684,20 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                         control={form.control}
                                         name="bookTime"
                                         render={({ field }) => (
-                                            <FloatingFormItem label="Time" itemClassName="md:col-span-1">
+                                            <FloatingFormItem label="Time (24h)" itemClassName="md:col-span-1">
                                                 <div className="relative">
                                                     <FormControl>
-                                                        <Input
-                                                            type="time"
-                                                            {...field}
+                                                        <Time24Select
                                                             value={field.value || ""}
-                                                            className={cn(FLOATING_INNER_CONTROL, "pl-8")}
+                                                            onChange={field.onChange}
+                                                            className="pl-6"
+                                                            selectClassName={cn(
+                                                                FLOATING_INNER_CONTROL,
+                                                                "min-w-[3.5rem] border-0 shadow-none",
+                                                            )}
                                                         />
                                                     </FormControl>
-                                                    <Clock className="pointer-events-none absolute bottom-1.5 left-2 h-4 w-4 text-muted-foreground" />
+                                                    <Clock className="pointer-events-none absolute bottom-1.5 left-0 h-4 w-4 text-muted-foreground" />
                                                 </div>
                                             </FloatingFormItem>
                                         )}

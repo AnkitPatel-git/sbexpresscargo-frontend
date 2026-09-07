@@ -36,12 +36,14 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { Textarea } from "@/components/ui/textarea";
 import { trackingService } from "@/services/transactions/tracking-service";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
 import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
 import { naiveDateTimeToIndiaIso, toDatetimeLocalInputValue } from "@/lib/india-date";
+import { DateTime24Input } from "@/components/ui/time-24-select";
 
 const formSchema = z
     .object({
@@ -237,13 +239,16 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                             control={form.control}
                             name="scannedAt"
                             render={({ field }) => (
-                                <FloatingFormItem label="Scan date & time (IST)">
+                                <FloatingFormItem label="Scan date & time (IST, 24h)">
                                     <FormControl>
-                                        <Input
-                                            type="datetime-local"
-                                            {...field}
+                                        <DateTime24Input
                                             value={field.value || ""}
-                                            className={FLOATING_INNER_CONTROL}
+                                            onChange={field.onChange}
+                                            dateClassName={FLOATING_INNER_CONTROL}
+                                            selectClassName={cn(
+                                                FLOATING_INNER_CONTROL,
+                                                "min-w-[3.5rem] border-0 shadow-none",
+                                            )}
                                         />
                                     </FormControl>
                                 </FloatingFormItem>

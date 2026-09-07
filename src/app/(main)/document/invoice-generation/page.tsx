@@ -29,6 +29,7 @@ import type {
   InvoiceGenerationPayload,
   InvoicePreviewResult,
 } from "@/types/document/invoice";
+import { formatIndiaDateTime } from "@/lib/india-date";
 
 function currentFinancialYear(): string {
   const now = new Date();
@@ -44,13 +45,6 @@ function formatMoney(value: number | null | undefined): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-}
-
-function formatDateTime(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 }
 
 const defaultPayload: InvoiceGenerationPayload = {
@@ -414,7 +408,7 @@ export default function InvoiceGenerationPage() {
                         </TableCell>
                         <TableCell>
                           {line.bookDate
-                            ? formatDateTime(line.bookDate).split(",")[0]
+                            ? formatIndiaDateTime(line.bookDate).split(",")[0]
                             : "—"}
                         </TableCell>
                         <TableCell>
