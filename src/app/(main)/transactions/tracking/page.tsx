@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, FilePlus, FileUp, Plus } from "lucide-react";
+import { Search, Loader2, Clock, CheckCircle2, AlertCircle, RefreshCcw, Download, Info, FilePlus, FileUp, Plus, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
@@ -26,6 +26,17 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
 import { trackingService } from "@/services/transactions/tracking-service";
 import { TrackingListItem, DeadLetterLog, type ShipmentTrackingStatusRow, type TrackingBulkManualImportResult } from "@/types/transactions/tracking";
 import { formatShipmentStatusLabel } from "@/lib/shipment-status-label";
@@ -33,7 +44,9 @@ import { ManualUpdateDialog } from "@/components/transactions/manual-update-dial
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
-import { formatIndiaDateTime } from "@/lib/india-date";
+import { formatIndiaDateTime, naiveDateTimeToIndiaIso, toDatetimeLocalInputValue } from "@/lib/india-date";
+import { useAuth } from "@/context/auth-context";
+import { isSuperAdminRole } from "@/lib/portal-permissions";
 
 function formatDateOnly(iso: string | null | undefined) {
     if (!iso) return "—";
@@ -52,6 +65,8 @@ function auditUsername(user?: { username?: string | null } | null) {
 
 export default function TrackingPage() {
     const queryClient = useQueryClient();
+    const { user } = useAuth();
+    const isAdmin = isSuperAdminRole(user?.role?.identifier);
     const [searchInput, setSearchInput] = useState("");
     const [searchTerm, setSearchTerm] = useState(""); // Submitted search term
     const [page, setPage] = useState(1);
@@ -68,6 +83,9 @@ export default function TrackingPage() {
     const [listSortOrder, setListSortOrder] = useState<SortOrder>("desc");
     const [logSortBy, setLogSortBy] = useState("createdAt");
     const [logSortOrder, setLogSortOrder] = useState<SortOrder>("desc");
+    const [editEvent, setEditEvent] = useState<ShipmentTrackingStatusRow | null>(null);
+    const [editScannedAt, setEditScannedAt] = useState("");
+    const [deleteEvent, setDeleteEvent] = useState<ShipmentTrackingStatusRow | null>(null);
 
     const { data: metricsData } = useQuery({
         queryKey: ["trackingMetrics"],
@@ -136,6 +154,33 @@ export default function TrackingPage() {
         },
         onError: (error: any) => {
             toast.error(error.message || "Retry failed");
+        },
+    });
+
+    const updateEventMutation = useMutation({
+        mutationFn: ({ id, scannedAt }: { id: number; scannedAt: string }) =>
+            trackingService.updateEventTime(id, scannedAt),
+        onSuccess: () => {
+            toast.success("Tracking date/time updated");
+            setEditEvent(null);
+            queryClient.invalidateQueries({ queryKey: ["trackingDetail"] });
+            queryClient.invalidateQueries({ queryKey: ["trackingSearch"] });
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Failed to update tracking time");
+        },
+    });
+
+    const deleteEventMutation = useMutation({
+        mutationFn: (id: number) => trackingService.deleteEvent(id),
+        onSuccess: () => {
+            toast.success("Tracking event deleted");
+            setDeleteEvent(null);
+            queryClient.invalidateQueries({ queryKey: ["trackingDetail"] });
+            queryClient.invalidateQueries({ queryKey: ["trackingSearch"] });
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || "Failed to delete tracking event");
         },
     });
 
@@ -402,7 +447,7 @@ export default function TrackingPage() {
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-gray-500">Booking date</p>
-                                        <p>{formatIndiaDateTime(d.shipmentDetails.date)}</p>
+                                        <p>{formatDateOnly(d.shipmentDetails.date)}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-gray-500">Expected delivery</p>
@@ -438,12 +483,13 @@ export default function TrackingPage() {
                                                     <TableHead>User</TableHead>
                                                     <TableHead>Service center</TableHead>
                                                     <TableHead>External</TableHead>
+                                                    {isAdmin ? <TableHead className="w-24 text-right">Actions</TableHead> : null}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {timeline.length === 0 ? (
                                                     <TableRow>
-                                                        <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                                                        <TableCell colSpan={isAdmin ? 11 : 10} className="text-center text-muted-foreground py-8">
                                                             No tracking events yet.
                                                         </TableCell>
                                                     </TableRow>
@@ -470,6 +516,36 @@ export default function TrackingPage() {
                                                             <TableCell className="text-xs max-w-[140px] truncate" title={row.externalStatus ?? ""}>
                                                                 {row.externalStatus || "—"}
                                                             </TableCell>
+                                                            {isAdmin ? (
+                                                                <TableCell className="text-right">
+                                                                    <div className="flex justify-end gap-1">
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8"
+                                                                            title="Edit date and time"
+                                                                            onClick={() => {
+                                                                                setEditEvent(row);
+                                                                                setEditScannedAt(toDatetimeLocalInputValue(row.eventAt));
+                                                                            }}
+                                                                        >
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-destructive hover:text-destructive"
+                                                                            title="Delete tracking"
+                                                                            disabled={timeline.length <= 1}
+                                                                            onClick={() => setDeleteEvent(row)}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </TableCell>
+                                                            ) : null}
                                                         </TableRow>
                                                     ))
                                                 )}
@@ -822,6 +898,82 @@ export default function TrackingPage() {
                     })()}
                 />
             )}
+
+            <Dialog
+                open={editEvent != null}
+                onOpenChange={(open) => {
+                    if (!open) setEditEvent(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Update tracking date and time</DialogTitle>
+                        <DialogDescription>
+                            Set the scan time in IST for {editEvent ? formatShipmentStatusLabel(editEvent.status) : "this event"}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        <Label htmlFor="tracking-event-scanned-at">Event time (IST)</Label>
+                        <Input
+                            id="tracking-event-scanned-at"
+                            type="datetime-local"
+                            value={editScannedAt}
+                            onChange={(e) => setEditScannedAt(e.target.value)}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setEditEvent(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            disabled={!editScannedAt || updateEventMutation.isPending || editEvent == null}
+                            onClick={() => {
+                                if (!editEvent || !editScannedAt) return;
+                                updateEventMutation.mutate({
+                                    id: editEvent.id,
+                                    scannedAt: naiveDateTimeToIndiaIso(editScannedAt),
+                                });
+                            }}
+                        >
+                            {updateEventMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog
+                open={deleteEvent != null}
+                onOpenChange={(open) => {
+                    if (!open) setDeleteEvent(null);
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this tracking event?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {deleteEvent
+                                ? `${formatShipmentStatusLabel(deleteEvent.status)} at ${formatIndiaDateTime(deleteEvent.eventAt)} will be removed from the timeline.`
+                                : "This tracking event will be removed from the timeline."}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={deleteEventMutation.isPending || deleteEvent == null}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if (deleteEvent) deleteEventMutation.mutate(deleteEvent.id);
+                            }}
+                        >
+                            {deleteEventMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

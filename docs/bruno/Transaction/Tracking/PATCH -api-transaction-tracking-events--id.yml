@@ -1,11 +1,11 @@
 info:
-  name: POST /api/transaction/tracking/manual
+  name: PATCH /api/transaction/tracking/events/:id
   type: http
-  seq: 7
+  seq: 10
 
 http:
-  method: POST
-  url: "{{baseUrl}}/api/transaction/tracking/manual"
+  method: PATCH
+  url: "{{baseUrl}}/api/transaction/tracking/events/1"
   headers:
     - name: Content-Type
       value: application/json
@@ -16,11 +16,7 @@ http:
     type: json
     data: |
       {
-        "awbNo": "AWB123456789",
-        "status": "OUT_FOR_DELIVERY",
-        "remark": "Manual override",
-        "location": "Service center",
-        "scannedAt": "2026-07-04T14:30:00+05:30"
+        "scannedAt": "2026-07-04T10:30:00+05:30"
       }
   auth: inherit
 

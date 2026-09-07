@@ -41,6 +41,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trackingService } from "@/services/transactions/tracking-service";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
 import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
+import { naiveDateTimeToIndiaIso, toDatetimeLocalInputValue } from "@/lib/india-date";
 
 const formSchema = z
     .object({
@@ -48,6 +49,7 @@ const formSchema = z
         remark: z.string().optional(),
         subStatus: z.string().max(128).optional(),
         location: z.string().max(512).optional(),
+        scannedAt: z.string().optional(),
         expectedDeliveryDate: z.string().optional(),
     })
     .superRefine((data, ctx) => {
@@ -83,6 +85,7 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
             remark: initialData?.remark || "",
             subStatus: initialData?.subStatus || "",
             location: initialData?.location || "",
+            scannedAt: toDatetimeLocalInputValue(new Date()),
             expectedDeliveryDate: initialData?.expectedDeliveryDate || "",
         },
     });
@@ -90,16 +93,18 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
     const watchedStatus = useWatch({ control: form.control, name: "status" });
 
     useEffect(() => {
-        if (isOpen && initialData) {
-            form.reset({
-                status: initialData.status,
-                remark: initialData.remark || "",
-                subStatus: initialData.subStatus || "",
-                location: initialData.location || "",
-                expectedDeliveryDate: initialData.expectedDeliveryDate || "",
-            });
-        }
-    }, [isOpen, initialData, form]);
+        if (!isOpen) return;
+        form.reset({
+            status: initialData?.status || "",
+            remark: initialData?.remark || "",
+            subStatus: initialData?.subStatus || "",
+            location: initialData?.location || "",
+            scannedAt: toDatetimeLocalInputValue(new Date()),
+            expectedDeliveryDate: initialData?.expectedDeliveryDate || "",
+        });
+        // Snapshot fields when the dialog opens; parent re-renders must not wipe scan time.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     const mutation = useMutation({
         mutationFn: (values: z.infer<typeof formSchema>) =>
@@ -109,6 +114,9 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                 remark: values.remark,
                 subStatus: values.subStatus,
                 location: values.location,
+                scannedAt: values.scannedAt?.trim()
+                    ? naiveDateTimeToIndiaIso(values.scannedAt.trim())
+                    : undefined,
                 expectedDeliveryDate: values.expectedDeliveryDate?.trim()
                     ? values.expectedDeliveryDate.trim()
                     : undefined,
@@ -219,6 +227,23 @@ export function ManualUpdateDialog({ awbNo, isOpen, onClose, initialData }: Manu
                                             placeholder="Hub, city, or PIN area"
                                             {...field}
                                             className={FLOATING_INNER_TEXTAREA}
+                                        />
+                                    </FormControl>
+                                </FloatingFormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="scannedAt"
+                            render={({ field }) => (
+                                <FloatingFormItem label="Scan date & time (IST)">
+                                    <FormControl>
+                                        <Input
+                                            type="datetime-local"
+                                            {...field}
+                                            value={field.value || ""}
+                                            className={FLOATING_INNER_CONTROL}
                                         />
                                     </FormControl>
                                 </FloatingFormItem>

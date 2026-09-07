@@ -142,6 +142,31 @@ class TrackingService {
         return response.blob();
     }
 
+    async updateEventTime(eventId: number, scannedAt: string): Promise<{ success: boolean; message?: string }> {
+        const response = await apiFetch(`${this.baseUrl}/events/${eventId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ scannedAt }),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Failed to update tracking time');
+        }
+        return response.json();
+    }
+
+    async deleteEvent(eventId: number): Promise<{ success: boolean; message?: string }> {
+        const response = await apiFetch(`${this.baseUrl}/events/${eventId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Failed to delete tracking event');
+        }
+        return response.json();
+    }
+
     /** Bruno: vendor webhook (often public; portal may still send Bearer). */
     async postVendorWebhook(body: unknown): Promise<unknown> {
         const response = await apiFetch(`${this.baseUrl}/webhook`, {

@@ -144,6 +144,8 @@ export interface ManualUpdatePayload {
     remark?: string;
     subStatus?: string;
     location?: string;
+    /** Scan instant (ISO-8601 or IST `YYYY-MM-DDTHH:mm`). Omit to use now. */
+    scannedAt?: string;
     /** YYYY-MM-DD expected delivery override */
     expectedDeliveryDate?: string;
 }
