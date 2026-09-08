@@ -119,6 +119,7 @@ const COLUMN_LABELS: Record<MisReportColumn, string> = {
 const STATUS_OPTIONS = [
   "BOOKED",
   "MANIFESTED",
+  "OUT_FOR_PICKUP",
   "PICKED_UP",
   "PICKUP_FAILED",
   "IN_TRANSIT",

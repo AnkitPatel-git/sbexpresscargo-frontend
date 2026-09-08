@@ -70,6 +70,7 @@ const DEFAULT_FILTERS: OperationsMisFilters = {
 const STATUS_OPTIONS = [
   "BOOKED",
   "MANIFESTED",
+  "OUT_FOR_PICKUP",
   "PICKED_UP",
   "PICKUP_FAILED",
   "IN_TRANSIT",

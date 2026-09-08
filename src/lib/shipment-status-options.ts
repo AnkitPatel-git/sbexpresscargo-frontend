@@ -2,6 +2,7 @@
 export const SHIPMENT_STATUS_OPTIONS = [
     { label: "Booked", value: "BOOKED" },
     { label: "Manifested", value: "MANIFESTED" },
+    { label: "Out for pickup", value: "OUT_FOR_PICKUP" },
     { label: "Picked up", value: "PICKED_UP" },
     { label: "Pickup failed", value: "PICKUP_FAILED" },
     { label: "In transit", value: "IN_TRANSIT" },

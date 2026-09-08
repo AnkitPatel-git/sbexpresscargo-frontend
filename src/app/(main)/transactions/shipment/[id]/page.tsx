@@ -188,7 +188,15 @@ export default function ShipmentDetailsPage() {
   const shipment = shipmentResponse?.data;
   const appliedCharges = useMemo(() => shipment?.charges ?? [], [shipment?.charges]);
   const kycDocuments = shipment?.kycDocuments ?? [];
-  const statuses = useMemo(() => shipment?.statuses ?? [], [shipment?.statuses]);
+  const statuses = useMemo(() => {
+    const rows = shipment?.statuses ?? []
+    return [...rows].sort((a, b) => {
+      const ta = new Date(a.scannedAt ?? a.createdAt ?? 0).getTime()
+      const tb = new Date(b.scannedAt ?? b.createdAt ?? 0).getTime()
+      if (ta !== tb) return ta - tb
+      return (a.id ?? 0) - (b.id ?? 0)
+    })
+  }, [shipment?.statuses]);
 
   const nonFuelCharges = useMemo(
     () => appliedCharges.filter((row) => !isFuelChargeRow(row)),
@@ -335,7 +343,7 @@ export default function ShipmentDetailsPage() {
           <p><span className="text-muted-foreground">Book Date:</span> {shipment.bookDate ? format(new Date(shipment.bookDate), "dd/MM/yyyy") : "—"}</p>
           <p><span className="text-muted-foreground">Book Time:</span> {formatIndiaTime(shipment.bookTime?.trim() || shipment.createdAt)}</p>
           <p><span className="text-muted-foreground">Reference No:</span> {fallbackText(shipment.referenceNo)}</p>
-          <p><span className="text-muted-foreground">Status:</span> {fallbackText(currentStatus)}</p>
+          <p><span className="text-muted-foreground">Status:</span> {formatShipmentStatusLabel(currentStatus === "—" ? null : currentStatus)}</p>
         </FormSection>
 
         <FormSection title="Party & Route" contentClassName="space-y-2 text-sm">
@@ -384,6 +392,17 @@ export default function ShipmentDetailsPage() {
               return (
                 <div key={status.id} className="rounded-md border border-border bg-muted/20 p-3">
                   <p className="font-medium">{formatShipmentStatusLabel(status.status)}</p>
+                  {status.externalStatus ? (
+                    <p className="text-xs text-muted-foreground">{status.externalStatus}</p>
+                  ) : null}
+                  {status.subStatus ? (
+                    <p className="text-xs text-muted-foreground">
+                      Reason: {formatShipmentStatusLabel(status.subStatus)}
+                    </p>
+                  ) : null}
+                  {status.location ? (
+                    <p className="text-xs text-muted-foreground">{status.location}</p>
+                  ) : null}
                   {creator ? (
                     <p className="text-xs text-muted-foreground">by {creator}</p>
                   ) : null}
@@ -427,7 +446,7 @@ export default function ShipmentDetailsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <FormSection title="Update Status" contentClassName="space-y-3 text-sm">
           <p className="text-xs text-muted-foreground">
-            Current: <span className="font-medium text-foreground">{currentStatus}</span>
+            Current: <span className="font-medium text-foreground">{formatShipmentStatusLabel(currentStatus === "—" ? null : currentStatus)}</span>
           </p>
           <Select value={statusValue || undefined} onValueChange={setStatusValue}>
             <SelectTrigger>

@@ -72,6 +72,7 @@ const DEFAULT_FILTERS: VendorBillingMisFilters = {
 const STATUS_OPTIONS = [
   "BOOKED",
   "MANIFESTED",
+  "OUT_FOR_PICKUP",
   "PICKED_UP",
   "PICKUP_FAILED",
   "IN_TRANSIT",

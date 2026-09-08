@@ -21,6 +21,7 @@ import { useIsClient } from "@/hooks/use-is-client";
 import { useAuth } from "@/context/auth-context";
 import { isSuperAdminRole, MASTER_READ, SHIPMENT_BOOKING_PORTAL, hasMasterLookupForPortalTransaction } from "@/lib/portal-permissions";
 import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
+import { formatShipmentStatusLabel } from "@/lib/shipment-status-label";
 import { customerService } from "@/services/masters/customer-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import { userService } from "@/services/user-service";
@@ -450,7 +451,7 @@ export default function ShipmentsPage() {
                   <TableCell>{shipment.destination || "—"}</TableCell>
                   <TableCell>{shipment.product?.productName || shipment.product?.name || "—"}</TableCell>
                   <TableCell>{formatShipmentPaymentTypeLabel(shipment.paymentType)}</TableCell>
-                  <TableCell>{shipment.currentStatus || "—"}</TableCell>
+                  <TableCell>{formatShipmentStatusLabel(shipment.currentStatus)}</TableCell>
                   <TableCell>{shipment.pieces ?? "—"}</TableCell>
                   <TableCell>{formatActualWeight(shipment.declaredWeight)}</TableCell>
                   <TableCell>{formatInvoiceValue(shipment.shipmentTotalValue)}</TableCell>

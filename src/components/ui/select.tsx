@@ -19,8 +19,14 @@ function SelectGroup({
 }
 
 function SelectValue({
+  children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
+  // React 19: Radix Select.Value portals into a ref and must be a leaf (no React children).
+  // Closed-state labels are passed as children because SelectContent is unmounted while closed.
+  if (children != null && children !== false) {
+    return <span data-slot="select-value">{children}</span>
+  }
   return <SelectPrimitive.Value data-slot="select-value" {...props} />
 }
 
