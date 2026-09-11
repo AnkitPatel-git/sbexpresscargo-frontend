@@ -127,7 +127,7 @@ export default function ShipmentBulkImportPage() {
           <span className="font-mono">Shipments</span> / the first sheet if unnamed). Row 1 is the header, row 2 is a{" "}
           <strong>sample row</strong> (skipped on import — use it as a guide), and your bookings start from{" "}
           <strong>row 3</strong>. Each row creates one booking, or updates an
-          existing <strong>BOOKED</strong> shipment when{" "}
+          existing shipment when{" "}
           <strong>AWB No.</strong> matches (only non-empty cells are applied). New rows still need{" "}
           <strong>customer</strong> and <strong>shipper</strong> master
           codes, <strong>product code</strong>, and <strong>service center</strong> code (e.g.{" "}
