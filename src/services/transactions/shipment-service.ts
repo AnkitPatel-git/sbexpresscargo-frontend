@@ -134,7 +134,7 @@ export const shipmentService = {
 
   async deleteShipment(
     id: number,
-    payload: { remark: string; requestedByUserId: number },
+    payload: { remark: string; requestedByUserId: number; operationsTeamId: number },
   ): Promise<ApiEnvelope<{ id: number; deleted: boolean }>> {
     return requestJson(
       `${API_URL}/transaction/shipment/${id}`,

@@ -23,8 +23,10 @@ import { isSuperAdminRole, MASTER_READ, SHIPMENT_BOOKING_PORTAL, hasMasterLookup
 import { formatShipmentPaymentTypeLabel } from "@/lib/shipment-payment-label";
 import { formatShipmentStatusLabel } from "@/lib/shipment-status-label";
 import { customerService } from "@/services/masters/customer-service";
+import { serviceCenterService } from "@/services/masters/service-center-service";
 import { shipmentService } from "@/services/transactions/shipment-service";
 import { userService } from "@/services/user-service";
+import type { ServiceCenter } from "@/types/masters/service-center";
 import type { Shipment } from "@/types/transactions/shipment";
 import type { UtilityUser } from "@/types/utilities/user";
 import { SortableColumnHeader, type SortOrder } from "@/components/ui/sortable-column-header";
@@ -55,6 +57,7 @@ const defaultFilters: ShipmentFilters = {
 
 export default function ShipmentsPage() {
   const deleteRequestedBySelectId = useId();
+  const deleteOperationsTeamSelectId = useId();
   const isClient = useIsClient();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -83,6 +86,7 @@ export default function ShipmentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null);
   const [deleteRemark, setDeleteRemark] = useState("");
   const [deleteRequestedByUserId, setDeleteRequestedByUserId] = useState<string>("");
+  const [deleteOperationsTeamId, setDeleteOperationsTeamId] = useState<string>("");
   const [limit] = useState(10);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<ShipmentFilters>(defaultFilters);
@@ -161,10 +165,16 @@ export default function ShipmentsPage() {
   };
 
   const deleteMutation = useMutation({
-    mutationFn: (input: { id: number; remark: string; requestedByUserId: number }) =>
+    mutationFn: (input: {
+      id: number;
+      remark: string;
+      requestedByUserId: number;
+      operationsTeamId: number;
+    }) =>
       shipmentService.deleteShipment(input.id, {
         remark: input.remark,
         requestedByUserId: input.requestedByUserId,
+        operationsTeamId: input.operationsTeamId,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipments"] });
@@ -172,6 +182,7 @@ export default function ShipmentsPage() {
       setDeleteTarget(null);
       setDeleteRemark("");
       setDeleteRequestedByUserId("");
+      setDeleteOperationsTeamId("");
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to delete shipment");
@@ -182,14 +193,20 @@ export default function ShipmentsPage() {
     setDeleteTarget(shipment);
     setDeleteRemark("");
     setDeleteRequestedByUserId("");
+    setDeleteOperationsTeamId("");
   };
 
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
     const remark = deleteRemark.trim();
     const requestedByUserId = Number(deleteRequestedByUserId);
+    const operationsTeamId = Number(deleteOperationsTeamId);
     if (!remark) {
       toast.error("Enter a deletion remark");
+      return;
+    }
+    if (!Number.isInteger(operationsTeamId) || operationsTeamId <= 0) {
+      toast.error("Select operations team");
       return;
     }
     if (!Number.isInteger(requestedByUserId) || requestedByUserId <= 0) {
@@ -200,6 +217,7 @@ export default function ShipmentsPage() {
       id: deleteTarget.id,
       remark,
       requestedByUserId,
+      operationsTeamId,
     });
   };
 
@@ -518,6 +536,7 @@ export default function ShipmentsPage() {
             setDeleteTarget(null);
             setDeleteRemark("");
             setDeleteRequestedByUserId("");
+            setDeleteOperationsTeamId("");
           }
         }}
       >
@@ -526,7 +545,7 @@ export default function ShipmentsPage() {
             <DialogTitle>Delete shipment</DialogTitle>
             <DialogDescription>
               {deleteTarget
-                ? `Soft-delete AWB ${deleteTarget.awbNo}. This action is recorded with a remark and the user who requested deletion.`
+                ? `Soft-delete AWB ${deleteTarget.awbNo}. This action is recorded with a remark, operations team, and the user who requested deletion.`
                 : "Soft-delete this shipment booking."}
             </DialogDescription>
           </DialogHeader>
@@ -540,6 +559,30 @@ export default function ShipmentsPage() {
                 placeholder="Why is this shipment being deleted?"
                 rows={4}
                 maxLength={1000}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={deleteOperationsTeamSelectId}>Operations team</Label>
+              <DbAsyncSelect<ServiceCenter>
+                id={deleteOperationsTeamSelectId}
+                queryKey={["shipment-delete-operations-teams"]}
+                value={deleteOperationsTeamId || undefined}
+                onValueChange={setDeleteOperationsTeamId}
+                fetchPage={(page, search) =>
+                  serviceCenterService.getServiceCenters({
+                    page,
+                    limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                    search: search || undefined,
+                    sortBy: "name",
+                    sortOrder: "asc",
+                  })
+                }
+                getItemLabel={(item) =>
+                  item.code ? `${item.name} (${item.code})` : item.name
+                }
+                placeholder="Select operations team"
+                searchPlaceholder="Search operations team…"
+                disabled={deleteMutation.isPending}
               />
             </div>
             <div className="space-y-2">
