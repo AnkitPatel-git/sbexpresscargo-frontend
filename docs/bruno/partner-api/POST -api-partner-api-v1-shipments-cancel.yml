@@ -1,0 +1,29 @@
+info:
+  name: POST /api/partner-api/v1/shipments/cancel
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/partner-api/v1/shipments/cancel"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{partnerAccessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "details": [
+          {
+            "docketNo": "AWB-20260914-000001",
+            "orderNo": "5943071109",
+            "canReason": "Customer Order cancel"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true

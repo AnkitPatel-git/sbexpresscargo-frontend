@@ -1,0 +1,15 @@
+info:
+  name: DELETE /api/partner-app-master/:id
+  type: http
+  seq: 9
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/partner-app-master/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  auth: inherit
+
+settings:
+  encodeUrl: true

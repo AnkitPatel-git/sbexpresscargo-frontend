@@ -38,6 +38,7 @@ import {
   FileText,
   ArrowLeftRight,
   BarChart3,
+  KeyRound,
   Menu,
   ClipboardList,
   Bike,
@@ -105,6 +106,7 @@ const headerNavItems = [
   { href: "/masters/charge", label: "Charge Master" },
   { href: "/masters/vehicle", label: "Vehicle Master" },
   { href: "/masters/vendor-config", label: "Vendor Config Master" },
+  { href: "/masters/partner-apps", label: "Partner Apps" },
   { href: "/transactions/shipment", label: "Shipment Booking" },
   { href: "/transactions/manifest", label: "Manifest" },
   { href: "/transactions/tracking", label: "Tracking" },
@@ -276,6 +278,12 @@ const MASTER_GROUP_ITEMS = {
       label: "Vehicle",
       icon: Truck,
       permission: "master.vehicle.read",
+    },
+    {
+      href: "/masters/partner-apps",
+      label: "Partner Apps",
+      icon: KeyRound,
+      permission: "master.partner_app.read",
     },
   ],
 } as const;

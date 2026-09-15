@@ -1,0 +1,30 @@
+info:
+  name: PATCH /api/partner-app-master/:id
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/partner-app-master/1"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Hafele",
+        "customerIds": [1, 2, 3, 4, 5],
+        "webhook": {
+          "webhookUrl": "https://partner.example.com/tracking",
+          "authType": "BEARER",
+          "authValue": "partner-token",
+          "isActive": true
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true

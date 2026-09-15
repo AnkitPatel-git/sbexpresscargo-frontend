@@ -1,0 +1,55 @@
+info:
+  name: POST /api/partner-api/v1/shipments
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/partner-api/v1/shipments"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{partnerAccessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "consignments": [
+          {
+            "Origin_name": "HAFELE INDIA PVT LTD",
+            "Origin_phone": "8657858214",
+            "Origin_address": "Hafele India Pvt Ltd, Antariksh Logipark, Bhiwandi",
+            "Origin_pincode": "421101",
+            "Origin_city": "Mumbai",
+            "Origin_state": "Maharashtra",
+            "Destination_name": "BNP INTERIORS",
+            "Destination_phone": "9320314458",
+            "Destination_address": "A 24, 25 TTC INDUSTRIAL AREA, THANE BELAPUR ROAD",
+            "Destination_pincode": "400710",
+            "Destination_city": "NAVI MUMBAI",
+            "Destination_state": "Maharashtra",
+            "From_branch_code": "268436243",
+            "To_branch_code": "268436242",
+            "reference_number": "5943071109",
+            "VehicleNumber": "MH12KP9736",
+            "InvoiceNo": "431049737",
+            "InvoiceAmount": 63372,
+            "ItemActualWeight": "21.29",
+            "ItemName": "AUTO PART",
+            "ItemList": [
+              {
+                "ItemQty": 1,
+                "ItemLength": 115,
+                "ItemHeight": 18,
+                "ItemWidth": 18,
+                "EwayBillNo": "123456789012"
+              }
+            ]
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true

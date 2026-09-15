@@ -1,0 +1,7 @@
+info:
+  name: partner-api
+  type: folder
+  seq: 40
+
+request:
+  auth: inherit

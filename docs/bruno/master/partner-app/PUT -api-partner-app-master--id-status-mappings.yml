@@ -1,0 +1,42 @@
+info:
+  name: PUT /api/partner-app-master/:id/status-mappings
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/partner-app-master/1/status-mappings"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{accessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "mappings": [
+          {
+            "internalStatus": "IN_TRANSIT",
+            "scan": "SHIPMENT INSCAN",
+            "scanCode": "001",
+            "scanType": "UD"
+          },
+          {
+            "internalStatus": "OUT_FOR_DELIVERY",
+            "scan": "SHIPMENT OUTSCANNED TO NETWORK",
+            "scanCode": "003",
+            "scanType": "UD"
+          },
+          {
+            "internalStatus": "DELIVERED",
+            "scan": "SHIPMENT DELIVERED",
+            "scanCode": "000",
+            "scanType": "DL"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true

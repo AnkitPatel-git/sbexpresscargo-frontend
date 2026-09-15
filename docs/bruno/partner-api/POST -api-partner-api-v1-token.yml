@@ -1,0 +1,22 @@
+info:
+  name: POST /api/partner-api/v1/token
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/partner-api/v1/token"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "clientId": "pa_replace_me",
+        "clientSecret": "replace_me"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
