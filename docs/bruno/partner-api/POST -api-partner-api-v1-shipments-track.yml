@@ -1,0 +1,30 @@
+info:
+  name: POST /api/partner-api/v1/shipments/track
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/partner-api/v1/shipments/track"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{partnerAccessToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "details": [
+          {
+            "docketNo": "{{partnerDocketNo}}"
+          },
+          {
+            "docketNo": "AWB-REPLACE-ME"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
