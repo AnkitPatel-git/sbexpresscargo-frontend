@@ -72,7 +72,7 @@ class PodService {
         }
         return {
             blob: await response.blob(),
-            filename: parseFilename(response, `POD-${awbNo.trim()}.pdf`),
+            filename: parseFilename(response, `${awbNo.trim()}.pdf`),
         };
     }
 

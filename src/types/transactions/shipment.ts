@@ -98,6 +98,17 @@ export function getEwaybillRequiredMessage(
   return null;
 }
 
+/** DRS / shipping-label PDF layout (must match backend ShipmentPrintFormat). */
+export type ShipmentPrintFormat = "SB" | "ST";
+
+export const SHIPMENT_PRINT_FORMAT_OPTIONS: Array<{
+  value: ShipmentPrintFormat;
+  label: string;
+}> = [
+  { value: "SB", label: "SB Format" },
+  { value: "ST", label: "ST Format" },
+];
+
 export const pieceItemSchema = z.object({
   contentId: z.number().int().positive("Content is required"),
   quantity: z.number().int().optional(),

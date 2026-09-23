@@ -5,11 +5,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
-import { ArrowLeft, Download, Loader2, Pencil } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SHIPMENT_CHARGE } from "@/lib/portal-permissions";
 import { GST_PERCENT, gstOnTotal, grandTotalWithGst } from "@/lib/gst";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,7 +32,13 @@ import {
   formatShipmentPaymentTypeLabel,
   SHIPMENT_COD_TOPAY_LABEL,
 } from "@/lib/shipment-payment-label";
-import type { Shipment, ShipmentCharge, ShipmentStatus } from "@/types/transactions/shipment";
+import {
+  SHIPMENT_PRINT_FORMAT_OPTIONS,
+  type Shipment,
+  type ShipmentCharge,
+  type ShipmentPrintFormat,
+  type ShipmentStatus,
+} from "@/types/transactions/shipment";
 import { naiveDateTimeToIndiaIso, formatIndiaTime } from "@/lib/india-date";
 import { DateTime24Input } from "@/components/ui/time-24-select";
 
@@ -110,8 +122,17 @@ export default function ShipmentDetailsPage() {
   });
 
   const labelDownloadMutation = useMutation({
-    mutationFn: (awbNo: string) =>
-      shipmentService.downloadShippingLabel(awbNo, { regenerate: true }),
+    mutationFn: ({
+      awbNo,
+      format,
+    }: {
+      awbNo: string;
+      format: ShipmentPrintFormat;
+    }) =>
+      shipmentService.downloadShippingLabel(awbNo, {
+        regenerate: true,
+        format,
+      }),
     onSuccess: ({ blob, filename }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -125,7 +146,11 @@ export default function ShipmentDetailsPage() {
   });
 
   const podBlankFormDownloadMutation = useMutation({
-    mutationFn: () => shipmentService.downloadPodBlankForm(id),
+    mutationFn: (format: ShipmentPrintFormat) =>
+      shipmentService.downloadPodBlankForm(id, {
+        format,
+        awbNo: shipmentResponse?.data?.awbNo,
+      }),
     onSuccess: ({ blob, filename }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -282,45 +307,79 @@ export default function ShipmentDetailsPage() {
             )}
           </Button>
           <PermissionGuard permission="transaction.pod.download">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => podBlankFormDownloadMutation.mutate()}
-              disabled={podBlankFormDownloadMutation.isPending}
-            >
-              {podBlankFormDownloadMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                  Downloading…
-                </>
-              ) : (
-                <>
-                  <Download className="mr-1 h-4 w-4" />
-                  Download DRS
-                </>
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={podBlankFormDownloadMutation.isPending}
+                >
+                  {podBlankFormDownloadMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      Downloading…
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-1 h-4 w-4" />
+                      Download DRS
+                      <ChevronDown className="ml-1 h-3 w-3" />
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {SHIPMENT_PRINT_FORMAT_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => podBlankFormDownloadMutation.mutate(option.value)}
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </PermissionGuard>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => labelDownloadMutation.mutate(shipment.awbNo)}
-            disabled={!shipment.awbNo?.trim() || labelDownloadMutation.isPending}
-          >
-            {labelDownloadMutation.isPending ? (
-              <>
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                Downloading…
-              </>
-            ) : (
-              <>
-                <Download className="mr-1 h-4 w-4" />
-                Shipment Label
-              </>
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!shipment.awbNo?.trim() || labelDownloadMutation.isPending}
+              >
+                {labelDownloadMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    Downloading…
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-1 h-4 w-4" />
+                    Shipment Label
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {SHIPMENT_PRINT_FORMAT_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  disabled={!shipment.awbNo?.trim()}
+                  onClick={() =>
+                    labelDownloadMutation.mutate({
+                      awbNo: shipment.awbNo,
+                      format: option.value,
+                    })
+                  }
+                >
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button asChild type="button" variant="outline" size="sm">
             <Link href="/transactions/shipment">
               <ArrowLeft className="mr-1 h-4 w-4" />

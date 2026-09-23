@@ -10,6 +10,7 @@ import type {
   ShipmentSingleResponse,
   ShipmentWeightPreviewResponse,
   VendorChargeBreakdownData,
+  ShipmentPrintFormat,
 } from "@/types/transactions/shipment";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -532,28 +533,38 @@ export const shipmentService = {
 
   async downloadPodBlankForm(
     shipmentId: number,
-    regenerate = false,
+    options?: { regenerate?: boolean; format?: ShipmentPrintFormat; awbNo?: string },
   ): Promise<{ blob: Blob; filename: string }> {
-    const q = regenerate ? "?regenerate=true" : "";
+    const format = options?.format ?? "SB";
+    const params = new URLSearchParams();
+    params.set("format", format);
+    if (options?.regenerate) params.set("regenerate", "true");
+    const q = `?${params.toString()}`;
     const response = await apiFetch(`${API_URL}/transaction/shipment/${shipmentId}/pod-form${q}`, {
       headers: authHeaders(),
     });
     if (!response.ok) {
       throw new Error(await readError(response, "Failed to download POD form"));
     }
+    const awbFallback = options?.awbNo?.trim()
+      ? `${options.awbNo.trim()}.pdf`
+      : 'awb.pdf';
     return {
       blob: await response.blob(),
-      filename: parseFilename(response, `POD-${shipmentId}.pdf`),
+      filename: parseFilename(response, awbFallback),
     };
   },
 
   async downloadShippingLabel(
     awbNo: string,
-    options?: { regenerate?: boolean },
+    options?: { regenerate?: boolean; format?: ShipmentPrintFormat },
   ): Promise<{ blob: Blob; filename: string }> {
     const encoded = encodeURIComponent(awbNo.trim());
-    const q =
-      options?.regenerate === true ? '?regenerate=true' : '';
+    const format = options?.format ?? "SB";
+    const params = new URLSearchParams();
+    params.set("format", format);
+    if (options?.regenerate === true) params.set("regenerate", "true");
+    const q = `?${params.toString()}`;
     const response = await apiFetch(
       `${API_URL}/transaction/shipment/awb/${encoded}/shipping-label${q}`,
       { headers: authHeaders() },
@@ -563,7 +574,7 @@ export const shipmentService = {
     }
     return {
       blob: await response.blob(),
-      filename: parseFilename(response, `label-${awbNo}.pdf`),
+      filename: parseFilename(response, `${awbNo.trim()}.pdf`),
     };
   },
 
@@ -578,7 +589,7 @@ export const shipmentService = {
     }
     return {
       blob: await response.blob(),
-      filename: parseFilename(response, `POD-proof-${shipmentId}`),
+      filename: parseFilename(response, `${shipmentId}.pdf`),
     };
   },
 

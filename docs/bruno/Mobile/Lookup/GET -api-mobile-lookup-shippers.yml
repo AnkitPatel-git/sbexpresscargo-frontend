@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/mobile/lookup/shippers?page=1&limit=50&search="
+  url: "{{baseUrl}}/api/mobile/lookup/shippers?page=1&limit=50&search=&id="
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
@@ -20,6 +20,10 @@ http:
     - name: search
       value: ""
       type: query
+    - name: id
+      value: "482"
+      type: query
+      disabled: true
   auth: inherit
 
 settings:
