@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Edit, FilePlus, FileSpreadsheet, FileUp, Filter, RefreshCw, Search, Trash2 } from "lucide-react";
@@ -93,17 +93,6 @@ export default function ShipmentsPage() {
   const [draftFilters, setDraftFilters] = useState<ShipmentFilters>(defaultFilters);
   const [sortBy, setSortBy] = useState("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-
-  const { data: userRolesData } = useQuery({
-    queryKey: ["user-roles"],
-    queryFn: () => userService.listRoles(),
-    enabled: isSuperAdmin,
-  });
-
-  const operationsRoleId = useMemo(() => {
-    const roles = userRolesData?.data ?? [];
-    return roles.find((role) => role.identifier === "OPERATIONS")?.id;
-  }, [userRolesData?.data]);
 
   const { data: customerData } = useQuery({
     queryKey: ["shipment-client-options"],
@@ -589,7 +578,7 @@ export default function ShipmentsPage() {
               <Label htmlFor={deleteRequestedBySelectId}>Deletion requested by</Label>
               <DbAsyncSelect<UtilityUser>
                 id={deleteRequestedBySelectId}
-                queryKey={["shipment-delete-requested-by-users", operationsRoleId]}
+                queryKey={["shipment-delete-requested-by-users"]}
                 value={deleteRequestedByUserId || undefined}
                 onValueChange={setDeleteRequestedByUserId}
                 fetchPage={(page, search) =>
@@ -598,7 +587,8 @@ export default function ShipmentsPage() {
                     limit: DB_ASYNC_SELECT_PAGE_SIZE,
                     search: search || undefined,
                     status: "ACTIVE",
-                    ...(operationsRoleId != null ? { roleId: operationsRoleId } : {}),
+                    sortBy: "username",
+                    sortOrder: "asc",
                   })
                 }
                 getItemLabel={(item) =>
@@ -606,9 +596,9 @@ export default function ShipmentsPage() {
                     ? `${item.username}${item.email ? ` (${item.email})` : ""}`
                     : `User #${item.id}`
                 }
-                placeholder="Select operations user"
-                searchPlaceholder="Search operations users…"
-                disabled={deleteMutation.isPending || operationsRoleId == null}
+                placeholder="Select user"
+                searchPlaceholder="Search users…"
+                disabled={deleteMutation.isPending}
               />
             </div>
           </div>
