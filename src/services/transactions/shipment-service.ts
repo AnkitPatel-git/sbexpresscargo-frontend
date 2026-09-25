@@ -75,6 +75,13 @@ function parseFilename(response: Response, fallback: string) {
   return match?.[1]?.trim() || fallback;
 }
 
+/** Download name without the internal SaiTrack ST prefix. */
+function awbPdfFilename(awbNo: string) {
+  const trimmed = awbNo.trim();
+  const printed = /^ST\d/i.test(trimmed) ? trimmed.slice(2) : trimmed;
+  return `${printed || "awb"}.pdf`;
+}
+
 export const shipmentService = {
   async getShipments(params?: ShipmentListQueryParams): Promise<ShipmentListResponse> {
     const queryParams = new URLSearchParams();
@@ -547,7 +554,7 @@ export const shipmentService = {
       throw new Error(await readError(response, "Failed to download POD form"));
     }
     const awbFallback = options?.awbNo?.trim()
-      ? `${options.awbNo.trim()}.pdf`
+      ? awbPdfFilename(options.awbNo)
       : 'awb.pdf';
     return {
       blob: await response.blob(),
@@ -574,7 +581,7 @@ export const shipmentService = {
     }
     return {
       blob: await response.blob(),
-      filename: parseFilename(response, `${awbNo.trim()}.pdf`),
+      filename: parseFilename(response, awbPdfFilename(awbNo)),
     };
   },
 

@@ -105,7 +105,7 @@ export default function TrackingPage() {
     const { data: detailData } = useQuery({
         queryKey: ["trackingDetail", searchTerm],
         queryFn: () => trackingService.getTrackingByAwb(searchTerm),
-        enabled: searchTerm.length > 5, // Only trigger if it looks like a full AWB
+        enabled: searchTerm.trim().length > 0,
         retry: false, // Don't retry if AWB not found
     });
 

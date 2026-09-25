@@ -14,6 +14,12 @@ function parseFilename(response: Response, fallback: string): string {
     return match?.[1]?.trim() || fallback;
 }
 
+function awbPdfFilename(awbNo: string): string {
+    const trimmed = awbNo.trim();
+    const printed = /^ST\d/i.test(trimmed) ? trimmed.slice(2) : trimmed;
+    return `${printed || 'awb'}.pdf`;
+}
+
 const getAuthHeaders = (isFormData = false) => {
     const headers: Record<string, string> = {
         'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -72,7 +78,7 @@ class PodService {
         }
         return {
             blob: await response.blob(),
-            filename: parseFilename(response, `${awbNo.trim()}.pdf`),
+            filename: parseFilename(response, awbPdfFilename(awbNo)),
         };
     }
 
