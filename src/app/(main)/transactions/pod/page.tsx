@@ -24,6 +24,17 @@ import { cn } from "@/lib/utils";
 
 const POD_PROOF_ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,image/*,application/pdf";
 
+function saveBlob(blob: Blob, filename: string) {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
+}
+
 function mergePodRows(current: PodRow[] | null, incoming: PodRow[]): PodRow[] {
     if (!current?.length) return incoming;
     const byAwb = new Map(incoming.map((r) => [r.AWBNo, r]));
@@ -135,36 +146,63 @@ export default function PodPage() {
             return podService.downloadBulkBlankZip(awbs);
         },
         onSuccess: ({ blob, filename }) => {
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode?.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            toast.success("Blank POD forms (ZIP) downloaded");
+            saveBlob(blob, filename);
+            toast.success("DRS (ZIP) downloaded");
         },
         onError: (error) => {
-            toast.error(error instanceof Error ? error.message : "Failed to download ZIP");
+            toast.error(error instanceof Error ? error.message : "Failed to download DRS ZIP");
+        },
+    });
+
+    const bulkUploadedPodZipMutation = useMutation({
+        mutationFn: () => {
+            const awbs = [
+                ...new Set(
+                    (podData ?? [])
+                        .filter((r) => r.hasPodProof)
+                        .map((r) => r.AWBNo)
+                        .filter(Boolean),
+                ),
+            ];
+            if (awbs.length === 0) {
+                return Promise.reject(new Error("No uploaded PODs in the loaded list"));
+            }
+            return podService.downloadBulkUploadedPodZip(awbs);
+        },
+        onSuccess: ({ blob, filename }) => {
+            saveBlob(blob, filename);
+            toast.success("Uploaded PODs (ZIP) downloaded");
+        },
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to download POD ZIP");
+        },
+    });
+
+    const bulkStickerZipMutation = useMutation({
+        mutationFn: () => {
+            if (!podData || podData.length === 0) {
+                return Promise.reject(new Error("Load AWBs first using Search"));
+            }
+            const awbs = [...new Set(podData.map((r) => r.AWBNo).filter(Boolean))];
+            return podService.downloadBulkStickerZip(awbs);
+        },
+        onSuccess: ({ blob, filename }) => {
+            saveBlob(blob, filename);
+            toast.success("Stickers (ZIP) downloaded");
+        },
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to download stickers ZIP");
         },
     });
 
     const blankPdfMutation = useMutation({
         mutationFn: ({ awbNo }: { awbNo: string }) => podService.downloadBlankPdf(awbNo, false),
         onSuccess: ({ blob, filename }) => {
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode?.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            toast.success("POD form downloaded");
+            saveBlob(blob, filename);
+            toast.success("DRS downloaded");
         },
         onError: (error) => {
-            toast.error(error instanceof Error ? error.message : "Failed to download POD form");
+            toast.error(error instanceof Error ? error.message : "Failed to download DRS");
         },
     });
 
@@ -205,15 +243,19 @@ export default function PodPage() {
     };
 
     const allAwbs = podData ? [...new Set(podData.map((r) => r.AWBNo).filter(Boolean))] : [];
+    const uploadedAwbs = podData
+        ? [...new Set(podData.filter((r) => r.hasPodProof).map((r) => r.AWBNo).filter(Boolean))]
+        : [];
 
     return (
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-3">
                 <h1 className="text-lg font-semibold text-foreground">POD</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Search AWBs to load the list, download blank POD forms, and upload signed POD scans. Name each file
-                    after the AWB (e.g. <span className="font-mono text-xs">AWB123456.pdf</span>) so bulk upload can match
-                    shipments automatically.
+                    Search AWBs to load the list. Download DRS forms, uploaded POD scans, or stickers as a ZIP, and
+                    upload signed POD scans. Name each file after the AWB (e.g.{" "}
+                    <span className="font-mono text-xs">AWB123456.pdf</span>) so bulk upload can match shipments
+                    automatically.
                 </p>
             </div>
 
@@ -302,7 +344,41 @@ export default function PodPage() {
                                 ) : (
                                     <FileDown className="mr-2 h-4 w-4" />
                                 )}
-                                Download blank PODs (ZIP)
+                                Download DRS
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                title={
+                                    uploadedAwbs.length === 0
+                                        ? "No uploaded PODs in this list"
+                                        : "Download uploaded POD scans as a ZIP"
+                                }
+                                onClick={() => bulkUploadedPodZipMutation.mutate()}
+                                disabled={
+                                    bulkUploadedPodZipMutation.isPending || uploadedAwbs.length === 0
+                                }
+                            >
+                                {bulkUploadedPodZipMutation.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <FileDown className="mr-2 h-4 w-4" />
+                                )}
+                                Download PODs
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                title="Download shipping-label stickers as a ZIP"
+                                onClick={() => bulkStickerZipMutation.mutate()}
+                                disabled={bulkStickerZipMutation.isPending || allAwbs.length === 0}
+                            >
+                                {bulkStickerZipMutation.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <FileDown className="mr-2 h-4 w-4" />
+                                )}
+                                Download Stickers
                             </Button>
                         </PermissionGuard>
                     </div>
@@ -476,7 +552,7 @@ export default function PodPage() {
                                                             variant="outline"
                                                             size="sm"
                                                             className="h-8 gap-1 text-xs"
-                                                            title={`Download blank POD for ${row.AWBNo}`}
+                                                            title={`Download DRS for ${row.AWBNo}`}
                                                             onClick={() => blankPdfMutation.mutate({ awbNo: row.AWBNo })}
                                                             disabled={rowBlankDownloading || !row.shipmentId}
                                                         >

@@ -131,18 +131,35 @@ class PodService {
     }
 
     async downloadBulkBlankZip(awbNos: string[]): Promise<{ blob: Blob; filename: string }> {
-        const response = await apiFetch(`${this.baseUrl}/bulk-blank-forms`, {
+        return this.downloadAwbZip('/bulk-blank-forms', awbNos, 'drs.zip', 'Failed to download DRS ZIP');
+    }
+
+    async downloadBulkUploadedPodZip(awbNos: string[]): Promise<{ blob: Blob; filename: string }> {
+        return this.downloadAwbZip('/bulk-uploaded-pods', awbNos, 'pods.zip', 'Failed to download POD ZIP');
+    }
+
+    async downloadBulkStickerZip(awbNos: string[]): Promise<{ blob: Blob; filename: string }> {
+        return this.downloadAwbZip('/bulk-stickers', awbNos, 'stickers.zip', 'Failed to download stickers ZIP');
+    }
+
+    private async downloadAwbZip(
+        path: string,
+        awbNos: string[],
+        fallback: string,
+        errorMessage: string,
+    ): Promise<{ blob: Blob; filename: string }> {
+        const response = await apiFetch(`${this.baseUrl}${path}`, {
             method: 'POST',
             headers: getAuthHeaders(false),
             body: JSON.stringify({ awbNos }),
         });
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
-            throw new Error((err as { message?: string }).message || 'Failed to download POD forms ZIP');
+            throw new Error((err as { message?: string }).message || errorMessage);
         }
         return {
             blob: await response.blob(),
-            filename: parseFilename(response, 'pod-blank-forms.zip'),
+            filename: parseFilename(response, fallback),
         };
     }
 
