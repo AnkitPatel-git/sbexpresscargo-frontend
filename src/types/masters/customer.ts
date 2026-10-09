@@ -191,6 +191,18 @@ export interface CustomerVolumetricFormData {
     cft?: number;
 }
 
+export interface CustomerAwbSerialRange {
+    id: number;
+    customerId: number;
+    startSerial: number;
+    endSerial: number;
+}
+
+export interface CustomerAwbSerialRangeFormData {
+    startSerial?: number;
+    endSerial?: number;
+}
+
 export interface CustomerKycDocument {
     id: number;
     customerId: number;

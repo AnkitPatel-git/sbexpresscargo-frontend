@@ -9,6 +9,8 @@ import {
     CustomerFuelSurchargeFormData,
     CustomerVolumetric,
     CustomerVolumetricFormData,
+    CustomerAwbSerialRange,
+    CustomerAwbSerialRangeFormData,
     CustomerKycDocument,
     CustomerKycDocumentFormData,
 } from '@/types/masters/customer';
@@ -25,7 +27,9 @@ async function getErrorMessage(response: Response, fallback: string) {
     try {
         if (contentType.includes('application/json')) {
             const error = await response.json();
-            return error?.message || fallback;
+            const message = error?.message;
+            if (Array.isArray(message)) return message.filter(Boolean).join(', ') || fallback;
+            return message || fallback;
         }
         const text = await response.text();
         if (text.includes('<!DOCTYPE html>')) {
@@ -360,6 +364,59 @@ export const customerService = {
             throw new Error(await getErrorMessage(response, 'Failed to update volumetric'));
         }
         return response.json() as Promise<CustomerChildSingleResponse<CustomerVolumetric>>;
+    },
+
+    async getCustomerAwbSerialRanges(customerId: number) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/awb-serial-ranges`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch AWB serial ranges');
+        return response.json() as Promise<CustomerChildListResponse<CustomerAwbSerialRange>>;
+    },
+
+    async addCustomerAwbSerialRange(customerId: number, body: CustomerAwbSerialRangeFormData) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/awb-serial-ranges`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            throw new Error(await getErrorMessage(response, 'Failed to add AWB serial range'));
+        }
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerAwbSerialRange>>;
+    },
+
+    async updateCustomerAwbSerialRange(
+        customerId: number,
+        rangeId: number | string,
+        body: CustomerAwbSerialRangeFormData,
+    ) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/awb-serial-ranges/${rangeId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            throw new Error(await getErrorMessage(response, 'Failed to update AWB serial range'));
+        }
+        return response.json() as Promise<CustomerChildSingleResponse<CustomerAwbSerialRange>>;
+    },
+
+    async deleteCustomerAwbSerialRange(customerId: number, rangeId: number | string) {
+        const response = await apiFetch(`${API_URL}/customer-master/${customerId}/awb-serial-ranges/${rangeId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        if (!response.ok) {
+            throw new Error(await getErrorMessage(response, 'Failed to delete AWB serial range'));
+        }
+        return response.json();
     },
 
     async deleteCustomerVolumetric(customerId: number, volumetricId: number | string) {

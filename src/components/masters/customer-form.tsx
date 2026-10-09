@@ -62,6 +62,8 @@ import {
     type CustomerKycDocumentFormData,
     type CustomerVolumetric,
     type CustomerVolumetricFormData,
+    type CustomerAwbSerialRange,
+    type CustomerAwbSerialRangeFormData,
 } from '@/types/masters/customer'
 import type { CustomerGroup } from "@/types/masters/customer-group"
 import type { Product } from "@/types/masters/product"
@@ -126,6 +128,7 @@ const CUSTOMER_TABS = [
     { value: "fuel", label: "Fuel Surcharges" },
     { value: "volumetric", label: "Customer Volumetric" },
     { value: "kyc", label: "KYC Details" },
+    { value: "awb-serials", label: "AWB Serials" },
 ] as const
 
 const ALL_PRODUCTS_OPTION_VALUE = '__ALL_PRODUCTS__'
@@ -436,6 +439,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                         <TabsTrigger value="fuel" className="rounded-full px-5 py-2">Fuel Surcharges</TabsTrigger>
                         <TabsTrigger value="volumetric" className="rounded-full px-5 py-2">Customer Volumetric</TabsTrigger>
                         <TabsTrigger value="kyc" className="rounded-full px-5 py-2">KYC Details</TabsTrigger>
+                        <TabsTrigger value="awb-serials" className="rounded-full px-5 py-2">AWB Serials</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="personal" className="space-y-6">
@@ -845,6 +849,9 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                     <TabsContent value="kyc" className="space-y-4">
                         <CustomerKycTab customerId={customerId} />
                     </TabsContent>
+                    <TabsContent value="awb-serials" className="space-y-4">
+                        <CustomerAwbSerialRangeTab customerId={customerId} />
+                    </TabsContent>
                 </Tabs>
 
                 <div className="flex flex-wrap justify-end gap-3 border-t pt-6">
@@ -933,6 +940,113 @@ function getChildRows<T>(response: unknown): T[] {
     }
 
     return []
+}
+
+const EMPTY_AWB_SERIAL_RANGE: CustomerAwbSerialRangeFormData = {
+    startSerial: undefined,
+    endSerial: undefined,
+}
+
+function CustomerAwbSerialRangeTab({ customerId }: { customerId: number | null }) {
+    const queryClient = useQueryClient()
+    const [open, setOpen] = useState(false)
+    const [editing, setEditing] = useState<CustomerAwbSerialRange | null>(null)
+    const [form, setForm] = useState<CustomerAwbSerialRangeFormData>(EMPTY_AWB_SERIAL_RANGE)
+
+    const { data } = useQuery({
+        queryKey: ['customer-awb-serial-ranges', customerId],
+        queryFn: () => customerService.getCustomerAwbSerialRanges(customerId!),
+        enabled: !!customerId,
+    })
+    const rows = getChildRows<CustomerAwbSerialRange>(data)
+
+    const mutation = useMutation({
+        mutationFn: (payload: CustomerAwbSerialRangeFormData) =>
+            editing
+                ? customerService.updateCustomerAwbSerialRange(customerId!, editing.id, payload)
+                : customerService.addCustomerAwbSerialRange(customerId!, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['customer-awb-serial-ranges', customerId] })
+            setOpen(false)
+            setEditing(null)
+            setForm(EMPTY_AWB_SERIAL_RANGE)
+            toast.success(`AWB serial range ${editing ? 'updated' : 'added'} successfully`)
+        },
+        onError: (error: Error) => toast.error(error.message),
+    })
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => customerService.deleteCustomerAwbSerialRange(customerId!, id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['customer-awb-serial-ranges', customerId] })
+            toast.success('AWB serial range deleted successfully')
+        },
+        onError: (error: Error) => toast.error(error.message),
+    })
+
+    if (!customerId) return <DisabledCustomerTab title="AWB Serials" />
+
+    return (
+        <CustomerChildTableCard
+            title="AWB Serials"
+            onAdd={() => {
+                setEditing(null)
+                setForm(EMPTY_AWB_SERIAL_RANGE)
+                setOpen(true)
+            }}
+            columns={['From', 'To', 'Action']}
+            rows={rows.map((item) => [String(item.startSerial), String(item.endSerial)])}
+            actions={rows.map((item) => (
+                <div className="flex gap-2" key={item.id}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                        setEditing(item)
+                        setForm({ startSerial: item.startSerial, endSerial: item.endSerial })
+                        setOpen(true)
+                    }}>Edit</Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => deleteMutation.mutate(item.id)}>Delete</Button>
+                </div>
+            ))}
+        >
+            <CustomerEntityDialog
+                open={open}
+                onOpenChange={setOpen}
+                title={editing ? 'Edit AWB serial range' : 'Add AWB serial range'}
+                onSave={() => {
+                    if (form.startSerial == null || form.endSerial == null) {
+                        toast.error('Enter the start and end serial')
+                        return
+                    }
+                    if (form.startSerial > form.endSerial) {
+                        toast.error('Start serial must be less than or equal to end serial')
+                        return
+                    }
+                    mutation.mutate({ startSerial: form.startSerial, endSerial: form.endSerial })
+                }}
+                saving={mutation.isPending}
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">From</label>
+                        <IntegerInput
+                            min={1}
+                            value={form.startSerial}
+                            onValueChange={(value) => setForm((prev) => ({ ...prev, startSerial: value }))}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">To</label>
+                        <IntegerInput
+                            min={1}
+                            value={form.endSerial}
+                            onValueChange={(value) => setForm((prev) => ({ ...prev, endSerial: value }))}
+                        />
+                    </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                    Numbers in this range are reserved for this customer. Add another range for a separate block, such as 4000–5000.
+                </p>
+            </CustomerEntityDialog>
+        </CustomerChildTableCard>
+    )
 }
 
 function CustomerFuelSurchargeTab({ customerId }: { customerId: number | null }) {
