@@ -33,7 +33,7 @@ export default function CustomerLoginPage() {
 
   useEffect(() => {
     if (!isLoading && isCustomerUser) {
-      router.replace("/customer/dashboard");
+      router.replace("/dashboard");
     }
   }, [isLoading, isCustomerUser, router]);
 
@@ -53,7 +53,7 @@ export default function CustomerLoginPage() {
         setError("This account uses the staff login.");
         return;
       }
-      login(response.data, "/customer/dashboard");
+      login(response.data, "/dashboard");
     },
     onError: (err: Error) => {
       setError(err.message || "An unexpected error occurred");

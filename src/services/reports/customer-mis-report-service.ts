@@ -9,10 +9,17 @@ export type CustomerMisQuery = {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   awbNo?: string;
+  ewaybillNumber?: string;
   referenceNo?: string;
   bookDateFrom?: string;
   bookDateTo?: string;
   customerId?: number;
+  shipperId?: number;
+  serviceCenterId?: number;
+  productId?: number;
+  fromZoneId?: number;
+  toZoneId?: number;
+  currentStatus?: string;
 };
 
 export type CustomerMisRow = Record<string, string | number | null>;
@@ -38,10 +45,17 @@ function appendParams(queryParams: URLSearchParams, params?: CustomerMisQuery) {
   queryParams.append("sortOrder", params?.sortOrder ?? "desc");
   queryParams.append("search", params?.search ?? "");
   if (params?.awbNo) queryParams.append("awbNo", params.awbNo);
+  if (params?.ewaybillNumber) queryParams.append("ewaybillNumber", params.ewaybillNumber);
   if (params?.referenceNo) queryParams.append("referenceNo", params.referenceNo);
   if (params?.bookDateFrom) queryParams.append("bookDateFrom", params.bookDateFrom);
   if (params?.bookDateTo) queryParams.append("bookDateTo", params.bookDateTo);
   if (params?.customerId) queryParams.append("customerId", String(params.customerId));
+  if (params?.shipperId) queryParams.append("shipperId", String(params.shipperId));
+  if (params?.serviceCenterId) queryParams.append("serviceCenterId", String(params.serviceCenterId));
+  if (params?.productId) queryParams.append("productId", String(params.productId));
+  if (params?.fromZoneId) queryParams.append("fromZoneId", String(params.fromZoneId));
+  if (params?.toZoneId) queryParams.append("toZoneId", String(params.toZoneId));
+  if (params?.currentStatus) queryParams.append("currentStatus", params.currentStatus);
 }
 
 async function readError(response: Response, fallback: string) {

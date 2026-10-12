@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server'
 
 export function proxy(request: NextRequest) {
     const token = request.cookies.get('accessToken')?.value
+    const customerPortal = request.cookies.get('sbPortal')?.value === 'customer'
     const { pathname } = request.nextUrl
 
     // Define protected and public routes
@@ -17,7 +18,7 @@ export function proxy(request: NextRequest) {
     const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/users') || pathname.startsWith('/masters') || pathname.startsWith('/transactions') || pathname.startsWith('/utilities') || pathname.startsWith('/settings') || isCustomerApp
 
     if (isProtectedRoute && !token) {
-        const loginPath = isCustomerApp ? '/customer/login' : '/login'
+        const loginPath = isCustomerApp || customerPortal ? '/customer/login' : '/login'
         return NextResponse.redirect(new URL(loginPath, request.url))
     }
 
@@ -30,5 +31,5 @@ export function proxy(request: NextRequest) {
 
 // See "Matching Paths" below to learn more
 export const config = {
-    matcher: ['/dashboard/:path*', '/users/:path*', '/login', '/forgot-password', '/reset-password', '/masters/:path*', '/transactions/:path*', '/utilities/:path*', '/settings/:path*', '/customer', '/customer/:path*'],
+    matcher: ['/dashboard/:path*', '/users/:path*', '/login', '/forgot-password', '/reset-password', '/masters/:path*', '/transactions/:path*', '/utilities/:path*', '/settings/:path*', '/report/:path*', '/profile', '/change-password', '/customer', '/customer/:path*'],
 }

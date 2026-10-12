@@ -2338,7 +2338,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             if (shipmentId) {
                 setSavedShipment({ id: shipmentId, version })
                 setIsAwbStepComplete(true)
-                setActiveTab('forwarding')
+                if (!isCustomerUser) {
+                    setActiveTab('forwarding')
+                }
             }
             toast.success(`Shipment booking ${isEdit || savedShipment ? 'updated' : 'created'} successfully`)
         },
@@ -2647,11 +2649,13 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         <Form {...form}>
             <form className="space-y-4 pb-20">
                 <Tabs value={activeTab} onValueChange={handleTabChange}>
+                    {!isCustomerUser && (
                     <TabsList className="rounded-md border border-border/60 bg-muted/50 p-1">
                         <TabsTrigger value="awb" className="rounded-md px-4 py-1.5 text-xs">AWB</TabsTrigger>
                         <TabsTrigger value="forwarding" className="rounded-md px-4 py-1.5 text-xs" disabled={!isAwbStepComplete}>Forwarding</TabsTrigger>
                         <TabsTrigger value="kyc" className="rounded-md px-4 py-1.5 text-xs" disabled={!isAwbStepComplete || !isForwardingStepComplete}>KYC Upload</TabsTrigger>
                     </TabsList>
+                    )}
 
                     <TabsContent value="awb" className="space-y-4">
                 <div className="rounded-md border border-border bg-card p-3">
@@ -4504,7 +4508,9 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                             className="bg-green-600 text-white hover:bg-green-700"
                         >
                             {awbMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isAwbStepComplete ? 'Save AWB & Next' : 'Create AWB & Next'}
+                            {isCustomerUser
+                                ? (isAwbStepComplete ? 'Save booking' : 'Create booking')
+                                : (isAwbStepComplete ? 'Save AWB & Next' : 'Create AWB & Next')}
                         </Button>
                     )}
                     {activeTab === 'forwarding' && (

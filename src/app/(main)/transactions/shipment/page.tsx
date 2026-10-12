@@ -64,7 +64,7 @@ export default function ShipmentsPage() {
   const { user, hasPermission, isCustomerUser, isLoading: authLoading } = useAuth();
   const isSuperAdmin = isSuperAdminRole(user?.role?.identifier);
   const canReadCustomers = hasMasterLookupForPortalTransaction(hasPermission, MASTER_READ.customer);
-  const tableColSpan = 18;
+  const tableColSpan = isCustomerUser ? 17 : 18;
 
   const auditUsername = (user?: { username?: string | null } | null) =>
     user?.username?.trim() || "—";
@@ -342,6 +342,7 @@ export default function ShipmentsPage() {
               className="h-8 w-full sm:w-[320px]"
             />
             <div className="flex flex-wrap gap-2">
+            {!isCustomerUser && (
             <Button
               type="button"
               variant="outline"
@@ -352,18 +353,21 @@ export default function ShipmentsPage() {
               <FileSpreadsheet className="h-4 w-4" />
               Bulk import
             </Button>
-            <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.update}>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 gap-2 px-3 font-semibold"
-                onClick={() => router.push("/transactions/shipment/bulk-forwarding")}
-                title="Bulk forwarding update from Excel"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                Bulk forwarding
-              </Button>
-            </PermissionGuard>
+            )}
+            {!isCustomerUser && (
+              <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.update}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 gap-2 px-3 font-semibold"
+                  onClick={() => router.push("/transactions/shipment/bulk-forwarding")}
+                  title="Bulk forwarding update from Excel"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Bulk forwarding
+                </Button>
+              </PermissionGuard>
+            )}
             <Button
               type="button"
               variant="default"
@@ -392,9 +396,11 @@ export default function ShipmentsPage() {
               <TableHead className="font-semibold text-primary-foreground">
                 <SortableColumnHeader label="Book Date" field="bookDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
               </TableHead>
-              <TableHead className="font-semibold text-primary-foreground">
-                <SortableColumnHeader label="Forwarding Date" field="forwardingDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-              </TableHead>
+              {!isCustomerUser && (
+                <TableHead className="font-semibold text-primary-foreground">
+                  <SortableColumnHeader label="Forwarding Date" field="forwardingDate" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                </TableHead>
+              )}
               <TableHead className="font-semibold text-primary-foreground">Customer</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Shipper</TableHead>
               <TableHead className="font-semibold text-primary-foreground">Consignee</TableHead>
@@ -446,11 +452,13 @@ export default function ShipmentsPage() {
                   </TableCell>
                   <TableCell>{shipment.ewaybillNumber || "—"}</TableCell>
                   <TableCell>{shipment.bookDate ? format(new Date(shipment.bookDate), "dd/MM/yyyy") : "—"}</TableCell>
-                  <TableCell>
-                    {shipment.forwarding?.forwardingDate
-                      ? format(new Date(shipment.forwarding.forwardingDate), "dd/MM/yyyy")
-                      : "—"}
-                  </TableCell>
+                  {!isCustomerUser && (
+                    <TableCell>
+                      {shipment.forwarding?.forwardingDate
+                        ? format(new Date(shipment.forwarding.forwardingDate), "dd/MM/yyyy")
+                        : "—"}
+                    </TableCell>
+                  )}
                   <TableCell>{shipment.customer?.name || shipment.customer?.code || shipment.customerId}</TableCell>
                   <TableCell>{shipment.shipper?.shipperName || shipment.shipper?.name || "—"}</TableCell>
                   <TableCell>{shipment.consignee?.consigneeName || shipment.consignee?.name || "—"}</TableCell>

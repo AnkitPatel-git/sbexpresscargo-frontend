@@ -1,7 +1,5 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { CustomerDashboard } from "@/components/dashboard/customer-dashboard";
-
-export default function CustomerDashboardPage() {
-  return <CustomerDashboard />;
+export default function CustomerDashboardRedirect() {
+  redirect("/dashboard");
 }

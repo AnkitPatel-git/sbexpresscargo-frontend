@@ -34,7 +34,16 @@ export function clearAuthSession(): void {
 export function redirectToLogin(): void {
     if (typeof window === "undefined") return;
     const path = window.location.pathname;
-    const customer = path.startsWith("/customer");
+    let customer = path.startsWith("/customer") || Cookies.get("sbPortal") === "customer";
+    try {
+        const raw = localStorage.getItem("user");
+        if (raw) {
+            const parsed = JSON.parse(raw) as { role?: { identifier?: string } };
+            if (parsed?.role?.identifier === "CUSTOMER") customer = true;
+        }
+    } catch {
+        // Ignore a corrupt stored user and fall back to the path or portal cookie.
+    }
     const target = customer ? "/customer/login" : "/login";
     if (path === target) return;
     clearAuthSession();

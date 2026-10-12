@@ -128,17 +128,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         Cookies.set("accessToken", data.accessToken, { expires: 7 })
         localStorage.setItem("accessToken", data.accessToken)
+        if (data.user?.role?.identifier === "CUSTOMER") {
+            Cookies.set("sbPortal", "customer", { expires: 7 })
+        } else {
+            Cookies.remove("sbPortal")
+        }
 
         router.push(redirectTo)
     }
 
     const logout = () => {
-        const customerSession =
-            typeof window !== "undefined" && window.location.pathname.startsWith("/customer")
+        const customerSession = user?.role?.identifier === "CUSTOMER"
         void userService.logout().catch(() => undefined)
         setToken(null)
         setUser(null)
         Cookies.remove("accessToken")
+        Cookies.remove("sbPortal")
         localStorage.removeItem("accessToken")
         localStorage.removeItem("user")
         router.push(customerSession ? "/customer/login" : "/login")

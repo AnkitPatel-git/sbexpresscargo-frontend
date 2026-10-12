@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Download, FileSpreadsheet, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { shipmentService, type ShipmentBulkImportJobStatus } from "@/services/transactions/shipment-service";
+import { useAuth } from "@/context/auth-context";
 import {
   bulkUploadLogService,
   canDownloadBulkUploadErrorsCsv,
@@ -28,6 +30,8 @@ import { BulkUploadOriginalFileButton } from "@/components/utilities/bulk-upload
 
 export default function ShipmentBulkImportPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const { isCustomerUser, isLoading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
@@ -42,6 +46,12 @@ export default function ShipmentBulkImportPage() {
     bulkUploadLogId?: number;
   } | null>(null);
   const [importProgress, setImportProgress] = useState<ShipmentBulkImportJobStatus | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && isCustomerUser) {
+      router.replace("/transactions/shipment");
+    }
+  }, [authLoading, isCustomerUser, router]);
 
   const importMutation = useMutation({
     mutationFn: (f: File) =>
@@ -108,6 +118,8 @@ export default function ShipmentBulkImportPage() {
       setDownloadingErrorCsv(false);
     }
   }
+
+  if (!authLoading && isCustomerUser) return null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 lg:p-6">

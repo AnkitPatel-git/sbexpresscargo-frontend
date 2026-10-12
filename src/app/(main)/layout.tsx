@@ -122,6 +122,7 @@ const headerNavItems = [
   { href: "/report/air-surface-batch", label: "Air/Surface Batch Report" },
   { href: "/report/partywise-sales-summary", label: "Partywise Sales Summary" },
   { href: "/report/attendance-register", label: "Attendance register" },
+  { href: "/report/customer-mis", label: "Customer MIS" },
   { href: "/document/invoice-generation", label: "Invoice Generation" },
   { href: "/document/invoice-print", label: "Invoice Print" },
   { href: "/document/invoice-finalise", label: "Invoice Finalise" },
@@ -1244,6 +1245,8 @@ const SidebarContent = ({
 
         {isReportsOpen && !isCollapsed && (
           <div className="mt-1 flex flex-col gap-0.5 rounded-md bg-white p-1 shadow-sm">
+            {!isCustomerUser && (
+            <>
             <PermissionGuard permission="report.mis.read">
               <LinkItem
                 href="/report/mis"
@@ -1343,6 +1346,19 @@ const SidebarContent = ({
                 Partywise Sales Summary
               </LinkItem>
             </PermissionGuard>
+            </>
+            )}
+            <PermissionGuard permission="report.customer_mis.read">
+              <LinkItem
+                href="/report/customer-mis"
+                active={isActive("/report/customer-mis")}
+                icon={ClipboardList}
+                showTextOverride
+                inFlyout
+              >
+                Customer MIS
+              </LinkItem>
+            </PermissionGuard>
           </div>
         )}
 
@@ -1356,6 +1372,8 @@ const SidebarContent = ({
             </div>
             <div className="max-h-[70vh] overflow-y-auto">
               <div className="mt-1 flex flex-col gap-1">
+                {!isCustomerUser && (
+                <>
                 <PermissionGuard permission="report.mis.read">
                   <LinkItem
                     href="/report/mis"
@@ -1453,6 +1471,19 @@ const SidebarContent = ({
                     inFlyout
                   >
                     Partywise Sales Summary
+                  </LinkItem>
+                </PermissionGuard>
+                </>
+                )}
+                <PermissionGuard permission="report.customer_mis.read">
+                  <LinkItem
+                    href="/report/customer-mis"
+                    active={isActive("/report/customer-mis")}
+                    icon={ClipboardList}
+                    showTextOverride
+                    inFlyout
+                  >
+                    Customer MIS
                   </LinkItem>
                 </PermissionGuard>
               </div>
@@ -1642,13 +1673,13 @@ function DashboardLayoutClient({
 }) {
   const { user, logout, isCustomerUser, isLoading: authLoading } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    if (!authLoading && isCustomerUser) {
-      router.replace("/customer/dashboard");
-    }
-  }, [authLoading, isCustomerUser, router]);
   const pathname = usePathname();
+  useEffect(() => {
+    if (authLoading || !isCustomerUser) return;
+    if (pathname.startsWith("/report") && pathname !== "/report/customer-mis") {
+      router.replace("/report/customer-mis");
+    }
+  }, [authLoading, isCustomerUser, pathname, router]);
   const rateContractQuery = useSearchParams().get("contract");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1663,7 +1694,7 @@ function DashboardLayoutClient({
     href === "/change-password" ||
     href.startsWith("/transactions/shipment") ||
     href.startsWith("/transactions/tracking") ||
-    href.startsWith("/report/");
+    href === "/report/customer-mis";
 
   const visibleHeaderNavItems = isCustomerUser
     ? headerNavItems.filter((item) => isCustomerVisibleHref(item.href))
@@ -1725,7 +1756,7 @@ function DashboardLayoutClient({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  if (authLoading || isCustomerUser) {
+  if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-100">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

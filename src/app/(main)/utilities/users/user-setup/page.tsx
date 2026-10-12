@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DbAsyncSelect, DB_ASYNC_SELECT_PAGE_SIZE } from "@/components/ui/db-async-select";
 import { optionLabelById } from "@/lib/select-closed-label";
 import { OutlinedFieldShell, FLOATING_INNER_CONTROL, FLOATING_INNER_SELECT_TRIGGER } from "@/components/ui/floating-form-item";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -107,12 +108,13 @@ export default function UserSetupPage() {
     total: totalCountResp?.meta?.total ?? 0,
   };
 
-  const { data: customersResp } = useQuery({
-    queryKey: ["user-setup-customers"],
-    queryFn: () => customerService.getCustomers({ page: 1, limit: 200, status: "ACTIVE" }),
-    enabled: isOpen && isCustomerRole,
+  const selectedCustomerId = Number(form.customerId);
+  const { data: selectedCustomerResp } = useQuery({
+    queryKey: ["user-setup-customer", selectedCustomerId],
+    queryFn: () => customerService.getCustomerById(selectedCustomerId),
+    enabled: isOpen && isCustomerRole && Number.isInteger(selectedCustomerId) && selectedCustomerId > 0,
   });
-  const customerOptions = customersResp?.data ?? [];
+  const selectedCustomer = selectedCustomerResp?.data;
 
   const resolveApplicationType = (roleId: string) => {
     const role = roles.find((r: { id: number; identifier?: string }) => String(r.id) === roleId);
@@ -334,29 +336,29 @@ export default function UserSetupPage() {
                     </Select>
                   </OutlinedFieldShell>
                   {isCustomerRole && (
-                    <OutlinedFieldShell label="Customer">
-                      <Select
-                        value={form.customerId}
-                        onValueChange={(value) => setForm((p) => ({ ...p, customerId: value }))}
-                      >
-                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
-                          <SelectValue placeholder="Select customer">
-                            {optionLabelById(
-                              form.customerId,
-                              customerOptions,
-                              (customer: { id: number; name?: string; code?: string }) =>
-                                customer.code ? `${customer.code} - ${customer.name ?? ""}` : (customer.name ?? ""),
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customerOptions.map((customer: { id: number; name?: string; code?: string }) => (
-                            <SelectItem key={customer.id} value={String(customer.id)}>
-                              {customer.code ? `${customer.code} - ${customer.name ?? ""}` : customer.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <OutlinedFieldShell label="Customer" className="md:col-span-2">
+                      <DbAsyncSelect<{ id: number; code: string; name: string }>
+                        queryKey={["user-setup-customers"]}
+                        fetchPage={(page, search) =>
+                          customerService.getCustomers({
+                            page,
+                            limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                            sortBy: "name",
+                            sortOrder: "asc",
+                            search: search || undefined,
+                          })
+                        }
+                        getItemLabel={(customer) =>
+                          customer.code ? `${customer.code} - ${customer.name}` : customer.name || `Customer ${customer.id}`
+                        }
+                        extraItems={selectedCustomer ? [selectedCustomer] : undefined}
+                        value={form.customerId || undefined}
+                        onValueChange={(value) => setForm((prev) => ({ ...prev, customerId: value }))}
+                        placeholder="Select customer"
+                        searchPlaceholder="Search customer"
+                        triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+                        contentClassName="z-[100]"
+                      />
                     </OutlinedFieldShell>
                   )}
                   <OutlinedFieldShell label="Mobile">

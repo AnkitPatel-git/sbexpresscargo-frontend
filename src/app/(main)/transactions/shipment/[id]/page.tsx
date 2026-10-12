@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { optionLabelForSelect } from "@/lib/select-closed-label";
 import { shipmentService } from "@/services/transactions/shipment-service";
+import { useAuth } from "@/context/auth-context";
 import { SHIPMENT_STATUS_OPTIONS } from "@/lib/shipment-status-options";
 import { formatShipmentStatusLabel } from "@/lib/shipment-status-label";
 import { SHIPMENT_SUB_STATUS_CODES } from "@/lib/shipment-sub-status-codes";
@@ -73,6 +74,7 @@ function isFuelChargeRow(row: ShipmentCharge): boolean {
 export default function ShipmentDetailsPage() {
   const params = useParams();
   const id = Number(params.id);
+  const { isCustomerUser } = useAuth();
   const queryClient = useQueryClient();
   const [statusValue, setStatusValue] = useState("");
   const [statusReason, setStatusReason] = useState("");
@@ -646,6 +648,7 @@ export default function ShipmentDetailsPage() {
           </Button>
         </FormSection>
 
+        {!isCustomerUser && (
         <FormSection title="Add KYC" contentClassName="space-y-3 text-sm">
           <div className="grid grid-cols-1 gap-2">
             <Input placeholder="Type" value={kycType} onChange={(e) => setKycType(e.target.value)} />
@@ -656,8 +659,10 @@ export default function ShipmentDetailsPage() {
             Save KYC
           </Button>
         </FormSection>
+        )}
       </div>
 
+      {!isCustomerUser && (
       <div className="grid grid-cols-1 gap-4">
         <FormSection title="Forwarding" contentClassName="space-y-2 text-sm">
           <p><span className="text-muted-foreground">Forwarding AWB:</span> {fallbackText(shipment.forwarding?.forwardingAwb)}</p>
@@ -693,6 +698,7 @@ export default function ShipmentDetailsPage() {
           )}
         </FormSection>
       </div>
+      )}
     </div>
   );
 }

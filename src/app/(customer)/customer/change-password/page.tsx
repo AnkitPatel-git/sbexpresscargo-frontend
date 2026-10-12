@@ -1,1 +1,5 @@
-export { default } from "../../../(main)/change-password/page";
+import { redirect } from "next/navigation";
+
+export default function CustomerChangePasswordRedirect() {
+  redirect("/change-password");
+}
