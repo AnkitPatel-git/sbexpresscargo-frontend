@@ -50,6 +50,7 @@ function appendListFilters(queryParams: URLSearchParams, params?: ShipmentListQu
   if (params?.bookDateFrom) queryParams.append("bookDateFrom", params.bookDateFrom);
   if (params?.bookDateTo) queryParams.append("bookDateTo", params.bookDateTo);
   if (params?.paymentType) queryParams.append("paymentType", params.paymentType);
+  if (params?.customerId) queryParams.append("customerId", String(params.customerId));
 }
 
 async function readError(response: Response, fallback: string) {

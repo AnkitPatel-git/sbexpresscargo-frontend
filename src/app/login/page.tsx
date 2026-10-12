@@ -57,6 +57,10 @@ export default function LoginPage() {
             }),
         onSuccess: (response) => {
             if (response.success) {
+                if (response.data.user?.role?.identifier === "CUSTOMER") {
+                    setError("This account uses the customer login at /customer/login.")
+                    return
+                }
                 login(response.data)
             } else {
                 setError(response.message || "Login failed")

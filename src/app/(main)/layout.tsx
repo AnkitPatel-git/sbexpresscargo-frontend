@@ -1642,6 +1642,12 @@ function DashboardLayoutClient({
 }) {
   const { user, logout, isCustomerUser, isLoading: authLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && isCustomerUser) {
+      router.replace("/customer/dashboard");
+    }
+  }, [authLoading, isCustomerUser, router]);
   const pathname = usePathname();
   const rateContractQuery = useSearchParams().get("contract");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -1718,6 +1724,14 @@ function DashboardLayoutClient({
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  if (authLoading || isCustomerUser) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full bg-gray-100 overflow-hidden">

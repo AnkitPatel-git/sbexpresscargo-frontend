@@ -19,7 +19,7 @@ interface AuthContextType {
     user: User | null
     token: string | null
     isLoading: boolean
-    login: (data: { accessToken: string; user: User }) => void
+    login: (data: { accessToken: string; user: User }, redirectTo?: string) => void
     logout: () => void
     isAuthenticated: boolean
     hasPermission: (permission: string) => boolean
@@ -122,24 +122,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [persistUser])
 
-    const login = (data: { accessToken: string; user: User }) => {
+    const login = (data: { accessToken: string; user: User }, redirectTo = "/dashboard") => {
         setToken(data.accessToken)
         persistUser(data.user)
 
         Cookies.set("accessToken", data.accessToken, { expires: 7 })
         localStorage.setItem("accessToken", data.accessToken)
 
-        router.push("/dashboard")
+        router.push(redirectTo)
     }
 
     const logout = () => {
+        const customerSession =
+            typeof window !== "undefined" && window.location.pathname.startsWith("/customer")
         void userService.logout().catch(() => undefined)
         setToken(null)
         setUser(null)
         Cookies.remove("accessToken")
         localStorage.removeItem("accessToken")
         localStorage.removeItem("user")
-        router.push("/login")
+        router.push(customerSession ? "/customer/login" : "/login")
     }
 
     const hasPermission = useCallback(

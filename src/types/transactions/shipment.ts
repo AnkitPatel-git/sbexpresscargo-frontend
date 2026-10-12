@@ -729,6 +729,7 @@ export interface ShipmentListQueryParams {
   bookDateFrom?: string;
   bookDateTo?: string;
   paymentType?: string;
+  customerId?: number;
 }
 
 export interface ShipmentFormPayload extends ShipmentFormValues {

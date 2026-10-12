@@ -6,6 +6,7 @@ import { Plus, RefreshCw, Edit, Trash2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { userService } from "@/services/user-service";
+import { customerService } from "@/services/masters/customer-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -49,6 +50,7 @@ export default function UserSetupPage() {
     origin: "",
     applicationType: "portal",
     weightType: "Kgs",
+    customerId: "",
   });
 
   const listBaseParams = {
@@ -96,12 +98,21 @@ export default function UserSetupPage() {
   const users = usersResp?.data ?? [];
   const roles = rolesResp?.data ?? [];
   const selectedRole = roles.find((r: { id: number }) => r.id === selectedRoleId) ?? null;
+  const formRole = roles.find((r: { id: number; identifier?: string }) => String(r.id) === form.roleId) ?? null;
+  const isCustomerRole = formRole?.identifier === "CUSTOMER";
   const totalPages = usersResp?.meta?.totalPages ?? 1;
   const userCounts = {
     portal: portalCountResp?.meta?.total ?? 0,
     mobile: mobileCountResp?.meta?.total ?? 0,
     total: totalCountResp?.meta?.total ?? 0,
   };
+
+  const { data: customersResp } = useQuery({
+    queryKey: ["user-setup-customers"],
+    queryFn: () => customerService.getCustomers({ page: 1, limit: 200, status: "ACTIVE" }),
+    enabled: isOpen && isCustomerRole,
+  });
+  const customerOptions = customersResp?.data ?? [];
 
   const resolveApplicationType = (roleId: string) => {
     const role = roles.find((r: { id: number; identifier?: string }) => String(r.id) === roleId);
@@ -112,6 +123,9 @@ export default function UserSetupPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (isCustomerRole && !(Number(form.customerId) > 0)) {
+        throw new Error("Select a customer for this login");
+      }
       const payload = {
         username: form.username,
         email: form.email,
@@ -120,8 +134,9 @@ export default function UserSetupPage() {
         mobile: form.mobile || undefined,
         profile: {
           origin: form.origin || undefined,
-          applicationType: resolveApplicationType(form.roleId),
+          applicationType: isCustomerRole ? "portal" : resolveApplicationType(form.roleId),
           weightType: form.weightType,
+          ...(isCustomerRole ? { customerId: Number(form.customerId) } : {}),
         },
       };
       if (editId) return userService.updateUser(editId, payload);
@@ -143,6 +158,7 @@ export default function UserSetupPage() {
         origin: "",
         applicationType: "portal",
         weightType: "Kgs",
+        customerId: "",
       });
     },
     onError: (error: Error) => toast.error(error.message || "Failed to save user"),
@@ -208,6 +224,7 @@ export default function UserSetupPage() {
       origin: user.profile?.origin ?? "",
       applicationType: user.profile?.applicationType ?? "portal",
       weightType: user.profile?.weightType ?? "Kgs",
+      customerId: user.profile?.customerId ? String(user.profile.customerId) : user.customerId ? String(user.customerId) : "",
     });
     setIsOpen(true);
   };
@@ -316,6 +333,32 @@ export default function UserSetupPage() {
                       </SelectContent>
                     </Select>
                   </OutlinedFieldShell>
+                  {isCustomerRole && (
+                    <OutlinedFieldShell label="Customer">
+                      <Select
+                        value={form.customerId}
+                        onValueChange={(value) => setForm((p) => ({ ...p, customerId: value }))}
+                      >
+                        <SelectTrigger className={FLOATING_INNER_SELECT_TRIGGER}>
+                          <SelectValue placeholder="Select customer">
+                            {optionLabelById(
+                              form.customerId,
+                              customerOptions,
+                              (customer: { id: number; name?: string; code?: string }) =>
+                                customer.code ? `${customer.code} - ${customer.name ?? ""}` : (customer.name ?? ""),
+                            )}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customerOptions.map((customer: { id: number; name?: string; code?: string }) => (
+                            <SelectItem key={customer.id} value={String(customer.id)}>
+                              {customer.code ? `${customer.code} - ${customer.name ?? ""}` : customer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </OutlinedFieldShell>
+                  )}
                   <OutlinedFieldShell label="Mobile">
                     <Input value={form.mobile} onChange={(e) => setForm((p) => ({ ...p, mobile: e.target.value }))} className={FLOATING_INNER_CONTROL} />
                   </OutlinedFieldShell>

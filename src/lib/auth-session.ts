@@ -32,7 +32,11 @@ export function clearAuthSession(): void {
 }
 
 export function redirectToLogin(): void {
-    if (typeof window === "undefined" || window.location.pathname === "/login") return;
+    if (typeof window === "undefined") return;
+    const path = window.location.pathname;
+    const customer = path.startsWith("/customer");
+    const target = customer ? "/customer/login" : "/login";
+    if (path === target) return;
     clearAuthSession();
-    window.location.href = "/login";
+    window.location.href = target;
 }

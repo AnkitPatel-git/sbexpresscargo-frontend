@@ -246,10 +246,10 @@ export function CustomerDashboard() {
 
       <div className="flex flex-wrap gap-3">
         <Button asChild variant="default">
-          <Link href="/transactions/shipment">View my shipments</Link>
+          <Link href="/customer/shipments">View my shipments</Link>
         </Button>
         <Button asChild variant="outline">
-          <Link href="/transactions/tracking">Track AWB</Link>
+          <Link href="/customer/tracking">Track AWB</Link>
         </Button>
       </div>
     </div>
