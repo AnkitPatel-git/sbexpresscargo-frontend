@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api-fetch";
+import { presentCustomerError } from "@/lib/customer-error-message";
 import type {
   ApiEnvelope,
   ForwardingOptionsData,
@@ -56,9 +57,9 @@ function appendListFilters(queryParams: URLSearchParams, params?: ShipmentListQu
 async function readError(response: Response, fallback: string) {
   try {
     const err = await response.json();
-    return err?.message || fallback;
+    return presentCustomerError(err?.message || fallback, response.status);
   } catch {
-    return fallback;
+    return presentCustomerError(fallback, response.status);
   }
 }
 

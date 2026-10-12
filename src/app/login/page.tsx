@@ -53,7 +53,8 @@ export default function LoginPage() {
             authApi.login({
                 email: values.email,
                 password: values.password,
-                platform: "portal"
+                platform: "portal",
+                audience: "staff",
             }),
         onSuccess: (response) => {
             if (response.success) {

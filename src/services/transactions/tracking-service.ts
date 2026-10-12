@@ -1,4 +1,5 @@
 import { apiFetch } from '@/lib/api-fetch';
+import { presentCustomerError } from '@/lib/customer-error-message';
 import { TrackingListResponse, TrackingDetailResponse, MetricsResponse, ManualUpdatePayload, DeadLettersResponse, TrackingSummaryResponse, TrackingBulkManualImportResponse } from '@/types/transactions/tracking';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -12,6 +13,17 @@ const getAuthHeaders = (isFormData = false) => {
     }
     return headers;
 };
+
+async function errorMessage(response: Response, fallback: string) {
+    try {
+        const err = await response.json();
+        const message = (err as { message?: string | string[] })?.message;
+        const text = Array.isArray(message) ? message.join(', ') : message || fallback;
+        return presentCustomerError(text, response.status);
+    } catch {
+        return presentCustomerError(fallback, response.status);
+    }
+}
 
 class TrackingService {
     private readonly baseUrl = `${API_URL}/transaction/tracking`;
@@ -34,7 +46,7 @@ class TrackingService {
 
         const response = await apiFetch(`${this.baseUrl}/search?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
-            throw new Error('Failed to fetch tracking list');
+            throw new Error(await errorMessage(response, 'Failed to fetch tracking list'));
         }
         return response.json();
     }
@@ -42,7 +54,7 @@ class TrackingService {
     async getTrackingByAwb(awbNo: string): Promise<TrackingDetailResponse> {
         const response = await apiFetch(`${this.baseUrl}/awb/${awbNo}`, { headers: getAuthHeaders() });
         if (!response.ok) {
-            throw new Error(`Failed to fetch tracking details for AWB: ${awbNo}`);
+            throw new Error(await errorMessage(response, `Failed to fetch tracking details for AWB: ${awbNo}`));
         }
         return response.json();
     }
@@ -63,7 +75,7 @@ class TrackingService {
         });
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to update status manually');
+            throw new Error(presentCustomerError(error.message || 'Failed to update status manually', response.status));
         }
         return response.json();
     }

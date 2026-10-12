@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api-fetch";
+import { presentCustomerError } from "@/lib/customer-error-message";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
@@ -62,10 +63,10 @@ async function readError(response: Response, fallback: string) {
   try {
     const err = await response.json();
     const message = err?.message;
-    if (Array.isArray(message)) return message.join(", ");
-    return message || fallback;
+    const text = Array.isArray(message) ? message.join(", ") : message || fallback;
+    return presentCustomerError(text, response.status);
   } catch {
-    return fallback;
+    return presentCustomerError(fallback, response.status);
   }
 }
 

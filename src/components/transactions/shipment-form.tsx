@@ -611,6 +611,19 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     return fallback
 }
 
+function firstFormErrorMessage(errors: Record<string, unknown>): string | null {
+    for (const value of Object.values(errors)) {
+        if (!value || typeof value !== "object") continue
+        const record = value as { message?: unknown }
+        if (typeof record.message === "string" && record.message.trim()) {
+            return record.message.trim()
+        }
+        const nested = firstFormErrorMessage(value as Record<string, unknown>)
+        if (nested) return nested
+    }
+    return null
+}
+
 const strOrEmpty = (v: string | null | undefined) => (v == null ? '' : String(v))
 
 function pincodeLocationFields(
@@ -1293,6 +1306,8 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         mode: 'onSubmit',
         reValidateMode: 'onSubmit',
     })
+    // Subscribe so validation messages are available after trigger().
+    void form.formState.errors
 
 
     const { fields: pieceFields, append: appendPiece, remove: removePiece } = useFieldArray({
@@ -2595,9 +2610,11 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             'volumetricWeight',
             'chargeWeight',
             'paymentType',
+            'serviceCenterId',
+            'shipmentTotalValue',
         ])
         if (!valid) {
-            toast.error('Please fill required AWB details first')
+            toast.error(firstFormErrorMessage(form.formState.errors as Record<string, unknown>) ?? 'Please fill the required booking details')
             return
         }
         const values = form.getValues()
@@ -3471,7 +3488,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                     control={form.control}
                                     name="serviceCenterId"
                                     render={({ field }) => (
-                                        <FloatingFormItem label="Service Center">
+                                        <FloatingFormItem required label="Service Center">
                                             <FormControl>
                                                 <Combobox
                                                     options={serviceCenterComboboxOptions}

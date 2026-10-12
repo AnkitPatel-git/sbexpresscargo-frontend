@@ -1,6 +1,7 @@
 import type { ApiResponse, LoginResponseData, UtilityUser } from "@/types/utilities/user";
 import { apiFetch } from "@/lib/api-fetch";
 import { isAuthFailureMessage } from "@/lib/auth-session";
+import { presentCustomerError } from "@/lib/customer-error-message";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
@@ -24,7 +25,10 @@ export async function apiClient<T>(
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
         throw new Error(
-            `Server returned non-JSON response (${response.status}). Please check that the API server is running at ${BASE_URL}.`,
+            presentCustomerError(
+                `Server returned non-JSON response (${response.status}). Please check that the API server is running at ${BASE_URL}.`,
+                response.status,
+            ),
         );
     }
 
@@ -41,14 +45,20 @@ export async function apiClient<T>(
     }
 
     if (!response.ok || apiBody?.success === false) {
-        throw new Error(message || "Something went wrong");
+        const raw = message || "Something went wrong";
+        throw new Error(presentCustomerError(raw, response.status));
     }
 
     return data;
 }
 
 export const authApi = {
-    login: (credentials: { email: string; password: string; platform: string }) =>
+    login: (credentials: {
+        email: string;
+        password: string;
+        platform: string;
+        audience?: "staff" | "customer";
+    }) =>
         apiClient<ApiResponse<LoginResponseData>>("/utilities/users/login", {
             method: "POST",
             body: JSON.stringify(credentials),

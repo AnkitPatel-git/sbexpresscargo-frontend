@@ -1676,8 +1676,15 @@ function DashboardLayoutClient({
   const pathname = usePathname();
   useEffect(() => {
     if (authLoading || !isCustomerUser) return;
-    if (pathname.startsWith("/report") && pathname !== "/report/customer-mis") {
-      router.replace("/report/customer-mis");
+    const allowed =
+      pathname === "/dashboard" ||
+      pathname === "/profile" ||
+      pathname === "/change-password" ||
+      pathname.startsWith("/transactions/shipment") ||
+      pathname.startsWith("/transactions/tracking") ||
+      pathname === "/report/customer-mis";
+    if (!allowed) {
+      router.replace("/dashboard");
     }
   }, [authLoading, isCustomerUser, pathname, router]);
   const rateContractQuery = useSearchParams().get("contract");

@@ -43,6 +43,7 @@ export default function CustomerLoginPage() {
         email: values.email,
         password: values.password,
         platform: "portal",
+        audience: "customer",
       }),
     onSuccess: (response) => {
       if (!response.success) {

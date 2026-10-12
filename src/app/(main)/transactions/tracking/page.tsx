@@ -66,7 +66,7 @@ function auditUsername(user?: { username?: string | null } | null) {
 
 export default function TrackingPage() {
     const queryClient = useQueryClient();
-    const { user } = useAuth();
+    const { user, isCustomerUser } = useAuth();
     const isAdmin = isSuperAdminRole(user?.role?.identifier);
     const [searchInput, setSearchInput] = useState("");
     const [searchTerm, setSearchTerm] = useState(""); // Submitted search term
@@ -246,6 +246,8 @@ export default function TrackingPage() {
         <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-1 rounded-md border border-border p-1">
+                    {!isCustomerUser && (
+                        <>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary">
                         <FilePlus className="h-4 w-4" />
                     </Button>
@@ -263,6 +265,8 @@ export default function TrackingPage() {
                     >
                         <FileUp className="h-4 w-4" />
                     </Button>
+                        </>
+                    )}
                     <Button
                         type="button"
                         variant="ghost"
@@ -276,8 +280,12 @@ export default function TrackingPage() {
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="flex gap-2 rounded-md bg-gray-100 p-1">
                         <Button variant={activeView === 'search' ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveView('search')}>Search</Button>
-                        <Button variant={activeView === 'logs' ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveView('logs')}>Carrier Logs</Button>
+                        {!isCustomerUser && (
+                            <Button variant={activeView === 'logs' ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveView('logs')}>Carrier Logs</Button>
+                        )}
                     </div>
+                    {!isCustomerUser && (
+                    <>
                     <Button
                         type="button"
                         variant="outline"
@@ -305,10 +313,12 @@ export default function TrackingPage() {
                     >
                         <Plus className="mr-1 h-4 w-4" /> Add Tracking Update
                     </Button>
+                    </>
+                    )}
                 </div>
             </div>
 
-            {activeView === 'search' && (
+            {activeView === 'search' || isCustomerUser ? (
                 <>
                     <Card>
                         <CardHeader>
@@ -359,6 +369,7 @@ export default function TrackingPage() {
                                             <Download className="h-4 w-4 mr-2" />
                                             Export
                                         </Button>
+                                        {!isCustomerUser && (
                                         <Button
                                             size="sm"
                                             onClick={() => {
@@ -368,6 +379,7 @@ export default function TrackingPage() {
                                         >
                                             Update Status
                                         </Button>
+                                        )}
                                         <Badge variant="outline" className="text-blue-700 bg-blue-50 border-blue-200 max-w-[min(100%,22rem)] whitespace-normal text-left">
                                             <span className="font-medium">{formatShipmentStatusLabel(badgeStatus)}</span>
                                             {badgeSub ? (
@@ -625,9 +637,9 @@ export default function TrackingPage() {
                         </Card>
                     )}
                 </>
-            )}
+            ) : null}
 
-            {activeView === 'logs' && (
+            {activeView === 'logs' && !isCustomerUser && (
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center">
