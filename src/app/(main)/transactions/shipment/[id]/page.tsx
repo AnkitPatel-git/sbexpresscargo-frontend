@@ -504,6 +504,7 @@ export default function ShipmentDetailsPage() {
         </PermissionGuard>
       </div>
 
+      {!isCustomerUser && (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <FormSection title="Update Status" contentClassName="space-y-3 text-sm">
           <p className="text-xs text-muted-foreground">
@@ -661,6 +662,7 @@ export default function ShipmentDetailsPage() {
         </FormSection>
         )}
       </div>
+      )}
 
       {!isCustomerUser && (
       <div className="grid grid-cols-1 gap-4">
