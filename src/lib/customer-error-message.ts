@@ -24,7 +24,7 @@ const FIELD_LABELS: Record<string, string> = {
 }
 
 const AUTH_MESSAGE =
-    /session expired|session no longer valid|please login again|logged in on another device|unauthorized|invalid token|jwt expired|invalid credentials/i
+    /session expired|session no longer valid|please login again|logged in on another device|unauthorized|invalid token|jwt expired|invalid credentials|account is inactive|user not found|uses the customer login|uses the staff login/i
 
 const SENSITIVE =
     /\b(vendor|vendors|freight|rate|rates|baseFreight|chargeWeight|charge weight|prisma|sql|constraint|fkey|stacktrace|stack trace|secret|password|api[_ ]?key|bearer)\b|P20\d{2}|\/Users\/|\/home\/|node_modules|invocation|ECONN|ENOTFOUND|ETIMEDOUT|Unknown field|Invalid `prisma|allowed values:|invalid value for "|unknown argument|missing required value for "|non-JSON|API server is running|localhost/i

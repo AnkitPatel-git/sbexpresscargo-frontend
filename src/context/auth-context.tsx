@@ -102,7 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         } as User),
                     )
                 } else {
-                    setUser(parsed)
+                    redirectToLogin()
+                    return
                 }
             } catch (error) {
                 const message = error instanceof Error ? error.message : ""

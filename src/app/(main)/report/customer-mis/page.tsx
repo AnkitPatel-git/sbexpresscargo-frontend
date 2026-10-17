@@ -170,7 +170,7 @@ export default function CustomerMisReportPage() {
     [appliedFilters, limit, page, search, sortBy, sortOrder],
   );
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["customer-mis-report", listParams],
     queryFn: () => customerMisReportService.getReport(listParams),
   });
@@ -542,6 +542,15 @@ export default function CustomerMisReportPage() {
                     className="h-24 text-center text-muted-foreground"
                   >
                     Loading Customer MIS report...
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={displayColumns.length || 1}
+                    className="h-24 text-center text-red-600"
+                  >
+                    {error instanceof Error ? error.message : "Could not load the report."}
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (

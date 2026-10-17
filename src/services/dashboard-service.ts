@@ -1,4 +1,5 @@
 import { apiFetch } from '@/lib/api-fetch';
+import { presentCustomerError } from '@/lib/customer-error-message';
 import { OperationSummary, SalesSummary, ServiceCenterSalesSummary, TatSummary } from '@/types/dashboard';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -7,6 +8,21 @@ const getAuthHeaders = () => ({
     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
     'Content-Type': 'application/json'
 });
+
+async function throwDashboardError(response: Response, fallback: string): Promise<never> {
+    let message = fallback;
+    try {
+        const body = (await response.json()) as { message?: unknown };
+        if (typeof body.message === 'string' && body.message.trim()) {
+            message = body.message;
+        } else if (Array.isArray(body.message)) {
+            message = body.message.map(String).join(', ');
+        }
+    } catch {
+        // The status is still useful when the body is empty.
+    }
+    throw new Error(presentCustomerError(message, response.status));
+}
 
 class DashboardService {
     private readonly baseUrl = `${API_URL}/dashboard`;
@@ -25,7 +41,7 @@ class DashboardService {
 
         const response = await apiFetch(`${this.baseUrl}/operation?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
-            throw new Error('Failed to fetch operation summary');
+            await throwDashboardError(response, 'Failed to fetch operation summary');
         }
         return response.json();
     }
@@ -44,7 +60,7 @@ class DashboardService {
 
         const response = await apiFetch(`${this.baseUrl}/tat?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
-            throw new Error('Failed to fetch TAT summary');
+            await throwDashboardError(response, 'Failed to fetch TAT summary');
         }
         return response.json();
     }
@@ -63,7 +79,7 @@ class DashboardService {
 
         const response = await apiFetch(`${this.baseUrl}/sales?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
-            throw new Error('Failed to fetch sales summary');
+            await throwDashboardError(response, 'Failed to fetch sales summary');
         }
         return response.json();
     }
@@ -78,7 +94,7 @@ class DashboardService {
 
         const response = await apiFetch(`${this.baseUrl}/sales/service-centers?${queryParams.toString()}`, { headers: getAuthHeaders() });
         if (!response.ok) {
-            throw new Error('Failed to fetch sales by service centers');
+            await throwDashboardError(response, 'Failed to fetch sales by service centers');
         }
         return response.json();
     }

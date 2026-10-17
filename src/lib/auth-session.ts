@@ -2,7 +2,7 @@ import Cookies from "js-cookie";
 
 export function isAuthFailureMessage(message: unknown): boolean {
     if (typeof message !== "string" || message === "") return false;
-    return /session expired|session no longer valid|please login again|logged in on another device|unauthorized|invalid token|jwt expired/i.test(
+    return /session expired|session no longer valid|please login again|logged in on another device|unauthorized|invalid token|jwt expired|invalid credentials|account is inactive|user not found|uses the customer login|uses the staff login/i.test(
         message,
     );
 }
@@ -45,7 +45,7 @@ export function redirectToLogin(): void {
         // Ignore a corrupt stored user and fall back to the path or portal cookie.
     }
     const target = customer ? "/customer/login" : "/login";
-    if (path === target) return;
     clearAuthSession();
+    if (path === target) return;
     window.location.href = target;
 }

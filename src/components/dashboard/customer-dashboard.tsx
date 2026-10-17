@@ -49,7 +49,7 @@ export function CustomerDashboard() {
     setIsMounted(true);
   }, []);
 
-  const { data: opsData, isLoading, refetch } = useQuery({
+  const { data: opsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["dashboard-customer-ops", fromDate, toDate, customerKey],
     queryFn: () =>
       dashboardService.getOperationSummary({
@@ -59,7 +59,7 @@ export function CustomerDashboard() {
     enabled: hasCustomers,
   });
 
-  const { data: tatData, isLoading: tatLoading, refetch: refetchTat } = useQuery({
+  const { data: tatData, isLoading: tatLoading, isError: tatError, error: tatQueryError, refetch: refetchTat } = useQuery({
     queryKey: ["dashboard-customer-tat", fromDate, toDate, customerKey],
     queryFn: () =>
       dashboardService.getTatSummary({
@@ -109,6 +109,15 @@ export function CustomerDashboard() {
           Overview of your bookings and delivery status for the selected period.
           {isLoading || tatLoading ? " Loading your shipments…" : ""}
         </p>
+        {isError || tatError ? (
+          <p className="mt-2 text-sm text-red-600">
+            {error instanceof Error
+              ? error.message
+              : tatQueryError instanceof Error
+                ? tatQueryError.message
+                : "Could not load your dashboard. Please try again."}
+          </p>
+        ) : null}
       </div>
 
       <Card className="gap-0 py-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)]">

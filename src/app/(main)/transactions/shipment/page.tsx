@@ -116,7 +116,7 @@ export default function ShipmentsPage() {
     ),
   };
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["shipments", page, limit, sortBy, sortOrder, appliedFilters],
     queryFn: () => shipmentService.getShipments(listParams),
   });
@@ -434,6 +434,12 @@ export default function ShipmentsPage() {
               <TableRow>
                 <TableCell colSpan={tableColSpan} className="h-24 text-center text-muted-foreground">
                   Loading shipment bookings…
+                </TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={tableColSpan} className="h-24 text-center text-red-600">
+                  {error instanceof Error ? error.message : "Could not load shipments."}
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
