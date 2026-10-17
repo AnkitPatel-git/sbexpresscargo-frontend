@@ -38,40 +38,35 @@ const CUSTOMER_INSIGHT_ITEMS: {
 ];
 
 export function CustomerDashboard() {
-  const { defaultCustomerId } = useAuth();
+  const { effectiveCustomerIds } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
   const [fromDate, setFromDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(format(new Date(), "yyyy-MM-dd"));
-
-  const scopedCustomerId =
-    Number.isInteger(Number(defaultCustomerId)) && Number(defaultCustomerId) > 0
-      ? Number(defaultCustomerId)
-      : undefined;
+  const customerKey = effectiveCustomerIds.join(",");
+  const hasCustomers = effectiveCustomerIds.length > 0;
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   const { data: opsData, isLoading, refetch } = useQuery({
-    queryKey: ["dashboard-customer-ops", fromDate, toDate, scopedCustomerId],
+    queryKey: ["dashboard-customer-ops", fromDate, toDate, customerKey],
     queryFn: () =>
       dashboardService.getOperationSummary({
         fromDate,
         toDate,
-        customerId: scopedCustomerId,
       }),
-    enabled: scopedCustomerId != null,
+    enabled: hasCustomers,
   });
 
-  const { data: tatData, refetch: refetchTat } = useQuery({
-    queryKey: ["dashboard-customer-tat", fromDate, toDate, scopedCustomerId],
+  const { data: tatData, isLoading: tatLoading, refetch: refetchTat } = useQuery({
+    queryKey: ["dashboard-customer-tat", fromDate, toDate, customerKey],
     queryFn: () =>
       dashboardService.getTatSummary({
         fromDate,
         toDate,
-        customerId: scopedCustomerId,
       }),
-    enabled: scopedCustomerId != null,
+    enabled: hasCustomers,
   });
 
   const buckets = opsData?.data.outbound.buckets;
@@ -93,7 +88,7 @@ export function CustomerDashboard() {
     return <div className="min-h-[40vh]" aria-hidden />;
   }
 
-  if (!scopedCustomerId) {
+  if (!hasCustomers) {
     return (
       <Card className="shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
         <CardHeader>
@@ -112,6 +107,7 @@ export function CustomerDashboard() {
         <h1 className="text-xl font-semibold tracking-tight text-foreground">Shipment insights</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Overview of your bookings and delivery status for the selected period.
+          {isLoading || tatLoading ? " Loading your shipments…" : ""}
         </p>
       </div>
 
