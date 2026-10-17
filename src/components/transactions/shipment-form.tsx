@@ -1112,17 +1112,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             Number(defaultCustomerId) > 0,
     })
 
-    const bookingCustomerId = normalizeMasterSelectId(form.watch('customerId'))
-    const { data: shippersData } = useQuery({
-        queryKey: ['shippers-list', debouncedShipperSearch, isCustomerUser ? bookingCustomerId : 0],
-        queryFn: () => shipperService.getShippers({
-            limit: 10,
-            search: debouncedShipperSearch || undefined,
-            ...(isCustomerUser && bookingCustomerId > 0 ? { customerId: bookingCustomerId } : {}),
-        }),
-        enabled: mastersReady && masterRead.shipper && (!isCustomerUser || bookingCustomerId > 0),
-    })
-
     const { data: consigneesData } = useQuery({
         queryKey: ['consignees-list', debouncedConsigneeSearch],
         queryFn: () => consigneeService.getConsignees({ limit: 10, search: debouncedConsigneeSearch || undefined }),
@@ -1245,7 +1234,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     const contentOptions = sanitizeArray(contentsQuery.data?.data)
     const serviceCenterOptions = sanitizeArray(serviceCentersData?.data)
     const customerOptions = sanitizeArray(customersData?.data)
-    const shipperOptions = sanitizeArray(shippersData?.data)
     const consigneeOptions = sanitizeArray(consigneesData?.data)
     const productOptions = sanitizeArray(productsData?.data)
     const vendorOptions = sanitizeArray(vendorsData?.data)
@@ -1570,6 +1558,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
     }, [isCustomerUser, isEdit, pinnedCustomerData])
 
     const customerIdNum = normalizeMasterSelectId(watchedCustomerId)
+    const { data: shippersData } = useQuery({
+        queryKey: ['shippers-list', debouncedShipperSearch, isCustomerUser ? customerIdNum : 0],
+        queryFn: () => shipperService.getShippers({
+            limit: 10,
+            search: debouncedShipperSearch || undefined,
+            ...(isCustomerUser && customerIdNum > 0 ? { customerId: customerIdNum } : {}),
+        }),
+        enabled: mastersReady && masterRead.shipper && (!isCustomerUser || customerIdNum > 0),
+    })
+    const shipperOptions = sanitizeArray(shippersData?.data)
 
     useEffect(() => {
         if (!isCustomerUser) return
