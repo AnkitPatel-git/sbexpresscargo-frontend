@@ -13,6 +13,7 @@ export const shipperService = {
         shipperCode?: string
         shipperName?: string
         aadhaarNo?: string
+        customerId?: number
     }): Promise<ShipperListResponse> {
         const queryParams = new URLSearchParams()
         if (params?.page) queryParams.append('page', String(params.page))
@@ -23,6 +24,7 @@ export const shipperService = {
         if (params?.shipperCode) queryParams.append('shipperCode', params.shipperCode)
         if (params?.shipperName) queryParams.append('shipperName', params.shipperName)
         if (params?.aadhaarNo) queryParams.append('aadhaarNo', params.aadhaarNo)
+        if (params?.customerId) queryParams.append('customerId', String(params.customerId))
 
         const response = await apiFetch(`${API_URL}/shipper-master?${queryParams.toString()}`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },

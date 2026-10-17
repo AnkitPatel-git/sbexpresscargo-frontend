@@ -1090,9 +1090,12 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
 
     // Lookup Data
     const { data: customersData } = useQuery({
-        queryKey: ['customers-list', debouncedCustomerSearch],
-        queryFn: () => customerService.getCustomers({ limit: 10, search: debouncedCustomerSearch || undefined }),
-        enabled: mastersReady && masterRead.customer && !isCustomerUser,
+        queryKey: ['customers-list', debouncedCustomerSearch, isCustomerUser],
+        queryFn: () => customerService.getCustomers({
+            limit: isCustomerUser ? 100 : 10,
+            search: debouncedCustomerSearch || undefined,
+        }),
+        enabled: mastersReady && masterRead.customer,
     })
     const { data: pinnedCustomerData } = useQuery({
         queryKey: ['shipment-pinned-customer', defaultCustomerId],
@@ -1109,10 +1112,15 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
             Number(defaultCustomerId) > 0,
     })
 
+    const bookingCustomerId = normalizeMasterSelectId(form.watch('customerId'))
     const { data: shippersData } = useQuery({
-        queryKey: ['shippers-list', debouncedShipperSearch],
-        queryFn: () => shipperService.getShippers({ limit: 10, search: debouncedShipperSearch || undefined }),
-        enabled: mastersReady && masterRead.shipper,
+        queryKey: ['shippers-list', debouncedShipperSearch, isCustomerUser ? bookingCustomerId : 0],
+        queryFn: () => shipperService.getShippers({
+            limit: 10,
+            search: debouncedShipperSearch || undefined,
+            ...(isCustomerUser && bookingCustomerId > 0 ? { customerId: bookingCustomerId } : {}),
+        }),
+        enabled: mastersReady && masterRead.shipper && (!isCustomerUser || bookingCustomerId > 0),
     })
 
     const { data: consigneesData } = useQuery({
@@ -1581,6 +1589,14 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         },
         enabled: mastersReady && masterRead.customer && customerIdNum > 0,
     })
+    const bookingCustomerComboboxOptions = useMemo(() => {
+        const selected = customerBookingDefaults ? toCustomerComboboxOption(customerBookingDefaults) : null
+        if (!selected || customerComboboxOptions.some((option) => option.value === selected.value)) {
+            return customerComboboxOptions
+        }
+        if (isCustomerUser && !isAllowedCustomer(selected.value)) return customerComboboxOptions
+        return [selected, ...customerComboboxOptions]
+    }, [customerBookingDefaults, customerComboboxOptions, isAllowedCustomer, isCustomerUser])
 
     const shipperComboboxOptions = useMemo(() => {
         const base = shipperOptions
@@ -1783,6 +1799,16 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
         lastDefaultShipperApplyCustomerRef.current = 0
         form.clearErrors()
     }
+
+    const previousBookingCustomerId = useRef<number | null>(null)
+    useEffect(() => {
+        if (!isCustomerUser) return
+        const current = customerIdNum
+        const previous = previousBookingCustomerId.current
+        previousBookingCustomerId.current = current
+        if (previous == null || previous <= 0 || previous === current) return
+        clearShipperBlock()
+    }, [customerIdNum, isCustomerUser])
 
     const clearConsigneeBlock = () => {
         form.setValue('consigneeId', 0, { shouldDirty: true, shouldValidate: false })
@@ -2741,7 +2767,7 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                             <FloatingFormItem required label="Client Name" itemClassName="md:col-span-1">
                                                 <FormControl>
                                                     <Combobox
-                                                        options={customerComboboxOptions}
+                                                        options={bookingCustomerComboboxOptions}
                                                         value={normalizeMasterSelectId(field.value) || undefined}
                                                         onChange={(v) => field.onChange(normalizeMasterSelectId(v))}
                                                         placeholder="Select customer"
@@ -2749,7 +2775,6 @@ export function ShipmentForm({ initialData }: ShipmentFormProps) {
                                                         searchValue={customerSearch}
                                                         onSearchValueChange={setCustomerSearch}
                                                         className={FLOATING_INNER_COMBO}
-                                                        disabled={isCustomerUser}
                                                     />
                                                 </FormControl>
                                             </FloatingFormItem>

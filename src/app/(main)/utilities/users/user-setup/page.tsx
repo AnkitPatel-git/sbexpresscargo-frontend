@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw, Edit, Trash2, KeyRound } from "lucide-react";
+import { Plus, RefreshCw, Edit, Trash2, KeyRound, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { userService } from "@/services/user-service";
@@ -51,8 +51,10 @@ export default function UserSetupPage() {
     origin: "",
     applicationType: "portal",
     weightType: "Kgs",
-    customerId: "",
+    customerIds: [] as number[],
   });
+  const [customerPicker, setCustomerPicker] = useState<string | undefined>(undefined);
+  const [selectedCustomers, setSelectedCustomers] = useState<Array<{ id: number; code?: string | null; name?: string | null }>>([]);
 
   const listBaseParams = {
     limit: LIMIT,
@@ -101,20 +103,12 @@ export default function UserSetupPage() {
   const selectedRole = roles.find((r: { id: number }) => r.id === selectedRoleId) ?? null;
   const formRole = roles.find((r: { id: number; identifier?: string }) => String(r.id) === form.roleId) ?? null;
   const isCustomerRole = formRole?.identifier === "CUSTOMER";
-  const totalPages = usersResp?.meta?.totalPages ?? 1;
   const userCounts = {
     portal: portalCountResp?.meta?.total ?? 0,
     mobile: mobileCountResp?.meta?.total ?? 0,
     total: totalCountResp?.meta?.total ?? 0,
   };
-
-  const selectedCustomerId = Number(form.customerId);
-  const { data: selectedCustomerResp } = useQuery({
-    queryKey: ["user-setup-customer", selectedCustomerId],
-    queryFn: () => customerService.getCustomerById(selectedCustomerId),
-    enabled: isOpen && isCustomerRole && Number.isInteger(selectedCustomerId) && selectedCustomerId > 0,
-  });
-  const selectedCustomer = selectedCustomerResp?.data;
+  const totalPages = usersResp?.meta?.totalPages ?? 1;
 
   const resolveApplicationType = (roleId: string) => {
     const role = roles.find((r: { id: number; identifier?: string }) => String(r.id) === roleId);
@@ -125,8 +119,8 @@ export default function UserSetupPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (isCustomerRole && !(Number(form.customerId) > 0)) {
-        throw new Error("Select a customer for this login");
+      if (isCustomerRole && form.customerIds.length === 0) {
+        throw new Error("Select at least one customer for this login");
       }
       const payload = {
         username: form.username,
@@ -138,7 +132,9 @@ export default function UserSetupPage() {
           origin: form.origin || undefined,
           applicationType: isCustomerRole ? "portal" : resolveApplicationType(form.roleId),
           weightType: form.weightType,
-          ...(isCustomerRole ? { customerId: Number(form.customerId) } : {}),
+          ...(isCustomerRole
+            ? { customerId: form.customerIds[0], customerIds: form.customerIds }
+            : {}),
         },
       };
       if (editId) return userService.updateUser(editId, payload);
@@ -160,8 +156,10 @@ export default function UserSetupPage() {
         origin: "",
         applicationType: "portal",
         weightType: "Kgs",
-        customerId: "",
+        customerIds: [],
       });
+      setSelectedCustomers([]);
+      setCustomerPicker(undefined);
     },
     onError: (error: Error) => toast.error(error.message || "Failed to save user"),
   });
@@ -215,6 +213,13 @@ export default function UserSetupPage() {
   };
 
   const openEdit = (user: any) => {
+    const ids = Array.isArray(user.customerIds) && user.customerIds.length
+      ? user.customerIds.map((id: number) => Number(id)).filter((id: number) => id > 0)
+      : user.profile?.customerId
+        ? [Number(user.profile.customerId)]
+        : user.customerId
+          ? [Number(user.customerId)]
+          : [];
     setEditId(user.id);
     setForm({
       username: user.username ?? "",
@@ -226,8 +231,22 @@ export default function UserSetupPage() {
       origin: user.profile?.origin ?? "",
       applicationType: user.profile?.applicationType ?? "portal",
       weightType: user.profile?.weightType ?? "Kgs",
-      customerId: user.profile?.customerId ? String(user.profile.customerId) : user.customerId ? String(user.customerId) : "",
+      customerIds: ids,
     });
+    setSelectedCustomers(ids.map((id: number) => ({ id, name: `Customer ${id}` })));
+    void Promise.all(
+      ids.map((id: number) =>
+        customerService.getCustomerById(id).then((res) => res.data).catch(() => null),
+      ),
+    ).then((rows) => {
+      setSelectedCustomers(
+        ids.map((id: number) => {
+          const customer = rows.find((row) => row?.id === id)
+          return { id, code: customer?.code, name: customer?.name || `Customer ${id}` }
+        }),
+      )
+    })
+    setCustomerPicker(undefined);
     setIsOpen(true);
   };
 
@@ -299,7 +318,12 @@ export default function UserSetupPage() {
             </Button>
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
-                <Button type="button" size="icon" className="h-8 w-8" onClick={() => setEditId(null)}>
+                <Button type="button" size="icon" className="h-8 w-8" onClick={() => {
+                  setEditId(null)
+                  setForm((prev) => ({ ...prev, customerIds: [] }))
+                  setSelectedCustomers([])
+                  setCustomerPicker(undefined)
+                }}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -336,29 +360,67 @@ export default function UserSetupPage() {
                     </Select>
                   </OutlinedFieldShell>
                   {isCustomerRole && (
-                    <OutlinedFieldShell label="Customer" className="md:col-span-2">
-                      <DbAsyncSelect<{ id: number; code: string; name: string }>
-                        queryKey={["user-setup-customers"]}
-                        fetchPage={(page, search) =>
-                          customerService.getCustomers({
-                            page,
-                            limit: DB_ASYNC_SELECT_PAGE_SIZE,
-                            sortBy: "name",
-                            sortOrder: "asc",
-                            search: search || undefined,
-                          })
-                        }
-                        getItemLabel={(customer) =>
-                          customer.code ? `${customer.code} - ${customer.name}` : customer.name || `Customer ${customer.id}`
-                        }
-                        extraItems={selectedCustomer ? [selectedCustomer] : undefined}
-                        value={form.customerId || undefined}
-                        onValueChange={(value) => setForm((prev) => ({ ...prev, customerId: value }))}
-                        placeholder="Select customer"
-                        searchPlaceholder="Search customer"
-                        triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
-                        contentClassName="z-[100]"
-                      />
+                    <OutlinedFieldShell label="Customers" className="md:col-span-2">
+                      <div className="space-y-2">
+                        {selectedCustomers.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {selectedCustomers.map((customer) => (
+                              <span key={customer.id} className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1 text-xs">
+                                {customer.code ? `${customer.code} - ${customer.name}` : customer.name || `Customer ${customer.id}`}
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground hover:text-foreground"
+                                  aria-label={`Remove ${customer.name || customer.id}`}
+                                  onClick={() => {
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      customerIds: prev.customerIds.filter((id) => id !== customer.id),
+                                    }))
+                                    setSelectedCustomers((prev) => prev.filter((row) => row.id !== customer.id))
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <DbAsyncSelect<{ id: number; code: string; name: string }>
+                          queryKey={["user-setup-customers", form.customerIds.join(",")]}
+                          fetchPage={(page, search) =>
+                            customerService.getCustomers({
+                              page,
+                              limit: DB_ASYNC_SELECT_PAGE_SIZE,
+                              sortBy: "name",
+                              sortOrder: "asc",
+                              search: search || undefined,
+                            })
+                          }
+                          getItemLabel={(customer) =>
+                            customer.code ? `${customer.code} - ${customer.name}` : customer.name || `Customer ${customer.id}`
+                          }
+                          visibleItem={(customer) => !form.customerIds.includes(customer.id)}
+                          value={customerPicker}
+                          onValueChange={(value) => {
+                            const id = Number(value)
+                            setCustomerPicker(undefined)
+                            if (!Number.isInteger(id) || id <= 0 || form.customerIds.includes(id)) return
+                            setForm((prev) => ({ ...prev, customerIds: [...prev.customerIds, id] }))
+                            setSelectedCustomers((prev) => [...prev, { id, name: `Customer ${id}` }])
+                            void customerService.getCustomerById(id).then((res) => {
+                              const customer = res.data
+                              if (!customer) return
+                              setSelectedCustomers((prev) =>
+                                prev.map((row) => (row.id === id ? { id, code: customer.code, name: customer.name } : row)),
+                              )
+                            }).catch(() => undefined)
+                          }}
+                          placeholder="Add customer"
+                          searchPlaceholder="Search customer"
+                          triggerClassName={FLOATING_INNER_SELECT_TRIGGER}
+                          contentClassName="z-[100]"
+                        />
+                      </div>
                     </OutlinedFieldShell>
                   )}
                   <OutlinedFieldShell label="Mobile">

@@ -342,7 +342,6 @@ export default function ShipmentsPage() {
               className="h-8 w-full sm:w-[320px]"
             />
             <div className="flex flex-wrap gap-2">
-            {!isCustomerUser && (
             <Button
               type="button"
               variant="outline"
@@ -353,7 +352,6 @@ export default function ShipmentsPage() {
               <FileSpreadsheet className="h-4 w-4" />
               Bulk import
             </Button>
-            )}
             {!isCustomerUser && (
               <PermissionGuard anyOf={SHIPMENT_BOOKING_PORTAL.update}>
                 <Button
