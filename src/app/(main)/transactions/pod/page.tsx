@@ -22,7 +22,7 @@ import { PodRow } from "@/types/transactions/pod";
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { cn } from "@/lib/utils";
 
-const POD_PROOF_ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp,image/*,application/pdf";
+const POD_PROOF_ACCEPT = ".jpg,.jpeg,.png,.webp,image/*";
 
 function saveBlob(blob: Blob, filename: string) {
     const url = window.URL.createObjectURL(blob);
@@ -254,7 +254,7 @@ export default function PodPage() {
                 <p className="mt-1 text-sm text-muted-foreground">
                     Search AWBs to load the list. Download DRS forms, uploaded POD scans, or stickers as a ZIP, and
                     upload signed POD scans. Name each file after the AWB (e.g.{" "}
-                    <span className="font-mono text-xs">AWB123456.pdf</span>) so bulk upload can match shipments
+                    <span className="font-mono text-xs">AWB123456.jpg</span>) so bulk upload can match shipments
                     automatically.
                 </p>
             </div>

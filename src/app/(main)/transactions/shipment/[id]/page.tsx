@@ -182,7 +182,7 @@ export default function ShipmentDetailsPage() {
   const podUploadMutation = useMutation({
     mutationFn: () => {
       if (!podFile) {
-        return Promise.reject(new Error("Choose a POD file (PDF or image)"));
+        return Promise.reject(new Error("Choose a POD image"));
       }
       return shipmentService.uploadPodProof(id, podFile, {
         remark: podRemark || undefined,
@@ -615,7 +615,7 @@ export default function ShipmentDetailsPage() {
             <Input
               id="pod-file"
               type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+              accept=".jpg,.jpeg,.png,.webp,image/*"
               onChange={(e) => setPodFile(e.target.files?.[0] ?? null)}
             />
             {podFile ? <p className="text-xs text-muted-foreground">Selected: {podFile.name}</p> : null}
