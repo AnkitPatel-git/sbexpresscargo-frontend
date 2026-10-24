@@ -113,7 +113,7 @@ export default function UserSetupPage() {
   const resolveApplicationType = (roleId: string) => {
     const role = roles.find((r: { id: number; identifier?: string }) => String(r.id) === roleId);
     if (role?.identifier === "FIELD_EXECUTIVE") return "mobile";
-    if (role?.identifier === "OPERATIONS") return "both";
+    if (role?.identifier === "OPERATIONS" || role?.identifier === "OPERATIONS_MOBILE") return "both";
     return form.applicationType;
   };
 
