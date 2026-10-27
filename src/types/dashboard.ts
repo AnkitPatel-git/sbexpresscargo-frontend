@@ -33,6 +33,7 @@ export interface OperationSummary {
             voidShipments: number;
             appointment: number;
             unManifest: number;
+            cancelled: number;
         };
     };
     inbound: {

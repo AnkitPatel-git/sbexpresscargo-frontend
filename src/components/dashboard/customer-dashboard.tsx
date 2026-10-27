@@ -34,7 +34,7 @@ const CUSTOMER_INSIGHT_ITEMS: {
   { key: "pending", label: "Pending", description: "Booked and awaiting movement" },
   { key: "rto", label: "RTO", description: "Return to origin in progress or completed" },
   { key: "unDelivered", label: "Delivery attempted", description: "Could not be delivered on attempt" },
-  { key: "unManifest", label: "Not manifested", description: "Booked but not yet on a manifest" },
+  { key: "cancelled", label: "Cancelled", description: "Shipments cancelled in this period" },
 ];
 
 export function CustomerDashboard() {
@@ -195,7 +195,7 @@ export function CustomerDashboard() {
           value={kpis?.totalBooking ?? 0}
           icon={Package}
           color="purple"
-          description="All bookings that are not deleted"
+          description="All shipment booking"
         />
         <StatsCard
           title="Out for delivery"

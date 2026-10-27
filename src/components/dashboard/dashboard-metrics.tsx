@@ -104,7 +104,7 @@ export function DashboardMetrics({ salesTotal, operationSummary }: DashboardMetr
         value={operationSummary.totalBooking}
         icon={Package}
         color="purple"
-        description="All bookings that are not deleted"
+        description="All shipment booking"
       />
       <StatsCard
         title="In Transit"

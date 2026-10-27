@@ -250,7 +250,7 @@ export function AdminDashboard() {
               value={opsData?.data.kpis?.totalBooking ?? 0}
               icon={Package}
               color="purple"
-              description="All bookings that are not deleted"
+              description="All shipment booking"
             />
             <StatsCard
               title="In Transit"
