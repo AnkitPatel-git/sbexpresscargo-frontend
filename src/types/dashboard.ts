@@ -12,6 +12,7 @@ export interface OperationSummary {
         totalBooking: number;
         inTransit: number;
         successfulDeliveries: number;
+        cancelled: number;
     };
     outbound: {
         summary: {

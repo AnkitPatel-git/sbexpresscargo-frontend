@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import {
+  Ban,
   Calendar,
   Package,
   RefreshCw,
   Search,
   Truck,
-  Clock,
   MapPin,
 } from "lucide-react";
 import Link from "next/link";
@@ -18,24 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatsCard } from "@/components/dashboard/dashboard-metrics";
-import { ExpressOutboundSummary } from "@/components/dashboard/express-operation-summary";
 import { TatSummaryCard } from "@/components/dashboard/tat-summary";
 import { dashboardService } from "@/services/dashboard-service";
 import { useAuth } from "@/context/auth-context";
-import type { OperationSummary } from "@/types/dashboard";
-
-const CUSTOMER_INSIGHT_ITEMS: {
-  key: keyof OperationSummary["outbound"]["buckets"];
-  label: string;
-  description: string;
-}[] = [
-  { key: "outForDelivery", label: "Out for delivery", description: "Shipments currently out for delivery" },
-  { key: "delivered", label: "Delivered", description: "Successfully delivered in this period" },
-  { key: "pending", label: "Pending", description: "Booked and awaiting movement" },
-  { key: "rto", label: "RTO", description: "Return to origin in progress or completed" },
-  { key: "unDelivered", label: "Delivery attempted", description: "Could not be delivered on attempt" },
-  { key: "cancelled", label: "Cancelled", description: "Shipments cancelled in this period" },
-];
 
 export function CustomerDashboard() {
   const { effectiveCustomerIds } = useAuth();
@@ -69,7 +54,6 @@ export function CustomerDashboard() {
     enabled: hasCustomers,
   });
 
-  const buckets = opsData?.data.outbound.buckets;
   const kpis = opsData?.data.kpis;
 
   const applyFilters = () => {
@@ -198,56 +182,29 @@ export function CustomerDashboard() {
           description="All shipment booking"
         />
         <StatsCard
-          title="Out for delivery"
-          value={buckets?.outForDelivery ?? 0}
+          title="In transit"
+          value={kpis?.inTransit ?? 0}
           icon={Truck}
           color="blue"
-          description="Currently with delivery executive"
+          description="All bookings before delivery or cancel"
         />
         <StatsCard
           title="Delivered"
-          value={buckets?.delivered ?? 0}
+          value={kpis?.successfulDeliveries ?? 0}
           icon={MapPin}
           color="green"
-          description="Completed deliveries"
+          description="Delivered shipments"
         />
         <StatsCard
-          title="Pending"
-          value={buckets?.pending ?? 0}
-          icon={Clock}
+          title="Cancelled"
+          value={kpis?.cancelled ?? 0}
+          icon={Ban}
           color="orange"
-          description="Awaiting pickup or movement"
+          description="Cancelled shipments"
         />
       </div>
 
-      <Card className="shadow-[0_1px_3px_rgba(23,42,69,0.08)]">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Status breakdown</CardTitle>
-          <CardDescription>Counts for your shipments in the selected date range</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {CUSTOMER_INSIGHT_ITEMS.map(({ key, label, description }) => (
-              <li
-                key={key}
-                className="flex items-start justify-between gap-3 rounded-lg border border-border/80 bg-muted/30 px-4 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{label}</p>
-                  <p className="text-xs text-muted-foreground">{description}</p>
-                </div>
-                <span className="shrink-0 text-lg font-semibold tabular-nums text-foreground">
-                  {buckets?.[key] ?? 0}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-
       <TatSummaryCard data={tatData?.data} />
-
-      <ExpressOutboundSummary data={opsData?.data} />
 
       <div className="flex flex-wrap gap-3">
         <Button asChild variant="default">
