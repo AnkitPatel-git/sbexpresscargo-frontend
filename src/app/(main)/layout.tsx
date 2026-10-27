@@ -2013,7 +2013,11 @@ function DashboardLayoutClient({
                   label: "Shipment Booking",
                   href: "/transactions/shipment",
                 },
-                { icon: BarChart3, label: "Analytics", href: "/dashboard" },
+                {
+                  icon: BarChart3,
+                  label: isCustomerUser ? "Customer MIS" : "Analytics",
+                  href: isCustomerUser ? "/report/customer-mis" : "/dashboard",
+                },
                 {
                   icon: Calculator,
                   label: "Rates",
