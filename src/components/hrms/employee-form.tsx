@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EmployeeFormValues, HrmsEmployeeStatus, HrmsGender, LinkableUser } from "@/types/hrms/employee";
+import { HRMS_ORGANIZATIONS } from "@/types/hrms/employee";
 
 const STATUSES: HrmsEmployeeStatus[] = [
   "PROBATION",
@@ -144,6 +145,21 @@ export function EmployeeForm({
 
       <section className="grid gap-3 rounded-lg border p-4 md:grid-cols-3">
         <h2 className="md:col-span-3 text-base font-semibold">Organisation</h2>
+        <Field label="Organization name">
+          <select
+            required
+            className="h-9 rounded-md border bg-background px-3 text-sm"
+            value={values.organizationName}
+            onChange={(event) =>
+              set({ organizationName: event.target.value as EmployeeFormValues["organizationName"] })
+            }
+          >
+            <option value="">Select organization</option>
+            {HRMS_ORGANIZATIONS.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </Field>
         <Field label="Joining date">
           <Input required type="date" value={values.joiningDate} onChange={(e) => set({ joiningDate: e.target.value })} />
         </Field>

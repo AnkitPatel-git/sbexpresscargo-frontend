@@ -9,6 +9,19 @@ export type HrmsGender = "MALE" | "FEMALE" | "OTHER";
 
 export type HrmsLeaveType = "CASUAL" | "SICK" | "EARNED" | "UNPAID" | "OTHER";
 
+export type HrmsOrganization =
+  | "SB Express Cargo LLP"
+  | "Saitrack Solutions"
+  | "SB Technoworld Solutions LLP"
+  | "Universal Enterprises";
+
+export const HRMS_ORGANIZATIONS: HrmsOrganization[] = [
+  "SB Express Cargo LLP",
+  "Saitrack Solutions",
+  "SB Technoworld Solutions LLP",
+  "Universal Enterprises",
+];
+
 export type EmployeeEducation = {
   qualification: string;
   institution?: string;
@@ -66,6 +79,7 @@ export type EmployeeFormValues = {
   emergencyRelation: string;
   department: string;
   designation: string;
+  organizationName: HrmsOrganization | "";
   reportingManagerId: string;
   joiningDate: string;
   photographPath: string;
@@ -89,6 +103,7 @@ export type EmployeeListItem = {
   status: HrmsEmployeeStatus;
   department: string | null;
   designation: string | null;
+  organizationName: string | null;
   mobile: string | null;
   joiningDate: string | null;
   version: number;

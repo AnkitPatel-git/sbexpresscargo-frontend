@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { hrmsService } from "@/services/hrms/hrms-service";
@@ -12,6 +13,7 @@ export default function HrmsEmployeesPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<HrmsEmployeeStatus | "">("");
   const [page, setPage] = useState(1);
+  const [downloading, setDownloading] = useState(false);
   const query = useQuery({
     queryKey: ["hrms-employees", page, search, status],
     queryFn: () => hrmsService.listEmployees({ page, search, status, limit: 20 }),
@@ -21,9 +23,33 @@ export default function HrmsEmployeesPage() {
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Employees</h1>
-        <Button asChild>
-          <Link href="/hrms/employees/create">Add employee</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            disabled={downloading}
+            onClick={async () => {
+              setDownloading(true);
+              try {
+                const { blob, filename } = await hrmsService.exportEmployees({ search, status });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = filename;
+                link.click();
+                URL.revokeObjectURL(url);
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : "Failed to download employees");
+              } finally {
+                setDownloading(false);
+              }
+            }}
+          >
+            {downloading ? "Downloading..." : "Download Excel"}
+          </Button>
+          <Button asChild>
+            <Link href="/hrms/employees/create">Add employee</Link>
+          </Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <Input
@@ -57,6 +83,7 @@ export default function HrmsEmployeesPage() {
             <tr className="text-left">
               <th className="px-3 py-2">Code</th>
               <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Organization</th>
               <th className="px-3 py-2">Department</th>
               <th className="px-3 py-2">Designation</th>
               <th className="px-3 py-2">Status</th>
@@ -73,6 +100,7 @@ export default function HrmsEmployeesPage() {
                   </Link>
                 </td>
                 <td className="px-3 py-2">{row.fullName}</td>
+                <td className="px-3 py-2">{row.organizationName || "—"}</td>
                 <td className="px-3 py-2">{row.department || "—"}</td>
                 <td className="px-3 py-2">{row.designation || "—"}</td>
                 <td className="px-3 py-2">{row.status}</td>

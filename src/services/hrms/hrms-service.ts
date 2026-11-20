@@ -51,6 +51,7 @@ function payload(values: EmployeeFormValues, version?: number) {
     emergencyRelation: optional(values.emergencyRelation),
     department: optional(values.department),
     designation: optional(values.designation),
+    organizationName: values.organizationName,
     reportingManagerId: numberOrUndefined(values.reportingManagerId),
     joiningDate: values.joiningDate,
     photographPath: optional(values.photographPath),
@@ -76,7 +77,7 @@ export const hrmsService = {
       headers: bearerHeaders(false),
     });
     if (!response.ok) {
-      throw new Error(await readErrorMessage(response, "Failed to load HRMS dashboard"));
+      throw new Error(await readErrorMessage(response, "Failed to load HR"));
     }
     const body = await response.json();
     return body.data;
@@ -101,6 +102,28 @@ export const hrmsService = {
     }
     const body = await response.json();
     return { data: body.data ?? [], total: body.meta?.total ?? 0 };
+  },
+
+  async exportEmployees(params?: {
+    search?: string;
+    status?: HrmsEmployeeStatus | "";
+  }): Promise<{ blob: Blob; filename: string }> {
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.status) q.set("status", params.status);
+    const suffix = q.toString() ? `?${q}` : "";
+    const response = await apiFetch(`${API_BASE_URL}/hrms/employees/export${suffix}`, {
+      headers: bearerHeaders(false),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to download employees"));
+    }
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const match = disposition.match(/filename="?([^";\n]+)"?/i);
+    return {
+      blob: await response.blob(),
+      filename: match?.[1]?.trim() || "employees.xlsx",
+    };
   },
 
   async linkableUsers(includeUserId?: number): Promise<LinkableUser[]> {
@@ -279,6 +302,7 @@ export function employeeToForm(row: Record<string, unknown>): EmployeeFormValues
     emergencyRelation: text(row.emergencyRelation),
     department: text(row.department),
     designation: text(row.designation),
+    organizationName: text(row.organizationName) as EmployeeFormValues["organizationName"],
     reportingManagerId: row.reportingManagerId ? String(row.reportingManagerId) : "",
     joiningDate: text(row.joiningDate),
     photographPath: text(row.photographPath),
@@ -337,6 +361,7 @@ export function emptyEmployeeForm(): EmployeeFormValues {
     emergencyRelation: "",
     department: "",
     designation: "",
+    organizationName: "",
     reportingManagerId: "",
     joiningDate: "",
     photographPath: "",
