@@ -37,6 +37,15 @@ export type EmployeeDocument = {
   filePath?: string;
 };
 
+export type LinkableUser = {
+  id: number;
+  username: string;
+  email: string;
+  mobile: string | null;
+  birthDate: string | null;
+  joiningDate: string | null;
+};
+
 export type EmployeeFormValues = {
   firstName: string;
   lastName: string;

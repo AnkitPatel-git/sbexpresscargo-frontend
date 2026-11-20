@@ -4,6 +4,7 @@ import type {
   EmployeeDetail,
   EmployeeFormValues,
   EmployeeListItem,
+  LinkableUser,
   HrmsDashboard,
   HrmsEmployeeStatus,
   HrmsLeaveType,
@@ -59,7 +60,7 @@ function payload(values: EmployeeFormValues, version?: number) {
     bankIfsc: optional(values.bankIfsc),
     aadhaarNumber: optional(values.aadhaarNumber),
     panNumber: optional(values.panNumber),
-    userId: numberOrUndefined(values.userId),
+    userId: Number(values.userId),
     educations: values.educations.filter((row) => row.qualification.trim()),
     previousJobs: values.previousJobs.filter((row) => row.companyName.trim()),
     familyMembers: values.familyMembers.filter(
@@ -100,6 +101,21 @@ export const hrmsService = {
     }
     const body = await response.json();
     return { data: body.data ?? [], total: body.meta?.total ?? 0 };
+  },
+
+  async linkableUsers(includeUserId?: number): Promise<LinkableUser[]> {
+    const q = new URLSearchParams();
+    if (includeUserId) q.set("includeUserId", String(includeUserId));
+    const suffix = q.toString() ? `?${q}` : "";
+    const response = await apiFetch(
+      `${API_BASE_URL}/hrms/employees/linkable-users${suffix}`,
+      { headers: bearerHeaders(false) },
+    );
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to load users"));
+    }
+    const body = await response.json();
+    return body.data ?? [];
   },
 
   async employeeOptions(): Promise<

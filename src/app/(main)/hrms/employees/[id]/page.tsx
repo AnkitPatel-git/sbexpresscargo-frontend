@@ -71,6 +71,7 @@ export default function EmployeeDetailPage() {
       </div>
 
       <section className="grid gap-2 rounded-lg border p-4 text-sm md:grid-cols-2">
+        <p>Login: {row.user ? `${row.user.username} (${row.user.email})` : "—"}</p>
         <p>Joining: {row.joiningDate || "—"}</p>
         <p>Confirmation: {row.confirmationDate || "—"}</p>
         <p>Manager: {row.reportingManagerName || "—"}</p>

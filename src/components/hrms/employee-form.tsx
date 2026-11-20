@@ -4,7 +4,7 @@ import { FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { EmployeeFormValues, HrmsEmployeeStatus, HrmsGender } from "@/types/hrms/employee";
+import type { EmployeeFormValues, HrmsEmployeeStatus, HrmsGender, LinkableUser } from "@/types/hrms/employee";
 
 const STATUSES: HrmsEmployeeStatus[] = [
   "PROBATION",
@@ -34,12 +34,14 @@ function Field({
 export function EmployeeForm({
   values,
   managers,
+  users,
   saving,
   onChange,
   onSubmit,
 }: {
   values: EmployeeFormValues;
   managers: Array<{ id: number; employeeCode: string; fullName: string }>;
+  users: LinkableUser[];
   saving: boolean;
   onChange: (next: EmployeeFormValues) => void;
   onSubmit: () => void;
@@ -165,8 +167,34 @@ export function EmployeeForm({
             ))}
           </select>
         </Field>
-        <Field label="Linked login user id">
-          <Input value={values.userId} onChange={(e) => set({ userId: e.target.value.replace(/\D/g, "") })} />
+        <Field label="Login user">
+          <select
+            required
+            className="h-9 rounded-md border bg-background px-3 text-sm"
+            value={values.userId}
+            onChange={(event) => {
+              const userId = event.target.value;
+              const user = users.find((item) => String(item.id) === userId);
+              const next: Partial<EmployeeFormValues> = { userId };
+              if (user && !values.firstName && !values.lastName) {
+                const parts = user.username.trim().split(/\s+/);
+                next.firstName = parts[0] ?? "";
+                next.lastName = parts.slice(1).join(" ");
+              }
+              if (user && !values.workEmail) next.workEmail = user.email;
+              if (user && !values.mobile && user.mobile) next.mobile = user.mobile;
+              if (user && !values.dateOfBirth && user.birthDate) next.dateOfBirth = user.birthDate;
+              if (user && !values.joiningDate && user.joiningDate) next.joiningDate = user.joiningDate;
+              set(next);
+            }}
+          >
+            <option value="">Select a user</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.username} ({user.email})
+              </option>
+            ))}
+          </select>
         </Field>
       </section>
 

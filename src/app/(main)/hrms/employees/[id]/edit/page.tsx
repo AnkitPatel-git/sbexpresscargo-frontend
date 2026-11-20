@@ -25,6 +25,12 @@ export default function EditEmployeePage() {
     queryKey: ["hrms-employee-options"],
     queryFn: () => hrmsService.employeeOptions(),
   });
+  const mappedUserId = (employee.data as { userId?: number } | undefined)?.userId;
+  const users = useQuery({
+    queryKey: ["hrms-linkable-users", mappedUserId],
+    queryFn: () => hrmsService.linkableUsers(mappedUserId),
+    enabled: mappedUserId != null,
+  });
 
   useEffect(() => {
     if (!employee.data) return;
@@ -46,6 +52,7 @@ export default function EditEmployeePage() {
       <EmployeeForm
         values={values}
         managers={(managers.data ?? []).filter((manager) => manager.id !== id)}
+        users={users.data ?? []}
         saving={saving}
         onChange={setValues}
         onSubmit={async () => {

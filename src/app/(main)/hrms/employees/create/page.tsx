@@ -17,6 +17,10 @@ export default function CreateEmployeePage() {
     queryKey: ["hrms-employee-options"],
     queryFn: () => hrmsService.employeeOptions(),
   });
+  const users = useQuery({
+    queryKey: ["hrms-linkable-users"],
+    queryFn: () => hrmsService.linkableUsers(),
+  });
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -27,6 +31,7 @@ export default function CreateEmployeePage() {
       <EmployeeForm
         values={values}
         managers={managers.data ?? []}
+        users={users.data ?? []}
         saving={saving}
         onChange={setValues}
         onSubmit={async () => {
