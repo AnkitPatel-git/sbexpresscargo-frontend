@@ -62,7 +62,8 @@ export default function LoginPage() {
                     setError("This account uses the customer login at /customer/login.")
                     return
                 }
-                login(response.data)
+                const role = response.data.user?.role?.identifier
+                login(response.data, role === "HRMS" ? "/hrms/dashboard" : "/dashboard")
             } else {
                 setError(response.message || "Login failed")
             }

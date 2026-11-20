@@ -79,10 +79,13 @@ interface SidebarContentProps {
   /** `contract` query on `/masters/rates` (null when absent = customer list). */
   rateContractQuery: string | null;
   isCustomerUser?: boolean;
+  isHrmsUser?: boolean;
 }
 
 const headerNavItems = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/hrms/dashboard", label: "HRMS Dashboard" },
+  { href: "/hrms/employees", label: "Employees" },
   { href: "/masters/products", label: "Product" },
   { href: "/masters/zones", label: "Zone" },
   { href: "/utilities/serviceable-pincodes", label: "Serviceable Pincode" },
@@ -296,6 +299,7 @@ const SidebarContent = ({
   onItemClick,
   rateContractQuery,
   isCustomerUser = false,
+  isHrmsUser = false,
 }: SidebarContentProps) => {
   const { isLoading: authLoading } = useAuth();
   const showMasters = !authLoading && !isCustomerUser;
@@ -635,6 +639,30 @@ const SidebarContent = ({
     ));
   };
 
+  if (isHrmsUser) {
+    return (
+      <nav
+        ref={navRef}
+        className="grid items-start px-2 text-sm font-medium lg:px-4 gap-1"
+      >
+        <LinkItem
+          href="/hrms/dashboard"
+          active={pathname.startsWith("/hrms/dashboard")}
+          icon={LayoutDashboard}
+        >
+          Dashboard
+        </LinkItem>
+        <LinkItem
+          href="/hrms/employees"
+          active={pathname.startsWith("/hrms/employees")}
+          icon={Users}
+        >
+          Employees
+        </LinkItem>
+      </nav>
+    );
+  }
+
   return (
     <nav
       ref={navRef}
@@ -654,6 +682,25 @@ const SidebarContent = ({
           {!isCollapsed && <span>Dashboard</span>}
         </div>
       </Link>
+
+      <PermissionGuard permission="hrms.dashboard.read">
+        <LinkItem
+          href="/hrms/dashboard"
+          active={pathname.startsWith("/hrms/dashboard")}
+          icon={LayoutDashboard}
+        >
+          HRMS
+        </LinkItem>
+      </PermissionGuard>
+      <PermissionGuard permission="hrms.employee.read">
+        <LinkItem
+          href="/hrms/employees"
+          active={pathname.startsWith("/hrms/employees")}
+          icon={Users}
+        >
+          Employees
+        </LinkItem>
+      </PermissionGuard>
 
       {/* Masters Menu */}
       {showMasters && <div
@@ -1710,6 +1757,17 @@ function DashboardLayoutClient({
       router.replace("/dashboard");
     }
   }, [authLoading, isCustomerUser, pathname, router]);
+  const isHrmsUser = !authLoading && user?.role?.identifier === "HRMS";
+  useEffect(() => {
+    if (authLoading || !isHrmsUser) return;
+    const allowed =
+      pathname.startsWith("/hrms") ||
+      pathname === "/profile" ||
+      pathname === "/change-password";
+    if (!allowed) {
+      router.replace("/hrms/dashboard");
+    }
+  }, [authLoading, isHrmsUser, pathname, router]);
   const rateContractQuery = useSearchParams().get("contract");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1728,7 +1786,14 @@ function DashboardLayoutClient({
 
   const visibleHeaderNavItems = isCustomerUser
     ? headerNavItems.filter((item) => isCustomerVisibleHref(item.href))
-    : headerNavItems;
+    : isHrmsUser
+      ? [
+          { href: "/hrms/dashboard", label: "HRMS Dashboard" },
+          { href: "/hrms/employees", label: "Employees" },
+          { href: "/profile", label: "Profile" },
+          { href: "/change-password", label: "Change password" },
+        ]
+      : headerNavItems;
   const initials = user?.username?.substring(0, 2).toUpperCase() || "US";
   const activeHeaderItem =
     [...visibleHeaderNavItems]
@@ -1806,7 +1871,7 @@ function DashboardLayoutClient({
         <div className="flex h-14 items-center justify-between px-2 lg:h-[60px] bg-primary border-b border-sidebar-border">
           {!isSidebarCollapsed && (
             <Link
-              href="/dashboard"
+              href={isHrmsUser ? "/hrms/dashboard" : "/dashboard"}
               className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md"
             >
               <img
@@ -1841,6 +1906,7 @@ function DashboardLayoutClient({
             isCollapsed={isSidebarCollapsed}
             rateContractQuery={rateContractQuery}
             isCustomerUser={isCustomerUser}
+            isHrmsUser={isHrmsUser}
           />
         </div>
       </aside>
@@ -1853,7 +1919,7 @@ function DashboardLayoutClient({
         >
           <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
             <Link
-              href="/dashboard"
+              href={isHrmsUser ? "/hrms/dashboard" : "/dashboard"}
               className="flex items-center gap-2 font-bold tracking-tight bg-white px-3 py-1.5 rounded-md"
             >
               <img
@@ -1869,6 +1935,7 @@ function DashboardLayoutClient({
               onItemClick={() => setIsMobileMenuOpen(false)}
               rateContractQuery={rateContractQuery}
               isCustomerUser={isCustomerUser}
+              isHrmsUser={isHrmsUser}
             />
           </div>
         </SheetContent>
@@ -1889,7 +1956,7 @@ function DashboardLayoutClient({
 
             {isSidebarCollapsed && (
               <Link
-                href="/dashboard"
+                href={isHrmsUser ? "/hrms/dashboard" : "/dashboard"}
                 className="hidden shrink-0 items-center sm:flex"
               >
                 <img
@@ -1911,7 +1978,7 @@ function DashboardLayoutClient({
 
             <div className="hidden min-w-0 items-center gap-1 text-sm sm:flex">
               <Link
-                href="/dashboard"
+                href={isHrmsUser ? "/hrms/dashboard" : "/dashboard"}
                 className="font-medium text-muted-foreground hover:text-[var(--express-link)]"
               >
                 Home
@@ -1926,7 +1993,7 @@ function DashboardLayoutClient({
             </div>
           </div>
 
-          <div className="hidden max-w-md flex-1 px-2 md:block">
+          {!isHrmsUser && <div className="hidden max-w-md flex-1 px-2 md:block">
             <div ref={searchBoxRef} className="relative">
               <div className="flex w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
                 <input
@@ -2002,7 +2069,7 @@ function DashboardLayoutClient({
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="hidden items-center gap-0.5 rounded-full border border-[#1f2d3d] bg-white px-1 py-0.5 lg:flex">
@@ -2044,9 +2111,10 @@ function DashboardLayoutClient({
                   href: "/transactions/tracking",
                 },
               ]
-                .filter((item) =>
-                  !isCustomerUser ? true : isCustomerVisibleHref(item.href),
-                )
+                .filter((item) => {
+                  if (isHrmsUser) return false;
+                  return !isCustomerUser ? true : isCustomerVisibleHref(item.href);
+                })
                 .map((item, i) => (
                 <Button
                   key={i}
