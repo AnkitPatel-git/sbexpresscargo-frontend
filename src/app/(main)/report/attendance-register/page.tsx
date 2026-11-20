@@ -446,7 +446,7 @@ export default function AttendanceRegisterPage() {
         fallback={
           <p className="text-sm text-muted-foreground">
             You need the <span className="font-mono">report.attendance.read</span> permission
-            (e.g. Human Resource or Super Admin) to view and download the register.
+            (e.g. HR or Super Admin) to view and download the register.
           </p>
         }
       >

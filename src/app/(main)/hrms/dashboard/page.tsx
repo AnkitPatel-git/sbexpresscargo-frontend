@@ -38,7 +38,7 @@ export default function HrmsDashboardPage() {
     onSettled: () => setBusyId(null),
   });
 
-  if (query.isLoading) return <p className="p-6 text-sm">Loading HRMS dashboard...</p>;
+  if (query.isLoading) return <p className="p-6 text-sm">Loading HR...</p>;
   if (query.isError) {
     return <p className="p-6 text-sm text-destructive">{(query.error as Error).message}</p>;
   }
@@ -49,7 +49,7 @@ export default function HrmsDashboardPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">HRMS dashboard</h1>
+          <h1 className="text-2xl font-semibold">HR</h1>
           <p className="text-sm text-muted-foreground">As of {data.asOf}</p>
         </div>
         {hasPermission("hrms.employee.create") ? (

@@ -63,7 +63,7 @@ export default function LoginPage() {
                     return
                 }
                 const role = response.data.user?.role?.identifier
-                login(response.data, role === "HRMS" ? "/hrms/dashboard" : "/dashboard")
+                login(response.data, role === "HR" ? "/hrms/dashboard" : "/dashboard")
             } else {
                 setError(response.message || "Login failed")
             }
