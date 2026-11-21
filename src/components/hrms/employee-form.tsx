@@ -219,8 +219,13 @@ export function EmployeeForm({
         <Field label="Aadhaar number">
           <Input maxLength={12} value={values.aadhaarNumber} onChange={(e) => set({ aadhaarNumber: e.target.value.replace(/\D/g, "").slice(0, 12) })} />
         </Field>
-        <Field label="PAN">
-          <Input maxLength={10} value={values.panNumber} onChange={(e) => set({ panNumber: e.target.value.toUpperCase() })} />
+        <Field label="PAN (optional)">
+          <Input
+            maxLength={10}
+            placeholder="Optional"
+            value={values.panNumber}
+            onChange={(e) => set({ panNumber: e.target.value.toUpperCase() })}
+          />
         </Field>
         <Field label="Account holder">
           <Input value={values.bankAccountHolder} onChange={(e) => set({ bankAccountHolder: e.target.value })} />
