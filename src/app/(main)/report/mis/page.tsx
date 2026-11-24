@@ -67,6 +67,7 @@ const DEFAULT_FILTERS: MisReportFilters = {
 
 const DEFAULT_COLUMNS: MisReportColumn[] = [
   "awbNo",
+  "pickupType",
   "referenceNo",
   "forwardingAwb",
   "bookDate",
@@ -92,6 +93,7 @@ const REPORT_DATETIME_COLUMNS = new Set<MisReportColumn>(["createdAt", "updatedA
 
 const COLUMN_LABELS: Record<MisReportColumn, string> = {
   awbNo: "AWB No",
+  pickupType: "Forward Pickup / Reverse Pickup",
   forwardingAwb: "FWD. No",
   referenceNo: "Ref No",
   bookDate: "Booking Date",

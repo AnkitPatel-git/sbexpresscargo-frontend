@@ -1,5 +1,6 @@
 export const MIS_REPORT_COLUMNS = [
   "awbNo",
+  "pickupType",
   "forwardingAwb",
   "referenceNo",
   "bookDate",
