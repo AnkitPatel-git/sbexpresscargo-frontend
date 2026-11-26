@@ -1,9 +1,12 @@
 "use client";
 
-import { FormEvent, type ReactNode } from "react";
+import { FormEvent, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EmployeeDocumentImage } from "@/components/hrms/employee-document-image";
+import { hrmsService } from "@/services/hrms/hrms-service";
 import type { EmployeeFormValues, HrmsEmployeeStatus, HrmsGender, LinkableUser } from "@/types/hrms/employee";
 import { HRMS_ORGANIZATIONS } from "@/types/hrms/employee";
 
@@ -47,7 +50,27 @@ export function EmployeeForm({
   onChange: (next: EmployeeFormValues) => void;
   onSubmit: () => void;
 }) {
+  const [uploadingDocument, setUploadingDocument] = useState<number | null>(null);
   const set = (patch: Partial<EmployeeFormValues>) => onChange({ ...values, ...patch });
+
+  const uploadDocumentImage = async (index: number, file: File | null) => {
+    if (!file) return;
+    setUploadingDocument(index);
+    try {
+      const saved = await hrmsService.uploadEmployeeDocument(file);
+      const documents = [...values.documents];
+      documents[index] = {
+        ...documents[index],
+        fileName: saved.fileName,
+        filePath: saved.filePath,
+      };
+      set({ documents });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+    } finally {
+      setUploadingDocument(null);
+    }
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -340,7 +363,7 @@ export function EmployeeForm({
         onAdd={() => set({ documents: [...values.documents, { documentType: "" }] })}
       >
         {values.documents.map((row, index) => (
-          <div key={index} className="grid gap-2 md:grid-cols-4">
+          <div key={index} className="grid gap-2 md:grid-cols-[1fr_1fr_1.4fr]">
             <Input placeholder="Type" value={row.documentType} onChange={(e) => {
               const documents = [...values.documents];
               documents[index] = { ...row, documentType: e.target.value };
@@ -351,16 +374,22 @@ export function EmployeeForm({
               documents[index] = { ...row, documentNumber: e.target.value };
               set({ documents });
             }} />
-            <Input placeholder="File name" value={row.fileName ?? ""} onChange={(e) => {
-              const documents = [...values.documents];
-              documents[index] = { ...row, fileName: e.target.value };
-              set({ documents });
-            }} />
-            <Input placeholder="File path" value={row.filePath ?? ""} onChange={(e) => {
-              const documents = [...values.documents];
-              documents[index] = { ...row, filePath: e.target.value };
-              set({ documents });
-            }} />
+            <div className="flex flex-col gap-2">
+              <Input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={uploadingDocument === index}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  event.target.value = "";
+                  void uploadDocumentImage(index, file);
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                {uploadingDocument === index ? "Uploading image..." : "JPG, PNG, or WebP"}
+              </p>
+              <EmployeeDocumentImage filePath={row.filePath} fileName={row.fileName} />
+            </div>
           </div>
         ))}
       </Repeat>

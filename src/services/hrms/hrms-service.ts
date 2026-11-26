@@ -154,6 +154,39 @@ export const hrmsService = {
     return body.data ?? [];
   },
 
+  async uploadEmployeeDocument(file: File): Promise<{ filePath: string; fileName: string }> {
+    const body = new FormData();
+    body.append("file", file);
+    const response = await apiFetch(`${API_BASE_URL}/hrms/employees/documents/upload`, {
+      method: "POST",
+      headers: bearerHeaders(false),
+      body,
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to upload image"));
+    }
+    const payload = await response.json();
+    return payload.data;
+  },
+
+  employeeDocumentUrl(filePath: string, own = false) {
+    const base = own
+      ? `${API_BASE_URL}/hrms/employees/me/documents/file`
+      : `${API_BASE_URL}/hrms/employees/documents/file`;
+    return `${base}?path=${encodeURIComponent(filePath)}`;
+  },
+
+  async getMyEmployee(): Promise<EmployeeDetail | null> {
+    const response = await apiFetch(`${API_BASE_URL}/hrms/employees/me`, {
+      headers: bearerHeaders(false),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to load employee details"));
+    }
+    const body = await response.json();
+    return body.data ?? null;
+  },
+
   async getEmployee(id: number): Promise<EmployeeDetail> {
     const response = await apiFetch(`${API_BASE_URL}/hrms/employees/${id}`, {
       headers: bearerHeaders(false),

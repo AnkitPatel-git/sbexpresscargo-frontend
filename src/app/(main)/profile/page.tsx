@@ -8,7 +8,10 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { OutlinedFieldShell, FLOATING_INNER_CONTROL } from "@/components/ui/floating-form-item";
+import { EmployeeDocumentImage } from "@/components/hrms/employee-document-image";
+import { hrmsService } from "@/services/hrms/hrms-service";
 import { userService } from "@/services/user-service";
+import type { EmployeeDetail } from "@/types/hrms/employee";
 
 type EditableProfileForm = {
   username: string;
@@ -19,6 +22,112 @@ type EditableProfileForm = {
   groupName: string;
   birthDate: string;
 };
+
+function displayValue(value: string | number | null | undefined) {
+  if (value == null || value === "") return "—";
+  return String(value);
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: string | number | null | undefined }) {
+  return (
+    <OutlinedFieldShell label={label}>
+      <Input value={displayValue(value)} readOnly disabled className={FLOATING_INNER_CONTROL} />
+    </OutlinedFieldShell>
+  );
+}
+
+function EmployeeDetails({ employee }: { employee: EmployeeDetail }) {
+  const address = [employee.addressLine1, employee.addressLine2].filter(Boolean).join(", ");
+  return (
+    <section className="mb-6 flex flex-col gap-4">
+      <div>
+        <h2 className="text-base font-semibold">Employee details</h2>
+        <p className="text-sm text-muted-foreground">
+          {employee.employeeCode} · These details are maintained by HR and cannot be changed here.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <ReadOnlyField label="Employee code" value={employee.employeeCode} />
+        <ReadOnlyField label="Name" value={employee.fullName} />
+        <ReadOnlyField label="Status" value={employee.status} />
+        <ReadOnlyField label="Organization" value={employee.organizationName} />
+        <ReadOnlyField label="Department" value={employee.department} />
+        <ReadOnlyField label="Designation" value={employee.designation} />
+        <ReadOnlyField label="Reporting manager" value={employee.reportingManagerName} />
+        <ReadOnlyField label="Joining date" value={employee.joiningDate} />
+        <ReadOnlyField label="Confirmation date" value={employee.confirmationDate} />
+        <ReadOnlyField label="Date of birth" value={employee.dateOfBirth} />
+        <ReadOnlyField label="Gender" value={employee.gender} />
+        <ReadOnlyField label="Mobile" value={employee.mobile} />
+        <ReadOnlyField label="Alternate mobile" value={employee.alternateMobile} />
+        <ReadOnlyField label="Work email" value={employee.workEmail} />
+        <ReadOnlyField label="Personal email" value={employee.personalEmail} />
+        <ReadOnlyField label="Address" value={address} />
+        <ReadOnlyField label="City" value={employee.city} />
+        <ReadOnlyField label="State" value={employee.state} />
+        <ReadOnlyField label="Pincode" value={employee.pinCode} />
+        <ReadOnlyField
+          label="Emergency contact"
+          value={[employee.emergencyName, employee.emergencyRelation, employee.emergencyPhone].filter(Boolean).join(" · ")}
+        />
+        <ReadOnlyField label="Aadhaar" value={employee.aadhaarNumber} />
+        <ReadOnlyField label="PAN" value={employee.panNumber} />
+        <ReadOnlyField
+          label="Bank"
+          value={[employee.bankAccountHolder, employee.bankName, employee.bankAccountNumber, employee.bankIfsc]
+            .filter(Boolean)
+            .join(" · ")}
+        />
+      </div>
+      <ReadOnlyList
+        title="Education"
+        rows={employee.educations.map((row) =>
+          [row.qualification, row.institution, row.yearOfPassing, row.grade].filter(Boolean).join(" · "),
+        )}
+      />
+      <ReadOnlyList
+        title="Previous employment"
+        rows={employee.previousJobs.map((row) =>
+          [row.companyName, row.designation, row.fromDate, row.toDate].filter(Boolean).join(" · "),
+        )}
+      />
+      <ReadOnlyList
+        title="Family"
+        rows={employee.familyMembers.map((row) =>
+          [row.name, row.relation, row.dateOfBirth, row.phone].filter(Boolean).join(" · "),
+        )}
+      />
+      {employee.documents.length > 0 ? (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold">Documents</h3>
+          <ul className="space-y-3">
+            {employee.documents.map((row, index) => (
+              <li key={`${row.filePath ?? row.documentType}-${index}`} className="text-sm text-muted-foreground">
+                <p>{[row.documentType, row.documentNumber].filter(Boolean).join(" · ")}</p>
+                <EmployeeDocumentImage filePath={row.filePath} fileName={row.fileName} own />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ReadOnlyList({ title, rows }: { title: string; rows: string[] }) {
+  const filled = rows.filter(Boolean);
+  if (filled.length === 0) return null;
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
+      <ul className="space-y-1 text-sm text-muted-foreground">
+        {filled.map((row, index) => (
+          <li key={`${title}-${index}`}>{row}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const [form, setForm] = useState<EditableProfileForm>({
@@ -34,6 +143,10 @@ export default function ProfilePage() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["self-profile"],
     queryFn: () => userService.getProfile(),
+  });
+  const employeeQuery = useQuery({
+    queryKey: ["self-employee"],
+    queryFn: () => hrmsService.getMyEmployee(),
   });
 
   useEffect(() => {
@@ -103,8 +216,14 @@ export default function ProfilePage() {
     <div className="rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_3px_rgba(23,42,69,0.08)] lg:p-5">
       <div className="mb-5">
         <h1 className="text-xl font-semibold">Profile</h1>
-        <p className="text-sm text-muted-foreground">Update the self-editable profile fields exposed by the Utilities API.</p>
+        <p className="text-sm text-muted-foreground">Update your login details. Linked employee details stay read-only.</p>
       </div>
+
+      {employeeQuery.isLoading ? (
+        <p className="mb-5 text-sm text-muted-foreground">Loading employee details...</p>
+      ) : employeeQuery.data ? (
+        <EmployeeDetails employee={employeeQuery.data} />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <OutlinedFieldShell label="Username">

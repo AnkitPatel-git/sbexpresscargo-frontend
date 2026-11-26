@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmployeeDocumentImage } from "@/components/hrms/employee-document-image";
 import { hrmsService } from "@/services/hrms/hrms-service";
 import type { HrmsLeaveType } from "@/types/hrms/employee";
 
@@ -168,6 +169,25 @@ export default function EmployeeDetailPage() {
             Submit leave
           </Button>
         </div>
+      </section>
+
+      <section className="rounded-lg border p-4">
+        <h2 className="mb-3 font-semibold">Documents</h2>
+        {(row.documents ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">No documents uploaded.</p>
+        ) : (
+          <ul className="space-y-3 text-sm">
+            {(row.documents as Array<{ documentType?: string; documentNumber?: string; fileName?: string; filePath?: string }>).map((document, index) => (
+              <li key={`${document.filePath ?? document.documentType}-${index}`} className="flex flex-col gap-2">
+                <p>
+                  {document.documentType || "Document"}
+                  {document.documentNumber ? ` · ${document.documentNumber}` : ""}
+                </p>
+                <EmployeeDocumentImage filePath={document.filePath} fileName={document.fileName} />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="rounded-lg border p-4">
