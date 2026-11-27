@@ -5,6 +5,8 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { PermissionGuard } from "@/components/auth/permission-guard";
+import { EmployeeStatusButton } from "@/components/hrms/employee-status-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmployeeDocumentImage } from "@/components/hrms/employee-document-image";
@@ -67,9 +69,20 @@ export default function EmployeeDetailPage() {
             {row.employeeCode} · {row.status} · {row.department || "No department"} · {row.designation || "No designation"}
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/hrms/employees/${id}/edit`}>Edit profile</Link>
-        </Button>
+        <PermissionGuard permission="hrms.employee.update">
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/hrms/employees/${id}/edit`}>Edit</Link>
+            </Button>
+            <EmployeeStatusButton
+              employeeId={id}
+              employeeName={row.fullName}
+              version={row.version}
+              currentStatus={row.status}
+              onChanged={reload}
+            />
+          </div>
+        </PermissionGuard>
       </div>
 
       <section className="grid gap-2 rounded-lg border p-4 text-sm md:grid-cols-2">
@@ -87,6 +100,7 @@ export default function EmployeeDetailPage() {
         <p>PAN: {row.panNumber || "—"}</p>
       </section>
 
+      <PermissionGuard permission="hrms.employee.update">
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-2 rounded-lg border p-4">
           <h2 className="font-semibold">Confirmation</h2>
@@ -171,6 +185,7 @@ export default function EmployeeDetailPage() {
           </Button>
         </div>
       </section>
+      </PermissionGuard>
 
       <section className="rounded-lg border p-4">
         <h2 className="mb-3 font-semibold">Documents</h2>

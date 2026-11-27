@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { PermissionGuard } from "@/components/auth/permission-guard";
+import { EmployeeStatusButton } from "@/components/hrms/employee-status-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { hrmsService } from "@/services/hrms/hrms-service";
@@ -14,6 +16,7 @@ export default function HrmsEmployeesPage() {
   const [status, setStatus] = useState<HrmsEmployeeStatus | "">("");
   const [page, setPage] = useState(1);
   const [downloading, setDownloading] = useState(false);
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["hrms-employees", page, search, status],
     queryFn: () => hrmsService.listEmployees({ page, search, status, limit: 20 }),
@@ -89,6 +92,7 @@ export default function HrmsEmployeesPage() {
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Joining</th>
               <th className="px-3 py-2">Manager</th>
+              <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -106,6 +110,22 @@ export default function HrmsEmployeesPage() {
                 <td className="px-3 py-2">{row.status}</td>
                 <td className="px-3 py-2">{row.joiningDate || "—"}</td>
                 <td className="px-3 py-2">{row.reportingManagerName || "—"}</td>
+                <td className="px-3 py-2">
+                  <PermissionGuard permission="hrms.employee.update">
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/hrms/employees/${row.id}/edit`}>Edit</Link>
+                      </Button>
+                      <EmployeeStatusButton
+                        employeeId={row.id}
+                        employeeName={row.fullName}
+                        version={row.version}
+                        currentStatus={row.status}
+                        onChanged={() => queryClient.invalidateQueries({ queryKey: ["hrms-employees"] })}
+                      />
+                    </div>
+                  </PermissionGuard>
+                </td>
               </tr>
             ))}
           </tbody>

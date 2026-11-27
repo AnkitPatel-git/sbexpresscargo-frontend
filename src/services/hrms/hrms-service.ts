@@ -252,6 +252,17 @@ export const hrmsService = {
     return body.data;
   },
 
+  async changeEmployeeStatus(id: number, version: number, status: HrmsEmployeeStatus) {
+    const response = await apiFetch(`${API_BASE_URL}/hrms/employees/${id}/status`, {
+      method: "POST",
+      headers: bearerHeaders(),
+      body: JSON.stringify({ version, status }),
+    });
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to change status"));
+    }
+  },
+
   async confirmEmployee(id: number, version: number, confirmationDate: string) {
     const response = await apiFetch(`${API_BASE_URL}/hrms/employees/${id}/confirm`, {
       method: "POST",
