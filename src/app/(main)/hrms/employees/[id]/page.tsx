@@ -61,6 +61,7 @@ export default function EmployeeDetailPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
+          <EmployeeDocumentImage filePath={row.photographPath} fileName="Profile image" />
           <h1 className="text-2xl font-semibold">{row.fullName}</h1>
           <p className="text-sm text-muted-foreground">
             {row.employeeCode} · {row.status} · {row.department || "No department"} · {row.designation || "No designation"}

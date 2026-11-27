@@ -16,7 +16,9 @@ export function EmployeeDocumentImage({
 }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-  const stored = filePath?.startsWith("hrms-employee-documents/");
+  const stored =
+    filePath?.startsWith("hrms-employee-documents/") ||
+    filePath?.startsWith("hrms-employee-photos/");
 
   useEffect(() => {
     if (!stored || !filePath) return;

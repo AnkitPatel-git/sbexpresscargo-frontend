@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmployeeDocumentImage } from "@/components/hrms/employee-document-image";
@@ -44,14 +45,55 @@ export function EmployeeForm({
   onSubmit,
 }: {
   values: EmployeeFormValues;
-  managers: Array<{ id: number; employeeCode: string; fullName: string }>;
+  managers: Array<{
+    id: number;
+    employeeCode: string;
+    fullName: string;
+    status?: string;
+    username?: string;
+    email?: string;
+  }>;
   users: LinkableUser[];
   saving: boolean;
-  onChange: (next: EmployeeFormValues) => void;
+  onChange: (
+    next: EmployeeFormValues | ((current: EmployeeFormValues) => EmployeeFormValues),
+  ) => void;
   onSubmit: () => void;
 }) {
   const [uploadingDocument, setUploadingDocument] = useState<number | null>(null);
-  const set = (patch: Partial<EmployeeFormValues>) => onChange({ ...values, ...patch });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [pincodeNote, setPincodeNote] = useState("");
+  const set = (patch: Partial<EmployeeFormValues>) =>
+    onChange((current) => ({ ...current, ...patch }));
+
+  useEffect(() => {
+    const pin = values.pinCode.replace(/\D/g, "");
+    if (pin.length !== 6) {
+      setPincodeNote("");
+      return;
+    }
+    let cancelled = false;
+    hrmsService
+      .lookupPincode(pin)
+      .then((place) => {
+        if (cancelled) return;
+        if (!place.city && !place.state) {
+          setPincodeNote("Pincode not found");
+          set({ city: "", state: "" });
+          return;
+        }
+        setPincodeNote("");
+        set({ city: place.city ?? "", state: place.state ?? "" });
+      })
+      .catch(() => {
+        if (!cancelled) setPincodeNote("Could not look up pincode");
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Only re-run when the pincode changes. `set` writes city and state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.pinCode]);
 
   const uploadDocumentImage = async (index: number, file: File | null) => {
     if (!file) return;
@@ -117,8 +159,33 @@ export function EmployeeForm({
             ))}
           </select>
         </Field>
-        <Field label="Photograph path">
-          <Input value={values.photographPath} onChange={(e) => set({ photographPath: e.target.value })} placeholder="File path or URL" />
+        <Field label="Employee code">
+          <Input
+            value={values.employeeCode}
+            maxLength={32}
+            placeholder="Leave blank to auto-generate"
+            onChange={(event) => set({ employeeCode: event.target.value.toUpperCase() })}
+          />
+        </Field>
+        <Field label="Profile image">
+          <Input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={uploadingPhoto}
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              event.target.value = "";
+              if (!file) return;
+              setUploadingPhoto(true);
+              hrmsService
+                .uploadEmployeeDocument(file, "photo")
+                .then((saved) => set({ photographPath: saved.filePath }))
+                .catch((error) => toast.error(error instanceof Error ? error.message : "Failed to upload image"))
+                .finally(() => setUploadingPhoto(false));
+            }}
+          />
+          <p className="text-xs text-muted-foreground">{uploadingPhoto ? "Uploading image..." : "JPG, PNG, or WebP"}</p>
+          <EmployeeDocumentImage filePath={values.photographPath} fileName="Profile image" />
         </Field>
       </section>
 
@@ -142,14 +209,20 @@ export function EmployeeForm({
         <Field label="Address line 2">
           <Input value={values.addressLine2} onChange={(e) => set({ addressLine2: e.target.value })} />
         </Field>
+        <Field label="Pincode">
+          <Input
+            maxLength={6}
+            value={values.pinCode}
+            placeholder="6-digit pincode"
+            onChange={(e) => set({ pinCode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+          />
+          {pincodeNote ? <p className="text-xs text-muted-foreground">{pincodeNote}</p> : null}
+        </Field>
         <Field label="City">
-          <Input value={values.city} onChange={(e) => set({ city: e.target.value })} />
+          <Input value={values.city} readOnly disabled placeholder="Filled from pincode" />
         </Field>
         <Field label="State">
-          <Input value={values.state} onChange={(e) => set({ state: e.target.value })} />
-        </Field>
-        <Field label="Pincode">
-          <Input maxLength={8} value={values.pinCode} onChange={(e) => set({ pinCode: e.target.value.replace(/\D/g, "").slice(0, 8) })} />
+          <Input value={values.state} readOnly disabled placeholder="Filled from pincode" />
         </Field>
       </section>
 
@@ -193,18 +266,24 @@ export function EmployeeForm({
           <Input value={values.designation} onChange={(e) => set({ designation: e.target.value })} />
         </Field>
         <Field label="Reporting manager">
-          <select
-            className="h-9 rounded-md border bg-background px-3 text-sm"
+          <Combobox
+            options={managers.map((manager) => ({
+              value: String(manager.id),
+              label: [
+                `${manager.fullName} (${manager.employeeCode})`,
+                manager.username,
+                manager.email,
+                manager.status && manager.status !== "ACTIVE" && manager.status !== "PROBATION"
+                  ? manager.status
+                  : "",
+              ].filter(Boolean).join(" · "),
+            }))}
             value={values.reportingManagerId}
-            onChange={(e) => set({ reportingManagerId: e.target.value })}
-          >
-            <option value="">None</option>
-            {managers.map((manager) => (
-              <option key={manager.id} value={manager.id}>
-                {manager.fullName} ({manager.employeeCode})
-              </option>
-            ))}
-          </select>
+            onChange={(value) => set({ reportingManagerId: value == null ? "" : String(value) })}
+            placeholder="Search reporting manager"
+            searchPlaceholder="Search name, code, or login..."
+            emptyMessage="No employee found"
+          />
         </Field>
         <Field label="Login user">
           <select

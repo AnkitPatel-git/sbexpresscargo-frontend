@@ -60,6 +60,7 @@ export type LinkableUser = {
 };
 
 export type EmployeeFormValues = {
+  employeeCode: string;
   firstName: string;
   lastName: string;
   status: HrmsEmployeeStatus;

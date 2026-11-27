@@ -32,6 +32,7 @@ function payload(values: EmployeeFormValues, version?: number) {
   };
   return {
     ...(version != null ? { version } : {}),
+    employeeCode: optional(values.employeeCode),
     firstName: values.firstName.trim(),
     lastName: values.lastName.trim(),
     status: values.status,
@@ -142,7 +143,15 @@ export const hrmsService = {
   },
 
   async employeeOptions(): Promise<
-    Array<{ id: number; employeeCode: string; fullName: string; department: string | null }>
+    Array<{
+      id: number;
+      employeeCode: string;
+      fullName: string;
+      status: string;
+      department: string | null;
+      username: string;
+      email: string;
+    }>
   > {
     const response = await apiFetch(`${API_BASE_URL}/hrms/employees/options`, {
       headers: bearerHeaders(false),
@@ -154,10 +163,25 @@ export const hrmsService = {
     return body.data ?? [];
   },
 
-  async uploadEmployeeDocument(file: File): Promise<{ filePath: string; fileName: string }> {
+  async lookupPincode(pinCode: string): Promise<{ pinCode: string; city: string | null; state: string | null }> {
+    const response = await apiFetch(
+      `${API_BASE_URL}/hrms/employees/pincode-lookup?pinCode=${encodeURIComponent(pinCode)}`,
+      { headers: bearerHeaders(false) },
+    );
+    if (!response.ok) {
+      throw new Error(await readErrorMessage(response, "Failed to look up pincode"));
+    }
+    const body = await response.json();
+    return body.data;
+  },
+
+  async uploadEmployeeDocument(
+    file: File,
+    kind: "document" | "photo" = "document",
+  ): Promise<{ filePath: string; fileName: string }> {
     const body = new FormData();
     body.append("file", file);
-    const response = await apiFetch(`${API_BASE_URL}/hrms/employees/documents/upload`, {
+    const response = await apiFetch(`${API_BASE_URL}/hrms/employees/documents/upload?kind=${kind}`, {
       method: "POST",
       headers: bearerHeaders(false),
       body,
@@ -316,6 +340,7 @@ export function employeeToForm(row: Record<string, unknown>): EmployeeFormValues
     Array.isArray(value) ? value.map((item) => map(item as Record<string, unknown>)) : [];
   return {
     ...emptyEmployeeForm(),
+    employeeCode: text(row.employeeCode),
     firstName: text(row.firstName),
     lastName: text(row.lastName),
     status: (text(row.status) || "PROBATION") as EmployeeFormValues["status"],
@@ -338,7 +363,9 @@ export function employeeToForm(row: Record<string, unknown>): EmployeeFormValues
     organizationName: text(row.organizationName) as EmployeeFormValues["organizationName"],
     reportingManagerId: row.reportingManagerId ? String(row.reportingManagerId) : "",
     joiningDate: text(row.joiningDate),
-    photographPath: text(row.photographPath),
+    photographPath: text(row.photographPath).startsWith("hrms-employee-photos/")
+      ? text(row.photographPath)
+      : "",
     bankAccountHolder: text(row.bankAccountHolder),
     bankName: text(row.bankName),
     bankAccountNumber: text(row.bankAccountNumber),
@@ -375,6 +402,7 @@ export function employeeToForm(row: Record<string, unknown>): EmployeeFormValues
 
 export function emptyEmployeeForm(): EmployeeFormValues {
   return {
+    employeeCode: "",
     firstName: "",
     lastName: "",
     status: "PROBATION",

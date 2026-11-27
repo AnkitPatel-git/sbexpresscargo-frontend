@@ -46,6 +46,7 @@ function EmployeeDetails({ employee }: { employee: EmployeeDetail }) {
           {employee.employeeCode} · These details are maintained by HR and cannot be changed here.
         </p>
       </div>
+      <EmployeeDocumentImage filePath={employee.photographPath} fileName="Profile image" own />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <ReadOnlyField label="Employee code" value={employee.employeeCode} />
         <ReadOnlyField label="Name" value={employee.fullName} />
